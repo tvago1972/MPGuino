@@ -2683,6 +2683,10 @@ static const uint8_t vInjectorCloseDelayIdx =		vInjectorOpenDelayIdx + 1;		// in
 static const uint8_t vInjectorTotalDelayIdx =		vInjectorCloseDelayIdx + 1;		// injector total settle time in timer0 cycles, for injector validity check
 static const uint8_t vInjectorValidMaxWidthIdx =	vInjectorTotalDelayIdx + 1;		// maximum valid fuel injector pulse width in timer0 cycles
 #define nextAllowedValue vInjectorValidMaxWidthIdx + 1
+#ifdef useChryslerMAPCorrection
+static const uint8_t vInjectorCorrectionIdx =		nextAllowedValue;				// Chrysler fuel injector correction value
+#define nextAllowedValue vInjectorCorrectionIdx + 1
+#endif // useChryslerMAPCorrection
 #ifdef useBarFuelEconVsTime
 static const uint8_t vFEvsTimePeriodTimeoutIdx =	nextAllowedValue;				// time period for fuel economy vs time bargraph
 #define nextAllowedValue vFEvsTimePeriodTimeoutIdx + 1
@@ -2736,8 +2740,7 @@ static const uint8_t mpMAPpressureIdx =				nextAllowedValue;
 static const uint8_t mpBaroPressureIdx =			mpMAPpressureIdx + 1;
 static const uint8_t mpFuelPressureIdx =			mpBaroPressureIdx + 1;
 static const uint8_t mpInjPressureIdx =				mpFuelPressureIdx + 1;
-static const uint8_t mpInjectorCorrectionIdx =		mpInjPressureIdx + 1;
-static const uint8_t mpAnalogMAPfloorIdx =			mpInjectorCorrectionIdx + 1;
+static const uint8_t mpAnalogMAPfloorIdx =			mpInjPressureIdx + 1;
 static const uint8_t mpAnalogMAPnumerIdx =			mpAnalogMAPfloorIdx + 1;
 static const uint8_t mpAnalogMAPdenomIdx =			mpAnalogMAPnumerIdx + 1;
 #define nextAllowedValue mpAnalogMAPdenomIdx + 1
@@ -2799,6 +2802,9 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 	"vInjectorCloseDelayIdx\r"				// fi close
 	"vInjectorTotalDelayIdx\r"				// fi close
 	"vInjectorValidMaxWidthIdx\r"			// fi close
+#ifdef useChryslerMAPCorrection
+	"vInjectorCorrectionIdx\r"				// fi close
+#endif // useChryslerMAPCorrection
 #ifdef useBarFuelEconVsTime
 	"vFEvsTimePeriodTimeoutIdx\r"			// timer0
 #endif // useBarFuelEconVsTime
@@ -2838,7 +2844,6 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpBaroPressureIdx\r"					// main program only
 	"mpFuelPressureIdx\r"					// main program only
 	"mpInjPressureIdx\r"					// main program only
-	"mpInjectorCorrectionIdx\r"				// main program only
 	"mpAnalogMAPfloorIdx\r"					// main program only
 	"mpAnalogMAPnumerIdx\r"					// main program only
 	"mpAnalogMAPdenomIdx\r"					// main program only
@@ -6999,7 +7004,7 @@ ISR( INT1_vect )
 			awakeFlags |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
 
 #ifdef useChryslerMAPCorrection
-			thisInjectorPulseLength *= volatileVariables[(uint16_t)(mpInjectorCorrectionIdx)]; // multiply by differential fuel pressure correction factor numerator
+			thisInjectorPulseLength *= volatileVariables[(uint16_t)(vInjectorCorrectionIdx)]; // multiply by differential fuel pressure correction factor numerator
 			thisInjectorPulseLength >>= 12; // divide by differential fuel pressure correction factor denominator
 
 #endif // useChryslerMAPCorrection
@@ -9379,7 +9384,7 @@ static const uint8_t prgmFormatToTime[] PROGMEM = {
 
 #ifdef useChryslerMAPCorrection
 static const uint8_t prgmPressureChannel[] PROGMEM = {
-	instrCmpIndex, mpInjectorCorrectionIdx - mpMAPpressureIdx,	// is trip index pointing to a valid pressure element?
+	instrCmpIndex, mpAnalogMAPfloorIdx - mpMAPpressureIdx,	// is trip index pointing to a valid pressure element?
 	instrBranchIfLT, 4,									// if so, skip ahead
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 	instrDone,											// exit to caller
@@ -9425,12 +9430,12 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrTestReg, 0x02,									// test whether overflow occurred
 	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it
 	instrIsqrt, 0x02,									// perform square root on result
-	instrStRegMain, 0x02, mpInjectorCorrectionIdx,		// save square root of presssure differential ratio as fuel injector correction factor
+	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
 	instrDone,											// return to caller
 
 //cont3:
 	instrLdRegConst, 0x02, idxCorrectionFactor,
-	instrStRegMain, 0x02, mpInjectorCorrectionIdx,		// save initial injector correction index for pressure differential calculation
+	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 	instrDone											// return to caller
 };
 
@@ -17095,7 +17100,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpFuelPressureIdx,			// save base fuel pressure value in psig * 1000
 
 	instrLdRegConst, 0x02, idxCorrectionFactor,
-	instrStRegMain, 0x02, mpInjectorCorrectionIdx,		// save initial injector correction index for pressure differential calculation
+	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 
 #endif	// useChryslerMAPCorrection
 #ifdef useBarFuelEconVsTime
