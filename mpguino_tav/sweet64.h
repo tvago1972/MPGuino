@@ -133,7 +133,7 @@ static const uint8_t i12 =	i11 + 8;	// load rX with denominator for constant
 static const uint8_t i13 =	i12 + 8;	//
 static const uint8_t i14 =	i13 + 8;	//
 static const uint8_t i15 =	i14 + 8;	// swap rX rY
-static const uint8_t i16 =	i15 + 8;	// store rX[extra] operand
+static const uint8_t i16 =	i15 + 8;	//
 static const uint8_t i17 =	i16 + 8;	// store eeprom rX
 static const uint8_t i18 =	i17 + 8;	// store volatile rX
 static const uint8_t i19 =	i18 + 8;	// store main program rX
@@ -232,8 +232,7 @@ static const uint8_t instrStRegTripVarIndexed =		instrLdRegTripVarIndexedRV + 1;
 static const uint8_t instrStRegTripVarIndexedRV =	instrStRegTripVarIndexed + 1;			// store 64-bit register X value to specified trip indexed read-in register
 static const uint8_t instrLdRegConst =				instrStRegTripVarIndexedRV + 1;			// load 64-bit register X with stored constant value
 static const uint8_t instrLdRegConstIndexed =		instrLdRegConst + 1;					// load 64-bit register X with indexed stored constant value
-static const uint8_t instrStByteToRegU8 =			instrLdRegConstIndexed + 1;				// store immediate byte value to specified byte index of 64-bit register X
-static const uint8_t instrDoBCDadjust =				instrStByteToRegU8 + 1;					// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
+static const uint8_t instrDoBCDadjust =				instrLdRegConstIndexed + 1;					// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
 static const uint8_t instrLdRegEEPROM =				instrDoBCDadjust + 1;					// load 64-bit register X with EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindexed =		instrLdRegEEPROM + 1;					// load 64-bit register X with indexed EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindirect =		instrLdRegEEPROMindexed + 1;			// load 64-bit register X with value of EEPROM parameter indexed in the SAE/metric reference conversion table
@@ -350,7 +349,6 @@ static const char opcodeList[] PROGMEM = {
 	"instrStRegTripVarIndexed\r"
 	"instrStRegTripVarIndexedRV\r"
 	"instrLdRegConst\r"
-	"instrStByteToRegU8\r"
 	"instrDoBCDadjust\r"
 	"instrLdRegEEPROM\r"
 	"instrLdRegEEPROMindexed\r"
@@ -476,8 +474,7 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,r01 | p01 | s02	// instrStRegTripVarIndexedRV
 	,r01 | p01 | s00	// instrLdRegConst
 	,r01 | p02 | s00	// instrLdRegConstIndexed
-	,r01 | p01 | s01	// instrStByteToRegU8
-	,r01 | p00 | s00	// instrDoBCDadjust
+	,r01 | p01 | s00	// instrDoBCDadjust
 	,r01 | p01 | s00	// instrLdRegEEPROM
 	,r01 | p02 | s00	// instrLdRegEEPROMindexed
 	,r01 | p04 | s00	// instrLdRegEEPROMindirect
@@ -587,7 +584,6 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,m00 | i20			// instrStRegTripVarIndexedRV
 	,m00 | i07			// instrLdRegConst
 	,m00 | i07			// instrLdRegConstIndexed
-	,m00 | i16			// instrStByteToRegU8
 	,m00 | i26			// instrDoBCDadjust
 	,m00 | i03			// instrLdRegEEPROM
 	,m00 | i03			// instrLdRegEEPROMindexed
@@ -919,4 +915,32 @@ const uint32_t convNumbers[] PROGMEM = {
 #ifdef useDragRaceFunction
 	,22840ul						// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #endif // useDragRaceFunction
+};
+
+const uint8_t s64BCDformatList[] PROGMEM = {
+	// 10 digit number format
+	 0x08		// total entry length
+	,' '		// leading zero character
+	,0x05		// total BCD byte length / offset into 64-bit register for BCD LSB
+	,0x04		// divisor string length
+	,100		// 10s and 100s
+	,100		// 1000s and 10000s
+	,100		// 100000s and 1000000s
+	,100		// 10000000s and 100000000s
+
+	// hhmmss number format
+	,0x07		// total entry length
+	,'0'		// leading zero character
+	,0x03		// total BCD byte length / offset into 64-bit register for BCD LSB
+	,0x03		// divisor string length
+	,60			// seconds
+	,60			// minutes
+	,24			// hours
+
+	// overflow number format
+	,0x03		// total entry length
+	,0x00		// leading zero character
+	,0xFF		// total BCD byte length // overflow signal
+
+	,0x00		// total entry length == 0 for end of list
 };

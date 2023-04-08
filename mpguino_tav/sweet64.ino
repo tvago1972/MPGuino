@@ -109,6 +109,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	uint8_t oldSREG;
 	uint8_t spnt = 0;
 	const uint8_t * prgmStack[16];
+	const uint8_t * s64BCDptr;
 	uint8_t opcodePrefix;
 	uint8_t opcodeSuffix;
 	uint8_t instr;
@@ -423,10 +424,6 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					swap64(regX, regY);
 					break;
 
-				case i16:	// store rX[index] direct
-					regX->u8[(unsigned int)(extra)] = operand;
-					break;
-
 				case i17:	// store eeprom rX
 					EEPROM::write64(regX, operand);
 					break;
@@ -500,31 +497,38 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					break;
 
 				case i26:	// BCD adjust
-					instr = regX->u8[6]; // fetch length
+					s64BCDptr = s64BCDformatList;
 
-					if (instr < 4) extra = instr - 1;
-					else
+					while (operand)
 					{
 
-						extra = 3;
-						regX->u8[0] = ((union union_64 *)(&s64reg[s64reg2]))->u8[0]; // workaround to support 10 decimal digits / 5 BCD bytes
+						s64BCDptr += pgm_read_byte(s64BCDptr);
+						operand--;
 
 					}
 
-					for (uint8_t x = extra; x < 4; x--)
+					operand = pgm_read_byte(++s64BCDptr); // fetch leading zero character
+					instr = pgm_read_byte(++s64BCDptr); // fetch total BCD byte length
+					extra = pgm_read_byte(++s64BCDptr); // fetch divisor string length
+
+					regX->u8[7] = operand; // store leading zero character
+					regX->u8[6] = instr; // store total BCD byte length
+
+					if (operand) // if this is a non-zero leading zero character
 					{
 
-						operand = regX->u8[(uint16_t)(--instr)]; // get indexed divisor
-						if (operand)
+						while (extra--)
 						{
 
-							regX->u8[(uint16_t)(instr)] = (uint8_t)(regY->ul[0] % operand); // put result of (source register) mod divisor into indexed byte of (target register)
+							operand = pgm_read_byte(++s64BCDptr); // get indexed divisor
+
+							regX->u8[(uint16_t)(--instr)] = (uint8_t)(regY->ul[0] % operand); // put result of (source register) mod divisor into indexed byte of (target register)
 							regY->ul[0] /= operand; // divide (source register) by divisor
 
 						}
-						else regX->u8[(uint16_t)(instr)] = operand;
 
 					}
+
 
 					break;
 
