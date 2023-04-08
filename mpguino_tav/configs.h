@@ -49,9 +49,9 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
-#define useFuelCost true					// Show fuel cost
+//#define useFuelCost true					// Show fuel cost
 #define useCPUreading true					// Show CPU loading and available RAM usage
-#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
+//#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useExpansionPins true				// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of message
@@ -99,7 +99,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
 #define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
-#define useTestButtonValues true				// Allows observation of button mapping
+//#define useTestButtonValues true				// Allows observation of button mapping
 #define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
 //#define useStatusLEDpins true					// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 #define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen

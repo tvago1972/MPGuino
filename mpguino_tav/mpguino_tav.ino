@@ -1728,7 +1728,7 @@ char findDigit(uint8_t value, char &zeroChar)
 char * ull2str(uint8_t prgmIdx, char * strBuffer, uint8_t decimalPlaces)
 {
 
-	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg3]);
+	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
 
 	uint8_t b;
 	char c;

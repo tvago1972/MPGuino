@@ -641,20 +641,14 @@ static const uint8_t prgmFormatToNumber[] PROGMEM = {
 	instrDiv2byConst, idxBCDdivisor,					// divide by 10^8 - quotient remains in register 2, and remainder goes into register 1
 	instrLdRegByte, 0x03, 99,
 	instrCmpXtoY, 0x23,									// test if quotient is greater than 99 (remainder will be less than 10^8)
-	instrBranchIfLTorE, 5,								// if quotient is 99 or less, continue with processing
+	instrBranchIfLTorE, 4,								// if quotient is 99 or less, continue with processing
 
 //overflow:
-	instrStByteToRegU8, 0x03, 255, 6,					// signal overflow by storing total length of 255 into byte 6 of register 3
+	instrDoBCDadjust, 0x12, 0x02,						// store overflow BCD string in register 2
 	instrDone,
 
 //cont:
-	instrStByteToRegU8, 0x03, 5, 6,						// store total BCD length into byte 6 of register 3
-	instrStByteToRegU8, 0x03, 32, 7,					// store leading zero character into byte 7 of register 3
-	instrStByteToRegU8, 0x03, 100, 1,					// store BCD divisor into byte 1 of register 3
-	instrStByteToRegU8, 0x03, 100, 2,					// store BCD divisor into byte 2 of register 3
-	instrStByteToRegU8, 0x03, 100, 3,					// store BCD divisor into byte 3 of register 3
-	instrStByteToRegU8, 0x03, 100, 4,					// store BCD divisor into byte 4 of register 3
-	instrDoBCDadjust, 0x13,								// go turn register 1 into a BCD string and store it in register 3
+	instrDoBCDadjust, 0x12, 0x00,						// process register 1 as 10 digit BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
@@ -896,12 +890,7 @@ static const uint8_t prgmParseCharacterToReg[] PROGMEM = {
 #endif // useDebugTerminal
 static const uint8_t prgmFormatToTime[] PROGMEM = {
 	instrLdReg, 0x21,									// move time in seconds into register 1
-	instrStByteToRegU8, 0x03, 3, 6,						// store total BCD length into byte 6 of register 3
-	instrStByteToRegU8, 0x03, 48, 7,					// store leading zero character into byte 7 of register 3
-	instrStByteToRegU8, 0x03, 60, 2,					// store hours divisor into byte 2 of register 3
-	instrStByteToRegU8, 0x03, 60, 1,					// store minutes divisor into byte 1 of register 3
-	instrStByteToRegU8, 0x03, 24, 0,					// store seconds divisor into byte 0 of register 3
-	instrDoBCDadjust, 0x13,								// go turn register 1 into a BCD string and store it in register 3
+	instrDoBCDadjust, 0x12, 0x01,						// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
