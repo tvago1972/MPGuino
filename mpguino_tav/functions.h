@@ -909,7 +909,7 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
 	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
-	instrBranchIfGTorE, 3,								// if not, continue
+	instrBranchIfLT, 3,								// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
@@ -924,7 +924,7 @@ static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
 	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
-	instrBranchIfGTorE, 3,								// if not, continue
+	instrBranchIfLT, 3,								// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
