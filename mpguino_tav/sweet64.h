@@ -176,6 +176,59 @@ uint64_t s64reg[6];
 uint64_t s64reg[5];
 #endif // useDebugTerminal
 
+#if defined(useMatrixMath)
+/*
+for useCoastDownCalculator -
+matrix_x - coastdown sample storage
+matrix_e - coastdown energy value storage
+matrix_c - coastdown coefficient matrix (what we are trying to solve for)
+    [ pCoefficientDidx
+	  pCoefficientVidx
+	  pCoefficientRRidx ]
+
+for useFuelParamCalculator -
+
+(fillup amount)(pMicroSecondsPerGallonIdx) + (injector open count)(pInjectorOpeningTimeIdx) = (raw injector open time)
+
+         fillup amount - user provided
+   injector open count - measured by MPGuino
+raw injector open time - measured by MPGuino
+
+matrix_x
+    [ fillup amount 1      injector open count 1
+	  fillup amount 2      injector open count 2 ]
+
+matrix_e
+	[ raw injector open time 1
+	  raw injector open time 2 ]
+
+matrix_c - fuel injector coefficient matrix (what we are trying to solve for)
+    [ pMicroSecondsPerGallonIdx
+	  pInjectorOpeningTimeIdx ]
+
+for both cases -
+
+matrix_r - inverse matrix
+matrix_r = matrix_x ^ -1
+
+(matrix_x ^ -1)(matrix_x) = I or identity matrix
+
+               (matrix_x)(matrix_c) = matrix_e
+
+(matrix_x ^ -1)(matrix_x)(matrix_c) = (matrix_x ^ -1)(matrix_e)
+
+                      (I)(matrix_c) = (matrix_x ^ -1)(matrix_e)
+
+                           matrix_c = (matrix_x ^ -1)(matrix_e)
+
+*/
+
+uint64_t matrix_x[3][3];
+uint64_t matrix_r[3][3];
+uint64_t matrix_e[3];
+uint64_t matrix_c[3];
+
+#endif // defined(useMatrixMath)
 static const uint8_t s64reg1 = 0;	// general purpose
 static const uint8_t s64reg2 = 1;	// output value / general purpose
 static const uint8_t s64reg3 = 2;	// general purpose / temporary storage
