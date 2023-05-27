@@ -118,37 +118,37 @@ static const uint8_t m07 =	m06 + 1;	//
 static const uint8_t mxxMask = 0b00000111;
 
 static const uint8_t i00 =	0;			// no operation
-static const uint8_t i01 =	i00 + 8;	// load rX with byte
-static const uint8_t i02 =	i01 + 8;	// load rX with rY
+static const uint8_t i01 =	i00 + 8;	// load rX with rY
+static const uint8_t i02 =	i01 + 8;	// swap rX rY
 static const uint8_t i03 =	i02 + 8;	// load rX with eeprom
-static const uint8_t i04 =	i03 + 8;	// load rX with main program
-static const uint8_t i05 =	i04 + 8;	// load rX with volatile
-static const uint8_t i06 =	i05 + 8;	// load rX with trip variable
-static const uint8_t i07 =	i06 + 8;	// load rX with const
-static const uint8_t i08 =	i07 + 8;	// load rX with eeprom init
-static const uint8_t i09 =	i08 + 8;	// load rX with voltage
-static const uint8_t i10 =	i09 + 8;	// load rX with numerator for constant
-static const uint8_t i11 =	i10 + 8;	// integer square root
+static const uint8_t i04 =	i03 + 8;	// store eeprom rX
+static const uint8_t i05 =	i04 + 8;	// load rX with main program
+static const uint8_t i06 =	i05 + 8;	// store main program rX
+static const uint8_t i07 =	i06 + 8;	// load rX with volatile
+static const uint8_t i08 =	i07 + 8;	// store volatile rX
+static const uint8_t i09 =	i08 + 8;	// load rX with byte[operand]
+static const uint8_t i10 =	i09 + 8;	// load rX with byte
+static const uint8_t i11 =	i10 + 8;	// store rX byte to bargraph data array
 static const uint8_t i12 =	i11 + 8;	// load rX with denominator for constant
-static const uint8_t i13 =	i12 + 8;	//
-static const uint8_t i14 =	i13 + 8;	//
-static const uint8_t i15 =	i14 + 8;	// swap rX rY
-static const uint8_t i16 =	i15 + 8;	//
-static const uint8_t i17 =	i16 + 8;	// store eeprom rX
-static const uint8_t i18 =	i17 + 8;	// store volatile rX
-static const uint8_t i19 =	i18 + 8;	// store main program rX
-static const uint8_t i20 =	i19 + 8;	// store trip variable rX
-static const uint8_t i21 =	i20 + 8;	//
-static const uint8_t i22 =	i21 + 8;	//
-static const uint8_t i23 =	i22 + 8;	// load rX with FEvT trip variable
-static const uint8_t i24 =	i23 + 8;	// shift rX left
-static const uint8_t i25 =	i24 + 8;	// shift rX right
-static const uint8_t i26 =	i25 + 8;	// BCD adjust
-static const uint8_t i27 =	i26 + 8;	// store rX byte to bargraph data array
-static const uint8_t i28 =	i27 + 8;	// load rX with byte[operand]
-static const uint8_t i29 =	i28 + 8;	//
-static const uint8_t i30 =	i29 + 8;	//
-static const uint8_t i31 =	i30 + 8;	//
+static const uint8_t i13 =	i12 + 8;	// load rX with numerator for constant
+static const uint8_t i14 =	i13 + 8;	// load rX with const
+static const uint8_t i15 =	i14 + 8;	// load rX with eeprom init
+static const uint8_t i16 =	i15 + 8;	// load rX with voltage
+static const uint8_t i17 =	i16 + 8;	// load rX with FEvT trip variable
+static const uint8_t i18 =	i17 + 8;	// load rX with trip variable
+static const uint8_t i19 =	i18 + 8;	// store trip variable rX
+static const uint8_t i20 =	i19 + 8;	// load rX with element of Matrix X
+static const uint8_t i21 =	i20 + 8;	// store Matrix X rX
+static const uint8_t i22 =	i21 + 8;	// load rX with element of Inverse Matrix
+static const uint8_t i23 =	i22 + 8;	// store Inverse Matrix rX
+static const uint8_t i24 =	i23 + 8;	// load rX with element of ExpData Matrix
+static const uint8_t i25 =	i24 + 8;	// store ExpData Matrix rX
+static const uint8_t i26 =	i25 + 8;	// load rX with element of Coefficient Matrix
+static const uint8_t i27 =	i26 + 8;	// store Coefficient Matrix rX
+static const uint8_t i28 =	i27 + 8;	// integer square root
+static const uint8_t i29 =	i28 + 8;	// shift rX left
+static const uint8_t i30 =	i29 + 8;	// shift rX right
+static const uint8_t i31 =	i30 + 8;	// BCD adjust
 
 static const uint8_t ixxMask = 0b11111000;
 uint8_t SWEET64processorFlags;
@@ -363,9 +363,21 @@ static const uint8_t instrLdRegTripFEvTindexed =	nextAllowedValue;						// load 
 #endif // useBarFuelEconVsTime
 
 #ifdef useBarGraph
-static const uint8_t instrStRegBGdataIndexed =		nextAllowedValue;							// store register byte to bargraph data array
+static const uint8_t instrStRegBGdataIndexed =		nextAllowedValue;						// store register byte to bargraph data array
 #define nextAllowedValue instrStRegBGdataIndexed + 1
 #endif // useBarFuelEconVsTime
+
+#if defined(useMatrixMath)
+static const uint8_t instrLdRegXColIndexedRow =		nextAllowedValue;						// load 64-bit register X with contents of Matrix X indexed row specified column
+static const uint8_t instrStRegXColIndexedRow =		instrLdRegXColIndexedRow + 1;			// store contents of 64-bit register X to Matrix X indexed row specified column
+static const uint8_t instrLdRegRColIndexedRow =		instrStRegXColIndexedRow + 1;			// load 64-bit register X with contents of Inverse Matrix indexed row specified column
+static const uint8_t instrStRegRColIndexedRow =		instrLdRegRColIndexedRow + 1;			// store contents of 64-bit register X to Inverse Matrix indexed row specified column
+static const uint8_t instrLdRegEIndexedRow =		instrStRegRColIndexedRow + 1;			// load 64-bit register X with contents of ExpData Matrix indexed row
+static const uint8_t instrStRegEIndexedRow =		instrLdRegEIndexedRow + 1;				// store contents of 64-bit register X to ExpData Matrix indexed row
+static const uint8_t instrLdRegCIndexedRow =		instrStRegEIndexedRow + 1;				// load 64-bit register X with contents of Coefficient Matrix indexed row
+static const uint8_t instrStRegCIndexedRow =		instrLdRegCIndexedRow + 1;				// store contents of 64-bit register X to Coefficient Matrix indexed row
+#define nextAllowedValue instrStRegCIndexedRow + 1
+#endif // defined(useMatrixMath)
 
 static const uint8_t instrDone =					nextAllowedValue;						// return to caller - if at topmost level of stack, return to main program
 #define nextAllowedValue instrDone + 1
@@ -476,6 +488,16 @@ static const char opcodeList[] PROGMEM = {
 #ifdef useBarGraph
 	"instrStRegBGdataIndexed\r"
 #endif // useBarGraph
+#if defined(useMatrixMath)
+	"instrLdRegXColIndexedRow\r"
+	"instrStRegXColIndexedRow\r"
+	"instrLdRegRColIndexedRow\r"
+	"instrStRegRColIndexedRow\r"
+	"instrLdRegEIndexedRow\r"
+	"instrStRegEIndexedRow\r"
+	"instrLdRegCIndexedRow\r"
+	"instrStRegCIndexedRow\r"
+#endif // defined(useMatrixMath)
 	"instrDone\r"
 };
 
@@ -599,6 +621,16 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 #ifdef useBarGraph
 	,r01 | p02 | s00	// instrStRegBGdataIndexed
 #endif // useBarGraph
+#if defined(useMatrixMath)
+	,r01 | p01 | s02	// instrLdRegXColIndexedRow
+	,r01 | p01 | s02	// instrStRegXColIndexedRow
+	,r01 | p01 | s02	// instrLdRegRColIndexedRow
+	,r01 | p01 | s02	// instrStRegRColIndexedRow
+	,r01 | p00 | s02	// instrLdRegEIndexedRow
+	,r01 | p00 | s02	// instrStRegEIndexedRow
+	,r01 | p00 | s02	// instrLdRegCIndexedRow
+	,r01 | p00 | s02	// instrStRegCIndexedRow
+#endif // defined(useMatrixMath)
 	,r00 | p00 | s00	// instrDone
 };
 
@@ -625,68 +657,68 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e27				// instrCall
 	,e27				// instrCallImplied
 	,e28				// instrJump
-	,m00 | i02			// instrLdReg
-	,m00 | i01			// instrLdRegByteFromIndex
-	,m00 | i01			// instrLdRegByte
-	,m00 | i28			// instrLdRegByteFromY
-	,m04 | i06			// instrLdRegTripVar
-	,m04 | i06			// instrLdRegTripVarIndexed
-	,m04 | i06			// instrLdRegTripVarOffset
-	,m04 | i06			// instrLdRegTripVarIndexedRV
-	,m00 | i20			// instrStRegTripVarIndexed
-	,m00 | i20			// instrStRegTripVarIndexedRV
-	,m00 | i07			// instrLdRegConst
-	,m00 | i07			// instrLdRegConstIndexed
-	,m00 | i26			// instrDoBCDadjust
+	,m00 | i01			// instrLdReg
+	,m00 | i10			// instrLdRegByteFromIndex
+	,m00 | i10			// instrLdRegByte
+	,m00 | i09			// instrLdRegByteFromY
+	,m04 | i18			// instrLdRegTripVar
+	,m04 | i18			// instrLdRegTripVarIndexed
+	,m04 | i18			// instrLdRegTripVarOffset
+	,m04 | i18			// instrLdRegTripVarIndexedRV
+	,m00 | i19			// instrStRegTripVarIndexed
+	,m00 | i19			// instrStRegTripVarIndexedRV
+	,m00 | i14			// instrLdRegConst
+	,m00 | i14			// instrLdRegConstIndexed
+	,m00 | i31			// instrDoBCDadjust
 	,m00 | i03			// instrLdRegEEPROM
 	,m00 | i03			// instrLdRegEEPROMindexed
 	,m00 | i03			// instrLdRegEEPROMindirect
-	,m00 | i08			// instrLdRegEinit
-	,m00 | i08			// instrLdRegEinitIndexed
-	,m00 | i17			// instrStRegEEPROM
-	,m00 | i17			// instrStRegEEPROMindexed
-	,m00 | i17			// instrStRegEEPROMindirect
-	,m00 | i04			// instrLdRegMain
-	,m00 | i04			// instrLdRegMainIndexed
-	,m00 | i04			// instrLdRegMainOffset
-	,m00 | i19			// instrStRegMain
-	,m00 | i19			// instrStRegMainIndexed
-	,m00 | i05			// instrLdRegVolatile
-	,m00 | i05			// instrLdRegVolatileIndexed
-	,m00 | i18			// instrStRegVolatile
-	,m00 | i18			// instrStRegVolatileIndexed
+	,m00 | i15			// instrLdRegEinit
+	,m00 | i15			// instrLdRegEinitIndexed
+	,m00 | i04			// instrStRegEEPROM
+	,m00 | i04			// instrStRegEEPROMindexed
+	,m00 | i04			// instrStRegEEPROMindirect
+	,m00 | i05			// instrLdRegMain
+	,m00 | i05			// instrLdRegMainIndexed
+	,m00 | i05			// instrLdRegMainOffset
+	,m00 | i06			// instrStRegMain
+	,m00 | i06			// instrStRegMainIndexed
+	,m00 | i07			// instrLdRegVolatile
+	,m00 | i07			// instrLdRegVolatileIndexed
+	,m00 | i08			// instrStRegVolatile
+	,m00 | i08			// instrStRegVolatileIndexed
 	,e23				// instrLxdI
 	,e24				// instrLxdIEEPROM
 	,e24				// instrLxdIEEPROMoffset
 	,e26				// instrLxdIParamLength
 	,e26				// instrLxdIParamLengthIndexed
-	,m00 | i10			// instrLdRegNumer
+	,m00 | i13			// instrLdRegNumer
 	,m00 | i12			// instrLdRegDenom
-	,m00 | i15			// instrSwapReg
+	,m00 | i02			// instrSwapReg
 	,m02 | i00			// instrSubYfromX
-	,m02 | i04			// instrSubMainFromX
+	,m02 | i05			// instrSubMainFromX
 	,m01 | i00			// instrAddYtoX
 	,m01 | i00			// instrAdjustQuotient
-	,m01 | i01			// instrAddByteToX
-	,m01 | i07			// instrAddConstToX
+	,m01 | i10			// instrAddByteToX
+	,m01 | i14			// instrAddConstToX
 	,m01 | i03			// instrAddEEPROMtoX
-	,m01 | i04			// instrAddMainToX
-	,m01 | i01			// instrAddIndexToX
-	,m05 | i02			// instrMul2by1
-	,m05 | i01			// instrMul2byByte
-	,m05 | i07			// instrMul2byConst
+	,m01 | i05			// instrAddMainToX
+	,m01 | i10			// instrAddIndexToX
+	,m05 | i01			// instrMul2by1
+	,m05 | i10			// instrMul2byByte
+	,m05 | i14			// instrMul2byConst
 	,m05 | i03			// instrMul2byEEPROM
-	,m05 | i04			// instrMul2byMain
-	,m05 | i05			// instrMul2byVolatile
-	,m05 | i06			// instrMul2byTripVarIndexed
-	,m06 | i02			// instrDiv2by1
-	,m06 | i07			// instrDiv2byConst
+	,m05 | i05			// instrMul2byMain
+	,m05 | i07			// instrMul2byVolatile
+	,m05 | i18			// instrMul2byTripVarIndexed
+	,m06 | i01			// instrDiv2by1
+	,m06 | i14			// instrDiv2byConst
 	,m06 | i03			// instrDiv2byEEPROM
-	,m06 | i04			// instrDiv2byMain
-	,m06 | i06			// instrDiv2byTripVarIndexed
-	,m06 | i01			// instrDiv2byByte
-	,m00 | i24			// instrShiftRegLeft
-	,m00 | i25			// instrShiftRegRight
+	,m06 | i05			// instrDiv2byMain
+	,m06 | i18			// instrDiv2byTripVarIndexed
+	,m06 | i10			// instrDiv2byByte
+	,m00 | i29			// instrShiftRegLeft
+	,m00 | i30			// instrShiftRegRight
 	,e23				// instrAddIndex
 	,e20				// instrTraceOn
 	,e22				// instrTraceOff
@@ -697,18 +729,28 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e30				// instrClearFlag
 	,e31				// instrSetFlag
 #ifdef useIsqrt
-	,m00 | i11			// instrIsqrt
+	,m00 | i28			// instrIsqrt
 #endif // useIsqrt
 #if defined(useAnalogRead)
-	,m00 | i09			// instrLdRegVoltage
-	,m00 | i09			// instrLdRegVoltageIndexed
+	,m00 | i16			// instrLdRegVoltage
+	,m00 | i16			// instrLdRegVoltageIndexed
 #endif // useAnalogRead
 #ifdef useBarFuelEconVsTime
-	,m04 | i23			// instrLdRegTripFEvTindexed
+	,m04 | i17			// instrLdRegTripFEvTindexed
 #endif // useBarFuelEconVsTime
 #ifdef useBarGraph
-	,m00 | i27			// instrStRegBGdataIndexed
+	,m00 | i11			// instrStRegBGdataIndexed
 #endif // useBarGraph
+#if defined(useMatrixMath)
+	,m00 | i20			// instrLdRegXColIndexedRow
+	,m00 | i21			// instrStRegXColIndexedRow
+	,m00 | i22			// instrLdRegRColIndexedRow
+	,m00 | i23			// instrStRegRColIndexedRow
+	,m00 | i24			// instrLdRegEIndexedRow
+	,m00 | i25			// instrStRegEIndexedRow
+	,m00 | i26			// instrLdRegCIndexedRow
+	,m00 | i27			// instrStRegCIndexedRow
+#endif // defined(useMatrixMath)
 	,e16				// instrDone
 };
 
