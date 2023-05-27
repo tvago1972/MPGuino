@@ -1,6 +1,14 @@
 #if defined(__AVR_ATmega32U4__)
 /* start of baseline ATmega native USB support */
 
+namespace USB
+{
+
+	static void init(void);
+	static void shutdown(void);
+
+};
+
 #ifdef useUSBserial
 namespace usbDevice
 {

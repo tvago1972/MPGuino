@@ -1,4 +1,62 @@
 #if defined(__AVR_ATmega32U4__)
+static void USB::init(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	PRR1 &= ~(1 << PRUSB); // turn on USB hardware
+
+	UHWCON = (1 << UVREGE); // enable USB pad regulator
+
+	USBCON = ((1 << USBE) | (1 << FRZCLK)); // enable USB controller, disable clock inputs
+
+#if F_CPU == 16000000UL
+	PLLCSR = ((1 << PINDIV) | (1 << PLLE)); // set PLL input prescaler for 16 MHz clock source, and enable PLL
+#elif F_CPU == 8000000UL
+	PLLCSR = (1 << PLLE); // set PLL input prescaler for 8 MHz clock source, and enable PLL
+#else // F_CPU == 16000000UL
+#error *** F_CPU clock rate not supported!!! ***
+#endif // F_CPU == 16000000UL
+
+	while (!(PLLCSR & (1 << PLOCK))); // wait for PLL lock
+
+	USBCON = ((1 << USBE) | (1 << OTGPADE)); // keep USB controller enabled, enable clock inputs, enable VBUS pad
+
+	UDCON = 0; // select USB high speed mode
+
+	usbConfiguration = 0;
+
+	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void USB::shutdown(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	UDIEN = 0; // disable all USB interrupts
+
+	USBCON = 0; // disable USB controller
+
+	PLLCSR = 0; // disable PLL
+
+	UHWCON = 0; // disable USB pad regulator
+
+	PRR1 |= (1 << PRUSB); // turn off USB hardware
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
 #ifdef useUSBserial
 static void usbDevice::init(void)
 {

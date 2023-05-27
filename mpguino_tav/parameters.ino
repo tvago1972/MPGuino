@@ -364,7 +364,7 @@ static void EEPROM::initGuinoSoftware(void)
 
 #endif // useBarFuelEconVsSpeed
 #ifdef useWindowTripFilter
-	windowTripFilterReset();
+	tripVar::resetWindowFilter();
 
 #endif // useWindowTripFilter
 }

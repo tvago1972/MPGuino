@@ -552,7 +552,7 @@ static void partialRefuel::select(void)
 			break;
 
 		default:
-			noSupport();
+			menu::noSupport();
 			break;
 
 	}
