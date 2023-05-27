@@ -7,13 +7,6 @@ namespace coastdown /* Coastdown Calculator support section prototype */
 
 }
 
-uint64_t matrix_x[3][3];	// coastdown sample storage
-uint64_t matrix_r[3][3];	// inverse matrix
-uint64_t matrix_e[3];		// coastdown energy value storage
-uint64_t matrix_c[3];		// coastdown coefficient matrix (what we are trying to solve for)
-
-#endif // useCoastDownCalculator
-#ifdef useCoastDownCalculator
 volatile uint8_t coastdownFlags;
 volatile uint8_t coastdownState;
 

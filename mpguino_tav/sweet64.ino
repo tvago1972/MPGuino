@@ -290,47 +290,91 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 		if (branchFlag) // opcode does something with the 64 bit registers
 		{
 
+			switch (opcodeSuffix & ixxMask) // disable interrupts, according to ixx
+			{
+
+				case i07:	// load rX with volatile
+				case i08:	// store volatile rX
+				case i18:	// load rX with trip variable
+				case i19:	// store trip variable rX
+					oldSREG = SREG; // save interrupt flag status
+					cli(); // disable interrupts
+				default:
+					break;
+
+			}
+
 			switch (opcodeSuffix & ixxMask) // perform load or store operation, according to ixx
 			{
 
 				case i00:	// do nothing
 					break;
 
-				case i28:	// load rX with byte[operand]
-					operand = regY->u8[(unsigned int)(operand)];
-				case i01:	// load rX with byte
-					init64byt(regX, operand);
+				case i01:	// load rX with rY
+					copy64(regX, regY);
 					break;
 
-				case i02:	// load rX with rY
-					copy64(regX, regY);
+				case i02:	// swap rX rY
+					swap64(regX, regY);
 					break;
 
 				case i03:	// load rX with eeprom
 					EEPROM::read64(regX, operand);
 					break;
 
-				case i04:	// load rX with main program
+				case i04:	// store eeprom rX
+					EEPROM::write64(regX, operand);
+					break;
+
+				case i05:	// load rX with main program
 					init64(regX, mainProgramVariables[(uint16_t)(operand)]);
 					break;
 
-				case i05:	// load rX with volatile
-					oldSREG = SREG; // save interrupt flag status
-					cli(); // disable interrupts
+				case i06:	// store main program rX
+					mainProgramVariables[(uint16_t)(operand)] = regX->ul[0];
+					break;
 
+				case i07:	// load rX with volatile
 					init64(regX, volatileVariables[(uint16_t)(operand)]);
+					break;
 
-					SREG = oldSREG; // restore interrupt flag status
+				case i08:	// store volatile rX
+					volatileVariables[(uint16_t)(operand)] = regX->ul[0];
+					break;
+
+				case i09:	// load rX with byte[operand]
+					operand = regY->u8[(unsigned int)(operand)];
+				case i10:	// load rX with byte
+					init64byt(regX, operand);
 					break;
 
 #ifdef useBarGraph
-				case i27:	// store rX byte to bargraph data array
+				case i11:	// store rX byte to bargraph data array
 					bargraphData[(unsigned int)(operand)] = regX->u8[0];
 					break;
 
 #endif // useBarGraph
+				case i12:	// load rX with denominator for constant
+					operand ^= 1;
+				case i13:	// load rX with numerator for constant
+					if (metricFlag & metricMode) operand ^= 1;
+					operand ^= pgm_read_byte(&convNumerIdx[(unsigned int)(operand)]);
+				case i14:	// load rX with const
+					init64(regX, pgm_read_dword(&convNumbers[(uint16_t)(operand)]));
+					break;
+
+				case i15:	// load rX with eeprom init
+					init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
+					break;
+
+#if defined(useAnalogRead)
+				case i16:	// load rX with voltage
+					init64(regX, analogValue[(unsigned int)(operand)]);
+					break;
+
+#endif // useAnalogRead
 #ifdef useBarFuelEconVsTime
-				case i23:	// load rX with FEvT trip variable
+				case i17:	// load rX with FEvT trip variable
 					instr = calcFEvTperiodIdx; // get current fuel econ vs time trip variable
 					instr -= FEvsTimeIdx; // translate out of trip index space
 
@@ -342,161 +386,151 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 					operand += FEvsTimeIdx; // shift back into trip index space
 #endif // useBarFuelEconVsTime
-				case i06:	// load rX with trip variable
-#ifdef useEEPROMtripStorage
-					if (operand >= tripSlotCount)
+				case i18:	// load rX with trip variable
+					if (operand < tripSlotCount)
+					{
+
+						switch (extra)
+						{
+
+							case rvInjPulseIdx:
+								if (operand < tripSlotFullCount) init64(regX, collectedInjPulseCount[(unsigned int)(operand)]);
+								else init64byt(regX, 0);
+								break;
+
+							case rvVSScycleIdx:
+								if (operand < tripSlotFullCount) copy64(regX, (union union_64 *)&collectedVSScycleCount[(uint16_t)(operand)]);
+								else init64byt(regX, 0);
+								break;
+
+							case rvEngCycleIdx:
+								if (operand < tripSlotFullCount) copy64(regX, (union union_64 *)&collectedEngCycleCount[(uint16_t)(operand)]);
+								else init64byt(regX, 0);
+								break;
+
+							case rvVSSpulseIdx:
+								init64(regX, collectedVSSpulseCount[(unsigned int)(operand)]);
+								break;
+
+							case rvInjCycleIdx:
+								copy64(regX, (union union_64 *)&collectedInjCycleCount[(uint16_t)(operand)]);
+								break;
+
+							default:
+								init64byt(regX, 0);
+								break;
+
+						}
+
+					}
+#if defined(useEEPROMtripStorage)
+					else
 					{
 
 						branchFlag = tripVar::getBaseEEPROMaddress(operand, extra);
 						if (branchFlag) EEPROM::read64(regX, branchFlag);
 						else init64byt(regX, 0);
-						break;
 
 					}
+#else // defined(useEEPROMtripStorage)
+					else init64byt(regX, 0);
+#endif // defined(useEEPROMtripStorage)
+					break;
 
-#endif // useEEPROMtripStorage
-					oldSREG = SREG; // save interrupt flag status
-					cli(); // disable interrupts
-
-					switch (extra)
+				case i19:	// store trip variable rX
+					if (operand < tripSlotCount)
 					{
 
-						case rvVSSpulseIdx:
-							if (operand < tripSlotCount) init64(regX, collectedVSSpulseCount[(unsigned int)(operand)]);
-							else init64byt(regX, 0);
-							break;
+						switch (extra)
+						{
 
-						case rvInjPulseIdx:
-							if (operand < tripSlotFullCount) init64(regX, collectedInjPulseCount[(unsigned int)(operand)]);
-							else init64byt(regX, 0);
-							break;
+							case rvInjPulseIdx:
+								if (operand < tripSlotFullCount) collectedInjPulseCount[(unsigned int)(operand)] = regX->ul[0];
+								break;
 
-						case rvVSScycleIdx:
-							if (operand < tripSlotFullCount) copy64(regX, (union union_64 *)&collectedVSScycleCount[(uint16_t)(operand)]);
-							else init64byt(regX, 0);
-							break;
+							case rvVSScycleIdx:
+								if (operand < tripSlotFullCount) copy64((union union_64 *)&collectedVSScycleCount[(uint16_t)(operand)], regX);
+								break;
 
-						case rvInjCycleIdx:
-							if (operand < tripSlotCount) copy64(regX, (union union_64 *)&collectedInjCycleCount[(uint16_t)(operand)]);
-							else init64byt(regX, 0);
-							break;
+							case rvEngCycleIdx:
+								if (operand < tripSlotFullCount) copy64((union union_64 *)&collectedEngCycleCount[(uint16_t)(operand)], regX);
+								break;
 
-						case rvEngCycleIdx:
-							if (operand < tripSlotFullCount) copy64(regX, (union union_64 *)&collectedEngCycleCount[(uint16_t)(operand)]);
-							else init64byt(regX, 0);
-							break;
+							case rvVSSpulseIdx:
+								collectedVSSpulseCount[(unsigned int)(operand)] = regX->ul[0];
+								break;
 
-						default:
-							init64byt(regX, 0);
-							break;
+							case rvInjCycleIdx:
+								copy64((union union_64 *)&collectedInjCycleCount[(uint16_t)(operand)], regX);
+								break;
+
+							default:
+								break;
+
+						}
 
 					}
-
-					SREG = oldSREG; // restore interrupt flag status
-					break;
-
-				case i12:	// load rX with denominator for constant
-					operand ^= 1;
-				case i10:	// load rX with numerator for constant
-					if (metricFlag & metricMode) operand ^= 1;
-					operand ^= pgm_read_byte(&convNumerIdx[(unsigned int)(operand)]);
-				case i07:	// load rX with const
-					init64(regX, pgm_read_dword(&convNumbers[(uint16_t)(operand)]));
-					break;
-
-				case i08:	// load rX with eeprom init
-					init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
-					break;
-
-#if defined(useAnalogRead)
-				case i09:	// load rX with voltage
-					init64(regX, analogValue[(unsigned int)(operand)]);
-					break;
-
-#endif // useAnalogRead
-#ifdef useIsqrt
-				case i11:	// integer square root
-					regX->ui[0] = iSqrt(regX->ui[0]);
-					break;
-
-#endif // useIsqrt
-				case i15:	// swap rX rY
-					swap64(regX, regY);
-					break;
-
-				case i17:	// store eeprom rX
-					EEPROM::write64(regX, operand);
-					break;
-
-				case i18:	// store volatile rX
-					oldSREG = SREG; // save interrupt flag status
-					cli(); // disable interrupts
-
-					volatileVariables[(uint16_t)(operand)] = regX->ul[0];
-
-					SREG = oldSREG; // restore interrupt flag status
-					break;
-
-				case i19:	// store main program rX
-					mainProgramVariables[(uint16_t)(operand)] = regX->ul[0];
-					break;
-
-				case i20:	// store trip variable rX
-#ifdef useEEPROMtripStorage
-					if (operand >= tripSlotCount)
+#if defined(useEEPROMtripStorage)
+					else
 					{
 
 						branchFlag = tripVar::getBaseEEPROMaddress(operand, extra);
 						if (branchFlag) EEPROM::write64(regX, branchFlag);
-						break;
 
 					}
-
-#endif // useEEPROMtripStorage
-					oldSREG = SREG; // save interrupt flag status
-					cli(); // disable interrupts
-
-					switch (extra)
-					{
-
-						case rvVSSpulseIdx:
-							if (operand < tripSlotCount) collectedVSSpulseCount[(unsigned int)(operand)] = regX->ul[0];
-							break;
-
-						case rvInjPulseIdx:
-							if (operand < tripSlotFullCount) collectedInjPulseCount[(unsigned int)(operand)] = regX->ul[0];
-							break;
-
-						case rvVSScycleIdx:
-							if (operand < tripSlotFullCount) copy64((union union_64 *)&collectedVSScycleCount[(uint16_t)(operand)], regX);
-							break;
-
-						case rvInjCycleIdx:
-							if (operand < tripSlotCount) copy64((union union_64 *)&collectedInjCycleCount[(uint16_t)(operand)], regX);
-							break;
-
-						case rvEngCycleIdx:
-							if (operand < tripSlotFullCount) copy64((union union_64 *)&collectedEngCycleCount[(uint16_t)(operand)], regX);
-							break;
-
-						default:
-							break;
-
-					}
-
-					SREG = oldSREG; // restore interrupt flag status
+#endif // defined(useEEPROMtripStorage)
 					break;
 
-				case i24:	// shift rX left
+#if defined(useMatrixMath)
+				case i20:	// load rX with element of Matrix X
+					copy64(regX, (union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)]);
+					break;
+
+				case i21:	// store Matrix X rX
+					copy64((union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+					break;
+
+				case i22:	// load rX with element of Inverse Matrix
+					copy64(regX, (union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)]);
+					break;
+
+				case i23:	// store Inverse Matrix rX
+					copy64((union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+					break;
+
+				case i24:	// load rX with element of ExpData Matrix
+					copy64(regX, (union union_64 *)&matrix_e[(uint16_t)(extra)]);
+					break;
+
+				case i25:	// store ExpData Matrix rX
+					copy64((union union_64 *)&matrix_e[(uint16_t)(extra)], regX);
+					break;
+
+				case i26:	// load rX with element of Coefficient Matrix
+					copy64(regX, (union union_64 *)&matrix_c[(uint16_t)(extra)]);
+					break;
+
+				case i27:	// store Coefficient Matrix rX
+					copy64((union union_64 *)&matrix_c[(uint16_t)(extra)], regX);
+					break;
+
+#endif // defined(useMatrixMath)
+#ifdef useIsqrt
+				case i28:	// integer square root
+					regX->ui[0] = iSqrt(regX->ui[0]);
+					break;
+
+#endif // useIsqrt
+				case i29:	// shift rX left
 					SWEET64processorFlags &= ~(SWEET64carryFlag);
 					shl64(regX);
 					break;
 
-				case i25:	// shift rX right
+				case i30:	// shift rX right
 					shr64(regX);
 					break;
 
-				case i26:	// BCD adjust
+				case i31:	// BCD adjust
 					s64BCDptr = s64BCDformatList;
 
 					while (operand)
@@ -529,11 +563,23 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 					}
 
-
 					break;
 
 				default:	// invalid ixx code detected, exit program
 					loopFlag = 0;
+					break;
+
+			}
+
+			switch (opcodeSuffix & ixxMask) // enable interrupts, according to ixx
+			{
+
+				case i07:	// load rX with volatile
+				case i08:	// store volatile rX
+				case i18:	// load rX with trip variable
+				case i19:	// store trip variable rX
+					SREG = oldSREG; // restore interrupt flag status
+				default:
 					break;
 
 			}
