@@ -346,7 +346,6 @@ Logging outputs
 #include "m_twi.h"
 #include "m_usb.h"
 #include "m_input.h"
-#include "m_output.h"
 #include "m_lcd.h"
 #include "functions.h"
 #include "feature_settings.h"
@@ -357,12 +356,26 @@ Logging outputs
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 
+// This is where direct-ported (not analog) pushbutton definitions should go
+
 #if defined(__AVR_ATmega32U4__)
 #ifndef PRTIM4
 #define PRTIM4 4
 
 #endif // PRTIM4
 #endif // defined(__AVR_ATmega32U4__)
+
+const char * findStr(const char * str, uint8_t strIdx);
+static void printStatusMessage(const char * s);
+static void printStatusMessage(const char * s, uint8_t strIdx);
+void doNothing(void);
+void noSupport(void);
+void initStatusLine(void);
+void execStatusLine(void);
+char findDigit(uint8_t value, char &zeroChar);
+unsigned long str2ull(char * strBuffer);
+char * ull2str(uint8_t prgmIdx, char * strBuffer, uint8_t decimalPlaces);
+char * formatDecimal(char * strBuffer, uint8_t windowLength, uint8_t decimalPlaces, uint8_t decimalFlag);
 uint8_t mainScreenDisplayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged); /* Main screen section */
 void doReturnToMainScreen(void);
 void doNextBright(void);
@@ -386,13 +399,22 @@ namespace peripheral /* MPGuino human interface I/O peripheral device prototype 
 
 	static void initMain(void);
 	static void shutdownMain(void);
+	static void initButton(void);
+	static void shutdownButton(void);
 	static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
+#if useAnalogButtons || useDebugTerminal
+	static void injectButton(uint8_t buttonValue);
+#endif // useAnalogButtons || useDebugTerminal
 #ifdef useExpansionPins
 	static void initExpansionPin(void);
 	static void shutdownExpansionPin(void);
 	static void outputExpansionPin1(uint8_t pin);
 	static void outputExpansionPin2(uint8_t pin);
 #endif // useExpansionPins
+#if defined(__AVR_ATmega32U4__)
+	static void initUSB(void);
+	static void shutdownUSB(void);
+#endif // defined(__AVR_ATmega32U4__)
 #ifdef useStatusLEDpins
 	static void initStatusLED(void);
 	static void shutdownStatusLED(void);
@@ -433,8 +455,26 @@ namespace menu /* Top-down menu selector section prototype */
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
 	static void entry(void);
 	static void select(void);
-	static void doNothing(void);
-	static void noSupport(void);
+
+};
+
+namespace text /* text string output section prototype */
+{
+
+	static void gotoXY(interfaceDevice &dev, uint8_t x, uint8_t y);
+	static uint8_t charOut(interfaceDevice &dev, uint8_t chr);
+
+	static void setModeOnCondition(interfaceDevice &dev, uint8_t condition, uint8_t odvFlag);
+	static void stringOut(interfaceDevice &dev, char * str);
+	static void stringOut(interfaceDevice &dev, const char * str);
+	static void stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
+	static void newLine(interfaceDevice &dev);
+	static void hexNybbleOut(interfaceDevice &dev, uint8_t val);
+	static void hexByteOut(interfaceDevice &dev, uint8_t val);
+	static void hexWordOut(interfaceDevice &dev, uint16_t val);
+	static void hexDWordOut(interfaceDevice &dev, uint32_t val);
+	static void hexLWordOut(interfaceDevice &dev, uint64_t * val);
+	static uint8_t numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 
 };
 
@@ -445,6 +485,12 @@ static const char titleMPGuino[] PROGMEM = {
 static const char dateMPGuino[] PROGMEM = {
 	"2023-MAR-18\r"
 };
+
+const char overFlowStr[] PROGMEM = "----------";
+const char overFlow9Str[] PROGMEM = "9999999999";
+
+const uint8_t dfAdjustWindow =		0b00000001;
+const uint8_t dfOverflow9s =		0b10000000;
 
 // Menu display / screen cursor support section
 
@@ -560,11 +606,21 @@ const uint8_t mainScreenDisplayFormatSize = displayPageCount * 4;
 typedef struct
 {
 
+	uint8_t buttonCode;
+	void (* buttonCommand)(void);
+
+} buttonVariable;
+
+typedef struct
+{
+
 	uint8_t menuIndex;
 	uint8_t modeIndex;
 	uint8_t modeYcount;
 	uint8_t modeXcount;
 	displayHandlerFunc screenDisplayHandler;
+//	void (* modeDisplay)(void);
+//	void (* modeCursorUpdate)(void);
 	const buttonVariable (* modeButtonList);
 
 } modeInformation;
@@ -575,14 +631,14 @@ static const buttonVariable bpListMenu[] PROGMEM = {
 		,{btnShortPressD,	cursor::shortRight}
 		,{btnShortPressU,	cursor::shortLeft}
 		,{btnLongPressU,	doNextBright}
-		,{btnShortPressL,	menu::doNothing}
+		,{btnShortPressL,	doNothing}
 		,{btnShortPressR,	menu::select}
 #else // useButtonCrossConfig
 		,{btnShortPressR,	cursor::shortRight}
 		,{btnShortPressL,	cursor::shortLeft}
 		,{btnLongPressC,	doNextBright}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 static const buttonVariable bpListMain[] PROGMEM = {
@@ -626,7 +682,7 @@ static const buttonVariable bpListMain[] PROGMEM = {
 		,{btnLongPressLCR,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 static const buttonVariable bpListSetting[] PROGMEM = {
@@ -648,7 +704,7 @@ static const buttonVariable bpListSetting[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp, 		menu::noSupport}
+	,{buttonsUp, 		noSupport}
 };
 
 static const buttonVariable bpListParameterEdit[] PROGMEM = {
@@ -674,7 +730,7 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 		,{btnLongPressLC,	parameterEdit::readMaxValue}
 		,{btnShortPressC,	parameterEdit::changeDigitUp}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #ifdef useBigDigitDisplay
@@ -709,7 +765,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useBigDigitDisplay
@@ -747,7 +803,7 @@ static const buttonVariable bpListClockShow[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 static const buttonVariable bpListClockSet[] PROGMEM = {
@@ -764,7 +820,7 @@ static const buttonVariable bpListClockSet[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnShortPressC,	clockSet::changeDigitUp}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useClockDisplay
@@ -794,7 +850,7 @@ static const buttonVariable bpListCPUmonitor[] PROGMEM = {
 		,{btnLongPressLC,	tripSupport::resetTank}
 	#endif // usePartialRefuel
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useCPUreading
@@ -814,7 +870,7 @@ static const buttonVariable bpListPartialRefuel[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnShortPressC,	partialRefuel::select}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // usePartialRefuel
@@ -836,13 +892,13 @@ static const buttonVariable bpListMiscViewer[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
 #ifdef useTestButtonValues
 static const buttonVariable bpListButtonView[] PROGMEM = {
-	 {buttonsUp,		menu::doNothing}
+	 {buttonsUp,		doNothing}
 };
 
 #endif // useTestButtonValues
@@ -859,7 +915,7 @@ static const buttonVariable bpListTripSave[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnLongPressC,	tripSupport::select}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useSavedTrips
@@ -901,7 +957,7 @@ static const buttonVariable bpListBarGraph[] PROGMEM = {
 		,{btnLongPressLR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useBarGraph
@@ -911,21 +967,21 @@ static const buttonVariable bpListScreenEdit[] PROGMEM = {
 	{btnShortPressU,	doScreenEditBump}
 	,{btnShortPressD,	doCursorUpdateScreenEdit}	// revert screen format value
 	,{btnLongPressU,	doSaveScreen}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useScreenEditor
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useCoastDownCalculator
@@ -935,21 +991,21 @@ static const buttonVariable bpListScreenEdit[] PROGMEM = {
 	{btnShortPressC,	doScreenEditBump}
 	,{btnLongPressLR,	doCursorUpdateScreenEdit}	// revert screen format value
 	,{btnLongPressC,	doSaveScreen}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useScreenEditor
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		menu::noSupport}
+	,{buttonsUp,		noSupport}
 };
 
 #endif // useCoastDownCalculator
@@ -1050,10 +1106,10 @@ static const modeInformation screenParameters[(unsigned int)(menuTotalSize)] PRO
 	,{timeoutSettingsScreenIdx,		timeoutSettingsScreenIdx | 0x80,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler,			bpListSetting}
 	,{miscSettingsScreenIdx,		miscSettingsScreenIdx | 0x80,		1,					eePtrSettingsMiscLen,		settings::displayHandler,			bpListSetting}
 #ifdef useDragRaceFunction
-	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	menu::doNothing,	bpListDragRace}
+	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	doNothing,	bpListDragRace}
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
-	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	menu::doNothing,	bpListCoastdown}
+	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	doNothing,	bpListCoastdown}
 #endif // useCoastDownCalculator
 #ifdef useSimulatedFIandVSS
 	,{debugReadingIdx,				debugReadingIdx | 0x80,				1,					4,							debugReading::displayHandler,		bpListMiscViewer}
@@ -1151,21 +1207,6 @@ static void menu::select(void)
 	i = screenCursor[(unsigned int)(menuScreenIdx)];
 
 	cursor::moveAbsolute(pgm_read_byte(&screenParameters[(unsigned int)(i)].menuIndex), 255);
-
-}
-
-static void menu::doNothing(void)
-{
-}
-
-static void menu::noSupport(void)
-{
-
-	initStatusLine();
-	text::stringOut(devLCD, PSTR("Btn 0x"));
-	text::hexByteOut(devLCD, buttonPress);
-	text::stringOut(devLCD, PSTR(" Pressed"));
-	execStatusLine();
 
 }
 
@@ -1351,6 +1392,475 @@ static void cursor::longRight(void)
 {
 
 	cursor::moveRelative(1, 0); // go to next option in next level
+
+}
+
+static void printStatusMessage(const char * s)
+{
+
+	initStatusLine();
+	text::stringOut(devLCD, s);
+	execStatusLine();
+
+}
+
+static void printStatusMessage(const char * s, uint8_t strIdx)
+{
+
+	printStatusMessage(findStr(s, strIdx));
+
+}
+
+void doNothing(void)
+{
+}
+
+void noSupport(void)
+{
+
+	initStatusLine();
+	text::stringOut(devLCD, PSTR("Btn 0x"));
+	text::hexByteOut(devLCD, buttonPress);
+	text::stringOut(devLCD, PSTR(" Pressed"));
+	execStatusLine();
+
+}
+
+void initStatusLine(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	displayPauseCount = 0; // end hold delay countdown
+	timer0Command &= ~(t0cDisplayDelay); // cancel display delay
+
+	SREG = oldSREG; // restore interrupt flag status
+
+#ifdef blankScreenOnMessage
+	text::charOut(devLCD, 0x0C); // clear the entire screen
+#else // blankScreenOnMessage
+	text::gotoXY(devLCD, 0, 0); // go to the first line
+#endif // blankScreenOnMessage
+
+}
+
+void execStatusLine(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	displayPauseCount = holdDelay; // start hold delay countdown
+	timer0Command |= (t0cDisplayDelay); // make display delay active
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+const char * findStr(const char * str, uint8_t strIdx)
+{
+
+	uint8_t c;
+
+	while (strIdx)
+	{
+
+		do c = pgm_read_byte(str++);
+		while ((c) && (c != 0x0D));
+
+		strIdx--;
+
+	}
+
+	return str;
+
+}
+
+/* text string output section */
+
+static const uint8_t odvFlagCRLF =				0b00000100;
+static const uint8_t odvFlagShootBlanks =		0b00000010;
+static const uint8_t odvFlagEnableOutput =		0b00000001;
+
+static void text::newLine(interfaceDevice &dev)
+{
+
+	charOut(dev, 0x0D);
+
+}
+
+static void text::gotoXY(interfaceDevice &dev, uint8_t xPos, uint8_t yPos)
+{
+
+	charOut(dev, 0x80 + yPos * 20 + xPos);
+
+}
+
+static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
+{
+
+	uint8_t retVal;
+
+	retVal = 1;
+
+	if (dev.chrOut)
+	{
+
+		switch (chr)
+		{
+
+			case 0x00:	// defined as end-of-string
+				dev.controlFlags |= (odvFlagEnableOutput);
+				retVal = 0;
+				break;
+
+			case 0xEB:	// disable device output for metric mode
+				if (metricFlag & metricMode) dev.controlFlags &= ~(odvFlagEnableOutput);
+				else dev.controlFlags |= (odvFlagEnableOutput);
+				break;
+
+			case 0xEC: // toggle device output enable
+				dev.controlFlags ^= (odvFlagEnableOutput);
+				break;
+
+			case 0xED: // enable device output
+				dev.controlFlags |= (odvFlagEnableOutput);
+				break;
+
+			case 0xEE:	// disable device output
+				dev.controlFlags &= ~(odvFlagEnableOutput);
+				break;
+
+			case 0x0D:	// also defined as end of string
+				retVal = 0;
+				dev.controlFlags |= (odvFlagEnableOutput);
+				dev.chrOut(0x0D);
+				if (dev.controlFlags & odvFlagCRLF) dev.chrOut(0x0A);
+				break;
+
+			case 0xF0 ... 0xF7: // print CGRAM character
+				chr &= 0x07;
+			case 0x20 ... 0x7F: // print normal character
+				if (dev.controlFlags & odvFlagEnableOutput)
+				{
+
+					if (dev.controlFlags & odvFlagShootBlanks) chr = ' ';
+					dev.chrOut(chr);
+
+				}
+				break;
+
+			default:
+				dev.chrOut(chr);
+				break;
+
+		}
+	}
+	else retVal = 0;
+
+	return retVal;
+
+}
+
+static void text::setModeOnCondition(interfaceDevice &dev, uint8_t condition, uint8_t odvFlag)
+{
+
+	if (condition) dev.controlFlags |= (odvFlag);
+	else dev.controlFlags &= ~(odvFlag);
+
+}
+
+static void text::stringOut(interfaceDevice &dev, char * str)
+{
+
+	while (charOut(dev, * str++));
+
+}
+
+static void text::stringOut(interfaceDevice &dev, const char * str)
+{
+
+	while (charOut(dev, pgm_read_byte(str++))) ;
+
+}
+
+static void text::stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx)
+{
+
+	stringOut(dev, findStr(str, strIdx));
+
+}
+
+static void text::hexNybbleOut(interfaceDevice &dev, uint8_t val)
+{
+
+	val &= 0x0F;
+	val |= 0x30;
+	if (val > 0x39) val += 0x07;
+	charOut(dev, val);
+
+}
+
+static void text::hexByteOut(interfaceDevice &dev, uint8_t val)
+{
+
+	hexNybbleOut(dev, val >> 4);
+	hexNybbleOut(dev, val);
+
+}
+
+static void text::hexWordOut(interfaceDevice &dev, uint16_t val)
+{
+
+	union union_16 * vee = (union union_16 *) &val;
+
+	for (uint8_t i = 1; i < 2; i--) hexByteOut(dev, vee->u8[i]);
+
+}
+
+static void text::hexDWordOut(interfaceDevice &dev, uint32_t val)
+{
+
+	union union_32 * vee = (union union_32 *) &val;
+
+	for (uint8_t i = 3; i < 4; i--) hexByteOut(dev, vee->u8[i]);
+
+}
+
+static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
+{
+
+	union union_64 * vee = (union union_64 *) val;
+
+	for (uint8_t i = 7; i < 8; i--) hexByteOut(dev, vee->u8[i]);
+
+}
+
+static uint8_t text::numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+{
+
+	calcFuncObj thisCalcFuncObj;
+
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag); // perform the required decimal formatting
+	stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
+
+	return thisCalcFuncObj.calcFmtIdx;
+
+}
+
+static const uint8_t prgmMultiplyBy100[] PROGMEM = {
+	instrMul2byByte, 100,								// multiply result by 100
+	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmMultiplyBy10[] PROGMEM = {
+	instrMul2byByte, 10,								// multiply result by 10
+	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
+	instrDone											// exit to caller
+};
+
+unsigned long str2ull(char * strBuffer)
+{
+
+	uint8_t c;
+	uint8_t n;
+
+	uint8_t x;
+	uint8_t f;
+	uint8_t loopFlag;
+
+	x = 0;
+	n = 0;
+	f = 1;
+	loopFlag = 1;
+
+	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
+
+	while ((loopFlag) && (x < 17))
+	{
+
+		if ((c = strBuffer[(unsigned int)(x++)])) // if a non-NULL character is read in
+		{
+
+			n *= 10; // shift accumulator left one digit
+			if (c != ' ') n += (uint8_t)(c) - 48; // if character is not a leading space, go add it to accumulator
+			f= 1 - f; // flip-flop the SWEET64 addition flag
+
+			if (f)
+			{
+
+				SWEET64::runPrgm(prgmMultiplyBy100, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 100 + n
+				n = 0;
+
+			}
+
+		}
+		else loopFlag = 0; // otherwise, terminate loop upon receipt of a NULL character
+
+	}
+
+	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
+
+	return ((union union_64 *)(&s64reg[s64reg2]))->ul[0];
+
+}
+
+char findDigit(uint8_t value, char &zeroChar)
+{
+
+	if (value)
+	{
+		value += '0';
+		zeroChar = '0';
+	}
+	else value = zeroChar;
+
+	return value;
+
+}
+
+char * ull2str(uint8_t prgmIdx, char * strBuffer, uint8_t decimalPlaces)
+{
+
+	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
+
+	uint8_t b;
+	char c;
+	uint8_t l;
+	uint8_t y;
+	char z;
+
+	SWEET64::doCalculate(decimalPlaces, prgmIdx); // call SWEET64 routine to perform decimal point rounding to next nearest decimal place
+
+	l = tmpPtr2->u8[6];	// load total length of binary-coded decimal bytes of converted number
+
+	if (l == 255) strcpy_P(strBuffer, overFlowStr); // if length is 255, this number overflowed
+	else
+	{
+
+		z = (char)(tmpPtr2->u8[7]);	// load leading zero character
+		y = 0;
+
+		for (uint8_t x = 0; x < l; x++) // go through all of the binary-coded decimal bytes of converted number
+		{
+
+			b = tmpPtr2->u8[(unsigned int)(x)];	// load a binary-coded decimal byte of number
+
+			c = findDigit(b / 10, z);		// perform leading zero conversion on 10's place digit
+			strBuffer[(unsigned int)(y++)] = c;	// store 10's place digit in string buffer
+
+			c = findDigit(b % 10, z);		// perform leading zero conversion on 1's place digit
+			strBuffer[(unsigned int)(y++)] = c;	// store 1's place digit in string buffer
+
+		}
+
+		if (c == ' ') strBuffer[(unsigned int)(y - 1)] = '0'; // ensure that at least one numeric digit exists
+		strBuffer[(unsigned int)(y)] = 0; // mark end of string buffer with a NULL character
+
+	}
+
+	return strBuffer; // return pointer to string buffer containing the number
+
+}
+
+char * formatDecimal(char * strBuffer, uint8_t windowLength, uint8_t decimalPlaces, uint8_t decimalFlag) // format number for output
+{
+
+	uint8_t x;
+	uint8_t y;
+	uint8_t z; // pointer to end of integer digits in string
+	uint8_t c; // temporary character storage
+	uint8_t i; // integer digit count
+
+	ull2str(tRoundOffNumber, strBuffer, decimalPlaces); // perform rounding of number to nearest decimal place, then format for ASCII output
+
+	if (windowLength > 11) windowLength = 0; // if window length is larger than the contents of the output string buffer, zero out window length
+
+	if (strBuffer[2] != '-') // if number did not overflow
+	{
+
+		x = 6 + decimalPlaces; // source string index
+		y = 10; // destination string index
+		i = 0;
+
+		while (y < 12) // loop through entire string buffer, insert padding and a decimal point as required, and preserve ending NULL
+		{
+
+			if (x < 10)
+			{
+
+				c = strBuffer[(unsigned int)(x)]; // read in a digit of formatted number from string buffer, bump down source string index by one
+
+				if ((x > 5) && (c == ' ')) c = '0'; // change 1's place and lower places leading spaces into leading zeros
+				if ((x == 6) && (decimalPlaces)) strBuffer[(unsigned int)(y--)] = '.'; // if a decimal position was specified, and at decimal point, insert it
+				if ((x < 7) && (c != ' ')) i++; // count the number of non-space integer characters
+
+				x--;
+
+			}
+			else c = ' '; // otherwise, pad front of number with extra spaces
+
+			strBuffer[(unsigned int)(y--)] = c; // store processed character back into string buffer, bump down destination string index by one
+
+		}
+
+		if (decimalPlaces) z = 10 - decimalPlaces; // point to either decimal point or to end of string
+		else z = 11; // results in pointing to first character past the 1's digit in both cases
+
+		if (windowLength)
+		{
+
+			if (i > windowLength) // if window length is smaller than the number of integer digits, overflow
+			{
+
+				x = 0; // signal 'do not perform string buffer move'
+				strcpy_P(strBuffer, overFlowStr); // copy overflow string to string buffer
+
+			}
+			else
+			{
+
+				if ((decimalFlag & dfAdjustWindow) && (i < windowLength)) windowLength++; // if variable window length, and window length > the # of integer digits, expand window to include decimal point
+
+				if ((i == windowLength) || ((i + 1) == windowLength)) x = z - windowLength;
+				else
+				{
+
+					x = z - i;
+					if ((x + windowLength) > 10) x = 11 - windowLength;
+
+				}
+
+			}
+
+		}
+		else // no window length specified, just eliminate leading spaces
+		{
+
+			x = z - i; // point to first integer character in string buffer
+			strBuffer[11] = 0; // mark new end of string buffer
+
+		}
+
+		if (x) for (y = 0; y < (12 - x); y++) strBuffer[(unsigned int)(y)] = strBuffer[(unsigned int)(y + x)]; // shift number left to remove unneeded leading spaces
+
+	}
+	else
+	{
+
+		if (decimalFlag & dfOverflow9s) strcpy_P(strBuffer, overFlow9Str);
+
+	}
+
+	if (windowLength) strBuffer[(unsigned int)(windowLength)] = 0; // mark new end of string buffer
+
+	return strBuffer;
 
 }
 
@@ -2084,9 +2594,9 @@ static void peripheral::initMain(void)
 	serial1::init();
 #endif // useSerial1Port
 #if defined(__AVR_ATmega32U4__)
-	USB::init();
+	initUSB();
 #endif // defined(__AVR_ATmega32U4__)
-	input::init();
+	initButton();
 	LCD::init();
 #ifdef useStatusLEDpins
 	initStatusLED();
@@ -2108,9 +2618,9 @@ static void peripheral::shutdownMain(void)
 #endif // useStatusLEDpins
 	changeBitFlags(timer0Command, t0cDisplayDelay, 0); // cancel any display delays in progress
 	LCD::shutdown(); // shut down the LCD display
-	input::shutdown();
+	shutdownButton();
 #if defined(__AVR_ATmega32U4__)
-	USB::shutdown();
+	shutdownUSB();
 #endif // defined(__AVR_ATmega32U4__)
 #ifdef useSerial1Port
 	serial1::shutdown();
@@ -2311,6 +2821,146 @@ static void peripheral::outputExpansionPin2(uint8_t pin)
 }
 
 #endif // useExpansionPins
+static void peripheral::initButton(void)
+{
+
+#ifdef useAdafruitRGBLCDshield
+	uint16_t MCP23017registers;
+#endif // useAdafruitRGBLCDshield
+	uint8_t oldSREG;
+
+#ifdef useAdafruitRGBLCDshield
+#if useTWIbuttons && useTWILCD
+	LCD::disableIntSample(); // disable TWI button sampling
+
+#endif // useTWIbuttons && useTWILCD
+	MCP23017registers = (uint16_t)(buttonMask);
+
+	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_IODIRx, (union_16 *)(&MCP23017registers)); // write out port direction (only buttons as input)
+	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_GPPUx, (union_16 *)(&MCP23017registers)); // write out pull-up resistor config (only buttons as input)
+	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_IPOLx, (union_16 *)(&MCP23017registers)); // write out input pin polarity config (only buttons as input)
+
+	adafruitRGBLCDsupport::setTransferMode(adaTWIbyteMode); // ensure address mode is in byte mode
+
+#if useTWIbuttons && useTWILCD
+	LCD::enableIntSample(); // enable TWI button sampling
+
+#endif // useTWIbuttons && useTWILCD
+#endif // useAdafruitRGBLCDshield
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+#ifdef useLegacyButtons
+#if defined(__AVR_ATmega2560__)
+	DIDR2 &= ~((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D)); // enable digital input on port K button pins
+
+	PORTK |= ((1 << PORTK5) | (1 << PORTK4) | (1 << PORTK3)); // enable port K button pullup resistors
+
+	PCMSK2 |= ((1 << PCINT21) | (1 << PCINT20) | (1 << PCINT19)); // enable port K button interrupts
+
+	PCICR |= (1 << PCIE2); // enable selected interrupts on port K
+
+	lastPINxState = PINK; // initialize last input pin state value so as to not erroneously detect a button press on start
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	DIDR0 &= ~((1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D)); // enable digital input on port C button pins
+
+	PORTC |= ((1 << PORTC5) | (1 << PORTC4) | (1 << PORTC3)); // enable port C button pullup resistors
+
+	PCMSK1 |= ((1 << PCINT13) | (1 << PCINT12) | (1 << PCINT11)); // enable port C button interrupts
+
+	PCICR |= (1 << PCIE1); // enable selected interrupts on port C
+
+	lastPINxState = PINC; // initialize last input pin state value so as to not erroneously detect a button press on start
+
+#endif // defined(__AVR_ATmega328P__)
+#endif // useLegacyButtons
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void peripheral::shutdownButton(void)
+{
+}
+
+#if defined(useAnalogButtons) || defined(useDebugTerminal)
+static void peripheral::injectButton(uint8_t buttonValue)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	thisButtonState = buttonValue;
+	timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+#endif // useAnalogButtons || useDebugTerminal
+#if defined(__AVR_ATmega32U4__)
+static void peripheral::initUSB(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	PRR1 &= ~(1 << PRUSB); // turn on USB hardware
+
+	UHWCON = (1 << UVREGE); // enable USB pad regulator
+
+	USBCON = ((1 << USBE) | (1 << FRZCLK)); // enable USB controller, disable clock inputs
+
+#if F_CPU == 16000000UL
+	PLLCSR = ((1 << PINDIV) | (1 << PLLE)); // set PLL input prescaler for 16 MHz clock source, and enable PLL
+#elif F_CPU == 8000000UL
+	PLLCSR = (1 << PLLE); // set PLL input prescaler for 8 MHz clock source, and enable PLL
+#else // F_CPU == 16000000UL
+#error *** F_CPU clock rate not supported!!! ***
+#endif // F_CPU == 16000000UL
+
+	while (!(PLLCSR & (1 << PLOCK))); // wait for PLL lock
+
+	USBCON = ((1 << USBE) | (1 << OTGPADE)); // keep USB controller enabled, enable clock inputs, enable VBUS pad
+
+	UDCON = 0; // select USB high speed mode
+
+	usbConfiguration = 0;
+
+	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void peripheral::shutdownUSB(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	UDIEN = 0; // disable all USB interrupts
+
+	USBCON = 0; // disable USB controller
+
+	PLLCSR = 0; // disable PLL
+
+	UHWCON = 0; // disable USB pad regulator
+
+	PRR1 |= (1 << PRUSB); // turn off USB hardware
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+#endif // defined(__AVR_ATmega32U4__)
 #ifdef useStatusLEDpins
 static void peripheral::initStatusLED(void)
 {
@@ -2620,7 +3270,7 @@ static void idleProcess(void)
 #ifdef useTestAnalogButtonIdx
 				thisButtonIdx = x;
 #endif //  useTestAnalogButtonIdx
-				input::inject(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
+				peripheral::injectButton(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
 				break;
 
 			}
@@ -2738,7 +3388,94 @@ static void idleProcess(void)
 
 #endif // useDragRaceFunction
 #ifdef useSimulatedFIandVSS
-	debugReading::idleProcess();
+	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
+	{
+
+		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
+
+		debugFIPidx++;
+		if (debugFIPidx >= debugFIPlength)
+		{
+
+			debugFIPidx = 0;
+			debugFIPstate++;
+			debugFIPstate &= 3;
+
+		}
+
+		switch (debugFIPstate)
+		{
+
+			case 0:
+				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
+				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
+				debugFIPWgoodTickLength = debugFIPtickLength - 63;
+				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
+				break;
+
+			case 1:
+				break;
+
+			case 2:
+				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+				debugFIPWgoodTickLength = debugFIPtickLength - 63;
+				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
+				break;
+
+			case 3:
+				break;
+
+			default:
+				break;
+
+		}
+
+		if (debugFIPWreadTickLength > debugFIPWgoodTickLength) debugFIPWreadTickLength = debugFIPWgoodTickLength;
+		else debugFIPWtickLength = debugFIPWreadTickLength;
+
+	}
+
+	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
+	{
+
+		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
+
+		debugVSSidx++;
+		if (debugVSSidx >= debugVSSlength)
+		{
+
+			debugVSSidx = 0;
+			debugVSSstate++;
+			debugVSSstate &= 3;
+
+		}
+
+		switch (debugVSSstate)
+		{
+
+			case 0:
+				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
+				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
+				break;
+
+			case 1:
+				break;
+
+			case 2:
+				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
+				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
+				break;
+
+			case 3:
+				break;
+
+			default:
+				break;
+
+		}
+
+	}
 
 #endif // useSimulatedFIandVSS
 #ifdef useDebugCPUreading
@@ -2910,7 +3647,7 @@ int main(void)
 	rawEOCidleTripIdx = raw0eocIdleTripIdx;
 #endif // trackIdleEOCdata
 
-	tripVar::init();
+	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
 
 #ifdef useDragRaceFunction
 	accelerationFlags &= ~accelTestClearFlags;
@@ -2923,12 +3660,16 @@ int main(void)
 
 	j = EEPROM::powerUpCheck();
 
-	peripheral::initMain(); // initialize all human interface peripherals
-
 	timer0DelayCount = delay1500msTick; // request a set number of timer tick delays equivalent to 1.5 seconds
 	timer0Command |= (t0cDoDelay); // signal request to timer
 
+#ifdef useWindowTripFilter
+	windowTripFilterReset();
+
+#endif // useWindowTripFilter
 	sei();
+
+	peripheral::initMain(); // initialize all human interface peripherals
 
 #ifdef useSavedTrips
 	i = tripSupport::doAutoAction(1);
@@ -3049,7 +3790,7 @@ int main(void)
 			{
 
 #ifdef useWindowTripFilter
-				tripVar::resetWindowFilter(); // reset the window trip filter
+				windowTripFilterReset(); // reset the window trip filter
 
 #endif // useWindowTripFilter
 #ifdef useSavedTrips

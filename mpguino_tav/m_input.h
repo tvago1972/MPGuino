@@ -1,22 +1,3 @@
-namespace input /* Hardware input section prototype */
-{
-
-	static void init(void);
-	static void shutdown(void);
-#if useAnalogButtons || useDebugTerminal
-	static void inject(uint8_t buttonValue);
-#endif // useAnalogButtons || useDebugTerminal
-
-};
-
-typedef struct
-{
-
-	uint8_t buttonCode;
-	void (* buttonCommand)(void);
-
-} buttonVariable;
-
 #ifdef useTWIbuttons
 #ifdef useAdafruitRGBLCDshield
 #define useButtonCrossConfig true

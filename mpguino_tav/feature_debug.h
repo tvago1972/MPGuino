@@ -31,7 +31,6 @@ namespace debugReading /* VSS / fuel injector on-board simulator support section
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
 	static void configurePorts(void);
-	static void idleProcess(void);
 
 }
 

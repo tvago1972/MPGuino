@@ -1,25 +1,3 @@
-static void tripVar::init(void)
-{
-
-	for (uint8_t x = 0; x < tripSlotCount; x++) reset(x);
-
-#if defined(useWindowTripFilter)
-	resetWindowFilter();
-
-#endif // defined(useWindowTripFilter)
-}
-
-#if defined(useWindowTripFilter)
-static void tripVar::resetWindowFilter(void)
-{
-
-	wtpCurrentIdx = windowTripFilterIdx;
-
-	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
-
-}
-
-#endif // defined(useWindowTripFilter)
 #ifdef useEEPROMtripStorage
 static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 {
@@ -262,6 +240,17 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 
 }
 
+#ifdef useWindowTripFilter
+void windowTripFilterReset(void)
+{
+
+	wtpCurrentIdx = windowTripFilterIdx;
+
+	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
+
+}
+
+#endif // useWindowTripFilter
 static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos)
 {
 

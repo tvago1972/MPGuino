@@ -667,7 +667,7 @@ static void terminal::mainProcess(void)
 						{
 
 							case ('I' | tmSomethingReadIn):
-								input::inject(terminalByte); // inject the parsed button press value into timer0
+								peripheral::injectButton(terminalByte); // inject the parsed button press value into timer0
 								terminalState = 14;
 								terminalMode &= ~(tmSomethingReadIn); // go parse another button press value
 								break;
@@ -881,7 +881,7 @@ static void terminal::mainProcess(void)
 		case 14:	// wait for injected buttonpress to be accepted into timer0
 			if (timer0Command & t0cProcessButton) break;
 			terminalState++;
-			input::inject(buttonsUp); // inject a buttons-up press into timer0
+			peripheral::injectButton(buttonsUp); // inject a buttons-up press into timer0
 			break;
 
 		case 15:	// wait for injected buttonpress to be accepted into timer0
@@ -1128,100 +1128,6 @@ static void debugReading::configurePorts(void)
 	else timer1Command &= ~(t1cEnableDebug);
 
 	SREG = oldSREG; // restore state of interrupt flag
-
-}
-
-static void debugReading::idleProcess(void)
-{
-
-	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
-	{
-
-		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
-
-		debugFIPidx++;
-		if (debugFIPidx >= debugFIPlength)
-		{
-
-			debugFIPidx = 0;
-			debugFIPstate++;
-			debugFIPstate &= 3;
-
-		}
-
-		switch (debugFIPstate)
-		{
-
-			case 0:
-				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
-				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
-				debugFIPWgoodTickLength = debugFIPtickLength - 63;
-				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
-				break;
-
-			case 1:
-				break;
-
-			case 2:
-				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-				debugFIPWgoodTickLength = debugFIPtickLength - 63;
-				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
-				break;
-
-			case 3:
-				break;
-
-			default:
-				break;
-
-		}
-
-		if (debugFIPWreadTickLength > debugFIPWgoodTickLength) debugFIPWreadTickLength = debugFIPWgoodTickLength;
-		else debugFIPWtickLength = debugFIPWreadTickLength;
-
-	}
-
-	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
-	{
-
-		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
-
-		debugVSSidx++;
-		if (debugVSSidx >= debugVSSlength)
-		{
-
-			debugVSSidx = 0;
-			debugVSSstate++;
-			debugVSSstate &= 3;
-
-		}
-
-		switch (debugVSSstate)
-		{
-
-			case 0:
-				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
-				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
-				break;
-
-			case 1:
-				break;
-
-			case 2:
-				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
-				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
-				break;
-
-			case 3:
-				break;
-
-			default:
-				break;
-
-		}
-
-	}
 
 }
 

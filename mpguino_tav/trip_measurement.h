@@ -1,13 +1,12 @@
+#ifdef useWindowTripFilter
+void windowTripFilterReset(void);
+#endif // useWindowTripFilter
 static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos);
 
 namespace tripVar /* trip data collection basic function prototype */
 {
 
-	static void init(void);
 	static void reset(uint8_t tripIdx);
-#ifdef useWindowTripFilter
-	static void resetWindowFilter(void);
-#endif // useWindowTripFilter
 	static void transfer(uint8_t srcTripIdx, uint8_t destTripIdx);
 	static void update(uint8_t srcTripIdx, uint8_t destTripIdx);
 	static void add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
