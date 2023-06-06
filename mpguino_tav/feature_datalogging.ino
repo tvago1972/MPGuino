@@ -82,7 +82,7 @@ void doOutputJSONnumber(union union_64 * an, uint8_t decimalPlaces, const char *
 void doOutputJSONnumber(uint8_t decimalPlaces, const char * labelStr)
 {
 
-	text::stringOut(devLogOutput, formatDecimal(mBuff1, 0, decimalPlaces, dfOverflow9s)); // output the number part
+	text::stringOut(devLogOutput, ull2str(mBuff1, decimalPlaces, 0, dfOverflow9s)); // output the number part
 	text::stringOut(devLogOutput, labelStr); // output the label part
 
 }
@@ -104,7 +104,7 @@ void doOutputJSON(void) //skybolt added json output function
 	if (timer0Status & t0sOutputJSON) // replaced timerChecker with this because systemInfo::cycles0() is a compile-time option that could break JSON output if #useCPUreading is not set
 	{
 
-		peripheral::changeBitFlags(timer0Status, t0sOutputJSON, 0); // clear JSON subtitle change timer command
+		changeBitFlags(timer0Status, t0sOutputJSON, 0); // clear JSON subtitle change timer command
 
 		if (!(--subtitleCount1)) subtitleCount1 = 2;
 #ifdef useDragRaceFunction

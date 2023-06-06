@@ -36,10 +36,10 @@ const uint8_t pSizeAlternateFE =			1;
 #ifdef useFuelCost
 const uint8_t pSizeFuelUnitCost =			24;
 #endif // useFuelCost
-#ifdef useExpansionPins
-const uint8_t pSizeExpansionPin1Mode =		3;
-const uint8_t pSizeExpansionPin2Mode =		3;
-#endif // useExpansionPins
+#if defined(useOutputPins)
+const uint8_t pSizeOutputPin1Mode =			3;
+const uint8_t pSizeOutputPin2Mode =			3;
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 const uint8_t pSizeVoltageOffset =			12;
 #endif // useCarVoltageOutput
@@ -198,11 +198,11 @@ const unsigned int pAddressAlternateFE =				pAddressMetricMode + byteSize(pSizeM
 const unsigned int pAddressFuelUnitCost =				nextAllowedValue;
 #define nextAllowedValue pAddressFuelUnitCost + byteSize(pSizeFuelUnitCost)
 #endif // useFuelCost
-#ifdef useExpansionPins
-const uint8_t pAddressExpansionPin1Mode =				nextAllowedValue;
-const uint8_t pAddressExpansionPin2Mode =				pAddressExpansionPin1Mode + byteSize(pSizeExpansionPin1Mode);
-#define nextAllowedValue pAddressExpansionPin2Mode + byteSize(pSizeExpansionPin2Mode)
-#endif // useExpansionPins
+#if defined(useOutputPins)
+const uint8_t pAddressOutputPin1Mode =					nextAllowedValue;
+const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
+#define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
@@ -399,11 +399,11 @@ const uint8_t pAlternateFEidx =				pMetricModeIdx + 1;
 const uint8_t pCostPerQuantity =			nextAllowedValue;
 #define nextAllowedValue pCostPerQuantity + 1
 #endif // useFuelCost
-#ifdef useExpansionPins
-const uint8_t pExpansionPin1Mode =			nextAllowedValue;
-const uint8_t pExpansionPin2Mode =			pExpansionPin1Mode + 1;
-#define nextAllowedValue pExpansionPin2Mode + 1
-#endif // useExpansionPins
+#if defined(useOutputPins)
+const uint8_t pOutputPin1Mode =				nextAllowedValue;
+const uint8_t pOutputPin2Mode =				pOutputPin1Mode + 1;
+#define nextAllowedValue pOutputPin2Mode + 1
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 const uint8_t pVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
@@ -640,10 +640,10 @@ const char parmLabels[] PROGMEM = {
 	"Price*1000/" "\xEB" "USgal" "\xEC" "\xED" "\r"
 #endif // useImperialGallon
 #endif // useFuelCost
-#ifdef useExpansionPins
+#if defined(useOutputPins)
 	"OutPtPin 1 Mode\r"
 	"OutPtPin 2 Mode\r"
-#endif // useExpansionPins
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 	"V(diode)*1000\r"
 #endif // useCarVoltageOutput
@@ -818,10 +818,10 @@ const uint8_t paramsLength[] PROGMEM = {
 #ifdef useFuelCost
 	,(pSizeFuelUnitCost & 0x07)													// Price per unit volume of fuel
 #endif // useFuelCost
-#ifdef useExpansionPins
-	,(pSizeExpansionPin1Mode & 0x07)											// Output Pin 1 mode
-	,(pSizeExpansionPin2Mode & 0x07)											// Output Pin 2 mode
-#endif // useExpansionPins
+#if defined(useOutputPins)
+	,(pSizeOutputPin1Mode & 0x07)												// Output Pin 1 mode
+	,(pSizeOutputPin2Mode & 0x07)												// Output Pin 2 mode
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 	,(pSizeVoltageOffset & 0x07)												// diode offset from V(alternator)
 #endif // useCarVoltageOutput
@@ -976,10 +976,10 @@ const uint8_t paramAddrs[] PROGMEM = {
 #ifdef useFuelCost
 	,(uint8_t)(pAddressFuelUnitCost)				// Price per unit volume of fuel
 #endif // useFuelCost
-#ifdef useExpansionPins
-	,(uint8_t)(pAddressExpansionPin1Mode)			// Output Pin 1 mode
-	,(uint8_t)(pAddressExpansionPin2Mode)			// Output Pin 2 mode
-#endif // useExpansionPins
+#if defined(useOutputPins)
+	,(uint8_t)(pAddressOutputPin1Mode)				// Output Pin 1 mode
+	,(uint8_t)(pAddressOutputPin2Mode)				// Output Pin 2 mode
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 	,(uint8_t)(pAddressVoltageOffset)				// diode offset from V(alternator)
 #endif // useCarVoltageOutput
@@ -1135,10 +1135,10 @@ const uint32_t params[] PROGMEM = {
 #ifdef useFuelCost
 	,2710259			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
 #endif // useFuelCost
-#ifdef useExpansionPins
+#if defined(useOutputPins)
 	,0					// Output pin 1 mode
 	,0					// Output pin 2 mode
-#endif // useExpansionPins
+#endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
 	,700				// diode offset from V(alternator) (via meelis11)
 #endif // useCarVoltageOutput

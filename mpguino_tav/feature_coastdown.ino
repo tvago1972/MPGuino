@@ -91,7 +91,7 @@ void coastdown::goDisplay(void)
 		i = screenCursor[(unsigned int)(coastdownIdx)] + pCoefficientDidx;
 
 		SWEET64::runPrgm(prgmFetchParameterValue, i);
-		ull2str(tFormatToNumber, pBuff, 3);
+		ull2str(pBuff, 0, tFormatToNumber);
 
 		text::stringOut(devLCD, parmLabels, i); // print parameter name at top left
 		text::stringOut(devLCD, pBuff);

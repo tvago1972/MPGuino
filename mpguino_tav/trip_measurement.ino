@@ -1,42 +1,3 @@
-#ifdef useEEPROMtripStorage
-static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
-{
-
-	uint8_t retVal;
-
-	if (dataIdx < rvMeasuredCount) switch (tripIdx)
-		{
-
-			case EEPROMcurrentIdx:
-				retVal = pCurrTripVSSpulseIdx + dataIdx;
-				break;
-
-			case EEPROMtankIdx:
-				retVal = pTankTripVSSpulseIdx + dataIdx;
-				break;
-
-#ifdef trackIdleEOCdata
-			case EEPROMeocIdleCurrentIdx:
-				retVal = pCurrIEOCvssPulseIdx + dataIdx;
-				break;
-
-			case EEPROMeocIdleTankIdx:
-				retVal = pTankIEOCvssPulseIdx + dataIdx;
-				break;
-
-#endif // trackIdleEOCdata
-			default:
-				retVal = 0;
-				break;
-
-		}
-	else retVal = 0;
-
-	return retVal;
-
-}
-
-#endif // useEEPROMtripStorage
 static void tripVar::reset(uint8_t tripIdx)
 {
 
@@ -240,18 +201,120 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 
 }
 
-#ifdef useWindowTripFilter
-void windowTripFilterReset(void)
+#ifdef useEEPROMtripStorage
+static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 {
 
-	wtpCurrentIdx = windowTripFilterIdx;
+	uint8_t retVal;
 
-	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
+	if (dataIdx < rvMeasuredCount) switch (tripIdx)
+		{
+
+			case EEPROMcurrentIdx:
+				retVal = pCurrTripVSSpulseIdx + dataIdx;
+				break;
+
+			case EEPROMtankIdx:
+				retVal = pTankTripVSSpulseIdx + dataIdx;
+				break;
+
+#ifdef trackIdleEOCdata
+			case EEPROMeocIdleCurrentIdx:
+				retVal = pCurrIEOCvssPulseIdx + dataIdx;
+				break;
+
+			case EEPROMeocIdleTankIdx:
+				retVal = pTankIEOCvssPulseIdx + dataIdx;
+				break;
+
+#endif // trackIdleEOCdata
+			default:
+				retVal = 0;
+				break;
+
+		}
+	else retVal = 0;
+
+	return retVal;
 
 }
 
+#endif // useEEPROMtripStorage
+/* Trip save/restore/reset support section */
+
+static void tripSupport::init(void)
+{
+
+	rawTripIdx = raw0tripIdx;
+#ifdef trackIdleEOCdata
+	rawEOCidleTripIdx = raw0eocIdleTripIdx;
+#endif // trackIdleEOCdata
+
+	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
+
+}
+
+static void tripSupport::idleProcess(void)
+{
+
+	uint8_t oldSREG;
+	uint8_t i;
+	uint8_t j;
+	uint8_t k;
+	uint8_t m;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	i = rawTripIdx; // save old trip variable index
+	rawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
+
+#ifdef trackIdleEOCdata
+	j = rawEOCidleTripIdx; // save old EOC/idle trip variable index
+	rawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
+
+#endif // trackIdleEOCdata
+	SREG = oldSREG; // restore interrupt flag status
+
+	for (uint8_t x = 0; x < tUScount; x++)
+	{
+
+		k = translateTripIndex(tripUpdateSrcList, x) & 0x7F;
+		m = translateTripIndex(tripUpdateDestList, x);
+
+		if (m)
+		{
+
+			if (m & 0x80) tripVar::transfer(k, m & 0x7F);
+			else tripVar::update(k, m);
+
+		}
+
+	}
+
+	tripVar::reset(i); // reset old raw trip variable
+#ifdef trackIdleEOCdata
+	tripVar::reset(j); // reset old EOC/idle raw trip variable
+#endif // trackIdleEOCdata
+
+#ifdef useWindowTripFilter
+	if (awakeFlags & aAwakeOnVehicle)
+	{
+
+		if (EEPROM::readVal(pWindowTripFilterIdx))
+		{
+
+			wtpCurrentIdx++;
+			if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
+
+		}
+
+	}
+
 #endif // useWindowTripFilter
-static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos)
+}
+
+static uint8_t tripSupport::translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos)
 {
 
 #ifdef useBarFuelEconVsTime
@@ -314,8 +377,6 @@ static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tri
 	return i;
 
 }
-
-/* Trip save/restore/reset support section */
 
 #ifdef useSavedTrips
 static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
@@ -502,8 +563,64 @@ static void tripSupport::resetCurrent(void)
 
 }
 
+#ifdef useWindowTripFilter
+static void tripSupport::resetWindowFilter(void)
+{
+
+	wtpCurrentIdx = windowTripFilterIdx;
+
+	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
+
+}
+
+#endif // useWindowTripFilter
 #ifdef useChryslerMAPCorrection
 /* Chrysler returnless fuel pressure correction display section */
+
+static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
+	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
+	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
+	instrBranchIfLT, 3,								// if not, continue
+	instrLdRegByte, 0x02, 0,							// zero out result in register 2
+
+//cont1:
+	instrMul2byMain, mpAnalogMAPnumerIdx,				// perform conversion to get pressure units per volts value
+	instrDiv2byMain, mpAnalogMAPdenomIdx,				// divide by pressure units per volts value
+	instrAddEEPROMtoX, 0x02, pMAPsensorOffsetIdx,		// add pressure offset value from EEPROM
+	instrStRegMain, 0x02, mpMAPpressureIdx,				// store resulting MAP sensor reading
+#ifdef useChryslerBaroSensor
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
+	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
+	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
+	instrBranchIfLT, 3,								// if not, continue
+	instrLdRegByte, 0x02, 0,							// zero out result in register 2
+
+//cont1:
+	instrMul2byMain, mpAnalogBaroNumerIdx,				// convert to obtain pressure units per volts value
+	instrDiv2byMain, mpAnalogBaroDenomIdx,				// divide by pressure units per volts value
+	instrAddEEPROMtoX, 0x02, pBaroSensorOffsetIdx,		// add pressure offset value from EEPROM
+	instrStRegMain, 0x02, mpBaroPressureIdx,			// store resulting barometric sensor reading
+#endif // useChryslerBaroSensor
+	instrLdRegMain, 0x02, mpFuelPressureIdx,			// get fuel system differential pressure
+	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
+	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
+	instrStRegMain, 0x02, mpInjPressureIdx,				// store differential pressure across the fuel injector
+	instrMul2byConst, idxCorrectionFactor,				// set up for iSqrt
+	instrDiv2byMain, mpFuelPressureIdx,					// divide by the fuel system differential pressure
+	instrTestReg, 0x02,									// test whether overflow occurred
+	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it
+	instrIsqrt, 0x02,									// perform square root on result
+	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
+	instrDone,											// return to caller
+
+//cont3:
+	instrLdRegConst, 0x02, idxCorrectionFactor,
+	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
+	instrDone											// return to caller
+};
 
 const uint8_t pressureCorrectScreenFormats[4][2] PROGMEM = {
 	 {(mpMAPpressureIdx - mpMAPpressureIdx),	0x80 | tPressureChannel}		// Pressures

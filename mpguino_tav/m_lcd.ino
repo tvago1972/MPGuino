@@ -747,7 +747,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 #endif // useTWILCD
 #endif // useBufferedLCD
 
-	peripheral::changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
+	changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
 
 }
 
@@ -898,7 +898,7 @@ static void LCD::outputNybble(uint8_t LCDchar)
 static void LCD::disableIntSample(void)
 {
 
-	peripheral::changeBitFlags(timer0Command, t0cEnableTWIsample, 0); // disable TWI button sampling as it interferes with TWI LCD output
+	changeBitFlags(timer0Command, t0cEnableTWIsample, 0); // disable TWI button sampling as it interferes with TWI LCD output
 	while (twiStatusFlags & twiBlockMainProgram) idleProcess(); // wait for any in-progress TWI button samples to finish
 
 }
@@ -906,7 +906,7 @@ static void LCD::disableIntSample(void)
 static void LCD::enableIntSample(void)
 {
 
-	peripheral::changeBitFlags(timer0Command, 0, t0cEnableTWIsample); // re-enable TWI button sampling
+	changeBitFlags(timer0Command, 0, t0cEnableTWIsample); // re-enable TWI button sampling
 
 }
 

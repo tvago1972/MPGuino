@@ -209,7 +209,7 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	else
 	{
 
-		peripheral::changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
+		changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
 		return 1; // signal buffer overflow
 
 	}

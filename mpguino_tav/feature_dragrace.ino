@@ -241,4 +241,108 @@ uint8_t accelerationTest::triggerTest(void)
 
 }
 
+void accelerationTest::idleProcess(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	accelTestStatus = lastAccelTestStatus; // copy last loop's accel test flag status to this loop
+	lastAccelTestStatus = accelerationFlags; // copy current accel test flag status for next loop
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	accelTestStatus = (lastAccelTestStatus ^ accelTestStatus) & accelTestClearFlags; // detect any drag race flag changes
+
+	if (accelTestStatus)
+	{
+
+		accelTestState = accelerationFlags & accelTestClearFlags;
+
+		switch (accelTestState)
+		{
+
+			case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+				accelTestState = 1;
+				break;
+
+			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+				accelTestState = 2;
+				break;
+
+			case (accelTestFinished):
+				if (SWEET64::runPrgm(prgmAccelTestCompareFullSpeeds, 0))
+				{
+
+					tripVar::transfer(dragRawHalfSpeedIdx, dragHalfSpeedIdx);
+					tripVar::transfer(dragRawFullSpeedIdx, dragFullSpeedIdx);
+					tripVar::transfer(dragRawDistanceIdx, dragDistanceIdx);
+
+				}
+
+				accelTestState = 3;
+				break;
+
+			case (accelTestFinished | accelTestCancelled):
+				accelTestState = 4;
+				break;
+
+			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
+				accelTestState = 5;
+				break;
+
+			case (accelTestActive | accelTestFullSpeed | accelTestDistance):
+				accelTestState = 6;
+				break;
+
+			case (accelTestActive | accelTestFullSpeed):
+				accelTestState = 7;
+				break;
+
+			case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
+				accelTestState = 8;
+				break;
+
+			case (accelTestActive | accelTestHalfSpeed):
+				accelTestState = 9;
+				break;
+
+			case (accelTestActive | accelTestDistance):
+				accelTestState = 10;
+				break;
+
+			case (accelTestActive):
+				accelTestState = 11;
+				break;
+
+			default:
+				accelTestState = 12;
+				break;
+
+		}
+
+	}
+	else
+	{
+
+		accelTestState = 0;
+
+		if (accelerationFlags & accelTestFinished)
+		{
+
+			if (EEPROM::readVal(pDragAutoFlagIdx))
+			{
+
+				if (accelerationTest::triggerTest() == 0) accelTestState = 1;
+
+			}
+
+		}
+
+	}
+
+}
+
 #endif // useDragRaceFunction

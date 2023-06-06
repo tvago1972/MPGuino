@@ -1,6 +1,20 @@
+#if defined(__AVR_ATmega32U4__)
+#ifndef PRTIM4
+#define PRTIM4 4
+
+#endif // PRTIM4
+#endif // defined(__AVR_ATmega32U4__)
+
 static void updateVSS(unsigned long thisVSStime);
-unsigned long findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
-void delay0(unsigned int ms);
+static void initCore(void);
+static void initHardware(void);
+#ifdef useDeepSleep
+static void doGoDeepSleep(void);
+#endif // useDeepSleep
+static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
+static void delay0(unsigned int ms);
+static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
+static void performSleepMode(uint8_t sleepMode);
 
 #ifdef useBuffering
 typedef struct
@@ -343,8 +357,8 @@ static const uint8_t metricMode =				0b00000001;
 static const uint8_t detectEEPROMchangeFlag =	0b11111100;
 static const uint8_t fuelEconOutputFlags =		0b00000011;
 
-static char mBuff1[17]; // used by formatDecimal(), translateCalcIdx(), bigDigit::, bar graph routines
-static char pBuff[12]; // used by parameterEdit::, clockSet::, function result output routines
+static char mBuff1[17]; // used by ull2str(), translateCalcIdx(), bigDigit::, bar graph routines
+static char pBuff[14]; // used by parameterEdit::, clockSet::, function result output routines
 
 volatile uint8_t lastPINxState;
 

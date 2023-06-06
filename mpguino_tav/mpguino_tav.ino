@@ -348,84 +348,65 @@ Logging outputs
 #include "m_input.h"
 #include "m_lcd.h"
 #include "functions.h"
+#include "feature_base.h"
 #include "feature_settings.h"
 #include "feature_datalogging.h"
 #include "feature_bignum.h"
 #include "feature_bargraph.h"
+#include "feature_outputpin.h"
 #include "feature_debug.h"
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 
-// This is where direct-ported (not analog) pushbutton definitions should go
+static const char titleMPGuino[] PROGMEM = {
+	"\xED" "MPGuino v1.95tav\r"
+};
 
-#if defined(__AVR_ATmega32U4__)
-#ifndef PRTIM4
-#define PRTIM4 4
+static const char dateMPGuino[] PROGMEM = {
+	"2023-MAR-18\r"
+};
 
-#endif // PRTIM4
-#endif // defined(__AVR_ATmega32U4__)
+typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t, uint8_t); // type for various handler functions
+
+typedef struct
+{
+
+	uint8_t buttonCode;
+	void (* buttonCommand)(void);
+
+} buttonVariable;
+
+typedef struct
+{
+
+	uint8_t menuIndex;
+	uint8_t modeIndex;
+	uint8_t modeYcount;
+	uint8_t modeXcount;
+	displayHandlerFunc screenDisplayHandler;
+	const buttonVariable (* modeButtonList);
+
+} modeInformation;
 
 const char * findStr(const char * str, uint8_t strIdx);
 static void printStatusMessage(const char * s);
 static void printStatusMessage(const char * s, uint8_t strIdx);
-void doNothing(void);
-void noSupport(void);
 void initStatusLine(void);
 void execStatusLine(void);
-char findDigit(uint8_t value, char &zeroChar);
-unsigned long str2ull(char * strBuffer);
-char * ull2str(uint8_t prgmIdx, char * strBuffer, uint8_t decimalPlaces);
-char * formatDecimal(char * strBuffer, uint8_t windowLength, uint8_t decimalPlaces, uint8_t decimalFlag);
-uint8_t mainScreenDisplayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged); /* Main screen section */
-void doReturnToMainScreen(void);
-void doNextBright(void);
-#ifdef useDeepSleep // Deep Sleep support section
-void doGoDeepSleep(void);
-#endif // useDeepSleep
-#ifdef useScreenEditor // Programmable main display screen edit support section
-void doCursorUpdateScreenEdit(void);
-void doScreenEditDisplay(void);
-void doGoScreenEdit(void);
-void doScreenEditBump(void);
-void doSaveScreen(void);
-void doScreenReturnToMain(void);
-#endif // useScreenEditor
 static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
-static void performSleepMode(uint8_t sleepMode);
 int main(void);
 
-namespace peripheral /* MPGuino human interface I/O peripheral device prototype */
+namespace menu /* Top-down menu selector section prototype */
 {
 
-	static void initMain(void);
-	static void shutdownMain(void);
-	static void initButton(void);
-	static void shutdownButton(void);
-	static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
-#if useAnalogButtons || useDebugTerminal
-	static void injectButton(uint8_t buttonValue);
-#endif // useAnalogButtons || useDebugTerminal
-#ifdef useExpansionPins
-	static void initExpansionPin(void);
-	static void shutdownExpansionPin(void);
-	static void outputExpansionPin1(uint8_t pin);
-	static void outputExpansionPin2(uint8_t pin);
-#endif // useExpansionPins
-#if defined(__AVR_ATmega32U4__)
-	static void initUSB(void);
-	static void shutdownUSB(void);
-#endif // defined(__AVR_ATmega32U4__)
-#ifdef useStatusLEDpins
-	static void initStatusLED(void);
-	static void shutdownStatusLED(void);
-	static void outputStatusLED(uint8_t val);
-#endif // useStatusLEDpins
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static void entry(void);
+	static void select(void);
+	static void doNextBright(void);
+	static void noSupport(void);
+	static void doNothing(void);
 
 };
-
-uint8_t menuLevel;
-uint8_t topScreenLevel;
-uint8_t brightnessIdx;
 
 namespace cursor /* LCD screen cursor manipulation section prototype */
 {
@@ -442,21 +423,16 @@ namespace cursor /* LCD screen cursor manipulation section prototype */
 
 };
 
+uint8_t menuLevel;
+uint8_t brightnessIdx;
+
+volatile uint8_t cursorXdirection;
+volatile uint8_t menuTop;
+
 const uint8_t menuExitIdx =				0;								// this call may not even be necessary
 const uint8_t menuEntryIdx =			menuExitIdx + 1;				// typically, this call will fall through
 const uint8_t menuCursorUpdateIdx =		menuEntryIdx + 1;				// ...to this call, then will fall through
 const uint8_t menuOutputDisplayIdx =	menuCursorUpdateIdx + 1;		// ...to this call
-
-typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t, uint8_t); // type for various handler functions
-
-namespace menu /* Top-down menu selector section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
-	static void entry(void);
-	static void select(void);
-
-};
 
 namespace text /* text string output section prototype */
 {
@@ -477,20 +453,6 @@ namespace text /* text string output section prototype */
 	static uint8_t numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 
 };
-
-static const char titleMPGuino[] PROGMEM = {
-	"\xED" "MPGuino v1.95tav\r"
-};
-
-static const char dateMPGuino[] PROGMEM = {
-	"2023-MAR-18\r"
-};
-
-const char overFlowStr[] PROGMEM = "----------";
-const char overFlow9Str[] PROGMEM = "9999999999";
-
-const uint8_t dfAdjustWindow =		0b00000001;
-const uint8_t dfOverflow9s =		0b10000000;
 
 // Menu display / screen cursor support section
 
@@ -596,49 +558,20 @@ const uint8_t screenEditIdx =						nextAllowedValue;
 
 static const char menuTotalSize =					nextAllowedValue;
 
-const uint8_t displayPageCount = 9						// count of base number of data screens
-#ifdef trackIdleEOCdata
-	+ 3													// count of Idle/EOC tracking data screens
-#endif // trackIdleEOCdata
-;
-const uint8_t mainScreenDisplayFormatSize = displayPageCount * 4;
-
-typedef struct
-{
-
-	uint8_t buttonCode;
-	void (* buttonCommand)(void);
-
-} buttonVariable;
-
-typedef struct
-{
-
-	uint8_t menuIndex;
-	uint8_t modeIndex;
-	uint8_t modeYcount;
-	uint8_t modeXcount;
-	displayHandlerFunc screenDisplayHandler;
-//	void (* modeDisplay)(void);
-//	void (* modeCursorUpdate)(void);
-	const buttonVariable (* modeButtonList);
-
-} modeInformation;
-
 static const buttonVariable bpListMenu[] PROGMEM = {
 	 {btnShortPressC,	menu::select}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::shortRight}
 		,{btnShortPressU,	cursor::shortLeft}
-		,{btnLongPressU,	doNextBright}
-		,{btnShortPressL,	doNothing}
+		,{btnLongPressU,	menu::doNextBright}
+		,{btnShortPressL,	menu::doNothing}
 		,{btnShortPressR,	menu::select}
 #else // useButtonCrossConfig
 		,{btnShortPressR,	cursor::shortRight}
 		,{btnShortPressL,	cursor::shortLeft}
-		,{btnLongPressC,	doNextBright}
+		,{btnLongPressC,	menu::doNextBright}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 static const buttonVariable bpListMain[] PROGMEM = {
@@ -648,7 +581,7 @@ static const buttonVariable bpListMain[] PROGMEM = {
 	,{btnLongPressL,	cursor::longLeft}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -667,7 +600,7 @@ static const buttonVariable bpListMain[] PROGMEM = {
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -682,7 +615,7 @@ static const buttonVariable bpListMain[] PROGMEM = {
 		,{btnLongPressLCR,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 static const buttonVariable bpListSetting[] PROGMEM = {
@@ -691,20 +624,20 @@ static const buttonVariable bpListSetting[] PROGMEM = {
 	,{btnLongPressL,	menu::entry}
 	,{btnShortPressLR,	parameterEdit::entry}
 #ifdef useButtonCrossConfig
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnShortPressD,	cursor::shortRight}
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 	#ifdef useCPUreading
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp, 		noSupport}
+	,{buttonsUp, 		menu::noSupport}
 };
 
 static const buttonVariable bpListParameterEdit[] PROGMEM = {
@@ -730,7 +663,7 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 		,{btnLongPressLC,	parameterEdit::readMaxValue}
 		,{btnShortPressC,	parameterEdit::changeDigitUp}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #ifdef useBigDigitDisplay
@@ -741,7 +674,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 	,{btnLongPressL,	cursor::longLeft}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -753,7 +686,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -765,7 +698,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useBigDigitDisplay
@@ -779,7 +712,7 @@ static const buttonVariable bpListClockShow[] PROGMEM = {
 	,{btnShortPressLR,	clockSet::entry}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -791,7 +724,7 @@ static const buttonVariable bpListClockShow[] PROGMEM = {
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -803,7 +736,7 @@ static const buttonVariable bpListClockShow[] PROGMEM = {
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 static const buttonVariable bpListClockSet[] PROGMEM = {
@@ -820,7 +753,7 @@ static const buttonVariable bpListClockSet[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnShortPressC,	clockSet::changeDigitUp}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useClockDisplay
@@ -832,7 +765,7 @@ static const buttonVariable bpListCPUmonitor[] PROGMEM = {
 	,{btnLongPressL,	cursor::longLeft}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -841,7 +774,7 @@ static const buttonVariable bpListCPUmonitor[] PROGMEM = {
 		,{btnLongPressUL,	tripSupport::resetTank}
 	#endif // usePartialRefuel
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -850,7 +783,7 @@ static const buttonVariable bpListCPUmonitor[] PROGMEM = {
 		,{btnLongPressLC,	tripSupport::resetTank}
 	#endif // usePartialRefuel
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useCPUreading
@@ -870,7 +803,7 @@ static const buttonVariable bpListPartialRefuel[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnShortPressC,	partialRefuel::select}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // usePartialRefuel
@@ -880,25 +813,25 @@ static const buttonVariable bpListMiscViewer[] PROGMEM = {
 	,{btnShortPressL,	cursor::shortLeft}
 	,{btnLongPressL,	menu::entry}
 #ifdef useButtonCrossConfig
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 	#ifdef useCPUreading
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
 #ifdef useTestButtonValues
 static const buttonVariable bpListButtonView[] PROGMEM = {
-	 {buttonsUp,		doNothing}
+	 {buttonsUp,		menu::doNothing}
 };
 
 #endif // useTestButtonValues
@@ -915,7 +848,7 @@ static const buttonVariable bpListTripSave[] PROGMEM = {
 #else // useButtonCrossConfig
 		,{btnLongPressC,	tripSupport::select}
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useSavedTrips
@@ -927,7 +860,7 @@ static const buttonVariable bpListBarGraph[] PROGMEM = {
 	,{btnLongPressL,	cursor::longLeft}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	doNextBright}
+		,{btnShortPressU,	menu::doNextBright}
 		,{btnShortPressC,	menu::entry}
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -942,7 +875,7 @@ static const buttonVariable bpListBarGraph[] PROGMEM = {
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-		,{btnShortPressC,	doNextBright}
+		,{btnShortPressC,	menu::doNextBright}
 		,{btnShortPressLCR,	menu::entry}
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#ifdef usePartialRefuel
@@ -957,7 +890,7 @@ static const buttonVariable bpListBarGraph[] PROGMEM = {
 		,{btnLongPressLR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #endif // useButtonCrossConfig
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useBarGraph
@@ -967,21 +900,21 @@ static const buttonVariable bpListScreenEdit[] PROGMEM = {
 	{btnShortPressU,	doScreenEditBump}
 	,{btnShortPressD,	doCursorUpdateScreenEdit}	// revert screen format value
 	,{btnLongPressU,	doSaveScreen}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useScreenEditor
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useCoastDownCalculator
@@ -991,21 +924,21 @@ static const buttonVariable bpListScreenEdit[] PROGMEM = {
 	{btnShortPressC,	doScreenEditBump}
 	,{btnLongPressLR,	doCursorUpdateScreenEdit}	// revert screen format value
 	,{btnLongPressC,	doSaveScreen}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useScreenEditor
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		noSupport}
+	,{buttonsUp,		menu::noSupport}
 };
 
 #endif // useCoastDownCalculator
@@ -1106,10 +1039,10 @@ static const modeInformation screenParameters[(unsigned int)(menuTotalSize)] PRO
 	,{timeoutSettingsScreenIdx,		timeoutSettingsScreenIdx | 0x80,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler,			bpListSetting}
 	,{miscSettingsScreenIdx,		miscSettingsScreenIdx | 0x80,		1,					eePtrSettingsMiscLen,		settings::displayHandler,			bpListSetting}
 #ifdef useDragRaceFunction
-	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	doNothing,	bpListDragRace}
+	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	menu::doNothing,	bpListDragRace}
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
-	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	doNothing,	bpListCoastdown}
+	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	menu::doNothing,	bpListCoastdown}
 #endif // useCoastDownCalculator
 #ifdef useSimulatedFIandVSS
 	,{debugReadingIdx,				debugReadingIdx | 0x80,				1,					4,							debugReading::displayHandler,		bpListMiscViewer}
@@ -1141,9 +1074,6 @@ static const modeInformation screenParameters[(unsigned int)(menuTotalSize)] PRO
 	,{screenEditIdx | 0x80,	1,	mainScreenDisplayFormatSize * 2,	doScreenEditDisplay,	doCursorUpdateScreenEdit,	bpListScreenEdit}
 #endif // useScreenEditor
 };
-
-volatile uint8_t cursorXdirection;
-volatile uint8_t menuTop;
 
 static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
@@ -1207,6 +1137,31 @@ static void menu::select(void)
 	i = screenCursor[(unsigned int)(menuScreenIdx)];
 
 	cursor::moveAbsolute(pgm_read_byte(&screenParameters[(unsigned int)(i)].menuIndex), 255);
+
+}
+
+static void menu::doNextBright(void)
+{
+
+	initStatusLine();
+	text::stringOut(devLCD, PSTR("Backlight = "));
+	text::stringOut(devLCD, brightString, brightnessIdx);
+	execStatusLine();
+
+}
+
+static void menu::doNothing(void)
+{
+}
+
+static void menu::noSupport(void)
+{
+
+	initStatusLine();
+	text::stringOut(devLCD, PSTR("Btn 0x"));
+	text::hexByteOut(devLCD, buttonPress);
+	text::stringOut(devLCD, PSTR(" Pressed"));
+	execStatusLine();
 
 }
 
@@ -1408,21 +1363,6 @@ static void printStatusMessage(const char * s, uint8_t strIdx)
 {
 
 	printStatusMessage(findStr(s, strIdx));
-
-}
-
-void doNothing(void)
-{
-}
-
-void noSupport(void)
-{
-
-	initStatusLine();
-	text::stringOut(devLCD, PSTR("Btn 0x"));
-	text::hexByteOut(devLCD, buttonPress);
-	text::stringOut(devLCD, PSTR(" Pressed"));
-	execStatusLine();
 
 }
 
@@ -1653,1424 +1593,6 @@ static uint8_t text::numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t ca
 
 }
 
-static const uint8_t prgmMultiplyBy100[] PROGMEM = {
-	instrMul2byByte, 100,								// multiply result by 100
-	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmMultiplyBy10[] PROGMEM = {
-	instrMul2byByte, 10,								// multiply result by 10
-	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
-	instrDone											// exit to caller
-};
-
-unsigned long str2ull(char * strBuffer)
-{
-
-	uint8_t c;
-	uint8_t n;
-
-	uint8_t x;
-	uint8_t f;
-	uint8_t loopFlag;
-
-	x = 0;
-	n = 0;
-	f = 1;
-	loopFlag = 1;
-
-	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-
-	while ((loopFlag) && (x < 17))
-	{
-
-		if ((c = strBuffer[(unsigned int)(x++)])) // if a non-NULL character is read in
-		{
-
-			n *= 10; // shift accumulator left one digit
-			if (c != ' ') n += (uint8_t)(c) - 48; // if character is not a leading space, go add it to accumulator
-			f= 1 - f; // flip-flop the SWEET64 addition flag
-
-			if (f)
-			{
-
-				SWEET64::runPrgm(prgmMultiplyBy100, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 100 + n
-				n = 0;
-
-			}
-
-		}
-		else loopFlag = 0; // otherwise, terminate loop upon receipt of a NULL character
-
-	}
-
-	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
-
-	return ((union union_64 *)(&s64reg[s64reg2]))->ul[0];
-
-}
-
-char findDigit(uint8_t value, char &zeroChar)
-{
-
-	if (value)
-	{
-		value += '0';
-		zeroChar = '0';
-	}
-	else value = zeroChar;
-
-	return value;
-
-}
-
-char * ull2str(uint8_t prgmIdx, char * strBuffer, uint8_t decimalPlaces)
-{
-
-	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
-
-	uint8_t b;
-	char c;
-	uint8_t l;
-	uint8_t y;
-	char z;
-
-	SWEET64::doCalculate(decimalPlaces, prgmIdx); // call SWEET64 routine to perform decimal point rounding to next nearest decimal place
-
-	l = tmpPtr2->u8[6];	// load total length of binary-coded decimal bytes of converted number
-
-	if (l == 255) strcpy_P(strBuffer, overFlowStr); // if length is 255, this number overflowed
-	else
-	{
-
-		z = (char)(tmpPtr2->u8[7]);	// load leading zero character
-		y = 0;
-
-		for (uint8_t x = 0; x < l; x++) // go through all of the binary-coded decimal bytes of converted number
-		{
-
-			b = tmpPtr2->u8[(unsigned int)(x)];	// load a binary-coded decimal byte of number
-
-			c = findDigit(b / 10, z);		// perform leading zero conversion on 10's place digit
-			strBuffer[(unsigned int)(y++)] = c;	// store 10's place digit in string buffer
-
-			c = findDigit(b % 10, z);		// perform leading zero conversion on 1's place digit
-			strBuffer[(unsigned int)(y++)] = c;	// store 1's place digit in string buffer
-
-		}
-
-		if (c == ' ') strBuffer[(unsigned int)(y - 1)] = '0'; // ensure that at least one numeric digit exists
-		strBuffer[(unsigned int)(y)] = 0; // mark end of string buffer with a NULL character
-
-	}
-
-	return strBuffer; // return pointer to string buffer containing the number
-
-}
-
-char * formatDecimal(char * strBuffer, uint8_t windowLength, uint8_t decimalPlaces, uint8_t decimalFlag) // format number for output
-{
-
-	uint8_t x;
-	uint8_t y;
-	uint8_t z; // pointer to end of integer digits in string
-	uint8_t c; // temporary character storage
-	uint8_t i; // integer digit count
-
-	ull2str(tRoundOffNumber, strBuffer, decimalPlaces); // perform rounding of number to nearest decimal place, then format for ASCII output
-
-	if (windowLength > 11) windowLength = 0; // if window length is larger than the contents of the output string buffer, zero out window length
-
-	if (strBuffer[2] != '-') // if number did not overflow
-	{
-
-		x = 6 + decimalPlaces; // source string index
-		y = 10; // destination string index
-		i = 0;
-
-		while (y < 12) // loop through entire string buffer, insert padding and a decimal point as required, and preserve ending NULL
-		{
-
-			if (x < 10)
-			{
-
-				c = strBuffer[(unsigned int)(x)]; // read in a digit of formatted number from string buffer, bump down source string index by one
-
-				if ((x > 5) && (c == ' ')) c = '0'; // change 1's place and lower places leading spaces into leading zeros
-				if ((x == 6) && (decimalPlaces)) strBuffer[(unsigned int)(y--)] = '.'; // if a decimal position was specified, and at decimal point, insert it
-				if ((x < 7) && (c != ' ')) i++; // count the number of non-space integer characters
-
-				x--;
-
-			}
-			else c = ' '; // otherwise, pad front of number with extra spaces
-
-			strBuffer[(unsigned int)(y--)] = c; // store processed character back into string buffer, bump down destination string index by one
-
-		}
-
-		if (decimalPlaces) z = 10 - decimalPlaces; // point to either decimal point or to end of string
-		else z = 11; // results in pointing to first character past the 1's digit in both cases
-
-		if (windowLength)
-		{
-
-			if (i > windowLength) // if window length is smaller than the number of integer digits, overflow
-			{
-
-				x = 0; // signal 'do not perform string buffer move'
-				strcpy_P(strBuffer, overFlowStr); // copy overflow string to string buffer
-
-			}
-			else
-			{
-
-				if ((decimalFlag & dfAdjustWindow) && (i < windowLength)) windowLength++; // if variable window length, and window length > the # of integer digits, expand window to include decimal point
-
-				if ((i == windowLength) || ((i + 1) == windowLength)) x = z - windowLength;
-				else
-				{
-
-					x = z - i;
-					if ((x + windowLength) > 10) x = 11 - windowLength;
-
-				}
-
-			}
-
-		}
-		else // no window length specified, just eliminate leading spaces
-		{
-
-			x = z - i; // point to first integer character in string buffer
-			strBuffer[11] = 0; // mark new end of string buffer
-
-		}
-
-		if (x) for (y = 0; y < (12 - x); y++) strBuffer[(unsigned int)(y)] = strBuffer[(unsigned int)(y + x)]; // shift number left to remove unneeded leading spaces
-
-	}
-	else
-	{
-
-		if (decimalFlag & dfOverflow9s) strcpy_P(strBuffer, overFlow9Str);
-
-	}
-
-	if (windowLength) strBuffer[(unsigned int)(windowLength)] = 0; // mark new end of string buffer
-
-	return strBuffer;
-
-}
-
-/* Main screen section */
-
-const char mainScreenFuncNames[] PROGMEM = {
-	"Instrument\r"
-	"Custom\r"
-	"Instant/Current\r"
-	"Instant/Tank\r"
-	"Current\r"
-	"Tank\r"
-#ifdef trackIdleEOCdata
-	"EOC/Idle\r"
-#endif // trackIdleEOCdata
-	"Current Data\r"
-	"Tank Data\r"
-#ifdef trackIdleEOCdata
-	"Current EOC/Idle\r"
-	"Tank EOC/Idle\r"
-#endif // trackIdleEOCdata
-	"Remaining\r"
-};
-
-const uint8_t mainDisplayScreenFormats[(unsigned int)(mainScreenDisplayFormatSize)][2] PROGMEM = {
-	 {lblInstantIdx,			tSpeed}					// Instrument
-	,{lblInstantIdx,			tEngineSpeed}
-	,{lblInstantIdx,			tFuelRate}
-	,{lblInstantIdx,			tFuelEcon}
-
-	,{lblInstantIdx,			tFuelEcon}				// Custom
-	,{lblInstantIdx,			tSpeed}
-	,{lblInstantIdx,			tFuelRate}
-	,{lblCurrentIdx,			tFuelEcon}
-
-	,{lblInstantIdx,			tFuelEcon}				// Instant / Current
-	,{lblInstantIdx,			tSpeed}
-	,{lblCurrentIdx,			tFuelEcon}
-	,{lblCurrentIdx,			tDistance}
-
-	,{lblInstantIdx,			tFuelEcon}				// Instant / Tank
-	,{lblInstantIdx,			tSpeed}
-	,{lblTankIdx,				tFuelEcon}
-	,{lblTankIdx,				tDistance}
-
-	,{lblCurrentIdx,			tSpeed}					// Current
-	,{lblCurrentIdx,			tFuelEcon}
-	,{lblCurrentIdx,			tDistance}
-	,{lblCurrentIdx,			tFuelUsed}
-
-	,{lblTankIdx,				tSpeed}					// Tank
-	,{lblTankIdx,				tFuelEcon}
-	,{lblTankIdx,				tDistance}
-	,{lblTankIdx,				tFuelUsed}
-
-#ifdef trackIdleEOCdata
-	,{lblEOCidleCurrentIdx,		tDistance}				// EOC / Idle
-	,{lblEOCidleCurrentIdx,		tFuelUsed}
-	,{lblEOCidleTankIdx,		tDistance}
-	,{lblEOCidleTankIdx,		tFuelUsed}
-
-#endif // trackIdleEOCdata
-	,{lblCurrentIdx,			tEngineRunTime}			// Current data
-	,{lblCurrentIdx,			tFuelUsed}
-	,{lblCurrentIdx,			tMotionTime}
-	,{lblCurrentIdx,			tDistance}
-
-	,{lblTankIdx,				tEngineRunTime}			// Tank data
-	,{lblTankIdx,				tFuelUsed}
-	,{lblTankIdx,				tMotionTime}
-	,{lblTankIdx,				tDistance}
-
-#ifdef trackIdleEOCdata
-	,{lblEOCidleCurrentIdx,		tEngineRunTime}			// Current EOC / Idle
-	,{lblEOCidleCurrentIdx,		tFuelUsed}
-	,{lblEOCidleCurrentIdx,		tMotionTime}
-	,{lblEOCidleCurrentIdx,		tDistance}
-
-	,{lblEOCidleTankIdx,		tEngineRunTime}			// Tank EOC / Idle
-	,{lblEOCidleTankIdx,		tFuelUsed}
-	,{lblEOCidleTankIdx,		tMotionTime}
-	,{lblEOCidleTankIdx,		tDistance}
-
-#endif // trackIdleEOCdata
-	,{lblTankIdx,				tFuelUsed}				// Remaining
-	,{lblTankIdx,				tRemainingFuel}
-	,{lblTankIdx,				tTimeToEmpty}
-	,{lblTankIdx,				tDistanceToEmpty}
-};
-
-#ifdef trackIdleEOCdata
-const uint8_t mainEOCscreenFormats[(unsigned int)(4)][2] PROGMEM = {
-	 {lblInstantIdx,			tSpeed}
-	,{lblCurrentIdx,			tFuelEcon}
-	,{lblEOCidleCurrentIdx,		tDistance}
-	,{lblEOCidleTankIdx,		tDistance}
-};
-
-const uint8_t mainIdleScreenFormats[(unsigned int)(4)][2] PROGMEM = {
-	 {lblInstantIdx,			tFuelRate}
-	,{lblCurrentIdx,			tFuelEcon}
-	,{lblEOCidleCurrentIdx,		tFuelUsed}
-	,{lblEOCidleTankIdx,		tFuelUsed}
-};
-
-#endif // trackIdleEOCdata
-uint8_t mainScreenDisplayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
-{
-
-#ifdef useScreenEditor
-	uint8_t i;
-#endif // useScreenEditor
-	uint8_t retVal = 0;
-
-	switch (cmd)
-	{
-
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			topScreenLevel = menuLevel; // save current menu level for sub-function (param edit, trip load/save, etc) support
-
-		case menuCursorUpdateIdx:
-			printStatusMessage(mainScreenFuncNames, cursorPos); // briefly display screen name
-
-		case menuOutputDisplayIdx:
-			retVal = (activityFlags & afActivityCheckFlags);
-			switch (retVal)
-			{
-
-				case (afVehicleStoppedFlag | afButtonFlag):
-#ifdef trackIdleEOCdata
-#ifdef useSpiffyTripLabels
-					displayMainScreenFunctions(mainIdleScreenFormats, 0, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-					displayMainScreenFunctions(mainIdleScreenFormats, 0);
-#endif // useSpiffyTripLabels
-					break;
-
-#endif // trackIdleEOCdata
-				case (afEngineOffFlag | afButtonFlag):
-#ifdef trackIdleEOCdata
-#ifdef useSpiffyTripLabels
-					displayMainScreenFunctions(mainEOCscreenFormats, 0, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-					displayMainScreenFunctions(mainEOCscreenFormats, 0);
-#endif // useSpiffyTripLabels
-					break;
-
-#endif // trackIdleEOCdata
-				default:
-#ifdef useScreenEditor
-					i = cursorPos;
-					i <<= 2;
-					i += eePtrScreensStart;
-
-#ifdef useSpiffyTripLabels
-					for (uint8_t x = 0; x < 4; x++) displayFunction(x, EEPROM::readVal(i++), EEPROM::readVal(i++), 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-					for (uint8_t x = 0; x < 4; x++) displayFunction(x, EEPROM::readVal(i++), EEPROM::readVal(i++));
-#endif // useSpiffyTripLabels
-
-#else // useScreenEditor
-#ifdef useSpiffyTripLabels
-					displayMainScreenFunctions(mainDisplayScreenFormats, cursorPos, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-					displayMainScreenFunctions(mainDisplayScreenFormats, cursorPos);
-#endif // useSpiffyTripLabels
-#endif // useScreenEditor
-					break;
-
-			}
-			retVal = 0;
-			break;
-
-		default:
-			break;
-
-	}
-
-	return retVal;
-
-}
-
-void doReturnToMainScreen(void)
-{
-
-	cursor::moveAbsolute(topScreenLevel, 255);
-
-}
-
-void doNextBright(void)
-{
-
-	initStatusLine();
-	text::stringOut(devLCD, PSTR("Backlight = "));
-	text::stringOut(devLCD, brightString, brightnessIdx);
-	execStatusLine();
-
-}
-
-#ifdef useDeepSleep // Deep Sleep support section
-void doGoDeepSleep(void)
-{
-
-	peripheral::shutdownMain();
-
-#ifdef useTWIsupport
-	TWI::shutdown();
-
-#endif // useTWIsupport
-	performSleepMode(SLEEP_MODE_PWR_DOWN); // go perform power-down sleep mode
-
-	peripheral::initMain(); // restart all peripherals
-
-}
-
-#endif // useDeepSleep
-#ifdef useScreenEditor // Programmable main display screen edit support section
-uint8_t screenTripValue = 0;
-uint8_t screenFunctionValue = 0;
-uint8_t screenEditDirty = 0;
-
-const uint8_t screenEditFlag_dirty =	0x80;
-
-const char seFormatRevertedString[] PROGMEM = "Format reverted";
-const char seExitScreenEditString[] PROGMEM = "Screen Display";
-
-void doCursorUpdateScreenEdit(void)
-{
-
-	uint8_t b;
-
-	b = screenCursor[(unsigned int)(screenEditIdx)];
-	b &= ~screenEditFlag_dirty;
-
-	if ((screenEditDirty & ~screenEditFlag_dirty) ^ b) // if cursor moved to a different screen function altogether
-	{
-
-		screenTripValue = EEPROM::readVal(b + eePtrScreensStart);
-		screenFunctionValue = EEPROM::readVal(b + eePtrScreensStart + 1);
-
-		if (screenEditDirty & screenEditFlag_dirty) // if previous screen function was changed but not saved
-		{
-
-			printStatusMessage(seFormatRevertedString);
-
-		}
-
-		screenEditDirty = b; // save current cursor position of screen function being edited
-		screenEditDirty &= ~screenEditFlag_dirty; // mark screen function as not modified
-
-	}
-
-}
-
-void doScreenEditDisplay(void)
-{
-
-	uint8_t i;
-	uint8_t j;
-	uint8_t k;
-
-	uint8_t tripIdx;
-	uint8_t calcIdx;
-	uint8_t calcBlink;
-	uint8_t tripBlink;
-
-	i = screenCursor[(unsigned int)(screenEditIdx)];
-
-	j = i; // extract whether trip index or trip function is to be edited
-	j &= 0x01;
-
-	i >>= 1; // figure out edited screen function placement on screen
-	k = i;
-
-	i &= 0xFC; // figure out start of screen page
-	k &= 0x03;
-
-	for (uint8_t x = 0; x < 4; x++)
-	{
-
-		calcBlink = 0;
-		tripBlink = 0;
-
-		if (x == k) // if at
-		{
-
-			tripIdx = screenTripValue;
-			calcIdx = screenFunctionValue;
-			if (j == 1) calcBlink = 170;
-			else tripBlink = 170;
-
-		}
-		else
-		{
-
-			tripIdx = EEPROM::readVal(eePtrScreensStart + (i + x) * 2);
-			calcIdx = EEPROM::readVal(eePtrScreensStart + (i + x) * 2 + 1);
-
-		}
-
-#ifdef useSpiffyTripLabels
-		displayFunction(x, tripIdx, calcIdx, tripBlink, calcBlink, msTripBitPattern); // call main screen function display routine
-#else // useSpiffyTripLabels
-		displayFunction(x, tripIdx, calcIdx); // call main screen function display routine
-#endif // useSpiffyTripLabels
-
-	}
-
-}
-
-void doGoScreenEdit(void)
-{
-
-	screenEditDirty = screenCursor[(unsigned int)(screenEditIdx)];
-	screenEditDirty >>= 1;
-	screenEditDirty ^= 0x01; // force update of screen function
-	screenEditDirty &= ~screenEditFlag_dirty;
-
-	cursor::moveAbsolute(screenEditIdx, screenCursor[(unsigned int)(mainScreenIdx)] << 3);
-
-	printStatusMessage(PSTR("Screen Editor"));
-
-}
-
-void doScreenEditBump(void)
-{
-
-	uint8_t b;
-
-	b = (screenCursor[(unsigned int)(screenEditIdx)] & 0x01); // figure out whether trip variable or trip function is being modified
-	screenEditDirty |= screenEditFlag_dirty; // mark current screen function as modified
-
-	if (b) // if trip function is being modified
-	{
-
-		screenFunctionValue++;
-		if (screenFunctionValue == dfMaxValDisplayCount) screenFunctionValue = 0;
-
-	}
-	else // otherwise, trip variable is being modified
-	{
-
-		screenTripValue++;
-		if (screenTripValue == dfMaxTripCount) screenTripValue = 0;
-
-	}
-
-}
-
-void doSaveScreen(void)
-{
-
-	uint8_t b;
-
-	b = screenCursor[(unsigned int)(screenEditIdx)];
-
-	// generate and save new screen function from trip variable and trip function
-	EEPROM::writeVal(eePtrScreensStart + b, (unsigned long)(screenTripValue));
-	EEPROM::writeVal(eePtrScreensStart + b + 1, (unsigned long)(screenFunctionValue));
-	screenEditDirty &= ~screenEditFlag_dirty;
-
-	printStatusMessage(PSTR("Format saved"));
-
-}
-
-void doScreenReturnToMain(void)
-{
-
-	const char * str;
-
-	if (screenEditDirty & screenEditFlag_dirty) str = seFormatRevertedString;
-	else s = seExitScreenEditString;
-
-	screenCursor[(unsigned int)(mainScreenIdx)] = (screenCursor[(unsigned int)(screenEditIdx)] >> 3);
-	cursor::screenLevelEntry(str, topScreenLevel);
-
-}
-
-#endif // useScreenEditor
-/* human interface I/O peripheral device support section */
-
-#ifdef useExpansionPins
-/*
-	Modes
-	0	Off
-	1	instant fuel economy < current fuel economy (0 - false, 255 - true)
-	2	instant fuel economy > current fuel economy (0 - false, 255 - true)
-	3	instant fuel economy < tank fuel economy (0 - false, 255 - true)
-	4	instant fuel economy > tank fuel economy (0 - false, 255 - true)
-	5	estimated tank fuel consumed (0 (none) to 255 (all of the tank), based on tank size)
-	6	estimated tank fuel remaining (0 (empty) to 255 (full), based on tank size)
-*/
-static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
-	instrCmpIndex, 2,									// is a valid expansion output pin number being requested?
-	instrBranchIfGTorE, 13,								// skip to output a zero if not
-	instrLxdIEEPROMoffset, pExpansionPin1Mode,			// load the indexed stored parameter index for the expansion output pin setting
-	instrTestIndex,										// test pin mode value for zero
-	instrBranchIfZero, 8,								// exit out if pin mode is zero
-	instrCmpIndex, 4,									// test if pin mode is "fuel economy comparison between instant and whatever"
-	instrBranchIfLTorE,	26,								// if so, skip ahead
-	instrCmpIndex, 6,									// test if pin mode is analog output tank quantity or quantity remaining
-	instrBranchIfLTorE, 4,								// if so, skip ahead
-
-//zeroOutRet:
-	instrLdRegByte, 0x02, 0,							// zero out result
-	instrDone,											// exit to caller
-
-//analogOut:
-	instrCall, tCalculateRemainingTank,					// fetch remaining fuel value in injector open cycles
-	instrCmpIndex, 6,									// outputting remaining value?
-	instrBranchIfE, 7,									// go do conversion if so
-	instrLdReg, 0x21,									// shift contents to register 1
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrSubYfromX, 0x12,								// subtract remaining fuel value from tank size
-
-//analogOut2:
-	instrMul2byByte, 255,								// multiply tank quantity by 255
-	instrDiv2byMain, mpTankSizeIdx,						// divide by calculated tank size
-	instrDone,											// return to caller
-
-// US (inst FE > accumulated FE) = /(inst FE <= accumulated FE)
-//
-//  (inst distance)      (accum distance)
-//  ---------------  <=  ----------------  >>>  (inst distance) * (accum quantity)  <=  (inst quantity) * (accum distance)
-//  (inst quantity)      (accum quantity)
-//
-//
-//
-// metric (inst FE > accumulated FE) = /(inst FE <= accumulated FE)
-//
-//  (inst quantity)      (accum quantity)
-//  ---------------  =>  ----------------  >>>  (inst quantity) * (accum distance)  =>  (inst distance) * (accum quantity)
-//  (inst distance)      (accum distance)                                           or
-//                                              (inst distance) * (accum quantity)  <=  (inst quantity) * (accum distance)
-//
-// therefore, for (inst FE > accumulated FE) comparison, there is no need to check whether MPGuino is in metric mode or not
-// (inst FE < accumulated FE) is treated in a similar way, but the left and right terms are swapped around
-//
-	instrCmpIndex, 2,									// comparing instant to current?
-	instrBranchIfLTorE, 10,								// if so, skip ahead
-	instrLdRegTripVar, 0x03, tankIdx, rvInjCycleIdx,	// fetch tank (accum quantity)
-	instrLdRegTripVar, 0x02, tankIdx, rvVSSpulseIdx,	// fetch tank (accum distance)
-	instrSkip, 8,										// skip ahead
-	instrLdRegTripVar, 0x03, currentIdx, rvInjCycleIdx,	// fetch current (accum quantity)
-	instrLdRegTripVar, 0x02, currentIdx, rvVSSpulseIdx,	// fetch current (accum distance)
-	instrLdRegTripVar, 0x01, instantIdx, rvInjCycleIdx,	// fetch (inst quantity)
-	instrMul2by1,										// calculate (inst quantity) * (accum distance) as right term
-	instrSwapReg, 0x23,									// swap right term and (accum quantity) values
-	instrLdRegTripVar, 0x01, instantIdx, rvVSSpulseIdx,	// fetch (inst distance)
-	instrMul2by1,										// calculate (inst distance) * (accum quantity) as left term
-	instrCmpIndex, 2,									// testing (inst distance) * (current quantity) <= (inst quantity) * (current distance)?
-	instrBranchIfE, 6,									// if so, skip ahead
-	instrCmpIndex, 4,									// testing (inst distance) * (tank quantity) <= (inst quantity) * (tank distance)?
-	instrBranchIfE, 2,									// if so, skip ahead
-	instrSwapReg, 0x23,									// swap left and right terms
-	instrCmpXtoY, 0x32,									// compare left term to right term
-	instrBranchIfLTorE, 4,								// if left term <= right term, go zero out and return
-
-	instrLdRegByte, 0x02, 255,							// max out result
-	instrDone,											// return to caller
-
-	instrLdRegByte, 0x02, 0,							// zero out result
-	instrDone											// exit to caller
-};
-
-#endif // useExpansionPins
-static void peripheral::initMain(void)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	// timer initialization section - multiple peripherals may use the same timer
-#ifdef useTimer1
-#if defined(__AVR_ATmega32U4__)
-	// turn on timer1 module
-	PRR0 &= ~(1 << PRTIM1);
-
-	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
-	TCCR1A &= ~(1 << WGM11);
-	TCCR1A |= (1 << WGM10);
-	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
-
-	// set timer 1 prescale factor to 1
-	TCCR1B &= ~((1 << CS12) | (1 << CS11));
-	TCCR1B |= (1 << CS10);
-
-	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
-	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
-
-	// set OC1A to disabled
-	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
-
-	// set OC1B to disabled
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
-
-	// set OC1C to disabled
-	TCCR1A &= ~((1 << COM1C1) | (1 << COM1C0));
-
-	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
-	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
-
-#ifdef useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
-
-	// clear timer 1 interrupt flags
-	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// turn on timer1 module
-	PRR0 &= ~(1 << PRTIM1);
-
-	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
-	TCCR1A &= ~(1 << WGM11);
-	TCCR1A |= (1 << WGM10);
-	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
-
-	// set timer 1 prescale factor to 1
-	TCCR1B &= ~((1 << CS12) | (1 << CS11));
-	TCCR1B |= (1 << CS10);
-
-	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
-	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
-
-	// set OC1A to disabled
-	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
-
-	// set OC1B to disabled
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
-
-	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
-	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
-
-#ifdef useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
-
-	// clear timer 1 interrupt flags
-	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// turn on timer1 module
-	PRR &= ~(1 << PRTIM1);
-
-	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
-	TCCR1A &= ~(1 << WGM11);
-	TCCR1A |= (1 << WGM10);
-	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
-
-	// set timer 1 prescale factor to 1
-	TCCR1B &= ~((1 << CS12) | (1 << CS11));
-	TCCR1B |= (1 << CS10);
-
-	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
-	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
-
-	// set OC1A to disabled
-	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
-
-	// set OC1B to disabled
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
-
-	// clear timer 1 output compare force bits for OC1A and OC1B
-	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B));
-
-#ifdef useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
-
-	// clear timer 1 interrupt flags
-	TIFR1 |= ((1 << ICF1) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
-
-#endif // defined(__AVR_ATmega328P__)
-#endif // useTimer1
-#ifdef useTimer2
-#if defined(__AVR_ATmega2560__)
-	// turn on timer2 module
-	PRR0 &= ~(1 << PRTIM2);
-
-	// set timer 2 to 8-bit phase correct PWM mode, TOP = 0xFF
-	TCCR2A &= ~(1 << WGM21);
-	TCCR2A |= (1 << WGM20);
-	TCCR2B &= ~(1 << WGM22);
-
-	// set timer 2 prescale factor to 64
-	TCCR2B &= ~((1 << CS22));
-	TCCR2B |= ((1 << CS21) | (1 << CS20));
-
-	// set OC2A to disabled
-	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
-
-	// set OC2B to disabled
-	TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
-
-	// clear timer 2 output compare force bits for OC2A and OC2B
-	TCCR2B &= ~((1 << FOC2A) | (1 << FOC2B));
-
-	// disable timer 2 interrupts
-	TIMSK2 &= ~((1 << OCIE2B) | (1 << OCIE2A) | (1 << TOIE2));
-
-	// clear timer 2 interrupt flags
-	TIFR2 |= ((1 << OCF2B) | (1 << OCF2A) | (1 << TOV2));
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// turn on timer2 module
-	PRR &= ~(1 << PRTIM2);
-
-	// set timer 2 to phase correct PWM mode, TOP = 0xFF
-	TCCR2A &= ~(1 << WGM21);
-	TCCR2A |= (1 << WGM20);
-	TCCR2B &= ~(1 << WGM22);
-
-	// set timer 2 prescale factor to 64
-	TCCR2B &= ~((1 << CS22));
-	TCCR2B |= ((1 << CS21) | (1 << CS20));
-
-	// set OC2A to disabled
-	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
-
-	// set OC2B to disabled
-	TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
-
-	// clear force bits for OC2A and OC2B
-	TCCR2B &= ~((1 << FOC2A) | (1 << FOC2B));
-
-	// disable timer 2 interrupts
-	TIMSK2 &= ~((1 << OCIE2B) | (1 << OCIE2A) | (1 << TOIE2));
-
-	// clear timer 2 interrupt flags
-	TIFR2 |= ((1 << OCF2B) | (1 << OCF2A) | (1 << TOV2));
-
-#endif // defined(__AVR_ATmega328P__)
-#endif // useTimer2
-#ifdef useTimer4
-#if defined(__AVR_ATmega32U4__)
-	// turn on timer4 module
-	PRR1 &= ~(1 << PRTIM4);
-
-	// set timer 4 to phase and frequency correct mode
-	TCCR4D &= ~(1 << WGM41);
-	TCCR4D |= (1 << WGM40);
-
-	// set timer 4 prescale factor to 64
-	TCCR4B &= ~(1 << CS43);
-	TCCR4B |= ((1 << CS42) | (1 << CS41) | (1 << CS40));
-
-	// clear timer 4 fault protection
-	TCCR4D &= ~((1 << FPIE4) | (1 << FPEN4) | (1 << FPNC4) | (1 << FPES4)  | (1 << FPAC4) | (1 << FPF4));
-
-	// set OC4A to disabled
-	TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0) | (1 << PWM4A));
-
-	// set OC4B to disabled
-	TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0) | (1 << PWM4B));
-
-	// set OC4D to disabled
-	TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0) | (1 << PWM4D));
-
-	// clear timer 4 PWM inversion mode
-	TCCR4B &= ~(1 << PWM4X);
-
-	// set timer 4 dead time prescaler to 1
-	TCCR4B &= ~((1 << DTPS41) | (1 << DTPS40));
-
-	// clear timer 4 output compare force bits for OC4A and OC4B
-	TCCR4A &= ~((1 << FOC4A) | (1 << FOC4B));
-
-	// clear timer 4 output compare force bits for OC4D
-	TCCR4C &= ~(1 << FOC4D);
-
-	// clear timer 4 update lock, disable timer 4 enhanced compare mode
-	TCCR4E &= ~((1 << TLOCK4) | (1 << ENHC4));
-
-	// disable timer 4 interrupts
-	TIMSK4 &= ~((1 < OCIE4D) | (1 < OCIE4A) | (1 < OCIE4B) | (1 < TOIE4));
-
-	// clear timer 4 interrupt flags
-	TIFR4 |= ((1 << OCF4D) | (1 << OCF4A) | (1 << OCF4B) | (1 << TOV4));
-
-	// set timer 4 dead time to 0
-	DT4 = 0;
-
-	// set timer 4 TOP value to 0x00FF, setting 8 bit mode
-	TC4H = 0;
-	OCR4C = 255;
-
-#endif // defined(__AVR_ATmega32U4__)
-#endif // useTimer4
-	SREG = oldSREG; // restore interrupt flag status
-
-#ifdef useTWIsupport
-	TWI::init();
-#ifdef useAdafruitRGBLCDshield
-	adafruitRGBLCDsupport::init(); // go init Adafruit RGB LCD shield
-#endif // useAdafruitRGBLCDshield
-#endif // useTWIsupport
-#ifdef useSerial0Port
-	serial0::init();
-#endif // useSerial0Port
-#ifdef useSerial1Port
-	serial1::init();
-#endif // useSerial1Port
-#if defined(__AVR_ATmega32U4__)
-	initUSB();
-#endif // defined(__AVR_ATmega32U4__)
-	initButton();
-	LCD::init();
-#ifdef useStatusLEDpins
-	initStatusLED();
-#endif // useStatusLEDpins
-#ifdef useExpansionPins
-	initExpansionPin();
-#endif // useExpansionPins
-
-}
-
-static void peripheral::shutdownMain(void)
-{
-
-#ifdef useExpansionPins
-	shutdownExpansionPin();
-#endif // useExpansionPins
-#ifdef useStatusLEDpins
-	shutdownStatusLED();
-#endif // useStatusLEDpins
-	changeBitFlags(timer0Command, t0cDisplayDelay, 0); // cancel any display delays in progress
-	LCD::shutdown(); // shut down the LCD display
-	shutdownButton();
-#if defined(__AVR_ATmega32U4__)
-	shutdownUSB();
-#endif // defined(__AVR_ATmega32U4__)
-#ifdef useSerial1Port
-	serial1::shutdown();
-#endif // useSerial1Port
-#ifdef useSerial0Port
-	serial0::shutdown();
-#endif // useSerial0Port
-
-#ifdef useTimer4
-#if defined(__AVR_ATmega32U4__)
-	PRR0 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
-#endif // defined(__AVR_ATmega32U4__)
-
-#endif // useTimer4
-#ifdef useTimer2
-#if defined(__AVR_ATmega2560__)
-	PRR0 |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	PRR |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
-#endif // defined(__AVR_ATmega328P__)
-
-#endif // useTimer2
-#ifdef useTimer1Interrupt
-#if defined(__AVR_ATmega32U4__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega328P__)
-
-#endif // useTimer1Interrupt
-#ifdef useTimer1
-#if defined(__AVR_ATmega32U4__)
-	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	PRR |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
-#endif // defined(__AVR_ATmega328P__)
-
-#endif // useTimer1
-}
-
-// this function is needed since there is no way to perform an atomic bit change of an SRAM byte value
-// most MPGuino variables that are shared between main program and interrupt handlers should not need to
-//    be treated as atomic (!) because only one side or the other is supposed to change said variables
-// however, status flag registers are obviously an exception, and status flag changes are common
-//    enough to warrant an explicit function definition
-static void peripheral::changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	flagRegister = (flagRegister & ~(maskAND)) | (maskOR); // go perform atomic status flag change
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-#ifdef useExpansionPins
-static void peripheral::initExpansionPin(void)
-{
-
-#if defined(__AVR_ATmega32U4__)
-	// set OC4A to clear-up/set-down PWM mode for EXP1 option pin
-	TCCR4A &= ~(1 << COM4A0);
-	TCCR4A |= ((1 << COM4A1) | (1 << PWM4A));
-
-	// set OC4D to clear-up/set-down PWM mode for EXP2 option pin
-	TCCR4C &= ~(1 << COM4D0);
-	TCCR4C |= ((1 << COM4D1) | (1 << PWM4D));
-
-	// enable EXP1 and EXP2 option pin outputs
-	DDRC |= (1 << DDC6); // set OC4A as output
-	DDRD |= (1 << DDD7); // set OC4D as output
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// set OC1B to clear-up/set-down for EXP1 option pin
-	TCCR1A &= ~(1 << COM1B0);
-	TCCR1A |= (1 << COM1B1);
-
-	// set OC2A to clear-up/set-down for EXP2 option pin
-	TCCR2A &= ~(1 << COM2A0);
-	TCCR2A |= (1 << COM2A1);
-
-	// enable EXP1 and EXP2 option pin outputs
-	DDRB |= ((1 << PB6) | (1 << PB4));
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// set OC1B to non-inverting mode for EXP1 option pin
-	TCCR1A &= ~(1 << COM1B0);
-	TCCR1A |= (1 << COM1B1);
-
-	// set OC2A to clear-up/set-down for EXP2 option pin
-	TCCR2A &= ~(1 << COM2A0);
-	TCCR2A |= (1 << COM2A1);
-
-	// enable EXP1 and EXP2 option pin outputs
-	DDRB |= ((1 << PB3) | (1 << PB2));
-
-#endif // defined(__AVR_ATmega328P__)
-	outputExpansionPin1(2); // initially set EXP1 option pin to 0
-	outputExpansionPin2(2); // initially set EXP2 option pin to 0
-
-}
-
-static void peripheral::shutdownExpansionPin(void)
-{
-
-	outputExpansionPin1(2); // set EXP1 option pin to 0
-	outputExpansionPin2(2); // set EXP2 option pin to 0
-
-#if defined(__AVR_ATmega32U4__)
-	// disable expansion pin output
-	DDRC &= ~(1 << DDC6);
-	DDRD &= ~(1 << DDD7);
-
-	// set OC4A to disabled for EXP1 option pin
-	TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0) | (1 << PWM4A));
-
-	// set OC4D to disabled for EXP2 option pin
-	TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0) | (1 << PWM4D));
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// disable expansion pin output
-	DDRB &= ~((1 << PB6) | (1 << PB4));
-
-	// set OC1B to disabled for EXP1 option pin
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
-
-	// set OC2A to disabled for EXP2 option pin
-	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// disable expansion pin output
-	DDRB &= ~((1 << PB3) | (1 << PB2));
-
-	// set OC1B to disabled for EXP1 option pin
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
-
-	// set OC2A to disabled for EXP2 option pin
-	TCCR2A &= ~(1 << COM2A0);
-	TCCR2A |= (1 << COM2A1);
-
-#endif // defined(__AVR_ATmega328P__)
-}
-
-// sets EXP1 option pin PWM output from 0-100%
-static void peripheral::outputExpansionPin1(uint8_t pin)
-{
-
-	uint8_t val = SWEET64::runPrgm(prgmCalculateOutputPinValue, pin);
-
-#if defined(__AVR_ATmega32U4__)
-	OCR4A = val;
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	OCR1B = val;
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	OCR1B = val;
-#endif // defined(__AVR_ATmega328P__)
-
-}
-
-// sets EXP2 option pin PWM output from 0-100%
-static void peripheral::outputExpansionPin2(uint8_t pin)
-{
-
-	uint8_t val = SWEET64::runPrgm(prgmCalculateOutputPinValue, pin);
-
-#if defined(__AVR_ATmega32U4__)
-	OCR4D = val;
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	OCR2A = val;
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	OCR2A = val;
-#endif // defined(__AVR_ATmega328P__)
-
-}
-
-#endif // useExpansionPins
-static void peripheral::initButton(void)
-{
-
-#ifdef useAdafruitRGBLCDshield
-	uint16_t MCP23017registers;
-#endif // useAdafruitRGBLCDshield
-	uint8_t oldSREG;
-
-#ifdef useAdafruitRGBLCDshield
-#if useTWIbuttons && useTWILCD
-	LCD::disableIntSample(); // disable TWI button sampling
-
-#endif // useTWIbuttons && useTWILCD
-	MCP23017registers = (uint16_t)(buttonMask);
-
-	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_IODIRx, (union_16 *)(&MCP23017registers)); // write out port direction (only buttons as input)
-	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_GPPUx, (union_16 *)(&MCP23017registers)); // write out pull-up resistor config (only buttons as input)
-	adafruitRGBLCDsupport::writeRegister16Bit(MCP23017_B0_IPOLx, (union_16 *)(&MCP23017registers)); // write out input pin polarity config (only buttons as input)
-
-	adafruitRGBLCDsupport::setTransferMode(adaTWIbyteMode); // ensure address mode is in byte mode
-
-#if useTWIbuttons && useTWILCD
-	LCD::enableIntSample(); // enable TWI button sampling
-
-#endif // useTWIbuttons && useTWILCD
-#endif // useAdafruitRGBLCDshield
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-#ifdef useLegacyButtons
-#if defined(__AVR_ATmega2560__)
-	DIDR2 &= ~((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D)); // enable digital input on port K button pins
-
-	PORTK |= ((1 << PORTK5) | (1 << PORTK4) | (1 << PORTK3)); // enable port K button pullup resistors
-
-	PCMSK2 |= ((1 << PCINT21) | (1 << PCINT20) | (1 << PCINT19)); // enable port K button interrupts
-
-	PCICR |= (1 << PCIE2); // enable selected interrupts on port K
-
-	lastPINxState = PINK; // initialize last input pin state value so as to not erroneously detect a button press on start
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	DIDR0 &= ~((1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D)); // enable digital input on port C button pins
-
-	PORTC |= ((1 << PORTC5) | (1 << PORTC4) | (1 << PORTC3)); // enable port C button pullup resistors
-
-	PCMSK1 |= ((1 << PCINT13) | (1 << PCINT12) | (1 << PCINT11)); // enable port C button interrupts
-
-	PCICR |= (1 << PCIE1); // enable selected interrupts on port C
-
-	lastPINxState = PINC; // initialize last input pin state value so as to not erroneously detect a button press on start
-
-#endif // defined(__AVR_ATmega328P__)
-#endif // useLegacyButtons
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void peripheral::shutdownButton(void)
-{
-}
-
-#if defined(useAnalogButtons) || defined(useDebugTerminal)
-static void peripheral::injectButton(uint8_t buttonValue)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts to make the next operations atomic
-
-	thisButtonState = buttonValue;
-	timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-#endif // useAnalogButtons || useDebugTerminal
-#if defined(__AVR_ATmega32U4__)
-static void peripheral::initUSB(void)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	PRR1 &= ~(1 << PRUSB); // turn on USB hardware
-
-	UHWCON = (1 << UVREGE); // enable USB pad regulator
-
-	USBCON = ((1 << USBE) | (1 << FRZCLK)); // enable USB controller, disable clock inputs
-
-#if F_CPU == 16000000UL
-	PLLCSR = ((1 << PINDIV) | (1 << PLLE)); // set PLL input prescaler for 16 MHz clock source, and enable PLL
-#elif F_CPU == 8000000UL
-	PLLCSR = (1 << PLLE); // set PLL input prescaler for 8 MHz clock source, and enable PLL
-#else // F_CPU == 16000000UL
-#error *** F_CPU clock rate not supported!!! ***
-#endif // F_CPU == 16000000UL
-
-	while (!(PLLCSR & (1 << PLOCK))); // wait for PLL lock
-
-	USBCON = ((1 << USBE) | (1 << OTGPADE)); // keep USB controller enabled, enable clock inputs, enable VBUS pad
-
-	UDCON = 0; // select USB high speed mode
-
-	usbConfiguration = 0;
-
-	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void peripheral::shutdownUSB(void)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	UDIEN = 0; // disable all USB interrupts
-
-	USBCON = 0; // disable USB controller
-
-	PLLCSR = 0; // disable PLL
-
-	UHWCON = 0; // disable USB pad regulator
-
-	PRR1 |= (1 << PRUSB); // turn off USB hardware
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-#endif // defined(__AVR_ATmega32U4__)
-#ifdef useStatusLEDpins
-static void peripheral::initStatusLED(void)
-{
-
-#if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
-//	DDRB |= (1 << DDB0); // turn on digital output for RX LED
-	DDRC |= (1 << DDC7); // turn on digital output for LED L
-//	DDRD |= (1 << DDD5); // turn on digital output for TX LED
-#else // useTinkerkitLCDmodule
-// insert any other ATmega32U4 port information for initializing status LEDs here
-#endif // useTinkerkitLCDmodule
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
-	DDRB |= (1 << DDB7); // turn on digital output for LED L
-#else // useArduinoMega2560
-// insert any other ATmega2560 port information for initializing status LEDs here
-#endif // useArduinoMega2560
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	DDRB |= (1 << DDB5); // turn on digital output for LED L
-#endif // defined(__AVR_ATmega328P__)
-
-	outputStatusLED(0); // initially turn off status LED
-
-}
-
-static void peripheral::shutdownStatusLED(void)
-{
-
-	outputStatusLED(0); // turn off status LED
-
-#if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
-//	DDRB &= ~(1 << DDB0); // turn off digital output for RX LED
-	DDRC &= ~(1 << DDC7); // turn off digital output for LED L
-//	DDRD &= ~(1 << DDD5); // turn off digital output for TX LED
-#else // useTinkerkitLCDmodule
-// insert any other ATmega32U4 port information for turning off status LEDs here
-#endif // useTinkerkitLCDmodule
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
-	DDRB &= ~(1 << DDB7); // turn off digital output for LED L
-#else // useArduinoMega2560
-// insert any other ATmega2560 port information for turning off status LEDs here
-#endif // useArduinoMega2560
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	DDRB &= ~(1 << DDB5); // turn off digital output for LED L
-#endif // defined(__AVR_ATmega328P__)
-
-}
-
-static void peripheral::outputStatusLED(uint8_t val)
-{
-
-	if (val)
-	{
-
-#if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
-//		PORTB &= ~(1 << PORTB0); // active low RX
-		PORTC |= (1 << PORTC7); // active high L
-//		PORTD &= ~(1 << PORTD5); // active low TX
-#else // useTinkerkitLCDmodule
-// insert any other ATmega32U4 port information for turning on status LEDs here
-#endif // useTinkerkitLCDmodule
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
-		PORTB |= (1 << PORTB7); // active high L
-#else // useArduinoMega2560
-// insert any other ATmega2560 port information for turning on status LEDs here
-#endif // useArduinoMega2560
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-		PORTB |= (1 << PORTB5); // active high L
-#endif // defined(__AVR_ATmega328P__)
-
-	}
-	else
-	{
-
-#if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
-//		PORTB |= (1 << PORTB0); // active low RX
-		PORTC &= ~(1 << PORTC7); // active high L
-//		PORTD |= (1 << PORTD5); // active low TX
-#else // useTinkerkitLCDmodule
-// insert any other ATmega32U4 port information for turning off status LEDs here
-#endif // useTinkerkitLCDmodule
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
-		PORTB &= ~(1 << PORTB7); // active high L
-#else // useArduinoMega2560
-// insert any other ATmega2560 port information for turning off status LEDs here
-#endif // useArduinoMega2560
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-		PORTB &= ~(1 << PORTB5); // active high L
-#endif // defined(__AVR_ATmega328P__)
-
-	}
-
-}
-
-#endif // useStatusLEDpins
 // this function is called whenever the main program has to wait for some external condition to occur
 // when the main program performs some I/O activity, the target peripheral may take some time to acknowledge the activity
 //    and let the main program know that the peripheral is ready for more activity
@@ -3091,22 +1613,14 @@ static void peripheral::outputStatusLED(uint8_t val)
 static void idleProcess(void)
 {
 
-	uint8_t oldSREG;
-	uint8_t i;
-	uint8_t j;
-	uint8_t k;
-	uint8_t m;
-#ifdef useStatusLEDpins
-	uint8_t ledSleepVal = 0;
-#endif // useStatusLEDpins
 #ifdef useCPUreading
 	uint32_t idleStart;
 #endif // useCPUreading
 
-#ifdef useStatusLEDpins
-	peripheral::outputStatusLED(ledSleepVal);
+#if defined(useActivityLED)
+	activityLED::output(0);
 
-#endif // useStatusLEDpins
+#endif // defined(useActivityLED)
 #ifdef useCPUreading
 	idleStart = systemInfo::cycles0(); // record starting time
 
@@ -3120,115 +1634,21 @@ static void idleProcess(void)
 #endif // useDebugCPUreading
 
 #endif // useCPUreading
-#ifdef useStatusLEDpins
-	peripheral::outputStatusLED(1 - ledSleepVal);
+#if defined(useActivityLED)
+	activityLED::output(1);
 
-#endif // useStatusLEDpins
+#endif // defined(useActivityLED)
 	// this is the part of the main loop that only executes twice a second (or what is defined by loopsPerSecond), to collect and process readings
 	if (timer0Status & t0sTakeSample) // if main timer has commanded a sample be taken
 	{
 
-		peripheral::changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
+		changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
 
 #ifdef useCPUreading
-		mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = systemInfo::findCycleLength(mainStart, systemInfo::cycles0());
-		mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)] = idleTimerLength;
+		systemInfo::idleProcess();
 
-		mainStart = systemInfo::cycles0();
-		idleTimerLength = 0;
-
-#ifdef useDebugCPUreading
-		switch (monitorState)
-		{
-
-			case 1:
-				idleProcessTimerLength = 0;
-				displayTimerLength = 0;
-				SWEET64timerLength = 0;
-
-				oldSREG = SREG; // save interrupt flag status
-				cli(); // disable interrupts to make the next operations atomic
-
-				volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] = 0;
-
-				SREG = oldSREG; // restore interrupt flag status
-
-				monitorState = 2;
-				break;
-
-			case 2:
-				mainProgramVariables[(uint16_t)(mpDebugAccMainLoopIdx)] = mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)];
-				mainProgramVariables[(uint16_t)(mpDebugAccIdleIdx)] = mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)];
-				mainProgramVariables[(uint16_t)(mpDebugAccIdleProcessIdx)] = idleProcessTimerLength;
-				mainProgramVariables[(uint16_t)(mpDebugAccDisplayIdx)] = displayTimerLength;
-				mainProgramVariables[(uint16_t)(mpDebugAccSWEET64idx)] = SWEET64timerLength;
-
-				oldSREG = SREG; // save interrupt flag status
-				cli(); // disable interrupts to make the next operations atomic
-
-				mainProgramVariables[(uint16_t)(mpDebugAccInterruptIdx)] = volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)];
-
-				SREG = oldSREG; // restore interrupt flag status
-
-				monitorState = 0;
-				break;
-
-			default:
-				monitorState = 0;
-				break;
-
-		}
-
-#endif // useDebugCPUreading
 #endif // useCPUreading
-		oldSREG = SREG; // save interrupt flag status
-		cli(); // disable interrupts to make the next operations atomic
-
-		i = rawTripIdx; // save old trip variable index
-		rawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
-
-#ifdef trackIdleEOCdata
-		j = rawEOCidleTripIdx; // save old EOC/idle trip variable index
-		rawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
-
-#endif // trackIdleEOCdata
-		SREG = oldSREG; // restore interrupt flag status
-
-		for (uint8_t x = 0; x < tUScount; x++)
-		{
-
-			k = translateTripIndex(tripUpdateSrcList, x) & 0x7F;
-			m = translateTripIndex(tripUpdateDestList, x);
-
-			if (m)
-			{
-
-				if (m & 0x80) tripVar::transfer(k, m & 0x7F);
-				else tripVar::update(k, m);
-
-			}
-
-		}
-
-		tripVar::reset(i); // reset old raw trip variable
-#ifdef trackIdleEOCdata
-		tripVar::reset(j); // reset old EOC/idle raw trip variable
-#endif // trackIdleEOCdata
-
-		if (awakeFlags & aAwakeOnVehicle)
-		{
-
-#ifdef useWindowTripFilter
-			if (EEPROM::readVal(pWindowTripFilterIdx))
-			{
-
-				wtpCurrentIdx++;
-				if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
-
-			}
-
-#endif // useWindowTripFilter
-		}
+		tripSupport::idleProcess();
 
 	}
 
@@ -3237,7 +1657,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadMAPchannel)
 	{
 
-		peripheral::changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
+		changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
 
 		SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
 
@@ -3248,7 +1668,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadBaroChannel)
 	{
 
-		peripheral::changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
+		changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
 
 		SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
 
@@ -3259,7 +1679,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadButtonChannel)
 	{
 
-		peripheral::changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
+		changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
 
 		for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 		{
@@ -3270,7 +1690,7 @@ static void idleProcess(void)
 #ifdef useTestAnalogButtonIdx
 				thisButtonIdx = x;
 #endif //  useTestAnalogButtonIdx
-				peripheral::injectButton(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
+				button::inject(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
 				break;
 
 			}
@@ -3285,104 +1705,9 @@ static void idleProcess(void)
 	if (timer0Status & t0sAccelTestFlag)
 	{
 
-		peripheral::changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
+		changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
 
-		oldSREG = SREG; // save interrupt flag status
-		cli(); // disable interrupts to make the next operations atomic
-
-		accelTestStatus = lastAccelTestStatus; // copy last loop's accel test flag status to this loop
-		lastAccelTestStatus = accelerationFlags; // copy current accel test flag status for next loop
-
-		SREG = oldSREG; // restore interrupt flag status
-
-		accelTestStatus = (lastAccelTestStatus ^ accelTestStatus) & accelTestClearFlags; // detect any drag race flag changes
-
-		if (accelTestStatus)
-		{
-
-			accelTestState = accelerationFlags & accelTestClearFlags;
-
-			switch (accelTestState)
-			{
-
-				case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-					accelTestState = 1;
-					break;
-
-				case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-					accelTestState = 2;
-					break;
-
-				case (accelTestFinished):
-					if (SWEET64::runPrgm(prgmAccelTestCompareFullSpeeds, 0))
-					{
-
-						tripVar::transfer(dragRawHalfSpeedIdx, dragHalfSpeedIdx);
-						tripVar::transfer(dragRawFullSpeedIdx, dragFullSpeedIdx);
-						tripVar::transfer(dragRawDistanceIdx, dragDistanceIdx);
-
-					}
-
-					accelTestState = 3;
-					break;
-
-				case (accelTestFinished | accelTestCancelled):
-					accelTestState = 4;
-					break;
-
-				case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
-					accelTestState = 5;
-					break;
-
-				case (accelTestActive | accelTestFullSpeed | accelTestDistance):
-					accelTestState = 6;
-					break;
-
-				case (accelTestActive | accelTestFullSpeed):
-					accelTestState = 7;
-					break;
-
-				case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
-					accelTestState = 8;
-					break;
-
-				case (accelTestActive | accelTestHalfSpeed):
-					accelTestState = 9;
-					break;
-
-				case (accelTestActive | accelTestDistance):
-					accelTestState = 10;
-					break;
-
-				case (accelTestActive):
-					accelTestState = 11;
-					break;
-
-				default:
-					accelTestState = 12;
-					break;
-
-			}
-
-		}
-		else
-		{
-
-			accelTestState = 0;
-
-			if (accelerationFlags & accelTestFinished)
-			{
-
-				if (EEPROM::readVal(pDragAutoFlagIdx))
-				{
-
-					if (accelerationTest::triggerTest() == 0) accelTestState = 1;
-
-				}
-
-			}
-
-		}
+		accelerationTest::idleProcess();
 
 	}
 
@@ -3391,89 +1716,18 @@ static void idleProcess(void)
 	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
 	{
 
-		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
+		changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
 
-		debugFIPidx++;
-		if (debugFIPidx >= debugFIPlength)
-		{
-
-			debugFIPidx = 0;
-			debugFIPstate++;
-			debugFIPstate &= 3;
-
-		}
-
-		switch (debugFIPstate)
-		{
-
-			case 0:
-				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
-				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
-				debugFIPWgoodTickLength = debugFIPtickLength - 63;
-				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
-				break;
-
-			case 1:
-				break;
-
-			case 2:
-				debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-				debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-				debugFIPWgoodTickLength = debugFIPtickLength - 63;
-				peripheral::changeBitFlags(debugFlags, 0, debugFIPready);
-				break;
-
-			case 3:
-				break;
-
-			default:
-				break;
-
-		}
-
-		if (debugFIPWreadTickLength > debugFIPWgoodTickLength) debugFIPWreadTickLength = debugFIPWgoodTickLength;
-		else debugFIPWtickLength = debugFIPWreadTickLength;
+		debugReading::idleProcessFuel();
 
 	}
 
 	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
 	{
 
-		peripheral::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
+		changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
 
-		debugVSSidx++;
-		if (debugVSSidx >= debugVSSlength)
-		{
-
-			debugVSSidx = 0;
-			debugVSSstate++;
-			debugVSSstate &= 3;
-
-		}
-
-		switch (debugVSSstate)
-		{
-
-			case 0:
-				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
-				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
-				break;
-
-			case 1:
-				break;
-
-			case 2:
-				debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
-				peripheral::changeBitFlags(debugFlags, 0, debugVSSready);
-				break;
-
-			case 3:
-				break;
-
-			default:
-				break;
-
-		}
+		debugReading::idleProcessVSS();
 
 	}
 
@@ -3482,16 +1736,6 @@ static void idleProcess(void)
 	idleProcessTimerLength += systemInfo::findCycleLength(idleStart, systemInfo::cycles0());
 
 #endif // useDebugCPUreading
-}
-
-static void performSleepMode(uint8_t sleepMode)
-{
-
-	set_sleep_mode(sleepMode); // set for specified sleep mode
-	sleep_enable(); // enable sleep mode
-	sleep_mode(); // go sleep for a bit
-	sleep_disable(); // disable sleep mode
-
 }
 
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
@@ -3509,146 +1753,17 @@ int main(void)
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
-	// timer0 is the taskmaster driving MPGuino's measurement functionality
-#if defined(__AVR_ATmega32U4__)
-	// turn on timer0 module
-	PRR0 &= ~(1 << PRTIM0);
+	initCore(); // go initialize core MPGuino functionality
 
-	// set timer 0 to fast PWM mode, TOP = 0xFF
-	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
-	TCCR0B &= ~(1 << WGM02);
+	j = EEPROM::powerUpCheck();
 
-	// set timer 0 prescale factor to 64
-	TCCR0B &= ~(1 << CS02);
-	TCCR0B |= ((1 << CS01) | (1 << CS00));
-
-	// set OC0A to disabled
-	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
-
-	// set OC0B to disabled
-	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
-
-	// clear timer 0 output compare force bits for OC0A and OC0B
-	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
-
-	// disable timer 0 output compare interrupts
-	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
-
-	// enable timer 0 overflow interrupt to generate ~1 ms tick
-	TIMSK0 |= (1 << TOIE0);
-
-	// clear timer 0 interrupt flags
-	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
-
-	// disable digital inputs for all ADC capable pins to reduce power consumption
-	DIDR0 |= ((ADC7D) | (1 << ADC6D) | (1 << ADC5D) | (1 << ADC4D) | (1 << ADC1D) | (1 << ADC0D));
-	DIDR1 |= (1 << AIN0D);
-	DIDR2 |= ((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D) | (1 << ADC10D) | (1 << ADC9D) | (1 << ADC8D));
-
-	// shut off on-board peripherals to reduce power consumption
-	PRR0 |= ((1 << PRTWI) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRADC));
-	PRR1 |= ((1 << PRUSB) | (1 << PRTIM4) | (1 << PRTIM3) | (1 << PRUSART1));
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// turn on timer0 module
-	PRR0 &= ~(1 << PRTIM0);
-
-	// set timer 0 to fast PWM mode, TOP = 0xFF
-	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
-	TCCR0B &= ~(1 << WGM02);
-
-	// set timer 0 prescale factor to 64
-	TCCR0B &= ~(1 << CS02);
-	TCCR0B |= ((1 << CS01) | (1 << CS00));
-
-	// set OC0A to disabled
-	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
-
-	// set OC0B to disabled
-	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
-
-	// clear timer 0 output compare force bits for OC0A and OC0B
-	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
-
-	// disable timer 0 output compare interrupts
-	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
-
-	// enable timer 0 overflow interrupt to generate ~1 ms tick
-	TIMSK0 |= (1 << TOIE0);
-
-	// clear timer 0 interrupt flags
-	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
-
-	// disable digital inputs for all ADC capable pins to reduce power consumption
-	DIDR0 |= ((1 << ADC7D) | (1 << ADC6D) | (1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D) | (1 << ADC2D) | (1 << ADC1D) | (1 << ADC0D));
-	DIDR1 |= ((1 << AIN1D) | (1 << AIN0D));
-	DIDR2 |= ((1 << ADC15D) | (1 << ADC14D) | (1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D) | (1 << ADC10D) | (1 << ADC9D) | (1 << ADC8D));
-
-	// shut off on-board peripherals to reduce power consumption
-	PRR0 |= ((1 << PRTWI) | (1 << PRTIM2) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0) | (1 << PRADC));
-	PRR1 |= ((1 << PRTIM5) | (1 << PRTIM4) | (1 << PRTIM3) | (1 << PRUSART3) | (1 << PRUSART2) | (1 << PRUSART1));
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// turn on timer0 module
-	PRR &= ~(1 << PRTIM0);
-
-	// set timer 0 to fast PWM mode, TOP = 0xFF
-	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
-	TCCR0B &= ~(1 << WGM02);
-
-	// set timer 0 prescale factor to 64
-	TCCR0B &= ~(1 << CS02);
-	TCCR0B |= ((1 << CS01) | (1 << CS00));
-
-	// set OC0A to disabled
-	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
-
-	// set OC0B to disabled
-	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
-
-	// clear timer 0 output compare force bits for OC0A and OC0B
-	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
-
-	// disable timer 0 output compare interrupts
-	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
-
-	// enable timer 0 overflow interrupt to generate ~1 ms tick
-	TIMSK0 |= (1 << TOIE0);
-
-	// clear timer 0 interrupt flags
-	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
-
-	// disable digital inputs for all ADC capable pins to reduce power consumption
-	DIDR0 |= ((1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D) | (1 << ADC2D) | (1 << ADC1D) | (1 << ADC0D));
-	DIDR1 |= ((1 << AIN1D) | (1 << AIN0D));
-
-	// shut off on-board peripherals to reduce power consumption
-	PRR |= ((1 << PRTWI) | (1 << PRTIM2) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0) | (1 << PRADC));
-
-#endif // defined(__AVR_ATmega328P__)
-	ACSR &= ~(1 << ACIE); // disable analog comparator interrupt
-	ACSR |= (1 << ACD); // disable analog comparator module
-	ADCSRB &= ~(1 << ACME); // disable analog comparator multiplexer
-
-	timer0Command = t0cResetTimer;
-#ifdef useTimer1Interrupt
-	timer1Command = t1cResetTimer;
-#endif // useTimer1Interrupt
+	tripSupport::init();
 
 #ifdef useSimulatedFIandVSS
 	debugFlags = (debugVSSflag | debugInjectorFlag);
 	debugReading::configurePorts();
 
 #endif // useSimulatedFIandVSS
-	rawTripIdx = raw0tripIdx;
-#ifdef trackIdleEOCdata
-	rawEOCidleTripIdx = raw0eocIdleTripIdx;
-#endif // trackIdleEOCdata
-
-	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
-
 #ifdef useDragRaceFunction
 	accelerationFlags &= ~accelTestClearFlags;
 	lastAccelTestStatus = accelerationFlags;
@@ -3658,18 +1773,12 @@ int main(void)
 	menuLevel = 255;
 	topScreenLevel = 0;
 
-	j = EEPROM::powerUpCheck();
-
 	timer0DelayCount = delay1500msTick; // request a set number of timer tick delays equivalent to 1.5 seconds
 	timer0Command |= (t0cDoDelay); // signal request to timer
 
-#ifdef useWindowTripFilter
-	windowTripFilterReset();
-
-#endif // useWindowTripFilter
 	sei();
 
-	peripheral::initMain(); // initialize all human interface peripherals
+	initHardware(); // initialize all human interface peripherals
 
 #ifdef useSavedTrips
 	i = tripSupport::doAutoAction(1);
@@ -3691,7 +1800,7 @@ int main(void)
 	terminalState = 0;
 
 #endif // outputDebugTerminalSplash
-	while (timer0Command & t0cDoDelay) idleProcess(); // show splash screen for 1.5 seconds
+	delay0(0); // show splash screen for 1.5 seconds
 
 #ifdef useTestButtonValues
 	cursor::moveAbsolute(buttonViewIdx, 0);
@@ -3733,7 +1842,7 @@ int main(void)
 		if (activityChangeFlags & afActivityTimeoutFlag)
 		{
 
-			peripheral::changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
+			changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
 
 			if (activityFlags & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
 			{
@@ -3765,7 +1874,7 @@ int main(void)
 		if (activityChangeFlags & afEngineOffFlag)
 		{
 
-			peripheral::changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
+			changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
 
 			if (((activityFlags & afEngineOffFlag) == 0) && (EEPROM::readVal(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent(); // if engine start is detected
 
@@ -3774,7 +1883,7 @@ int main(void)
 		if (activityChangeFlags & afVehicleStoppedFlag)
 		{
 
-			peripheral::changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
+			changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
 
 			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readVal(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent(); // if vehicle movement is detected
 
@@ -3784,13 +1893,13 @@ int main(void)
 		if (activityChangeFlags & afParkFlag)
 		{
 
-			peripheral::changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
+			changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
 
 			if (activityFlags & afParkFlag) // if MPGuino is commanded to go park
 			{
 
 #ifdef useWindowTripFilter
-				windowTripFilterReset(); // reset the window trip filter
+				tripSupport::resetWindowFilter(); // reset the window trip filter
 
 #endif // useWindowTripFilter
 #ifdef useSavedTrips
@@ -3810,7 +1919,7 @@ int main(void)
 		{
 
 			j = buttonPress; // capture button state
-			peripheral::changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
+			changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
 
 			bpPtr = (const buttonVariable *)(pgm_read_word(&(screenParameters[(unsigned int)(menuLevel)].modeButtonList)));
 
@@ -3834,7 +1943,7 @@ int main(void)
 		if (timer0Status & t0sOutputLogging)
 		{
 
-			peripheral::changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
+			changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
 
 #ifdef useDataLoggingOutput
 			if (EEPROM::readVal(pSerialDataLoggingIdx)) doOutputDataLog();
@@ -3852,13 +1961,13 @@ int main(void)
 		if (timer0Status & t0sUpdateDisplay)
 		{
 
-			peripheral::changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
+			changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
 
-#ifdef useExpansionPins
-			peripheral::outputExpansionPin1(0);
-			peripheral::outputExpansionPin2(1);
+#if defined(useOutputPins)
+			outputPin::setOutputPin1(0);
+			outputPin::setOutputPin2(1);
 
-#endif // useExpansionPins
+#endif // defined(useOutputPins)
 #ifdef useBarFuelEconVsSpeed
 			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
 

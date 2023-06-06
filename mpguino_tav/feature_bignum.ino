@@ -5,7 +5,7 @@ static void clockSet::entry(void)
 {
 
 #ifdef useSoftwareClock
-	ull2str(tReadTicksToSeconds, pBuff, vClockCycleIdx);
+	ull2str(pBuff, vClockCycleIdx, tReadTicksToSeconds);
 #endif // useSoftwareClock
 
 	cursor::moveAbsolute(clockSetScreenIdx, 0);
@@ -200,13 +200,13 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 #endif // useBigFE
 #ifdef useBigTTE
 				case bigTTEscreenIdx:
-					outputTime(ull2str(tTimeToEmpty, mBuff1, tripIdx), (mainLoopHeartBeat & 0b01010101), 4);
+					outputTime(ull2str(mBuff1, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
 					break;
 
 #endif // useBigTTE
 #ifdef useClockDisplay
 				case clockShowScreenIdx:
-					outputTime(ull2str(tReadTicksToSeconds, mBuff1, vClockCycleIdx), (mainLoopHeartBeat & 0b01010101), 4);
+					outputTime(ull2str(mBuff1, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
 					break;
 
 				case clockSetScreenIdx:
@@ -275,7 +275,7 @@ static uint8_t bigDigit::outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t 
 
 	calcFuncObj thisCalcFuncObj;
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, windowLength, dfAdjustWindow); // perform the required decimal formatting
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
 	outputNumberString(thisCalcFuncObj.strBuffer); // output the number
 
 	return thisCalcFuncObj.calcFmtIdx; // for big MPG label

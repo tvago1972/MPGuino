@@ -103,7 +103,7 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 			SWEET64::runPrgm(prgmFetchParameterValue, parameterPtr);
 
 		case nesLoadValue:
-			ull2str(tFormatToNumber, pBuff, 3);
+			ull2str(pBuff, 3, tFormatToNumber);
 			parameterEdit::findLeft();
 
 		case nesOnChange:
@@ -370,7 +370,7 @@ static void parameterEdit::save(void)
 	{
 
 		case 10:
-			str2ull(pBuff); // convert parameter string to a number
+			str2ull(pBuff); // convert parameter buffer string into uint64_t
 #ifdef usePartialRefuel
 			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // usePartialRefuel
@@ -552,7 +552,7 @@ static void partialRefuel::select(void)
 			break;
 
 		default:
-			noSupport();
+			menu::noSupport();
 			break;
 
 	}

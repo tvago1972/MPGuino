@@ -1,6 +1,3 @@
-#ifdef useIsqrt
-static unsigned int iSqrt(unsigned int n);
-#endif // useIsqrt
 /*
 
  SWEET64 is a low-level pseudocode interpreter, meant to save a lot of space in program memory for 64-bit calculations
@@ -12,6 +9,14 @@ static unsigned int iSqrt(unsigned int n);
     perform 16-bit machine language instructions while running on an 8-bit microprocessor
 
 */
+
+#ifdef useIsqrt
+static unsigned int iSqrt(unsigned int n);
+#endif // useIsqrt
+static unsigned long str2ull(char * strBuffer);
+static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t &decPos, char &zeroChar, uint8_t &digCnt, uint8_t flg);
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx);
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag);
 
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
@@ -814,8 +819,7 @@ const uint8_t idxMicroSecondsPerSecond =	idxTicksPerSecond + 1;
 const uint8_t idxDecimalPoint =				idxMicroSecondsPerSecond + 1;
 const uint8_t idxMetricFE =					idxDecimalPoint + 1;
 const uint8_t idxSecondsPerHour =			idxMetricFE + 1;
-const uint8_t idxNumber500 =				idxSecondsPerHour + 1;
-const uint8_t idxBCDdivisor =				idxNumber500 + 1;
+const uint8_t idxBCDdivisor =				idxSecondsPerHour + 1;
 #define nextAllowedValue idxBCDdivisor + 1
 #ifdef useIsqrt
 const uint8_t idxNumerPressure =			nextAllowedValue;
@@ -879,7 +883,6 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxDecimalPoint\r"
 	"idxMetricFE\r"
 	"idxSecondsPerHour\r"
-	"idxNumber500\r"
 	"idxBCDdivisor\r"
 #ifdef useIsqrt
 	"idxNumerPressure\r"
@@ -973,7 +976,6 @@ const uint32_t convNumbers[] PROGMEM = {
 	,1000ul							// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
 	,100000ul						// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
 	,3600ul							// idxSecondsPerHour - seconds per hour
-	,500ul							// idxNumber500 - round to nearest whole number, for numeric formatting
 	,100000000ul					// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
 #ifdef useIsqrt
 	,68947573ul						// idxNumerPressure - numerator to convert psig to kPa
@@ -1039,3 +1041,10 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 
 	,0x00		// total entry length == 0 for end of list
 };
+
+const char overFlowStr[] PROGMEM = "----------";
+const char overFlow9Str[] PROGMEM = "9999999999";
+
+const uint8_t dfIgnoreDecimalPoint =	0b00000001;
+const uint8_t dfOverflow9s =			0b10000000;
+

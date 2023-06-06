@@ -5,6 +5,7 @@ namespace accelerationTest /* Acceleration Test support section prototype */
 	void goDisplay(void);
 	void goTrigger(void);
 	uint8_t triggerTest(void);
+	void idleProcess(void);
 
 }
 

@@ -40,11 +40,11 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 #define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
-//#define useSpiffyBigChars true
+#define useSpiffyBigChars true
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-//#define useBigFE true						// Show big fuel economy displays
-//#define useBigDTE true						// Show big distance-to-empty displays
-//#define useBigTTE true						// Show big time-to-empty displays
+#define useBigFE true						// Show big fuel economy displays
+#define useBigDTE true						// Show big distance-to-empty displays
+#define useBigTTE true						// Show big time-to-empty displays
 //#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
@@ -53,7 +53,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
-//#define useExpansionPins true				// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
+#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of message
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
 //#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
@@ -96,12 +96,13 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 // program measurement and debugging tools
 //
 #define useDebugTerminal true					// (inw) terminal interface between PC and MPGuino
+//#define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
 #define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
 #define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true				// Allows observation of button mapping
 #define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
-//#define useStatusLEDpins true					// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
+#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 #define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useObsoleteMult64 true					// use obsolete slower bit-based 64-bit multiplication
 //#define useSWEET64mult true						// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
@@ -179,7 +180,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #undef useAnalogMuxButtons
 #undef useParallax5PositionSwitch
 #undef useAdafruitRGBLCDshield
-#undef useStatusLEDpins
+#undef useActivityLED
 #endif // defined (useJellyBeanDriverBoard) || defined (useLegacyBoard)
 
 #if not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
@@ -401,7 +402,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useTimer1 true
 #endif // useTimer1Interrupt
 
-#ifdef useExpansionPins
+#if defined(useOutputPins)
 #if defined(__AVR_ATmega32U4__)
 #define useTimer4 true
 #endif // defined(__AVR_ATmega32U4__)
@@ -412,7 +413,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useTimer1 true
 #define useTimer2 true
 #endif // defined(__AVR_ATmega328P__)
-#endif // useExpansionPins
+#endif // defined(useOutputPins)
 
 #ifdef useDragRaceFunction
 #define useVehicleMass true
@@ -526,9 +527,9 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #endif // useSerial0Port && __AVR_ATmega32U4__
 
 // Really, dcb? Really? You couldn't have used something else for LCD data bit 3?
-#if useLegacyLCD && __AVR_ATmega328P__ && useStatusLEDpins
-#error *** CANNOT use useLegacyLCD and useStatusLEDpins!!! ***
-#endif // useLegacyLCD && __AVR_ATmega328P__ && useStatusLEDpins
+#if useLegacyLCD && __AVR_ATmega328P__ && useActivityLED
+#error *** CANNOT use useLegacyLCD and useActivityLED!!! ***
+#endif // useLegacyLCD && __AVR_ATmega328P__ && useActivityLED
 
 #if useSoftwareClock && useDeepSleep
 #error *** CANNOT use both useSoftwareClock and useDeepSleep!!! ***

@@ -16,6 +16,65 @@ static const uint8_t prgmOutputAvailableRAM[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
+static void systemInfo::idleProcess(void)
+{
+
+	uint8_t oldSREG;
+
+#ifdef useCPUreading
+	mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = systemInfo::findCycleLength(mainStart, systemInfo::cycles0());
+	mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)] = idleTimerLength;
+
+	mainStart = systemInfo::cycles0();
+	idleTimerLength = 0;
+
+#ifdef useDebugCPUreading
+	switch (monitorState)
+	{
+
+		case 1:
+			idleProcessTimerLength = 0;
+			displayTimerLength = 0;
+			SWEET64timerLength = 0;
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] = 0;
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			monitorState = 2;
+			break;
+
+		case 2:
+			mainProgramVariables[(uint16_t)(mpDebugAccMainLoopIdx)] = mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)];
+			mainProgramVariables[(uint16_t)(mpDebugAccIdleIdx)] = mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)];
+			mainProgramVariables[(uint16_t)(mpDebugAccIdleProcessIdx)] = idleProcessTimerLength;
+			mainProgramVariables[(uint16_t)(mpDebugAccDisplayIdx)] = displayTimerLength;
+			mainProgramVariables[(uint16_t)(mpDebugAccSWEET64idx)] = SWEET64timerLength;
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			mainProgramVariables[(uint16_t)(mpDebugAccInterruptIdx)] = volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)];
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			monitorState = 0;
+			break;
+
+		default:
+			monitorState = 0;
+			break;
+
+	}
+
+#endif // useDebugCPUreading
+#endif // useCPUreading
+
+}
+
 static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
 
@@ -36,13 +95,13 @@ static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos, uint8
 		case menuOutputDisplayIdx: // display max cpu utilization and RAM
 			showCPUload();
 			text::stringOut(devLCD, PSTR(" T"));
-			text::stringOut(devLCD, ull2str(tReadTicksToSeconds, mBuff1, vSystemCycleIdx)); // output system time (since MPGuino was powered up)
+			text::stringOut(devLCD, ull2str(mBuff1, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(devLCD, 0, 1);
 			text::stringOut(devLCD, PSTR("FREE RAM: "));
 			mainProgramVariables[(uint16_t)(mpAvailableRAMidx)] = availableRAMptr;
 			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
-			text::stringOut(devLCD, formatDecimal(mBuff1, 6, 2, 0));
+			text::stringOut(devLCD, ull2str(mBuff1, 0, 6, 0));
 			break;
 
 		default:
@@ -59,7 +118,7 @@ static void systemInfo::showCPUload(void)
 
 	text::stringOut(devLCD, PSTR("C%"));
 	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
-	text::stringOut(devLCD, formatDecimal(mBuff1, 6, 2, 0));
+	text::stringOut(devLCD, ull2str(mBuff1, 2, 6, 0));
 #ifdef useDebugCPUreading
 	monitorState = 1;
 #endif // useDebugCPUreading
@@ -113,6 +172,118 @@ static uint32_t systemInfo::cycles0(void)
 }
 
 #endif // useCPUreading
+#if defined(useActivityLED)
+/* Activity status LED support section */
+
+static void activityLED::init(void)
+{
+
+#if defined(__AVR_ATmega32U4__)
+#ifdef useTinkerkitLCDmodule
+//	DDRB |= (1 << DDB0); // turn on digital output for RX LED
+	DDRC |= (1 << DDC7); // turn on digital output for LED L
+//	DDRD |= (1 << DDD5); // turn on digital output for TX LED
+#else // useTinkerkitLCDmodule
+// insert any other ATmega32U4 port information for initializing status LEDs here
+#endif // useTinkerkitLCDmodule
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#ifdef useArduinoMega2560
+	DDRB |= (1 << DDB7); // turn on digital output for LED L
+#else // useArduinoMega2560
+// insert any other ATmega2560 port information for initializing status LEDs here
+#endif // useArduinoMega2560
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	DDRB |= (1 << DDB5); // turn on digital output for LED L
+#endif // defined(__AVR_ATmega328P__)
+
+	output(1); // initially turn on status LED
+
+}
+
+static void activityLED::shutdown(void)
+{
+
+	output(0); // turn off status LED
+
+#if defined(__AVR_ATmega32U4__)
+#ifdef useTinkerkitLCDmodule
+//	DDRB &= ~(1 << DDB0); // turn off digital output for RX LED
+	DDRC &= ~(1 << DDC7); // turn off digital output for LED L
+//	DDRD &= ~(1 << DDD5); // turn off digital output for TX LED
+#else // useTinkerkitLCDmodule
+// insert any other ATmega32U4 port information for turning off status LEDs here
+#endif // useTinkerkitLCDmodule
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#ifdef useArduinoMega2560
+	DDRB &= ~(1 << DDB7); // turn off digital output for LED L
+#else // useArduinoMega2560
+// insert any other ATmega2560 port information for turning off status LEDs here
+#endif // useArduinoMega2560
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	DDRB &= ~(1 << DDB5); // turn off digital output for LED L
+#endif // defined(__AVR_ATmega328P__)
+
+}
+
+static void activityLED::output(uint8_t val)
+{
+
+	if (val)
+	{
+
+#if defined(__AVR_ATmega32U4__)
+#ifdef useTinkerkitLCDmodule
+//		PORTB &= ~(1 << PORTB0); // active low RX
+		PORTC |= (1 << PORTC7); // active high L
+//		PORTD &= ~(1 << PORTD5); // active low TX
+#else // useTinkerkitLCDmodule
+// insert any other ATmega32U4 port information for turning on status LEDs here
+#endif // useTinkerkitLCDmodule
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#ifdef useArduinoMega2560
+		PORTB |= (1 << PORTB7); // active high L
+#else // useArduinoMega2560
+// insert any other ATmega2560 port information for turning on status LEDs here
+#endif // useArduinoMega2560
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+		PORTB |= (1 << PORTB5); // active high L
+#endif // defined(__AVR_ATmega328P__)
+
+	}
+	else
+	{
+
+#if defined(__AVR_ATmega32U4__)
+#ifdef useTinkerkitLCDmodule
+//		PORTB |= (1 << PORTB0); // active low RX
+		PORTC &= ~(1 << PORTC7); // active high L
+//		PORTD |= (1 << PORTD5); // active low TX
+#else // useTinkerkitLCDmodule
+// insert any other ATmega32U4 port information for turning off status LEDs here
+#endif // useTinkerkitLCDmodule
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#ifdef useArduinoMega2560
+		PORTB &= ~(1 << PORTB7); // active high L
+#else // useArduinoMega2560
+// insert any other ATmega2560 port information for turning off status LEDs here
+#endif // useArduinoMega2560
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+		PORTB &= ~(1 << PORTB5); // active high L
+#endif // defined(__AVR_ATmega328P__)
+
+	}
+
+}
+
+#endif // defined(useActivityLED)
 #ifdef useTestButtonValues
 /* Button input value viewer section */
 
@@ -162,48 +333,61 @@ static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_
 static const uint8_t prgmParseDecimalDigit[] PROGMEM = {
 	instrLdReg, 0x62,									// load terminal register into main register
 	instrMul2byByte, 10,								// multiply by 10
-	instrJump, tParseCharacterToReg
+	instrJump, tParseCharacterToReg						// go perform number parse
 };
 
 static const uint8_t prgmParseHexDigit[] PROGMEM = {
 	instrLdReg, 0x62,									// load terminal register into main register
 	instrMul2byByte, 16,								// multiply by 16
-	instrJump, tParseCharacterToReg
+	instrJump, tParseCharacterToReg						// go perform number parse
 };
 
 static const uint8_t prgmFetchMainProgramValue[] PROGMEM = {
 	instrLdRegMainIndexed, 0x02,
-	instrDone
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchConstantValue[] PROGMEM = {
 	instrLdRegConstIndexed, 0x02,
-	instrDone
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchVolatileValue[] PROGMEM = {
 	instrLdRegVolatileIndexed, 0x02,
-	instrDone
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmFetchDecimalValue[] PROGMEM = {
+	instrTestIndex,										// test line number
+	instrBranchIfNotE, 3,								// skip if line number is not zero
+	instrLdRegByte, 0x06, 0,							// initialize terminal register
+
+//cont:
+	instrLdReg, 0x62,									// load terminal register into main register
+	instrMul2byByte, 10,								// multiply by 10
+	instrAddByteToX, 0x02, 5,							// add 5
+	instrLdReg, 0x26,									// load main register into terminal register
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchTripVarValue[] PROGMEM = {
 	instrLdRegTripVarIndexedRV, 0x02, terminalIdx,
-	instrDone
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmWriteMainProgramValue[] PROGMEM = {
 	instrStRegMainIndexed, 0x06,
-	instrDone
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmWriteVolatileValue[] PROGMEM = {
 	instrStRegVolatileIndexed, 0x06,
-	instrDone
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmWriteTripMeasurementValue[] PROGMEM = {
 	instrStRegTripVarIndexedRV, 0x06, terminalIdx,
-	instrDone
+	instrDone											// exit to caller
 };
 
 #ifdef useLegacyButtons
@@ -301,7 +485,7 @@ static void terminal::outputConstantValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchConstantValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
 }
 
@@ -309,7 +493,7 @@ static void terminal::outputParameterValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
 }
 
@@ -326,7 +510,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 
 		text::stringOut(devDebugTerminal, PSTR(" (orig "));
 		SWEET64::runPrgm(prgmFetchInitialParamValue, lineNumber);
-		text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+		text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 		text::stringOut(devDebugTerminal, PSTR(")"));
 
 	}
@@ -346,7 +530,7 @@ static void terminal::outputVolatileValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchVolatileValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
 }
 
@@ -354,7 +538,7 @@ static void terminal::outputMainProgramValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchMainProgramValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
 }
 
@@ -363,7 +547,7 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 
 
 	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(tFormatToNumber, termNumberBuff, 3));
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
 }
 
@@ -375,6 +559,14 @@ static void terminal::outputTripVarMeasuredExtra(uint8_t lineNumber)
 
 }
 
+static void terminal::outputDecimalValue(uint8_t lineNumber)
+{
+
+	SWEET64::runPrgm(prgmFetchDecimalValue, lineNumber);
+	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
+
+}
+
 static void terminal::mainProcess(void)
 {
 
@@ -383,32 +575,50 @@ static void terminal::mainProcess(void)
 	uint8_t oldSREG;
 
 /*
+the debug terminal is based off of the Apple II system monitor, which is command-line based. One or more commands are
+entered at the prompt, separated by space characters. Pressing <Enter> will cause the monitor to execute these commands
 
 	terminal commands:
-      P - list stored parameters
-      V - list volatile variables
-      M - list main program variables
-      O - list program constants
-      T - list read-in trip variable values
-      L - list functions for read-in trip variable
-     ^L - list SWEET64 source code for function
-   [x]R - read trip variable x into terminal trip variable
-   [x]W - write terminal trip variable into trip variable x
-          if no x specified, lists available trip variables
-      S - output system status
-      I - inject button press
-            short (l, c, r, u, d)
-             long (L, C, R, U, D)
-      ? - displays this help
+    [y].[x]P - list stored parameters, optionally between [y] and [x]
+  xPy y y... - store one or more y values in stored parameter beginning with x
+
+    [y].[x]V - list volatile variables, optionally between [y] and [x]
+  xVy y y... - store one or more y values in volatile variable beginning with x
+
+    [y].[x]M - list main program variables, optionally between [y] and [x]
+  xMy y y... - store one or more y values in main program variable beginning with x
+
+    [y].[x]T - list terminal trip variable values, optionally between [y] and [x]
+  xTy y y... - store one or more y values in terminal trip variable beginning with x
+
+    [y].[x]O - list program constants, optionally between [y] and [x]
+    [y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]
+[z]<[y].[x]U - list decimal number sample for output
+                z - decimal processing flag
+                y - window length
+                x - decimal digit count
+          ^L - list SWEET64 source code for function
+    [y]<[x]R - read trip variable x into trip variable y
+                default for x and y is terminal trip variable
+                if no x or y specified, lists available trip variables
+           S - output system status
+           I - inject button press
+                short (l, c, r, u, d)
+                 long (L, C, R, U, D)
+           ? - displays this help
 
 	numbers or button presses are separated by spaces
 
 	ex:
-	]1r           << reads instant trip variable into terminal
+	]1r           << reads instant trip variable into terminal trip variable
 
-	]1l 2l 3l     << prints functions 1, 2, and 3 associated with read-in trip variable
+	]1.3l         << outputs functions 1, 2, and 3 associated with read-in trip variable
 
-	]l            << prints all available functions associated with read-in  trip variable
+	]0.3p         << outputs stored parameters 0 through 3
+
+	]1p2 66 3000  << stores 2 at stored parameter 1, 66 at stored parameter 2, and 3000 at stored parameter 3
+
+	]l            << outputs all available functions associated with terminal trip variable
 
 	]ild          << injects short button press l+d into MPGuino
 
@@ -426,8 +636,8 @@ static void terminal::mainProcess(void)
 			terminalState++;
 			inpIdx = 0;
 			readIdx = 0;
-			terminalMode = tmHexInput;
-			terminalByte = 0;
+			terminalCmd = 0;
+			terminalMode = tmInitHex;
 			terminalAddress = 0;
 		case 1:		// get line
 			i = devDebugTerminal.chrIn();
@@ -500,59 +710,49 @@ static void terminal::mainProcess(void)
 			else chr = terminalBuff[(uint16_t)(readIdx++)];
 
 			i = 1;
-			if ((terminalMode & tmSomethingReadIn) == 0)
+
+			if (terminalMode & tmInitInput)
 			{
+
+				terminalMode &= ~(tmInitInput | tmByteReadIn);
 
 				terminalByte = 0;
 				SWEET64::init64byt((union union_64 *)(&s64reg[s64reg6]), 0);
 
 			}
-			if (chr > 0x5F) j = chr - 0x20;
-			else j = chr;
-			switch (terminalMode)
+
+			j = chr; // save raw input character for button press processing
+
+			if (chr > 0x5F) chr &= 0x5F; // force input character to uppercase
+
+			switch (terminalMode & tmInputMask) // process a possible digit, hexit, or button press character
 			{
 
-				case 'I':										// parse a button press character
-				case ('I' | tmSomethingReadIn):					// parse a button press character
+				case (tmButtonInput):					// parse a button press character
+				case (tmButtonInput | tmByteReadIn):	// parse a button press character
 					for (uint8_t x = 0; x < terminalButtonCount; x++)
-						if (chr == pgm_read_byte(&terminalButtonChars[(uint16_t)(x)]))
+						if (j == pgm_read_byte(&terminalButtonChars[(uint16_t)(x)]))
 						{
 
-							i = 0; // signal that a valid character was already read in
+							i = 0; // signal that a valid character was read in
 							terminalByte |= (pgm_read_byte(&terminalButtonValues[(uint16_t)(x)]));
-							terminalMode |= (tmSomethingReadIn);
+							terminalMode |= (tmByteReadIn);
 
 						}
 					break;
 
-				case ('.' | tmHexInput):						// parse an address range upper limit
-#ifdef useSWEET64trace
-				case (0x1B | tmHexInput):						// parse a specific SWEET64 argument hexadecimal value input digit
-#endif // useSWEET64trace
-				case (0x0D | tmHexInput):						// parse a specific main program variable hexadecimal value input digit
-				case (0x10 | tmHexInput):						// parse a specific parameter value input hexadecimal digit
-				case (0x14 | tmHexInput):						// parse a specific trip variable measurement hexadecimal value input digit
-				case (0x16 | tmHexInput):						// parse a specific volatile variable value input hexadecimal digit
-				case (tmHexInput):								// parse a generic hexadecimal digit
-				case ('.' | tmSomethingReadIn | tmHexInput):	// parse an address range upper limit
-#ifdef useSWEET64trace
-				case (0x1B | tmSomethingReadIn | tmHexInput):	// parse a specific SWEET64 argument hexadecimal value input digit
-#endif // useSWEET64trace
-				case (0x0D | tmSomethingReadIn | tmHexInput):	// parse a specific main program variable value input hexadecimal digit
-				case (0x10 | tmSomethingReadIn | tmHexInput):	// parse a specific parameter value input hexadecimal digit
-				case (0x14 | tmSomethingReadIn | tmHexInput):	// parse a specific trip variable measurement value input hexadecimal digit
-				case (0x16 | tmSomethingReadIn | tmHexInput):	// parse a specific volatile variable value input hexadecimal digit
-				case (tmSomethingReadIn | tmHexInput):			// parse a generic hexadecimal digit
-					switch (j)
+				case (tmHexInput):						// parse a generic hexadecimal digit
+				case (tmHexInput | tmByteReadIn):		// parse a generic hexadecimal digit
+					switch (chr)
 					{
 
 						case 'A' ... 'F':
-							j -= 7;
+							chr -= 7;
 						case '0' ... '9':
-							j -= 48;
-							i = 0; // signal that a valid character was already read in
-							terminalMode |= (tmSomethingReadIn);
-							terminalByte = SWEET64::runPrgm(prgmParseHexDigit, j);
+							chr -= 48;
+							i = 0; // signal that a valid character was read in
+							terminalMode |= (tmByteReadIn);
+							terminalByte = SWEET64::runPrgm(prgmParseHexDigit, chr);
 							break;
 
 						default:
@@ -561,48 +761,34 @@ static void terminal::mainProcess(void)
 					}
 					break;
 
-				case '.':										// parse an address range upper limit
-#ifdef useSWEET64trace
-				case 0x1B:										// parse a specific SWEET64 argument hexadecimal value input digit
-#endif // useSWEET64trace
-				case 0x0D:										// parse a specific main program decimal digit variable input decimal digit or switch to hex mode
-				case 0x10:										// parse a specific parameter decimal digit input decimal digit or switch to hex mode
-				case 0x14:										// parse a specific trip variable measurement decimal digit input decimal digit or switch to hex mode
-				case 0x16:										// parse a specific volatile variable decimal digit input decimal digit or switch to hex mode
-				case 0x00:										// parse a generic decimal digit or switch to hex mode
-					if ((j == 'X') || (j == '$'))
+				case (tmDecimalInput):					// parse a generic decimal digit or switch to hex mode
+					if ((chr == 'X') || (chr == '$'))
 					{
 
-						terminalMode |= (tmHexInput);
-						i = 0; // signal that a valid character was already read in
+						terminalMode &= ~(tmDecimalInput); // clear decimal input mode
+						terminalMode |= (tmHexInput); // set hexadecimal input mode
+						i = 0; // signal that a valid character was read in
 						break;
 
 					}
 
-				case ('.' | tmSomethingReadIn):					// parse an address range upper limit
-#ifdef useSWEET64trace
-				case (0x1B | tmSomethingReadIn):				// parse a specific SWEET64 argument hexadecimal value input digit
-#endif // useSWEET64trace
-				case (0x0D | tmSomethingReadIn):				// parse a specific main program variable decimal digit
-				case (0x10 | tmSomethingReadIn):				// parse a specific parameter decimal digit
-				case (0x14 | tmSomethingReadIn):				// parse a specific trip variable measurement decimal digit
-				case (0x16 | tmSomethingReadIn):				// parse a specific volatile variable decimal digit
-				case (tmSomethingReadIn):						// parse a generic decimal digit
-					switch (j)
+				case (tmDecimalInput | tmByteReadIn):	// parse a generic decimal digit
+					switch (chr)
 					{
 
 						case '0' ... '9':
-							j -= 48;
-							i = 0; // signal that a valid character was already read in
-							terminalMode |= (tmSomethingReadIn);
-							terminalByte = SWEET64::runPrgm(prgmParseDecimalDigit, j);
+							chr -= 48;
+							i = 0; // signal that a valid character was read in
+							terminalMode |= (tmByteReadIn);
+							terminalByte = SWEET64::runPrgm(prgmParseDecimalDigit, chr);
 							break;
 
 						default:
 							break;
 
 					}
-				default:										// nothing to parse - could be a possible command
+
+				default:								// nothing to parse - could be a possible command
 					break;
 
 			}
@@ -610,104 +796,221 @@ static void terminal::mainProcess(void)
 			if (i) // parsing wasn't valid, so check for a command
 			{
 
-				if (chr > 0x5F) chr &= 0x5F;
 				nextTerminalState = 2; // get another character from input buffer
 				switch (chr)
 				{
 
+#if defined(useDebugTerminalHelp)
 					case '?':   // display help
 						terminalLine = 0; // initialize terminal output line
-						terminalMode = tmHexInput; // shift to parsing a generic input value
+						terminalCmd = 0; // reset any pending commands
+						terminalMode = tmInitHex; // shift to parsing a generic input value
 						terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+						break;
+
+#endif // defined(useDebugTerminalHelp)
+					case '.':	// specify source address
+						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
+						{
+
+							terminalCmd = 0; // reset any pending commands
+							terminalMode = tmInitHex; // shift to parsing a generic input value
+							terminalState = nextTerminalState; // go fetch next command
+
+						}
+						else
+						{
+
+							terminalSource = terminalByte; // save source start byte value
+							terminalMode &= ~(tmInputMask); // clear input mode processing bits
+							terminalMode |= (tmInitHex | tmSourceReadIn); // shift to hex input
+
+						}
+
+						break;
+
+					case '<':	// specify target address
+						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
+						{
+
+							terminalCmd = 0; // reset any pending commands
+							terminalMode = tmInitHex; // shift to parsing a generic input value
+							terminalState = nextTerminalState; // go fetch next command
+
+						}
+						else
+						{
+
+							terminalTarget = terminalByte; // save source start byte value
+							terminalMode &= ~(tmInputMask); // clear input mode processing bits
+							terminalMode |= (tmInitHex | tmTargetReadIn); // shift to hex input
+
+						}
+
+						break;
+
+					case 'S':   // print system status
+						terminal::outputFlags(activityFlags, terminalActivityFlagStr);
+						terminalCmd = 0; // reset any pending commands
+						terminalMode = tmInitHex; // shift to reading hex words
+						break;
+
+					case 'I':   // inject button press
+						terminalCmd = chr; // save command for later
+						terminalMode = tmInitButton; // shift to reading button press words
 						break;
 
 #ifdef useSWEET64trace
 					case 0x0C:
+						terminalCmd = 0; // reset any pending commands
+						terminalMode = tmInitHex; // shift to parsing a generic input value
+						terminalState = nextTerminalState; // go fetch next command
+						break;
+
 #endif // useSWEET64trace
 					case 'L':   // list available trip functions from terminalIdx
 					case 'M':   // list available main program variables
 					case 'O':	// list available program constants
 					case 'P':   // list available stored parameters
 					case 'T':   // list available trip variable measurements
+					case 'U':	// list a range of decimal numbers
 					case 'V':   // list available volatile variables
-						i = terminalMode; // save old terminal mode
-						terminalMode = chr; // prepare to shift to parsing an array-specific input value
+						terminalCmd = chr; // save command for later
+						terminalMode &= ~(tmInputMask); // clear input mode processing bits
+						terminalMode |= (tmInitDecimal); // shift to decimal input
 						chr = '>'; // do unified list output preparation
 						break;
 
-					case '.':	// specify address range
-						terminalAddress = terminalByte;
-						terminalMode = (chr | tmHexInput); // shift to reading button press words
-						break;
-
-					case 'I':   // inject button press
-						terminalMode = chr; // shift to reading button press words
-						break;
-
-					case 'W':	// write trip variable
-						terminalLine = terminalByte;
-						terminalByte = terminalIdx;
-						terminalState = 20;
-						break;
-
 					case 'R':   // read trip variable into terminal
-						terminalLine = terminalIdx;
-						terminalState = 20;
-						break;
+						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
+						{
 
-					case 'S':   // print system status
-						terminal::outputFlags(activityFlags, terminalActivityFlagStr);
-						terminalMode = tmHexInput; // shift to parsing a generic input value
+							terminalCmd = 0; // reset any pending commands
+							terminalMode = tmInitHex; // shift to parsing a generic input value
+							terminalState = nextTerminalState; // go fetch next command
+
+						}
+						else
+						{
+
+							// if no target was read in, assume terminal trip index
+							if ((terminalMode & tmTargetReadIn) == 0) terminalTarget = terminalIdx; 
+
+							// if no source was read in, assume terminal trip index
+							if ((terminalMode & tmByteReadIn) == 0) terminalByte = terminalIdx;
+
+							if (terminalTarget != terminalByte) // if target and source are not the same
+							{
+
+								if (terminalTarget >= tripSlotTotalCount)
+								{
+
+									text::stringOut(devDebugTerminal, PSTR("Invalid target trip variable specified\r"));
+									terminalState = 0;
+
+								}
+								else if (terminalByte >= tripSlotTotalCount)
+								{
+
+									text::stringOut(devDebugTerminal, PSTR("Invalid source trip variable specified\r"));
+									terminalState = 0;
+
+								}
+								else
+								{
+
+									oldSREG = SREG; // save interrupt flag status
+									cli(); // disable interrupts to make the next operations atomic
+
+									SWEET64::runPrgm(prgmLoadTrip, terminalByte); // this allows direct loading/saving of trips to EEPROM
+									SWEET64::runPrgm(prgmSaveTrip, terminalTarget);
+
+									SREG = oldSREG; // restore interrupt flag status
+
+									text::stringOut(devDebugTerminal, PSTR("transferred "));
+									text::stringOut(devDebugTerminal, terminalTripVarNames, terminalByte);
+									text::stringOut(devDebugTerminal, PSTR(" to "));
+									text::stringOut(devDebugTerminal, terminalTripVarNames, terminalTarget);
+
+									terminalState = nextTerminalState; // go fetch next command
+									terminalCmd = 0; // reset any pending commands
+									terminalMode = tmInitHex; // shift to reading hex words
+
+								}
+
+							}
+							else // source and target trip variables are the same, output a list of available trip variables
+							{
+
+								terminalCmd = chr; // save command for later
+								terminalMode &= ~(tmInputMask); // clear input mode processing bits
+								terminalMode |= (tmInitDecimal); // shift to decimal input
+								chr = '>'; // do unified list output preparation
+
+							}
+
+						}
+
 						break;
 
 					case 0x0D:    // carriage return - treat as a special space
 						nextTerminalState = 0; // when finished processing, go back to terminal state 0 - initialize input and print prompt character
 					case ' ':   // space character
-						switch (terminalMode)
+						switch (terminalCmd)
 						{
 
-							case ('I' | tmSomethingReadIn):
-								peripheral::injectButton(terminalByte); // inject the parsed button press value into timer0
-								terminalState = 14;
-								terminalMode &= ~(tmSomethingReadIn); // go parse another button press value
+							case 'I':   // inject button press
+								if (terminalMode & tmByteReadIn)
+								{
+
+									button::inject(terminalByte); // inject the parsed button press value into timer0
+									terminalState = 14;
+									terminalMode |= (tmInitInput); // go parse another button press value
+
+								}
+
 								break;
 
-#ifdef useSWEET64trace
-							case 0x1B:	// if no address was specified
-								primaryFunc = 0;
-#endif // useSWEET64trace
-							case 'L':	// if no address was specified
-							case 'M':	// if no address was specified
-							case 'O':	// if no address was specified
-							case 'P':	// if no address was specified
-							case 'T':	// if no address was specified
-							case 'V':	// if no address was specified
-							case (0x0D):	// if no values were input
-							case (0x10):	// if no values were input
-							case (0x14):	// if no values were input
-							case (0x16):	// if no values were input
+							case 'P':   // list available stored parameters
+								//text::hexByteOut(devDebugTerminal, terminalMode);
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								{
+
+									parameterEdit::onEEPROMchange(prgmPtr, terminalAddress++);
+									terminalMode &= ~(tmInputMask); // clear input mode processing bits
+									terminalMode |= (tmInitDecimal); // shift to reading a new decimal or hexadecimal value
+
+								}
+								else terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+
+								break;
+
+							case 'M':   // list available main program variables
+							case 'T':   // list available trip variable measurements
+							case 'V':   // list available volatile variables
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								{
+
+									SWEET64::runPrgm(prgmPtr, terminalAddress++);
+									terminalMode &= ~(tmInputMask); // clear input mode processing bits
+									terminalMode |= (tmInitDecimal); // shift to reading a new decimal or hexadecimal value
+
+								}
+								else terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+
+								break;
+
+							case 'L':   // list available trip functions from terminalIdx
+							case 'O':	// list available program constants
+							case 'R':   // list available trip variables
+							case 'U':	// list a range of decimal numbers
 								terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
 								break;
 
-							case (0x10 | tmSomethingReadIn | tmHexInput):	// process a specific parameter hexadecimal value input
-							case (0x10 | tmSomethingReadIn):				// process a specific parameter decimal value
-								if (prgmPtr) parameterEdit::onEEPROMchange(prgmPtr, terminalAddress);
-								terminalAddress = 0;
-								terminalMode = tmHexInput; // go parse a generic hexadecimal digit
-								terminalState = nextTerminalState;
-								break;
-
-							case (0x0D | tmSomethingReadIn | tmHexInput):	// process a specific main program variable hexadecimal value input
-							case (0x14 | tmSomethingReadIn | tmHexInput):	// process a specific trip variable measurement hexadecimal value input
-							case (0x16 | tmSomethingReadIn | tmHexInput):	// process a specific volatile variable hexadecimal value input
-							case (0x0D | tmSomethingReadIn):				// process a specific main program variable decimal value
-							case (0x14 | tmSomethingReadIn):				// process a specific trip variable measurement decimal value
-							case (0x16 | tmSomethingReadIn):				// process a specific volatile variable decimal value
-								if (prgmPtr) SWEET64::runPrgm(prgmPtr, terminalAddress);
 							default:
-								terminalAddress = 0;
-								terminalMode = tmHexInput; // go parse a generic hexadecimal digit
-								terminalState = nextTerminalState;
+								terminalState = nextTerminalState; // go fetch next command
+								terminalCmd = 0; // reset any pending commands
+								terminalMode = tmInitHex; // shift to reading hex words
 								break;
 
 						}
@@ -728,13 +1031,10 @@ static void terminal::mainProcess(void)
 					maxLine = 0;
 					prgmPtr = 0;
 					labelList = 0;
-					switch (terminalMode)
+
+					switch (terminalCmd)
 					{
 
-#ifdef useSWEET64trace
-						case 0x0C:	// generate SWEET64 source code for a given function
-							terminalMode = 0x1B;
-#endif // useSWEET64trace
 						case 'L':   // list available trip functions from terminalIdx
 							maxLine = dfMaxValDisplayCount;
 #if (useDebugTerminalLabels) || (useSWEET64trace)
@@ -770,6 +1070,13 @@ static void terminal::mainProcess(void)
 							prgmPtr = prgmTerminalWriteParameterValue;
 							break;
 
+						case 'R':	// list available trip variables
+							maxLine = tripSlotTotalCount;
+#ifdef useDebugTerminalLabels
+							labelList = terminalTripVarNames;
+#endif // useDebugTerminalLabels
+							break;
+
 						case 'T':   // list available trip variable measurements
 							maxLine = rvMeasuredCount;
 #ifdef useDebugTerminalLabels
@@ -778,6 +1085,11 @@ static void terminal::mainProcess(void)
 							primaryFunc = terminal::outputTripVarMeasuredValue;
 							extraFunc = terminal::outputTripVarMeasuredExtra;
 							prgmPtr = prgmWriteTripMeasurementValue;
+							break;
+
+						case 'U':   // list a range of decimal numbers
+							maxLine = 11;
+							primaryFunc = terminal::outputDecimalValue;
 							break;
 
 						case 'V':   // list available volatile variables
@@ -794,75 +1106,85 @@ static void terminal::mainProcess(void)
 
 					}
 
-					if (i & tmSomethingReadIn) // examine old terminal mode to see if a hex byte was read in
+					if (terminalCmd == 'U') // handle decimal format in a special case
 					{
 
-						if (terminalByte < maxLine)
-						{
+						if (terminalMode & tmByteReadIn) decPlace = terminalByte;
 
-							switch (i)
-							{
+						if (terminalMode & tmSourceReadIn) decWindow = terminalSource;
 
-								case (tmSomethingReadIn | tmHexInput):
-								case (tmSomethingReadIn):
-									terminalLine = terminalByte; // if a hex byte was read in and is less than maxLine, use it
-									maxLine = terminalByte; // only output one line
+						if (terminalMode & tmTargetReadIn) decMode = terminalTarget;
 
-									if (prgmPtr) // if this command could result in storing a value instead
-									{
-
-										terminalMode &= 0x1F; // go parse a decimal or hex value for possible saving
-										terminalAddress = terminalByte; // save for possible saving
-
-									}
-									break;
-
-								case ('.' | tmSomethingReadIn | tmHexInput):
-								case ('.' | tmSomethingReadIn):
-									if (terminalAddress < terminalByte) terminalLine = terminalAddress;
-									else terminalLine = terminalByte;
-
-									maxLine = terminalByte + 1;
-									prgmPtr = 0;
-									break;
-
-								default:
-									break;
-
-							}
-
-						}
-						else // otherwise
-						{
-
-							text::stringOut(devDebugTerminal, PSTR("input value too large\r"));
-							terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
-
-						}
+						terminalLine = 0;
 
 					}
 					else
 					{
 
-						prgmPtr = 0; // no address was specified, so do not store anything
-						switch (i)
+						if (terminalMode & tmSourceReadIn)
 						{
 
-							case ('.' | tmHexInput):
-							case '.':
-								if (terminalAddress < maxLine) terminalLine = terminalAddress;
-								else
+							if (terminalSource >= maxLine)
+							{
+
+								text::stringOut(devDebugTerminal, PSTR("index start value too large\r"));
+								terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
+
+							}
+							else
+							{
+
+								terminalLine = terminalSource;
+
+								if (terminalMode & tmByteReadIn)
 								{
 
-									text::stringOut(devDebugTerminal, PSTR("input value too large\r"));
+									if (terminalByte >= maxLine)
+									{
+
+										text::stringOut(devDebugTerminal, PSTR("index end value too large\r"));
+										terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
+
+									}
+									else
+									{
+
+										maxLine = terminalByte + 1;
+
+										if (terminalLine >= maxLine) maxLine = terminalLine + 1;
+
+									}
+
+								}
+
+							}
+
+						}
+						else
+						{
+
+							if (terminalMode & tmByteReadIn)
+							{
+
+								if (terminalByte >= maxLine)
+								{
+
+									text::stringOut(devDebugTerminal, PSTR("index value too large\r"));
 									terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 								}
-								break;
+								else
+								{
 
-							default:
-								terminalLine = 0;
-								break;
+									terminalAddress = terminalByte;
+									terminalMode |= (tmAddressReadIn);
+									terminalLine = terminalByte;
+									maxLine = terminalByte + 1;
+
+								}
+
+							}
+							else terminalLine = 0;
 
 						}
 
@@ -873,69 +1195,23 @@ static void terminal::mainProcess(void)
 			}
 			break;
 
+#if defined(useDebugTerminalHelp)
 		case 12:	// print a line of help
 			text::stringOut(devDebugTerminal, terminalHelp, terminalLine++);
 			if (pgm_read_byte(findStr(terminalHelp, terminalLine)) == 0) terminalState = nextTerminalState;
 			break;
 
+#endif // defined(useDebugTerminalHelp)
 		case 14:	// wait for injected buttonpress to be accepted into timer0
 			if (timer0Command & t0cProcessButton) break;
 			terminalState++;
-			peripheral::injectButton(buttonsUp); // inject a buttons-up press into timer0
+			button::inject(buttonsUp); // inject a buttons-up press into timer0
 			break;
 
 		case 15:	// wait for injected buttonpress to be accepted into timer0
 			if (timer0Command & t0cProcessButton) break;
 			terminalState = nextTerminalState;
 			break;
-
-		case 20:
-			if (terminalMode & 0x80) // if a hex byte was read in
-			{
-
-				if (terminalByte >= tripSlotTotalCount)
-				{
-
-					text::stringOut(devDebugTerminal, PSTR("Invalid trip variable specified\r"));
-					terminalState = 0;
-					break;
-
-				}
-				else
-				{
-
-					oldSREG = SREG; // save interrupt flag status
-					cli(); // disable interrupts to make the next operation atomic
-
-					termRawIdx = terminalByte;
-					SWEET64::runPrgm(prgmLoadTrip, terminalByte); // this allows direct loading/saving of trips to EEPROM
-					SWEET64::runPrgm(prgmSaveTrip, terminalLine);
-
-					SREG = oldSREG; // restore interrupt flag status
-
-					text::stringOut(devDebugTerminal, PSTR("transferred "));
-					text::stringOut(devDebugTerminal, terminalTripVarNames, terminalByte);
-					text::stringOut(devDebugTerminal, PSTR(" to "));
-					text::stringOut(devDebugTerminal, terminalTripVarNames, terminalLine);
-
-					terminalState = nextTerminalState; // go fetch next command
-					terminalMode = tmHexInput; // shift to reading hex words
-					break;
-
-				}
-
-			}
-			terminalState = 32;
-			terminalMode = tmHexInput; // shift to reading hex words
-			terminalLine = 0;
-			maxLine = tripSlotTotalCount;
-#ifdef useDebugTerminalLabels
-			labelList = terminalTripVarNames;
-#else // useDebugTerminalLabels
-			labelList = 0;
-#endif // useDebugTerminalLabels
-			primaryFunc = 0;
-			extraFunc = 0;
 
 		case 32:	// output list of selected items
 			text::hexByteOut(devDebugTerminal, terminalLine);
@@ -991,19 +1267,19 @@ static uint8_t debugReading::displayHandler(uint8_t cmd, uint8_t cursorPos, uint
 			{
 
 				case 0:
-					peripheral::changeBitFlags(debugFlags, 0, (debugInjectorFlag | debugVSSflag));
+					changeBitFlags(debugFlags, 0, (debugInjectorFlag | debugVSSflag));
 					break;
 
 				case 1:
-					peripheral::changeBitFlags(debugFlags, debugInjectorFlag, debugVSSflag);
+					changeBitFlags(debugFlags, debugInjectorFlag, debugVSSflag);
 					break;
 
 				case 2:
-					peripheral::changeBitFlags(debugFlags, (debugInjectorFlag | debugVSSflag), 0);
+					changeBitFlags(debugFlags, (debugInjectorFlag | debugVSSflag), 0);
 					break;
 
 				case 3:
-					peripheral::changeBitFlags(debugFlags, debugVSSflag, debugInjectorFlag);
+					changeBitFlags(debugFlags, debugVSSflag, debugInjectorFlag);
 					break;
 
 				default:
@@ -1128,6 +1404,91 @@ static void debugReading::configurePorts(void)
 	else timer1Command &= ~(t1cEnableDebug);
 
 	SREG = oldSREG; // restore state of interrupt flag
+
+}
+
+static void debugReading::idleProcessFuel(void)
+{
+
+	debugFIPidx++;
+	if (debugFIPidx >= debugFIPlength)
+	{
+
+		debugFIPidx = 0;
+		debugFIPstate++;
+		debugFIPstate &= 3;
+
+	}
+
+	switch (debugFIPstate)
+	{
+
+		case 0:
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
+			debugFIPWgoodTickLength = debugFIPtickLength - 63;
+			changeBitFlags(debugFlags, 0, debugFIPready);
+			break;
+
+		case 1:
+			break;
+
+		case 2:
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPWgoodTickLength = debugFIPtickLength - 63;
+			changeBitFlags(debugFlags, 0, debugFIPready);
+			break;
+
+		case 3:
+			break;
+
+		default:
+			break;
+
+	}
+
+	if (debugFIPWreadTickLength > debugFIPWgoodTickLength) debugFIPWreadTickLength = debugFIPWgoodTickLength;
+	else debugFIPWtickLength = debugFIPWreadTickLength;
+
+}
+
+static void debugReading::idleProcessVSS(void)
+{
+
+	debugVSSidx++;
+	if (debugVSSidx >= debugVSSlength)
+	{
+
+		debugVSSidx = 0;
+		debugVSSstate++;
+		debugVSSstate &= 3;
+
+	}
+
+	switch (debugVSSstate)
+	{
+
+		case 0:
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
+			changeBitFlags(debugFlags, 0, debugVSSready);
+			break;
+
+		case 1:
+			break;
+
+		case 2:
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
+			changeBitFlags(debugFlags, 0, debugVSSready);
+			break;
+
+		case 3:
+			break;
+
+		default:
+			break;
+
+	}
 
 }
 

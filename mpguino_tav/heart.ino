@@ -1343,7 +1343,499 @@ static void updateVSS(unsigned long thisVSStime)
 
 }
 
-unsigned long findCycleLength(unsigned long lastCycle, unsigned long thisCycle) // this is only to be meant to be used with interrupt handlers
+static void initCore(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	// timer0 is the taskmaster driving MPGuino's measurement functionality
+#if defined(__AVR_ATmega32U4__)
+	// turn on timer0 module
+	PRR0 &= ~(1 << PRTIM0);
+
+	// set timer 0 to fast PWM mode, TOP = 0xFF
+	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
+	TCCR0B &= ~(1 << WGM02);
+
+	// set timer 0 prescale factor to 64
+	TCCR0B &= ~(1 << CS02);
+	TCCR0B |= ((1 << CS01) | (1 << CS00));
+
+	// set OC0A to disabled
+	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
+
+	// set OC0B to disabled
+	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
+
+	// clear timer 0 output compare force bits for OC0A and OC0B
+	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
+
+	// disable timer 0 output compare interrupts
+	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
+
+	// enable timer 0 overflow interrupt to generate ~1 ms tick
+	TIMSK0 |= (1 << TOIE0);
+
+	// clear timer 0 interrupt flags
+	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
+
+	// disable digital inputs for all ADC capable pins to reduce power consumption
+	DIDR0 |= ((ADC7D) | (1 << ADC6D) | (1 << ADC5D) | (1 << ADC4D) | (1 << ADC1D) | (1 << ADC0D));
+	DIDR1 |= (1 << AIN0D);
+	DIDR2 |= ((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D) | (1 << ADC10D) | (1 << ADC9D) | (1 << ADC8D));
+
+	// shut off on-board peripherals to reduce power consumption
+	PRR0 |= ((1 << PRTWI) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRADC));
+	PRR1 |= ((1 << PRUSB) | (1 << PRTIM4) | (1 << PRTIM3) | (1 << PRUSART1));
+
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// turn on timer0 module
+	PRR0 &= ~(1 << PRTIM0);
+
+	// set timer 0 to fast PWM mode, TOP = 0xFF
+	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
+	TCCR0B &= ~(1 << WGM02);
+
+	// set timer 0 prescale factor to 64
+	TCCR0B &= ~(1 << CS02);
+	TCCR0B |= ((1 << CS01) | (1 << CS00));
+
+	// set OC0A to disabled
+	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
+
+	// set OC0B to disabled
+	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
+
+	// clear timer 0 output compare force bits for OC0A and OC0B
+	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
+
+	// disable timer 0 output compare interrupts
+	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
+
+	// enable timer 0 overflow interrupt to generate ~1 ms tick
+	TIMSK0 |= (1 << TOIE0);
+
+	// clear timer 0 interrupt flags
+	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
+
+	// disable digital inputs for all ADC capable pins to reduce power consumption
+	DIDR0 |= ((1 << ADC7D) | (1 << ADC6D) | (1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D) | (1 << ADC2D) | (1 << ADC1D) | (1 << ADC0D));
+	DIDR1 |= ((1 << AIN1D) | (1 << AIN0D));
+	DIDR2 |= ((1 << ADC15D) | (1 << ADC14D) | (1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D) | (1 << ADC10D) | (1 << ADC9D) | (1 << ADC8D));
+
+	// shut off on-board peripherals to reduce power consumption
+	PRR0 |= ((1 << PRTWI) | (1 << PRTIM2) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0) | (1 << PRADC));
+	PRR1 |= ((1 << PRTIM5) | (1 << PRTIM4) | (1 << PRTIM3) | (1 << PRUSART3) | (1 << PRUSART2) | (1 << PRUSART1));
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// turn on timer0 module
+	PRR &= ~(1 << PRTIM0);
+
+	// set timer 0 to fast PWM mode, TOP = 0xFF
+	TCCR0A |= ((1 << WGM01) | (1 << WGM00));
+	TCCR0B &= ~(1 << WGM02);
+
+	// set timer 0 prescale factor to 64
+	TCCR0B &= ~(1 << CS02);
+	TCCR0B |= ((1 << CS01) | (1 << CS00));
+
+	// set OC0A to disabled
+	TCCR0A &= ~((1 << COM0A1) | (1 << COM0A0));
+
+	// set OC0B to disabled
+	TCCR0A &= ~((1 << COM0B1) | (1 << COM0B0));
+
+	// clear timer 0 output compare force bits for OC0A and OC0B
+	TCCR0B &= ~((1 << FOC0A) | (1 << FOC0B));
+
+	// disable timer 0 output compare interrupts
+	TIMSK0 &= ~((1 << OCIE0B) | (1 << OCIE0A));
+
+	// enable timer 0 overflow interrupt to generate ~1 ms tick
+	TIMSK0 |= (1 << TOIE0);
+
+	// clear timer 0 interrupt flags
+	TIFR0 |= ((1 << OCF0B) | (1 << OCF0A) | (1 << TOV0));
+
+	// disable digital inputs for all ADC capable pins to reduce power consumption
+	DIDR0 |= ((1 << ADC5D) | (1 << ADC4D) | (1 << ADC3D) | (1 << ADC2D) | (1 << ADC1D) | (1 << ADC0D));
+	DIDR1 |= ((1 << AIN1D) | (1 << AIN0D));
+
+	// shut off on-board peripherals to reduce power consumption
+	PRR |= ((1 << PRTWI) | (1 << PRTIM2) | (1 << PRTIM1) | (1 << PRSPI) | (1 << PRUSART0) | (1 << PRADC));
+
+#endif // defined(__AVR_ATmega328P__)
+	ACSR &= ~(1 << ACIE); // disable analog comparator interrupt
+	ACSR |= (1 << ACD); // disable analog comparator module
+	ADCSRB &= ~(1 << ACME); // disable analog comparator multiplexer
+
+	timer0Command = t0cResetTimer;
+#ifdef useTimer1Interrupt
+	timer1Command = t1cResetTimer;
+#endif // useTimer1Interrupt
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void initHardware(void)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	// timer initialization section - multiple peripherals may use the same timer
+#ifdef useTimer1
+#if defined(__AVR_ATmega32U4__)
+	// turn on timer1 module
+	PRR0 &= ~(1 << PRTIM1);
+
+	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
+	TCCR1A &= ~(1 << WGM11);
+	TCCR1A |= (1 << WGM10);
+	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
+
+	// set timer 1 prescale factor to 1
+	TCCR1B &= ~((1 << CS12) | (1 << CS11));
+	TCCR1B |= (1 << CS10);
+
+	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
+	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
+
+	// set OC1A to disabled
+	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
+
+	// set OC1B to disabled
+	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
+
+	// set OC1C to disabled
+	TCCR1A &= ~((1 << COM1C1) | (1 << COM1C0));
+
+	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
+	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
+
+#ifdef useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
+
+	// enable timer1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#else // useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
+#endif // useTimer1Interrupt
+
+	// clear timer 1 interrupt flags
+	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
+
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// turn on timer1 module
+	PRR0 &= ~(1 << PRTIM1);
+
+	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
+	TCCR1A &= ~(1 << WGM11);
+	TCCR1A |= (1 << WGM10);
+	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
+
+	// set timer 1 prescale factor to 1
+	TCCR1B &= ~((1 << CS12) | (1 << CS11));
+	TCCR1B |= (1 << CS10);
+
+	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
+	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
+
+	// set OC1A to disabled
+	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
+
+	// set OC1B to disabled
+	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
+
+	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
+	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
+
+#ifdef useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
+
+	// enable timer1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#else // useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
+#endif // useTimer1Interrupt
+
+	// clear timer 1 interrupt flags
+	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// turn on timer1 module
+	PRR &= ~(1 << PRTIM1);
+
+	// set timer 1 to 8-bit phase correct PWM mode, TOP = 0xFF
+	TCCR1A &= ~(1 << WGM11);
+	TCCR1A |= (1 << WGM10);
+	TCCR1B &= ~((1 << WGM13) | (1 << WGM12));
+
+	// set timer 1 prescale factor to 1
+	TCCR1B &= ~((1 << CS12) | (1 << CS11));
+	TCCR1B |= (1 << CS10);
+
+	// disable timer 1 input capture noise canceler, select timer 1 falling edge for input capture
+	TCCR1B &= ~((1 << ICNC1) | (1 << ICES1));
+
+	// set OC1A to disabled
+	TCCR1A &= ~((1 << COM1A1) | (1 << COM1A0));
+
+	// set OC1B to disabled
+	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
+
+	// clear timer 1 output compare force bits for OC1A and OC1B
+	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B));
+
+#ifdef useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A));
+
+	// enable timer1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#else // useTimer1Interrupt
+	// disable timer 1 interrupts
+	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
+#endif // useTimer1Interrupt
+
+	// clear timer 1 interrupt flags
+	TIFR1 |= ((1 << ICF1) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
+
+#endif // defined(__AVR_ATmega328P__)
+#endif // useTimer1
+#ifdef useTimer2
+#if defined(__AVR_ATmega2560__)
+	// turn on timer2 module
+	PRR0 &= ~(1 << PRTIM2);
+
+	// set timer 2 to 8-bit phase correct PWM mode, TOP = 0xFF
+	TCCR2A &= ~(1 << WGM21);
+	TCCR2A |= (1 << WGM20);
+	TCCR2B &= ~(1 << WGM22);
+
+	// set timer 2 prescale factor to 64
+	TCCR2B &= ~((1 << CS22));
+	TCCR2B |= ((1 << CS21) | (1 << CS20));
+
+	// set OC2A to disabled
+	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
+
+	// set OC2B to disabled
+	TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
+
+	// clear timer 2 output compare force bits for OC2A and OC2B
+	TCCR2B &= ~((1 << FOC2A) | (1 << FOC2B));
+
+	// disable timer 2 interrupts
+	TIMSK2 &= ~((1 << OCIE2B) | (1 << OCIE2A) | (1 << TOIE2));
+
+	// clear timer 2 interrupt flags
+	TIFR2 |= ((1 << OCF2B) | (1 << OCF2A) | (1 << TOV2));
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// turn on timer2 module
+	PRR &= ~(1 << PRTIM2);
+
+	// set timer 2 to phase correct PWM mode, TOP = 0xFF
+	TCCR2A &= ~(1 << WGM21);
+	TCCR2A |= (1 << WGM20);
+	TCCR2B &= ~(1 << WGM22);
+
+	// set timer 2 prescale factor to 64
+	TCCR2B &= ~((1 << CS22));
+	TCCR2B |= ((1 << CS21) | (1 << CS20));
+
+	// set OC2A to disabled
+	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
+
+	// set OC2B to disabled
+	TCCR2A &= ~((1 << COM2B1) | (1 << COM2B0));
+
+	// clear force bits for OC2A and OC2B
+	TCCR2B &= ~((1 << FOC2A) | (1 << FOC2B));
+
+	// disable timer 2 interrupts
+	TIMSK2 &= ~((1 << OCIE2B) | (1 << OCIE2A) | (1 << TOIE2));
+
+	// clear timer 2 interrupt flags
+	TIFR2 |= ((1 << OCF2B) | (1 << OCF2A) | (1 << TOV2));
+
+#endif // defined(__AVR_ATmega328P__)
+#endif // useTimer2
+#ifdef useTimer4
+#if defined(__AVR_ATmega32U4__)
+	// turn on timer4 module
+	PRR1 &= ~(1 << PRTIM4);
+
+	// set timer 4 to phase and frequency correct mode
+	TCCR4D &= ~(1 << WGM41);
+	TCCR4D |= (1 << WGM40);
+
+	// set timer 4 prescale factor to 64
+	TCCR4B &= ~(1 << CS43);
+	TCCR4B |= ((1 << CS42) | (1 << CS41) | (1 << CS40));
+
+	// clear timer 4 fault protection
+	TCCR4D &= ~((1 << FPIE4) | (1 << FPEN4) | (1 << FPNC4) | (1 << FPES4)  | (1 << FPAC4) | (1 << FPF4));
+
+	// set OC4A to disabled
+	TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0) | (1 << PWM4A));
+
+	// set OC4B to disabled
+	TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0) | (1 << PWM4B));
+
+	// set OC4D to disabled
+	TCCR4C &= ~((1 << COM4D1) | (1 << COM4D0) | (1 << PWM4D));
+
+	// clear timer 4 PWM inversion mode
+	TCCR4B &= ~(1 << PWM4X);
+
+	// set timer 4 dead time prescaler to 1
+	TCCR4B &= ~((1 << DTPS41) | (1 << DTPS40));
+
+	// clear timer 4 output compare force bits for OC4A and OC4B
+	TCCR4A &= ~((1 << FOC4A) | (1 << FOC4B));
+
+	// clear timer 4 output compare force bits for OC4D
+	TCCR4C &= ~(1 << FOC4D);
+
+	// clear timer 4 update lock, disable timer 4 enhanced compare mode
+	TCCR4E &= ~((1 << TLOCK4) | (1 << ENHC4));
+
+	// disable timer 4 interrupts
+	TIMSK4 &= ~((1 < OCIE4D) | (1 < OCIE4A) | (1 < OCIE4B) | (1 < TOIE4));
+
+	// clear timer 4 interrupt flags
+	TIFR4 |= ((1 << OCF4D) | (1 << OCF4A) | (1 << OCF4B) | (1 << TOV4));
+
+	// set timer 4 dead time to 0
+	DT4 = 0;
+
+	// set timer 4 TOP value to 0x00FF, setting 8 bit mode
+	TC4H = 0;
+	OCR4C = 255;
+
+#endif // defined(__AVR_ATmega32U4__)
+#endif // useTimer4
+	SREG = oldSREG; // restore interrupt flag status
+
+#ifdef useTWIsupport
+	TWI::init();
+#ifdef useAdafruitRGBLCDshield
+	adafruitRGBLCDsupport::init(); // go init Adafruit RGB LCD shield
+#endif // useAdafruitRGBLCDshield
+#endif // useTWIsupport
+#ifdef useSerial0Port
+	serial0::init();
+#endif // useSerial0Port
+#ifdef useSerial1Port
+	serial1::init();
+#endif // useSerial1Port
+#if defined(__AVR_ATmega32U4__)
+	usbSupport::init();
+#endif // defined(__AVR_ATmega32U4__)
+	button::init();
+	LCD::init();
+#if defined(useActivityLED)
+	activityLED::init();
+#endif // defined(useActivityLED)
+#if defined(useOutputPins)
+	outputPin::init();
+#endif // defined(useOutputPins)
+
+}
+
+#ifdef useDeepSleep // Deep Sleep support section
+static void doGoDeepSleep(void)
+{
+
+#if defined(useOutputPins)
+	outputPin::shutdown();
+#endif // defined(useOutputPins)
+#if defined(useActivityLED)
+	activityLED::shutdown();
+#endif // defined(useActivityLED)
+	changeBitFlags(timer0Command, t0cDisplayDelay, 0); // cancel any display delays in progress
+	LCD::shutdown(); // shut down the LCD display
+	button::shutdown();
+#if defined(__AVR_ATmega32U4__)
+	usbSupport::shutdown();
+#endif // defined(__AVR_ATmega32U4__)
+#ifdef useSerial1Port
+	serial1::shutdown();
+#endif // useSerial1Port
+#ifdef useSerial0Port
+	serial0::shutdown();
+#endif // useSerial0Port
+#ifdef useTWIsupport
+	TWI::shutdown();
+#endif // useTWIsupport
+
+#ifdef useTimer4
+#if defined(__AVR_ATmega32U4__)
+	PRR0 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
+#endif // defined(__AVR_ATmega32U4__)
+
+#endif // useTimer4
+#ifdef useTimer2
+#if defined(__AVR_ATmega2560__)
+	PRR0 |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	PRR |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
+#endif // defined(__AVR_ATmega328P__)
+
+#endif // useTimer2
+#ifdef useTimer1Interrupt
+#if defined(__AVR_ATmega32U4__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega328P__)
+
+#endif // useTimer1Interrupt
+#ifdef useTimer1
+#if defined(__AVR_ATmega32U4__)
+	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	PRR |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
+#endif // defined(__AVR_ATmega328P__)
+
+#endif // useTimer1
+	performSleepMode(SLEEP_MODE_PWR_DOWN); // go perform power-down sleep mode
+
+	initHardware(); // restart all peripherals
+
+}
+
+#endif // useDeepSleep
+static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle) // this is only to be meant to be used with interrupt handlers
 {
 
 	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
@@ -1353,7 +1845,34 @@ unsigned long findCycleLength(unsigned long lastCycle, unsigned long thisCycle) 
 
 }
 
-void delay0(unsigned int ms)
+static void delay0(unsigned int ms)
+{
+
+	uint8_t oldSREG;
+
+	if (ms)
+	{
+
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts
+
+		timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
+		timer0Command |= t0cDoDelay; // signal request to timer
+
+		SREG = oldSREG; // restore interrupt flag status
+
+	}
+
+	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+
+}
+
+// this function is needed since there is no way to perform an atomic bit change of an SRAM byte value
+// most MPGuino variables that are shared between main program and interrupt handlers should not need to
+//    be treated as atomic (!) because only one side or the other is supposed to change said variables
+// however, status flag registers are obviously an exception, and status flag changes are common
+//    enough to warrant an explicit function definition
+static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR)
 {
 
 	uint8_t oldSREG;
@@ -1361,11 +1880,19 @@ void delay0(unsigned int ms)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
-	timer0Command |= t0cDoDelay; // signal request to timer
+	flagRegister = (flagRegister & ~(maskAND)) | (maskOR); // go perform atomic status flag change
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+}
+
+static void performSleepMode(uint8_t sleepMode)
+{
+
+	set_sleep_mode(sleepMode); // set for specified sleep mode
+	sleep_enable(); // enable sleep mode
+	sleep_mode(); // go sleep for a bit
+	sleep_disable(); // disable sleep mode
 
 }
+

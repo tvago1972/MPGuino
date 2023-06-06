@@ -1,8 +1,3 @@
-#ifdef useWindowTripFilter
-void windowTripFilterReset(void);
-#endif // useWindowTripFilter
-static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos);
-
 namespace tripVar /* trip data collection basic function prototype */
 {
 
@@ -21,6 +16,9 @@ namespace tripVar /* trip data collection basic function prototype */
 namespace tripSupport /* Trip save/restore/reset support section prototype */
 {
 
+	static void init(void);
+	static void idleProcess(void);
+	static uint8_t translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos);
 #ifdef useSavedTrips
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
 	static void goSaveCurrent(void);
@@ -34,6 +32,9 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 	static void doResetTrip(uint8_t tripSlot);
 	static void resetCurrent(void);
 	static void resetTank(void);
+#ifdef useWindowTripFilter
+	static void resetWindowFilter(void);
+#endif // useWindowTripFilter
 
 };
 
@@ -44,6 +45,10 @@ namespace pressureCorrect /* Chrysler returnless fuel pressure correction displa
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
 
 }
+
+const char pressureCorrectScreenFuncNames[] PROGMEM = {
+	"Pressures\r"
+};
 
 #endif // useChryslerMAPCorrection
 const uint8_t rvVSSpulseIdx = 0; 			// distance pulse count
@@ -377,9 +382,3 @@ const char tripSaveFuncNames[] PROGMEM = {
 };
 
 #endif // useSavedTrips
-#ifdef useChryslerMAPCorrection
-const char pressureCorrectScreenFuncNames[] PROGMEM = {
-	"Pressures\r"
-};
-
-#endif // useChryslerMAPCorrection

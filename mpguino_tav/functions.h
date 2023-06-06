@@ -614,20 +614,23 @@ static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrTestReg, 0x02,									// test register 2
 	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
+	instrCmpIndex, 2,									// check if 3 or more right hand digits were specified
+	instrBranchIfGT, 17,								// if so, just exit
+	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
 	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
-	instrBranchIfLT, 11,								// branch if 0 right-hand digits were specified
-	instrBranchIfE, 14,									// branch if 1 right-hand digit was specified
-	instrCmpIndex, 2,									// check if 2 right-hand digits were specified
-	instrBranchIfGT, 13,								// skip if 3 or more right-hand digits were specified
-	instrAddByteToX, 0x02, 5,							// round off to nearest 1/100th
-	instrSkip, 8,										// skip to exit
+	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
+	instrDiv2byConst, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
+	instrSkip, 6,										// skip to adjustment
 
-//roundint:
-	instrAddConstToX, 0x02, idxNumber500,				// round off to nearest whole integer
-	instrSkip, 3,										// skip to exit
+//to10ths:
+	instrDiv2byByte, 100,								// shift number right 2 digits
+	instrSkip, 2,										// skip to adjustment
 
-//round10th:
-	instrAddByteToX, 0x02, 50,							// round off to nearest 1/10th
+//to100ths:
+	instrDiv2byByte, 10,								// shift number right 1 digit
+
+//adjust:
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //exit:
 	instrJump, tFormatToNumber							// go call prgmFormatToNumber to perform actual formatting
@@ -904,51 +907,6 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 //cont1:
 	instrLdRegMainOffset, 0x02, mpMAPpressureIdx,		// load pre-formatted pressure element
 	instrDone											// exit to caller
-};
-
-static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
-	instrBranchIfLT, 3,								// if not, continue
-	instrLdRegByte, 0x02, 0,							// zero out result in register 2
-
-//cont1:
-	instrMul2byMain, mpAnalogMAPnumerIdx,				// perform conversion to get pressure units per volts value
-	instrDiv2byMain, mpAnalogMAPdenomIdx,				// divide by pressure units per volts value
-	instrAddEEPROMtoX, 0x02, pMAPsensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpMAPpressureIdx,				// store resulting MAP sensor reading
-#ifdef useChryslerBaroSensor
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
-	instrBranchIfLT, 3,								// if not, continue
-	instrLdRegByte, 0x02, 0,							// zero out result in register 2
-
-//cont1:
-	instrMul2byMain, mpAnalogBaroNumerIdx,				// convert to obtain pressure units per volts value
-	instrDiv2byMain, mpAnalogBaroDenomIdx,				// divide by pressure units per volts value
-	instrAddEEPROMtoX, 0x02, pBaroSensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpBaroPressureIdx,			// store resulting barometric sensor reading
-#endif // useChryslerBaroSensor
-	instrLdRegMain, 0x02, mpFuelPressureIdx,			// get fuel system differential pressure
-	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
-	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
-	instrStRegMain, 0x02, mpInjPressureIdx,				// store differential pressure across the fuel injector
-	instrMul2byConst, idxCorrectionFactor,				// set up for iSqrt
-	instrDiv2byMain, mpFuelPressureIdx,					// divide by the fuel system differential pressure
-	instrTestReg, 0x02,									// test whether overflow occurred
-	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it
-	instrIsqrt, 0x02,									// perform square root on result
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
-	instrDone,											// return to caller
-
-//cont3:
-	instrLdRegConst, 0x02, idxCorrectionFactor,
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
-	instrDone											// return to caller
 };
 
 #endif // useChryslerMAPCorrection

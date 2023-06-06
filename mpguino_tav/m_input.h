@@ -1,3 +1,14 @@
+namespace button /* button input support section prototype */
+{
+
+	static void init(void);
+	static void shutdown(void);
+#if useAnalogButtons || useDebugTerminal
+	static void inject(uint8_t buttonValue);
+#endif // useAnalogButtons || useDebugTerminal
+
+};
+
 #ifdef useTWIbuttons
 #ifdef useAdafruitRGBLCDshield
 #define useButtonCrossConfig true

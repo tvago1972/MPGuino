@@ -48,12 +48,12 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	{
 
 
-		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx) ull2str(thisCalcFuncObj.calcIdx, strBuff, thisCalcFuncObj.tripIdx);
+		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx) ull2str(strBuff, thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
 		else
 		{
 
 			SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
-			formatDecimal(strBuff, windowLength, thisCalcFuncObj.decimalPlaces, decimalFlag);
+			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag);
 
 		}
 
