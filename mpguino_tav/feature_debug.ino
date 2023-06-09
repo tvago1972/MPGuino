@@ -357,7 +357,7 @@ static const uint8_t prgmFetchVolatileValue[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmFetchDecimalValue[] PROGMEM = {
+static const uint8_t prgmUpdateDecimalValue[] PROGMEM = {
 	instrTestIndex,										// test line number
 	instrBranchIfNotE, 3,								// skip if line number is not zero
 	instrLdRegByte, 0x06, 0,							// initialize terminal register
@@ -367,6 +367,57 @@ static const uint8_t prgmFetchDecimalValue[] PROGMEM = {
 	instrMul2byByte, 10,								// multiply by 10
 	instrAddByteToX, 0x02, 5,							// add 5
 	instrLdReg, 0x26,									// load main register into terminal register
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmPerformMathOperation[] PROGMEM = {
+	instrTestIndex,										// if math operation is null, do assignment
+	instrBranchIfE, 27,
+	instrCmpIndex, '=',									// if math operation is '=', do assignment
+	instrBranchIfE, 23,
+	instrCmpIndex, '+',									// if math operation is '+', do addition
+	instrBranchIfE, 22,
+	instrCmpIndex, '-',									// if math operation is '-', do subtraction
+	instrBranchIfE, 21,
+	instrLdReg, 0x61,									// load terminal register into register 1
+	instrLdReg, 0x72,									// load math register into register 2
+	instrCmpIndex, '*',									// if math operation is '*', do multiplication
+	instrBranchIfE, 16,
+	instrCmpIndex, '/',									// if math operation is '/', do division
+	instrBranchIfE, 16,
+	instrLdReg, 0x67,									// assign decimal value to result register
+	instrDone,											// exit to caller
+
+//assignment:
+	instrLdReg, 0x67,									// assign decimal value to result register
+	instrDone,											// exit to caller
+
+//addition:
+	instrAddYtoX, 0x67,									// perform addition
+	instrDone,											// exit to caller
+
+//subtraction:
+	instrSubYfromX, 0x67,								// perform subtraction
+	instrDone,											// exit to caller
+
+//multiplication:
+	instrMul2by1,										// perform multiplication
+	instrLdReg, 0x27,									// save math result
+	instrDone,											// exit to caller
+
+//division:
+	instrDiv2by1,										// perform division
+	instrLdReg, 0x27,									// save math result
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmFetchResultValue[] PROGMEM = {
+	instrLdReg, 0x72,									// load terminal register into math register
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmFetchDecimalValue[] PROGMEM = {
+	instrLdReg, 0x62,									// load terminal register into main register
 	instrDone											// exit to caller
 };
 
@@ -473,11 +524,14 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 {
 
-	uint8_t i;
+	calcFuncObj thisCalcFuncObj;
 
-	i = text::numberOut(devDebugTerminal, terminalIdx, lineNumber, termNumberBuff, 0, dfOverflow9s);
+	// perform the required decimal formatting
+	thisCalcFuncObj = translateCalcIdx(terminalIdx, lineNumber, termNumberBuff, decWindow, 0);
+
+	text::stringOut(devDebugTerminal, thisCalcFuncObj.strBuffer); // output the number
 	text::charOut(devDebugTerminal, ' ');
-	text::stringOut(devDebugTerminal, terminalFormats, i);
+	text::stringOut(devDebugTerminal, terminalFormats, thisCalcFuncObj.calcFmtIdx);
 
 }
 
@@ -545,7 +599,6 @@ static void terminal::outputMainProgramValue(uint8_t lineNumber)
 static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 {
 
-
 	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
 	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
 
@@ -562,8 +615,38 @@ static void terminal::outputTripVarMeasuredExtra(uint8_t lineNumber)
 static void terminal::outputDecimalValue(uint8_t lineNumber)
 {
 
+	if (lineNumber == 0)
+	{
+
+		text::hexByteOut(devDebugTerminal, decMode);
+		text::charOut(devDebugTerminal, ' ');
+		text::hexByteOut(devDebugTerminal, decWindow);
+		text::charOut(devDebugTerminal, ' ');
+		text::hexByteOut(devDebugTerminal, decPlace);
+		text::stringOut(devDebugTerminal, PSTR("\xEF" "    "));
+
+	}
+
+	SWEET64::runPrgm(prgmUpdateDecimalValue, lineNumber);
+	text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
+
+}
+
+static void terminal::outputDecimalExtra(uint8_t lineNumber)
+{
+
 	SWEET64::runPrgm(prgmFetchDecimalValue, lineNumber);
 	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
+
+}
+
+static void terminal::processMath(uint8_t cmd)
+{
+
+	if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
+	if (terminalMode & tmSourceReadIn) decPlace = terminalSource; // if decimal count specified, save it
+	// save terminal register contents for later
+	if (terminalMode & tmByteReadIn) SWEET64::runPrgm(prgmPerformMathOperation, cmd);
 
 }
 
@@ -580,24 +663,31 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 	terminal commands:
     [y].[x]P - list stored parameters, optionally between [y] and [x]
-  xPy y y... - store one or more y values in stored parameter beginning with x
-
     [y].[x]V - list volatile variables, optionally between [y] and [x]
-  xVy y y... - store one or more y values in volatile variable beginning with x
-
     [y].[x]M - list main program variables, optionally between [y] and [x]
-  xMy y y... - store one or more y values in main program variable beginning with x
-
     [y].[x]T - list terminal trip variable values, optionally between [y] and [x]
-  xTy y y... - store one or more y values in terminal trip variable beginning with x
-
     [y].[x]O - list program constants, optionally between [y] and [x]
-    [y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]
+[z]<[y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]
+                [z] - decimal window length (optional)
 [z]<[y].[x]U - list decimal number sample for output
-                z - decimal processing flag
-                y - window length
-                x - decimal digit count
-          ^L - list SWEET64 source code for function
+                [z] - decimal window length (optional)
+                [y] - decimal digit count (optional)
+                [x] - decimal processing flag (optional)
+         x^L - list SWEET64 source code for trip function
+   [z]<[y].x - enters a number x into the 64-bit math accumulator
+                [z] - decimal window length (optional)
+                [y] - decimal digit count (optional)
+          +x - adds x to math accumulator
+		  -x - subtracts x from math accumulator
+		  *x - multiplies math accumulator by x
+		  /x - divides math accumulator by x
+		  =x - enters a number x into the 64-bit math accumulator
+
+  x:Py [y] [y]... - store one or more y values, starting at stored parameter x
+  x:Vy [y] [y]... - store one or more y values, starting at volatile variable x
+  x:My [y] [y]... - store one or more y values, starting at main program variable x
+  x:Ty [y] [y]... - store one or more y values, starting at terminal trip variable x
+
     [y]<[x]R - read trip variable x into trip variable y
                 default for x and y is terminal trip variable
                 if no x or y specified, lists available trip variables
@@ -625,6 +715,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 	]ir r r r     << injects 4 successive short press r into MPGuino
 
 	]irc R LC r   << injects short press r+c, long press r, long press l+c, short press r into MPGuino
+	
+	]300          << stores 768 into the 64-bit math accumulator
+
+	]*f           << multiplies 64-bit math accumulator contents by 15
 
 */
 	switch (terminalState)
@@ -711,6 +805,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 			i = 1;
 
+			j = chr; // save raw input character for button press processing
+
+			if (chr > 0x5F) chr &= 0x5F; // force input character to uppercase
+
 			if (terminalMode & tmInitInput)
 			{
 
@@ -720,10 +818,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 				SWEET64::init64byt((union union_64 *)(&s64reg[s64reg6]), 0);
 
 			}
-
-			j = chr; // save raw input character for button press processing
-
-			if (chr > 0x5F) chr &= 0x5F; // force input character to uppercase
 
 			switch (terminalMode & tmInputMask) // process a possible digit, hexit, or button press character
 			{
@@ -741,7 +835,17 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						}
 					break;
 
-				case (tmHexInput):						// parse a generic hexadecimal digit
+				case (tmHexInput):						// parse a generic hexadecimal digit or switch to decimal mode
+					if (chr == '\\')
+					{
+
+						terminalMode &= ~(tmHexInput); // clear hexadecimal input mode
+						terminalMode |= (tmDecimalInput); // set decimal input mode
+						i = 0; // signal that a valid character was read in
+						break;
+
+					}
+
 				case (tmHexInput | tmByteReadIn):		// parse a generic hexadecimal digit
 					switch (chr)
 					{
@@ -803,24 +907,17 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 #if defined(useDebugTerminalHelp)
 					case '?':   // display help
 						terminalLine = 0; // initialize terminal output line
-						terminalCmd = 0; // reset any pending commands
-						terminalMode = tmInitHex; // shift to parsing a generic input value
 						terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+						chr = '\\'; // reset input mode and pending command
 						break;
 
 #endif // defined(useDebugTerminalHelp)
 					case '.':	// specify source address
-						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
-						{
-
-							terminalCmd = 0; // reset any pending commands
-							terminalMode = tmInitHex; // shift to parsing a generic input value
-							terminalState = nextTerminalState; // go fetch next command
-
-						}
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
 						{
 
+							terminalCmd = 0; // reset pending command
 							terminalSource = terminalByte; // save source start byte value
 							terminalMode &= ~(tmInputMask); // clear input mode processing bits
 							terminalMode |= (tmInitHex | tmSourceReadIn); // shift to hex input
@@ -830,17 +927,11 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						break;
 
 					case '<':	// specify target address
-						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
-						{
-
-							terminalCmd = 0; // reset any pending commands
-							terminalMode = tmInitHex; // shift to parsing a generic input value
-							terminalState = nextTerminalState; // go fetch next command
-
-						}
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
 						{
 
+							terminalCmd = 0; // reset pending command
 							terminalTarget = terminalByte; // save source start byte value
 							terminalMode &= ~(tmInputMask); // clear input mode processing bits
 							terminalMode |= (tmInitHex | tmTargetReadIn); // shift to hex input
@@ -849,10 +940,23 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 						break;
 
+					case ':':   // specify storage address
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
+
+							terminalCmd = chr; // save command for later
+							terminalAddress = terminalByte; // save address byte value
+							terminalMode &= ~(tmInputMask); // clear input mode processing bits
+							terminalMode |= (tmInitHex | tmAddressReadIn); // shift to hex input
+
+						}
+
+						break;
+
 					case 'S':   // print system status
 						terminal::outputFlags(activityFlags, terminalActivityFlagStr);
-						terminalCmd = 0; // reset any pending commands
-						terminalMode = tmInitHex; // shift to reading hex words
+						chr = '\\'; // reset input mode and pending command
 						break;
 
 					case 'I':   // inject button press
@@ -860,36 +964,60 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						terminalMode = tmInitButton; // shift to reading button press words
 						break;
 
+					case '+':	// add
+					case '-':	// subtract
+					case '*':	// multiply
+					case '/':	// divide
+					case '=':	// output last result
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
+
+							processMath(terminalCmd);
+
+							terminalCmd = chr; // save command for later
+							terminalMode |= (tmInitInput); // shift to reading a new numeric value
+
+						}
+
+						break;
+
 #ifdef useSWEET64trace
 					case 0x0C:
-						terminalCmd = 0; // reset any pending commands
-						terminalMode = tmInitHex; // shift to parsing a generic input value
-						terminalState = nextTerminalState; // go fetch next command
+						chr = '\\'; // reset input mode and pending command
 						break;
 
 #endif // useSWEET64trace
 					case 'L':   // list available trip functions from terminalIdx
-					case 'M':   // list available main program variables
+						if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 					case 'O':	// list available program constants
+						terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+						terminalCmd = chr; // save command for later
+						chr = '$'; // do unified list output preparation
+						break;
+
+					case 'U':	// output a sample list of decimal numbers
+						if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
+						if (terminalMode & tmSourceReadIn) decPlace = terminalSource; // if decimal count specified, save it
+						if (terminalMode & tmByteReadIn) decMode = terminalByte; // if decimal mode specified, save it
+
+						terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+						terminalCmd = chr; // save command for later
+						chr = '$'; // do unified list output preparation
+						break;
+
+					case 'M':   // list available main program variables
 					case 'P':   // list available stored parameters
 					case 'T':   // list available trip variable measurements
-					case 'U':	// list a range of decimal numbers
 					case 'V':   // list available volatile variables
+						if (terminalCmd != ':') terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+
 						terminalCmd = chr; // save command for later
-						terminalMode &= ~(tmInputMask); // clear input mode processing bits
-						terminalMode |= (tmInitDecimal); // shift to decimal input
-						chr = '>'; // do unified list output preparation
+						chr = '$'; // do unified list output preparation
 						break;
 
 					case 'R':   // read trip variable into terminal
-						if (terminalMode & tmButtonInput) // if in button injection mode, reset input mode and pending command
-						{
-
-							terminalCmd = 0; // reset any pending commands
-							terminalMode = tmInitHex; // shift to parsing a generic input value
-							terminalState = nextTerminalState; // go fetch next command
-
-						}
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
 						{
 
@@ -932,9 +1060,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 									text::stringOut(devDebugTerminal, PSTR(" to "));
 									text::stringOut(devDebugTerminal, terminalTripVarNames, terminalTarget);
 
-									terminalState = nextTerminalState; // go fetch next command
-									terminalCmd = 0; // reset any pending commands
-									terminalMode = tmInitHex; // shift to reading hex words
+									chr = '\\'; // reset input mode and pending command
 
 								}
 
@@ -943,9 +1069,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							{
 
 								terminalCmd = chr; // save command for later
-								terminalMode &= ~(tmInputMask); // clear input mode processing bits
-								terminalMode |= (tmInitDecimal); // shift to decimal input
-								chr = '>'; // do unified list output preparation
+								chr = '$'; // do unified list output preparation
 
 							}
 
@@ -956,6 +1080,8 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 					case 0x0D:    // carriage return - treat as a special space
 						nextTerminalState = 0; // when finished processing, go back to terminal state 0 - initialize input and print prompt character
 					case ' ':   // space character
+						i = 1;
+
 						switch (terminalCmd)
 						{
 
@@ -965,72 +1091,91 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 									button::inject(terminalByte); // inject the parsed button press value into timer0
 									terminalState = 14;
-									terminalMode |= (tmInitInput); // go parse another button press value
+									i = 0;
 
 								}
 
 								break;
 
-							case 'P':   // list available stored parameters
-								//text::hexByteOut(devDebugTerminal, terminalMode);
+							case 'P':   // enter a stored parameter value
 								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
 								{
 
 									parameterEdit::onEEPROMchange(prgmPtr, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
-									terminalMode |= (tmInitDecimal); // shift to reading a new decimal or hexadecimal value
+									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
+									i = 0;
 
 								}
-								else terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
 
 								break;
 
-							case 'M':   // list available main program variables
-							case 'T':   // list available trip variable measurements
-							case 'V':   // list available volatile variables
+							case 'M':   // enter a main program variable value
+							case 'T':   // enter a trip variable measurement value
+							case 'V':   // enter a volatile variable value
 								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
 								{
 
 									SWEET64::runPrgm(prgmPtr, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
-									terminalMode |= (tmInitDecimal); // shift to reading a new decimal or hexadecimal value
+									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
+									i = 0;
 
 								}
-								else terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
 
 								break;
 
-							case 'L':   // list available trip functions from terminalIdx
-							case 'O':	// list available program constants
-							case 'R':   // list available trip variables
-							case 'U':	// list a range of decimal numbers
-								terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
+							case 0:
+							case '+':	// add
+							case '-':	// subtract
+							case '*':	// multiply
+							case '/':	// divide
+							case '=':	// output last result
+								if (terminalMode & (tmByteReadIn | tmSourceReadIn | tmTargetReadIn)) processMath(terminalCmd);
+
+								SWEET64::runPrgm(prgmFetchResultValue, 0);
+								text::charOut(devDebugTerminal, '=');
+								text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
+								text::stringOut(devDebugTerminal, PSTR(" (0x"));
+								text::hexLWordOut(devDebugTerminal, &s64reg[s64reg7]);
+								text::stringOut(devDebugTerminal, PSTR(")" "\xEF"));
+
 								break;
 
 							default:
-								terminalState = nextTerminalState; // go fetch next command
-								terminalCmd = 0; // reset any pending commands
-								terminalMode = tmInitHex; // shift to reading hex words
+								chr = '\\';
 								break;
 
 						}
+
+						if (i) chr = '\\';
+						else terminalMode |= (tmInitInput); // go parse another input value
+
 						break;
 
+					case '$': // modeshift from decimal input mode to hexadecimal input mode
+					case 'X': // modeshift from decimal input mode to hexadecimal input mode
+					case '\\': // modeshift from decimal input mode to hexadecimal input mode
 					default:    // unsupported command
-						chr = ' ';
 						terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
+						chr = ' ';
 						break;
 
 				}
 
-				if (chr == '>')
+				if (chr == '$') // unified list output preparation
 				{
+
+					terminalMode &= ~(tmInputMask); // clear input mode processing bits
+					terminalMode |= (tmInitDecimal); // shift to decimal input
 
 					primaryFunc = 0;
 					extraFunc = 0;
 					maxLine = 0;
 					prgmPtr = 0;
 					labelList = 0;
+					terminalLine = 0;
+					chr = 'X';
 
 					switch (terminalCmd)
 					{
@@ -1087,9 +1232,11 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							prgmPtr = prgmWriteTripMeasurementValue;
 							break;
 
-						case 'U':   // list a range of decimal numbers
-							maxLine = 11;
+						case 'U':   // output a sample list of decimal numbers
+							maxLine = 14;
 							primaryFunc = terminal::outputDecimalValue;
+							extraFunc = terminal::outputDecimalExtra;
+							chr = ' ';
 							break;
 
 						case 'V':   // list available volatile variables
@@ -1101,67 +1248,31 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							prgmPtr = prgmWriteVolatileValue;
 							break;
 
-						default:
+						default:	// unrecognized listing command
+							chr = '\\'; // reset input mode and pending command
 							break;
 
 					}
 
-					if (terminalCmd == 'U') // handle decimal format in a special case
+				}
+
+				if (chr == 'X') // handle second part of list preparation
+				{
+
+					if (terminalMode & tmSourceReadIn)
 					{
 
-						if (terminalMode & tmByteReadIn) decPlace = terminalByte;
-
-						if (terminalMode & tmSourceReadIn) decWindow = terminalSource;
-
-						if (terminalMode & tmTargetReadIn) decMode = terminalTarget;
-
-						terminalLine = 0;
-
-					}
-					else
-					{
-
-						if (terminalMode & tmSourceReadIn)
+						if (terminalSource >= maxLine)
 						{
 
-							if (terminalSource >= maxLine)
-							{
-
-								text::stringOut(devDebugTerminal, PSTR("index start value too large\r"));
-								terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
-
-							}
-							else
-							{
-
-								terminalLine = terminalSource;
-
-								if (terminalMode & tmByteReadIn)
-								{
-
-									if (terminalByte >= maxLine)
-									{
-
-										text::stringOut(devDebugTerminal, PSTR("index end value too large\r"));
-										terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
-
-									}
-									else
-									{
-
-										maxLine = terminalByte + 1;
-
-										if (terminalLine >= maxLine) maxLine = terminalLine + 1;
-
-									}
-
-								}
-
-							}
+							text::stringOut(devDebugTerminal, PSTR("index start value too large\r"));
+							terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 						}
 						else
 						{
+
+							terminalLine = terminalSource;
 
 							if (terminalMode & tmByteReadIn)
 							{
@@ -1169,26 +1280,58 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								if (terminalByte >= maxLine)
 								{
 
-									text::stringOut(devDebugTerminal, PSTR("index value too large\r"));
+									text::stringOut(devDebugTerminal, PSTR("index end value too large\r"));
 									terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 								}
 								else
 								{
 
-									terminalAddress = terminalByte;
-									terminalMode |= (tmAddressReadIn);
-									terminalLine = terminalByte;
 									maxLine = terminalByte + 1;
+
+									if (terminalLine >= maxLine) maxLine = terminalLine + 1;
 
 								}
 
 							}
-							else terminalLine = 0;
 
 						}
 
 					}
+					else
+					{
+
+						if (terminalMode & tmByteReadIn)
+						{
+
+							if (terminalByte >= maxLine)
+							{
+
+								text::stringOut(devDebugTerminal, PSTR("index value too large\r"));
+								terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
+
+							}
+							else
+							{
+
+								terminalLine = terminalByte;
+								maxLine = terminalByte + 1;
+
+							}
+
+						}
+						else terminalLine = 0;
+
+					}
+
+				}
+
+				if (chr == '\\') // reset pending commands, reset number input mode
+				{
+
+					terminalState = nextTerminalState; // go fetch next command
+					terminalCmd = 0; // reset any pending commands
+					terminalMode = tmInitHex; // clear all read-in byte addressing values, and shift to parsing a generic input value
 
 				}
 

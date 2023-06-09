@@ -91,10 +91,12 @@ namespace terminal /* debug terminal section prototype */
 	static void outputParameterValue(uint8_t lineNumber);
 	static void outputParameterExtra(uint8_t lineNumber);
 	static void outputVolatileValue(uint8_t lineNumber);
-	static void outputDecimalValue(uint8_t lineNumber);
 	static void outputMainProgramValue(uint8_t lineNumber);
 	static void outputTripVarMeasuredValue(uint8_t lineNumber);
 	static void outputTripVarMeasuredExtra(uint8_t lineNumber);
+	static void outputDecimalValue(uint8_t lineNumber);
+	static void outputDecimalExtra(uint8_t lineNumber);
+	static void processMath(uint8_t cmd);
 
 }
 
@@ -104,38 +106,43 @@ static const uint8_t tBuffLength = 40;
 
 #if defined(useDebugTerminalHelp)
 static const char terminalHelp[] PROGMEM = {
-	"    [y].[x]P - list stored parameters, optionally between [y] and [x]\r"
-	"  xPy y y... - store one or more y values in stored parameter beginning with x\r"
-	"\r"
-	"    [y].[x]V - list volatile variables, optionally between [y] and [x]\r"
-	"  xVy y y... - store one or more y values in volatile variable beginning with x\r"
-	"\r"
-	"    [y].[x]M - list main program variables, optionally between [y] and [x]\r"
-	"  xMy y y... - store one or more y values in main program variable beginning with x\r"
-	"\r"
-	"    [y].[x]T - list terminal trip variable values, optionally between [y] and [x]\r"
-	"  xTy y y... - store one or more y values in terminal trip variable beginning with x\r"
-	"\r"
-	"    [y].[x]O - list program constants, optionally between [y] and [x]\r"
-	"    [y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]\r"
-	"[z]<[y].[x]U - list decimal number sample for output\r"
-	"                z - decimal processing flag\r"
-	"                y - window length\r"
-	"                x - decimal digit count\r"
+	"    [y].[x]P - list stored parameters, optionally between [y] and [x]" "\r"
+	"    [y].[x]V - list volatile variables, optionally between [y] and [x]" "\r"
+	"    [y].[x]M - list main program variables, optionally between [y] and [x]" "\r"
+	"    [y].[x]T - list terminal trip variable values, optionally between [y] and [x]" "\r"
+	"    [y].[x]O - list program constants, optionally between [y] and [x]" "\r"
+	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]" "\r"
+	"                [z] - decimal window length (optional)" "\r"
+	"[z]<[y].[x]U - list decimal number sample for output" "\r"
+	"                [z] - decimal window length (optional)" "\r"
+	"                [y] - decimal digit count (optional)" "\r"
+	"                [x] - decimal processing flag (optional)" "\r"
 #ifdef useSWEET64trace
-	"          ^L - list SWEET64 source code for function\r"
+	"              x^L - list SWEET64 source code for trip function" "\r"
 #endif // useSWEET64trace
-	"    [y]<[x]R - read trip variable x into trip variable y\r"
-	"                default for x and y is terminal trip variable\r"
-	"                if no x or y specified, lists available trip variables\r"
-	"           S - output system status\r"
-	"           I - inject button press\r"
+	"   [z]<[y].x - enters a number x into the 64-bit math accumulator" "\r"
+	"                [z] - decimal window length (optional)" "\r"
+	"                [y] - decimal digit count (optional)" "\r"
+	"          +x - adds x to math accumulator" "\r"
+	"		  -x - subtracts x from math accumulator" "\r"
+	"		  *x - multiplies math accumulator by x" "\r"
+	"		  /x - divides math accumulator by x" "\r"
+	"		  =x - enters a number x into the 64-bit math accumulator" "\xEF" "\r"
+	"  x:Py [y] [y]... - store one or more y values, starting at stored parameter x" "\r"
+	"  x:Vy [y] [y]... - store one or more y values, starting at volatile variable x" "\r"
+	"  x:My [y] [y]... - store one or more y values, starting at main program variable x" "\r"
+	"  x:Ty [y] [y]... - store one or more y values, starting at terminal trip variable x" "\xEF" "\r"
+	"    [y]<[x]R - read trip variable x into trip variable y" "\r"
+	"                default for x and y is terminal trip variable" "\r"
+	"                if no x or y specified, lists available trip variables" "\r"
+	"           S - output system status" "\r"
+	"           I - inject button press" "\r"
 #ifdef useLegacyButtons
-	"                short (l, c, r)\r"
-	"                 long (L, C, R)\r"
+	"                short (l, c, r)" "\r"
+	"                 long (L, C, R)" "\xEF" "\r"
 #else // useLegacyButtons
-	"                short (l, c, r, u, d)\r"
-	"                 long (L, C, R, U, D)\r"
+	"                short (l, c, r, u, d)" "\r"
+	"                 long (L, C, R, U, D)" "\xEF" "\r"
 #endif // useLegacyButtons
 	"           ? - displays this help\r"
 	"\0"

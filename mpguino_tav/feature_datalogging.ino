@@ -3,6 +3,8 @@
 static void doOutputDataLog(void)
 {
 
+	calcFuncObj thisCalcFuncObj;
+
 	uint8_t tripIdx;
 	uint8_t calcIdx;
 	uint8_t c = ',';
@@ -15,8 +17,9 @@ static void doOutputDataLog(void)
 		tripIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][0]);
 		calcIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][1]);
 
-		text::numberOut(devLogOutput, tripIdx, calcIdx, mBuff1, 0, dfOverflow9s);
-		text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+		thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, 0, dfOverflow9s); // perform the required decimal formatting
+
+		text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // output the number
 		text::charOut(devLogOutput, c);
 
 	}

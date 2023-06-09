@@ -175,11 +175,22 @@ const uint8_t SWEET64traceFlag =			0b10000000;			// this flag is ignored if #use
 
 const uint8_t SWEET64traceFlagGroup =	SWEET64traceCommandFlag | SWEET64traceFlag;
 
-#ifdef useDebugTerminal
-uint64_t s64reg[6];
-#else // useDebugTerminal
-uint64_t s64reg[5];
-#endif // useDebugTerminal
+#define nextAllowedValue 0
+static const uint8_t s64reg1 = nextAllowedValue;	// general purpose
+static const uint8_t s64reg2 = s64reg1 + 1;			// output value / general purpose
+static const uint8_t s64reg3 = s64reg2 + 1;			// general purpose / temporary storage
+static const uint8_t s64reg4 = s64reg3 + 1;			// used in multiply, divide operations
+static const uint8_t s64reg5 = s64reg4 + 1;			// used in multiply, divide operations
+#define nextAllowedValue s64reg5 + 1
+#if defined(useDebugTerminal)
+static const uint8_t s64reg6 = nextAllowedValue;	// used for debug terminal
+static const uint8_t s64reg7 = s64reg6 + 1;			// used for debug terminal
+#define nextAllowedValue s64reg7 + 1
+#endif // defined(useDebugTerminal)
+
+static const uint8_t s64regCount = nextAllowedValue;
+
+uint64_t s64reg[(uint16_t)(s64regCount)];
 
 #if defined(useMatrixMath)
 /*
@@ -234,14 +245,6 @@ uint64_t matrix_e[3];
 uint64_t matrix_c[3];
 
 #endif // defined(useMatrixMath)
-static const uint8_t s64reg1 = 0;	// general purpose
-static const uint8_t s64reg2 = 1;	// output value / general purpose
-static const uint8_t s64reg3 = 2;	// general purpose / temporary storage
-static const uint8_t s64reg4 = 3;	// used in multiply, divide operations
-static const uint8_t s64reg5 = 4;	// used in multiply, divide operations
-#ifdef useDebugTerminal
-static const uint8_t s64reg6 = 5;	// used for debug terminal
-#endif // useDebugTerminal
 
 #define nextAllowedValue 0
 static const uint8_t instrTestReg =					nextAllowedValue;						// tests 64-bit register for zero condition or high bit set
@@ -290,7 +293,7 @@ static const uint8_t instrStRegTripVarIndexed =		instrLdRegTripVarIndexedRV + 1;
 static const uint8_t instrStRegTripVarIndexedRV =	instrStRegTripVarIndexed + 1;			// store 64-bit register X value to specified trip indexed read-in register
 static const uint8_t instrLdRegConst =				instrStRegTripVarIndexedRV + 1;			// load 64-bit register X with stored constant value
 static const uint8_t instrLdRegConstIndexed =		instrLdRegConst + 1;					// load 64-bit register X with indexed stored constant value
-static const uint8_t instrDoBCDadjust =				instrLdRegConstIndexed + 1;					// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
+static const uint8_t instrDoBCDadjust =				instrLdRegConstIndexed + 1;				// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
 static const uint8_t instrLdRegEEPROM =				instrDoBCDadjust + 1;					// load 64-bit register X with EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindexed =		instrLdRegEEPROM + 1;					// load 64-bit register X with indexed EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindirect =		instrLdRegEEPROMindexed + 1;			// load 64-bit register X with value of EEPROM parameter indexed in the SAE/metric reference conversion table
@@ -807,86 +810,154 @@ const uint8_t convSize = (sizeof(convIdx) / sizeof(uint8_t));
 
 // indexes into SWEET64 conversion factor value table
 //
+// the order of the indices, representing the powers of 10 between 10 and 1000000000, is vitally important to the
+//    proper functioning of the autoranging feature of ull2str
+//
 #define nextAllowedValue 0
-const uint8_t idxNumerDistance =			nextAllowedValue;
-const uint8_t idxDenomDistance =			idxNumerDistance + 1;
-const uint8_t idxNumerVolume =				idxDenomDistance + 1;
-const uint8_t idxDenomVolume =				idxNumerVolume + 1;
-const uint8_t idxCycles0PerSecond =			idxDenomVolume + 1;
-const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;
-const uint8_t idxMicroSecondsPerSecond =	idxTicksPerSecond + 1;
-const uint8_t idxDecimalPoint =				idxMicroSecondsPerSecond + 1;
-const uint8_t idxMetricFE =					idxDecimalPoint + 1;
-const uint8_t idxSecondsPerHour =			idxMetricFE + 1;
-const uint8_t idxBCDdivisor =				idxSecondsPerHour + 1;
-#define nextAllowedValue idxBCDdivisor + 1
+const uint8_t idxTen =						nextAllowedValue;
+
+const uint8_t idxOneHundred =				idxTen + 1;
+
+const uint8_t idxOneThousand =				idxOneHundred + 1;
+const uint8_t idxDecimalPoint =				idxOneThousand;					// decimal point format (the basis for all of those '* 1000' parameters)
+
+const uint8_t idxTenThousand =				idxOneThousand + 1;
+
+const uint8_t idxOneHundredThousand =		idxTenThousand + 1;
+const uint8_t idxMetricFE =					idxOneHundredThousand;			// decimal point format * 100 for metric FE (L / 100km)
+#ifdef useCoastDownCalculator
+const uint8_t idxNumerDensity =				idxOneHundredThousand;			// numerator to convert SAE density to metric density
+#endif // useCoastDownCalculator
+#ifdef useImperialGallon
+const uint8_t idxDenomImperialGallon =		idxOneHundredThousand;			// denominator to convert Imperial gallons to liters
+#endif // useImperialGallon
+
+const uint8_t idxOneMillion =				idxOneHundredThousand + 1;
+const uint8_t idxMicroSecondsPerSecond	=	idxOneMillion;					// microseconds per second
+const uint8_t idxDenomDistance =			idxOneMillion;					// denominator to convert miles to kilometers
+
+const uint8_t idxTenMillion =				idxOneMillion + 1;
 #ifdef useIsqrt
-const uint8_t idxNumerPressure =			nextAllowedValue;
-const uint8_t idxDenomPressure =			idxNumerPressure + 1;
-#define nextAllowedValue idxDenomPressure + 1
+const uint8_t idxDenomPressure =			idxTenMillion;					// denominator to convert psig to kPa
+#endif // useIsqrt
+
+const uint8_t idxOneHundredMillion =		idxTenMillion + 1;
+const uint8_t idxBCDdivisor =				idxOneHundredMillion;			// divisor to separate lower 4 BCD bytes from 5th byte
+#ifdef useCoastDownCalculator
+const uint8_t idxDenomArea =				idxOneHundredMillion;			// denominator to convert square feet to square meters
+#endif // useCoastDownCalculator
+
+const uint8_t idxOneBillion =				idxOneHundredMillion + 1;
+const uint8_t idxDenomVolume =				idxOneBillion;					// denominator to convert US gallons to liters
+#ifdef useVehicleMass
+const uint8_t idxNumerMass =				idxOneBillion;					// numerator to convert pounds to kilograms
+#endif // useVehicleMass
+
+const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
+const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
+const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
+const uint8_t idxNumerDistance =			idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
+const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
+const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// seconds per hour
+#define nextAllowedValue idxSecondsPerHour + 1
+#ifdef useIsqrt
+const uint8_t idxNumerPressure =			nextAllowedValue;				// numerator to convert psig to kPa
+const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor seed for square root function
+#define nextAllowedValue idxCorrectionFactor + 1
 #endif // useIsqrt
 #if defined(useAnalogRead)
-const uint8_t idxNumerVoltage =				nextAllowedValue;
-const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;
+const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
+const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
 #define nextAllowedValue idxDenomVoltage + 1
 #endif // useAnalogRead
 #ifdef useCarVoltageOutput
-const uint8_t idxResistanceR5 =				nextAllowedValue;		// resistor next to ground
-const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;	// resistor next to diode
+const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
+const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
 #endif // useCarVoltageOutput
 #ifdef useVehicleMass
-const uint8_t idxNumerMass =				nextAllowedValue;
-const uint8_t idxDenomMass =				idxNumerMass + 1;
+const uint8_t idxDenomMass =				nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
 #endif // useVehicleMass
 #ifdef useCoastDownCalculator
-const uint8_t idxNumerArea =				nextAllowedValue;
-const uint8_t idxDenomArea =				idxNumerArea + 1;
-const uint8_t idxNumerDensity =				idxDenomArea + 1;
-const uint8_t idxDenomDensity =				idxNumerDensity + 1;
+const uint8_t idxNumerArea =				nextAllowedValue;				// numerator to convert square feet to square meters
+const uint8_t idxDenomDensity =				idxNumerArea + 1;				// denominator to convert SAE density to metric density
 #define nextAllowedValue idxDenomDensity + 1
 #endif // useCoastDownCalculator
 #ifdef useClockDisplay
-const uint8_t idxSecondsPerDay =			nextAllowedValue;
+const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in a day
 #define nextAllowedValue idxSecondsPerDay + 1
 #endif // useClockDisplay
-#ifdef useIsqrt
-const uint8_t idxCorrectionFactor =			nextAllowedValue;
-#define nextAllowedValue idxCorrectionFactor + 1
-#endif // useIsqrt
 #ifdef useImperialGallon
-const uint8_t idxNumerImperialGallon =		nextAllowedValue;
-const uint8_t idxDenomImperialGallon =		idxNumerImperialGallon + 1;
-#define nextAllowedValue idxDenomImperialGallon + 1
+const uint8_t idxNumerImperialGallon =		nextAllowedValue;				// numerator to convert Imperial gallons to liters
+#define nextAllowedValue idxNumerImperialGallon + 1
 #endif // useImperialGallon
 #ifdef useDragRaceFunction
-const uint8_t idxPowerFactor =				nextAllowedValue;
+const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #define nextAllowedValue idxPowerFactor + 1
 #endif // useDragRaceFunction
-
-#define idxOneThousand idxDecimalPoint
 
 const uint8_t idxMaxConstant =				nextAllowedValue;
 
 #ifdef useDebugTerminalLabels
 static const char terminalConstIdxNames[] PROGMEM = {
-	"idxNumerDistance\r"
-	"idxDenomDistance\r"
-	"idxNumerVolume\r"
-	"idxDenomVolume\r"
+	"idxTen"
+	"\r"
+
+	"idxOneHundred"
+	"\r"
+
+	"idxOneThousand"
+	"/idxDecimalPoint"
+	"\r"
+
+	"idxTenThousand"
+	"\r"
+
+	"idxOneHundredThousand"
+	"/idxMetricFE"
+#ifdef useCoastDownCalculator
+	"/idxNumerDensity"
+#endif // useCoastDownCalculator
+#ifdef useImperialGallon
+	"/idxDenomImperialGallon"
+#endif // useImperialGallon
+	"\r"
+
+	"idxOneMillion"
+	"/idxMicroSecondsPerSecond"
+	"/idxDenomDistance"
+	"\r"
+
+	"idxTenMillion"
+#ifdef useIsqrt
+	"/idxDenomPressure"
+#endif // useIsqrt
+	"\r"
+
+	"idxOneHundredMillion"
+	"/idxBCDdivisor"
+#ifdef useCoastDownCalculator
+	"/idxDenomArea"
+#endif // useCoastDownCalculator
+	"\r"
+
+	"idxOneBillion"
+	"/idxDenomVolume"
+#ifdef useVehicleMass
+	"/idxNumerMass"
+#endif // useVehicleMass
+	"\r"
+
 	"idxCycles0PerSecond\r"
 	"idxCycles0PerTick\r"
 	"idxTicksPerSecond\r"
-	"idxMicroSecondsPerSecond\r"
-	"idxDecimalPoint\r"
-	"idxMetricFE\r"
+	"idxNumerDistance\r"
+	"idxNumerVolume\r"
 	"idxSecondsPerHour\r"
-	"idxBCDdivisor\r"
 #ifdef useIsqrt
 	"idxNumerPressure\r"
-	"idxDenomPressure\r"
+	"idxCorrectionFactor\r"
 #endif // useIsqrt
 #if defined(useAnalogRead)
 	"idxNumerVoltage\r"
@@ -897,24 +968,17 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxResistanceR6\r"
 #endif // useCarVoltageOutput
 #ifdef useVehicleMass
-	"idxNumerMass\r"
 	"idxDenomMass\r"
 #endif // useVehicleMass
 #ifdef useCoastDownCalculator
 	"idxNumerArea\r"
-	"idxDenomArea\r"
-	"idxNumerDensity\r"
 	"idxDenomDensity\r"
 #endif // useCoastDownCalculator
 #ifdef useClockDisplay
 	"idxSecondsPerDay\r"
 #endif // useClockDisplay
-#ifdef useIsqrt
-	"idxCorrectionFactor\r"
-#endif // useIsqrt
 #ifdef useImperialGallon
 	"idxNumerImperialGallon\r"
-	"idxDenomImperialGallon\r"
 #endif // useImperialGallon
 #ifdef useDragRaceFunction
 	"idxPowerFactor\r"
@@ -922,6 +986,87 @@ static const char terminalConstIdxNames[] PROGMEM = {
 };
 
 #endif // useDebugTerminalLabels
+// SWEET64 conversion factor value table
+//
+// the order of the values, representing the powers of 10 between 10 and 1000000000, is vitally important to the
+//    proper functioning of the autoranging feature of ull2str
+//
+static const uint32_t convNumbers[] PROGMEM = {
+	 10ul							// idxTen
+
+	,100ul							// idxOneHundred
+
+	,1000ul							// idxOneThousand
+									// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
+
+	,10000ul						// idxTenThousand
+
+	,100000ul						// idxOneHundredThousand
+									// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
+#ifdef useCoastDownCalculator
+									// idxNumerDensity - numerator to convert SAE density to metric density
+#endif // useCoastDownCalculator
+#ifdef useImperialGallon
+									// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
+#endif // useImperialGallon
+
+	,1000000ul						// idxOneMillion
+									// idxMicroSecondsPerSecond - microseconds per second
+									// idxDenomDistance - denominator to convert miles to kilometers
+
+	,10000000ul						// idxTenMillion
+#ifdef useIsqrt
+									// idxDenomPressure - denominator to convert psig to kPa
+#endif // useIsqrt
+
+	,100000000ul					// idxOneHundredMillion
+									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
+#ifdef useCoastDownCalculator
+									// idxDenomArea - denominator to convert square feet to square meters
+#endif // useCoastDownCalculator
+
+	,1000000000ul					// idxOneBillion
+									// idxDenomVolume - denominator to convert US gallons to liters
+#ifdef useVehicleMass
+									// idxNumerMass - numerator to convert pounds to kilograms
+#endif // useVehicleMass
+
+	,t0CyclesPerSecond				// idxCycles0PerSecond - timer0 clock cycles per second
+	,256ul							// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
+	,t0TicksPerSecond				// idxTicksPerSecond - timer0 clock ticks per second
+	,1609344ul						// idxNumerDistance - numerator to convert miles to kilometers
+	,3785411784ul					// idxNumerVolume - numerator to convert US gallons to liters
+	,3600ul							// idxSecondsPerHour - seconds per hour
+#ifdef useIsqrt
+	,68947573ul						// idxNumerPressure - numerator to convert psig to kPa
+	,4096ul							// idxCorrectionFactor - correction factor seed for square root function
+#endif // useIsqrt
+#if defined(useAnalogRead)
+	,1024ul							// idxNumerVoltage - numerator to convert volts DC to ADC steps
+	,5000ul							// idxDenomVoltage - denominator to convert volts DC to ADC steps
+#endif // useAnalogRead
+#ifdef useCarVoltageOutput
+	,9600ul							// idxResistanceR5 - resistor next to ground (via meelis11)
+	,27000ul						// idxResistanceR6 - resistor next to diode  (via meelis11)
+#endif // useCarVoltageOutput
+#ifdef useVehicleMass
+	,2204622621ul					// idxDenomMass - denominator to convert pounds to kilograms
+#endif // useVehicleMass
+#ifdef useCoastDownCalculator
+	,9290304ul						// idxNumerArea - numerator to convert square feet to square meters
+	,168555ul						// idxDenomDensity - denominator to convert SAE density to metric density
+#endif // useCoastDownCalculator
+#ifdef useClockDisplay
+	,86400ul						// idxSecondsPerDay - number of seconds in a day
+#endif // useClockDisplay
+#ifdef useImperialGallon
+	,454609ul						// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
+#endif // useImperialGallon
+#ifdef useDragRaceFunction
+	,22840ul						// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+#endif // useDragRaceFunction
+};
+
 const uint8_t convNumerIdx[] PROGMEM = {
 	 idxDenomDistance						// pPulsesPerDistanceIdx
 	,idxNumerDistance						// pMinGoodSpeedidx
@@ -964,56 +1109,6 @@ const uint8_t convNumerIdx[] PROGMEM = {
 #endif // useFuelCost
 };
 
-const uint32_t convNumbers[] PROGMEM = {
-	 1609344ul						// idxNumerDistance - numerator to convert miles to kilometers
-	,1000000ul						// idxDenomDistance - denominator to convert miles to kilometers
-	,3785411784ul					// idxNumerVolume - numerator to convert US gallons to liters
-	,1000000000ul					// idxDenomVolume - denominator to convert US gallons to liters
-	,t0CyclesPerSecond				// idxCycles0PerSecond - timer0 clock cycles per second
-	,256ul							// idxCycles0PerTick - timer0 clock cycles per timer0 tick
-	,t0TicksPerSecond				// idxTicksPerSecond - timer0 clock ticks per second
-	,1000000ul						// idxMicroSecondsPerSecond - microseconds per second
-	,1000ul							// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
-	,100000ul						// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
-	,3600ul							// idxSecondsPerHour - seconds per hour
-	,100000000ul					// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
-#ifdef useIsqrt
-	,68947573ul						// idxNumerPressure - numerator to convert psig to kPa
-	,10000000ul						// idxDenomPressure - denominator to convert psig to kPa
-#endif // useIsqrt
-#if defined(useAnalogRead)
-	,1024ul							// idxNumerVoltage - numerator to convert volts DC to ADC steps
-	,5000ul							// idxDenomVoltage - denominator to convert volts DC to ADC steps
-#endif // useAnalogRead
-#ifdef useCarVoltageOutput
-	,9600ul							// idxResistanceR5 - resistor next to ground (via meelis11)
-	,27000ul						// idxResistanceR6 - resistor next to diode  (via meelis11)
-#endif // useCarVoltageOutput
-#ifdef useVehicleMass
-	,1000000000ul					// idxNumerMass - numerator to convert pounds to kilograms
-	,2204622621ul					// idxDenomMass - denominator to convert pounds to kilograms
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	,9290304ul						// idxNumerArea - numerator to convert square feet to square meters
-	,100000000ul					// idxDenomArea - denominator to convert square feet to square meters
-	,100000ul						// idxNumerDensity - numerator to convert SAE density to metric density
-	,168555ul						// idxDenomDensity - denominator to convert SAE density to metric density
-#endif // useCoastDownCalculator
-#ifdef useClockDisplay
-	,86400ul						// idxSecondsPerDay - number of seconds in a day
-#endif // useClockDisplay
-#ifdef useIsqrt
-	,4096ul							// idxCorrectionFactor - correction factor seed for square root function
-#endif // useIsqrt
-#ifdef useImperialGallon
-	,454609ul						// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
-	,100000ul						// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
-#endif // useImperialGallon
-#ifdef useDragRaceFunction
-	,22840ul						// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
-#endif // useDragRaceFunction
-};
-
 const uint8_t s64BCDformatList[] PROGMEM = {
 	// 10 digit number format
 	 0x08		// total entry length
@@ -1045,6 +1140,6 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 const char overFlowStr[] PROGMEM = "----------";
 const char overFlow9Str[] PROGMEM = "9999999999";
 
-const uint8_t dfIgnoreDecimalPoint =	0b00000001;
 const uint8_t dfOverflow9s =			0b10000000;
+const uint8_t dfIgnoreDecimalPoint =	0b01000000;
 

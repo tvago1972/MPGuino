@@ -450,7 +450,6 @@ namespace text /* text string output section prototype */
 	static void hexWordOut(interfaceDevice &dev, uint16_t val);
 	static void hexDWordOut(interfaceDevice &dev, uint32_t val);
 	static void hexLWordOut(interfaceDevice &dev, uint64_t * val);
-	static uint8_t numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 
 };
 
@@ -1476,9 +1475,10 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 				dev.controlFlags &= ~(odvFlagEnableOutput);
 				break;
 
-			case 0x0D:	// also defined as end of string
+			case 0x0D:	// output carriage return, defined as end of string
 				retVal = 0;
 				dev.controlFlags |= (odvFlagEnableOutput);
+			case 0xEF:	// output carriage return not at end of string
 				dev.chrOut(0x0D);
 				if (dev.controlFlags & odvFlagCRLF) dev.chrOut(0x0A);
 				break;
@@ -1578,18 +1578,6 @@ static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
 	union union_64 * vee = (union union_64 *) val;
 
 	for (uint8_t i = 7; i < 8; i--) hexByteOut(dev, vee->u8[i]);
-
-}
-
-static uint8_t text::numberOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
-{
-
-	calcFuncObj thisCalcFuncObj;
-
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag); // perform the required decimal formatting
-	stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
-
-	return thisCalcFuncObj.calcFmtIdx;
 
 }
 
