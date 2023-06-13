@@ -54,15 +54,15 @@ namespace partialRefuel /* partial refuelling support section prototype */
 }
 
 const char partialRefuelFuncNames[] PROGMEM = {
-	"Add Partial\r"
-	"Zero Partial\r"
-	"Reset Tank Trip\r"
+	"Add Partial" tcEOSCR
+	"Zero Partial" tcEOSCR
+	"Reset Tank Trip" tcEOSCR
 };
 
 static const char prStatusMessages[] PROGMEM = {
-	"No change\r"
-	"Added Partial\r"
-	"Canx Partial Add\r"
+	"No change" tcEOSCR
+	"Added Partial" tcEOSCR
+	"Canx Partial Add" tcEOSCR
 };
 
 #endif // usePartialRefuel
@@ -73,3 +73,10 @@ static const char numberEditSave[] PROGMEM = {
 static const char numberEditCancel[] PROGMEM = {
 	" XX"
 };
+
+static const char pseStatusMessages[] PROGMEM = {
+	"Param Unchanged" tcEOSCR
+	"Param Changed" tcEOSCR
+	"Param Reverted" tcEOSCR
+};
+

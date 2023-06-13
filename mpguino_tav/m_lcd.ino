@@ -97,7 +97,7 @@ static void LCD::init(void)
 	DDRD |= (lcdBit0 | lcdContrast | lcdEnable | lcdRegisterSelect);
 
 #endif // defined(__AVR_ATmega328P__)
-	setContrast(EEPROM::readVal(pContrastIdx));
+	setContrast(EEPROM::readByte(pContrastIdx));
 
 #endif // useTWILCD
 	oldSREG = SREG; // save interrupt flag status
@@ -345,7 +345,7 @@ static void LCD::setBrightness(uint8_t idx)
 #ifdef use4BitLCD
 #ifdef useTWILCD
 #ifdef useAdafruitRGBLCDshield
-	if (idx) idx = EEPROM::readVal(pLCDcolorIdx); // get LCD backlight color
+	if (idx) idx = EEPROM::readByte(pLCDcolorIdx); // get LCD backlight color
 
 	setRGBcolor(idx); // set LCD backlight color
 

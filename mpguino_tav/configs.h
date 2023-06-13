@@ -39,21 +39,21 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 // selectable options - any conflicts will be reported at compile time
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
-#define useSpiffyBigChars true
+//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+//#define useSpiffyBigChars true
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-#define useBigFE true						// Show big fuel economy displays
-#define useBigDTE true						// Show big distance-to-empty displays
-#define useBigTTE true						// Show big time-to-empty displays
+//#define useBigFE true						// Show big fuel economy displays
+//#define useBigDTE true						// Show big distance-to-empty displays
+//#define useBigTTE true						// Show big time-to-empty displays
 //#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
-#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
+//#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 //#define useFuelCost true					// Show fuel cost
-#define useCPUreading true					// Show CPU loading and available RAM usage
+//#define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
-#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
+//#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of message
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
 //#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
@@ -61,14 +61,14 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useDragRaceFunction true			// (inw) Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
-//#define useScreenEditor true				// (inw) Ability to change any of (8 to 14, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
+#define useScreenEditor true				// (inw) Ability to change any of (8 to 14, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 //#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 
 // performance enhancement options - all may be chosen independently of one another
 //
 #define useBufferedLCD true					// Speed up non-serial LCD output
-#define useBufferedSerial0Port true			// Speed up serial port 0 output (including serial LCD)
+//#define useBufferedSerial0Port true			// Speed up serial port 0 output (including serial LCD)
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output (including serial LCD)
 #define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
@@ -96,14 +96,14 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 // program measurement and debugging tools
 //
 #define useDebugTerminal true					// (inw) terminal interface between PC and MPGuino
-//#define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
+#define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
 #define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
-#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
+//#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true				// Allows observation of button mapping
 #define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
-#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
-#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
+//#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
+//#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useObsoleteMult64 true					// use obsolete slower bit-based 64-bit multiplication
 //#define useSWEET64mult true						// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
 //#define useObsoleteDiv64 true					// use obsolete slower 64-bit division

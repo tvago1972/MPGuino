@@ -75,10 +75,10 @@ volatile uint8_t FEvTperiodIdx;
 uint8_t calcFEvTperiodIdx; // used for calculations, graphing
 
 static const char barFEvTfuncNames[] PROGMEM = {
-	"FuelUsed / Time\r"
-	"Distance / Time\r"
-	"FE / Time\r"
-	"DiffFE / Time\r"
+	"FuelUsed / Time" tcEOSCR
+	"Distance / Time" tcEOSCR
+	"FE / Time" tcEOSCR
+	"DiffFE / Time" tcEOSCR
 };
 
 static const uint8_t barFEvTdisplayFuncs[] PROGMEM = {
@@ -114,9 +114,9 @@ namespace bgFEvsSsupport /* fuel economy over speed histograph support section p
 };
 
 static const char barFEvSfuncNames[] PROGMEM = {
-	"FE / Speed\r"
-	"Fuel Used/Speed\r"
-	"Distance / Speed\r"
+	"FE / Speed" tcEOSCR
+	"Fuel Used/Speed" tcEOSCR
+	"Distance / Speed" tcEOSCR
 };
 
 static const uint8_t barFEvSdisplayFuncs[] PROGMEM = {

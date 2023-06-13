@@ -8,31 +8,31 @@ static void clockSet::entry(void)
 	ull2str(pBuff, vClockCycleIdx, tReadTicksToSeconds);
 #endif // useSoftwareClock
 
-	cursor::moveAbsolute(clockSetScreenIdx, 0);
+	cursor::moveAbsolute(clockSetDisplayIdx, 0);
 
 }
 
 static void clockSet::changeDigitUp(void)
 {
 
-	pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])]++;
-	if (pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])] > '9') pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])] = '0';
+	pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])]++;
+	if (pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] > '9') pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] = '0';
 
-	if (pBuff[2] > '5') pBuff[2] = '0'; // this will only happen if clockSetScreenIdx == 2
-	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '0'; // this will only happen if clockSetScreenIdx == 0 or 1
-	if (pBuff[0] > '2') pBuff[0] = '0'; // this will only happen if clockSetScreenIdx == 0
+	if (pBuff[2] > '5') pBuff[2] = '0'; // this will only happen if clockSetDisplayIdx == 2
+	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '0'; // this will only happen if clockSetDisplayIdx == 0 or 1
+	if (pBuff[0] > '2') pBuff[0] = '0'; // this will only happen if clockSetDisplayIdx == 0
 
 }
 
 static void clockSet::changeDigitDown(void)
 {
 
-	pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])]--;
-	if (pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])] < '0') pBuff[(unsigned int)(screenCursor[(unsigned int)(clockSetScreenIdx)])] = '9';
+	pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])]--;
+	if (pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] < '0') pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] = '9';
 
-	if (pBuff[0] > '2') pBuff[0] = '2'; // this will only happen if clockSetScreenIdx == 0
-	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '3'; // this will only happen if clockSetScreenIdx == 0 or 1
-	if (pBuff[2] > '5') pBuff[2] = '5'; // this will only happen if clockSetScreenIdx == 2
+	if (pBuff[0] > '2') pBuff[0] = '2'; // this will only happen if clockSetDisplayIdx == 0
+	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '3'; // this will only happen if clockSetDisplayIdx == 0 or 1
+	if (pBuff[2] > '5') pBuff[2] = '5'; // this will only happen if clockSetDisplayIdx == 2
 
 }
 
@@ -57,7 +57,7 @@ static void clockSet::set(void)
 
 	SWEET64::runPrgm(prgmChangeSoftwareClock, 0); // convert time value into timer0 clock cycles
 
-	cursor::screenLevelEntry(PSTR("Time Set"), clockShowScreenIdx);
+	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
 
 #endif // useSoftwareClock
 }
@@ -65,7 +65,7 @@ static void clockSet::set(void)
 static void clockSet::cancel(void)
 {
 
-	cursor::screenLevelEntry(PSTR("Time NOT Set"), clockShowScreenIdx);
+	cursor::screenLevelEntry(PSTR("Time NOT Set"), clockShowDisplayIdx);
 
 }
 
@@ -90,26 +90,26 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 	{
 
 #ifdef useBigDTE
-		case bigDTEscreenIdx:
-			str = PSTR(" DistToEmpty\r");
+		case bigDTEdisplayIdx:
+			str = PSTR(" DistToEmpty" tcEOSCR);
 			break;
 
 #endif // useBigDTE
 #ifdef useBigFE
-		case bigFEscreenIdx:
-			str = PSTR(" Fuel Econ\r");
+		case bigFEdisplayIdx:
+			str = PSTR(" Fuel Econ" tcEOSCR);
 			break;
 
 #endif // useBigFE
 #ifdef useBigTTE
-		case bigTTEscreenIdx:
-			str = PSTR(" TimeToEmpty\r");
+		case bigTTEdisplayIdx:
+			str = PSTR(" TimeToEmpty" tcEOSCR);
 			break;
 
 #endif // useBigTTE
 		default:
 #ifdef useClockDisplay
-			if (cursorPos == 255) thisMenuLevel = clockShowScreenIdx;
+			if (cursorPos == 255) thisMenuLevel = clockShowDisplayIdx;
 #endif // useClockDisplay
 			break;
 
@@ -126,17 +126,17 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 			{
 
 #ifdef useClockDisplay
-				case clockShowScreenIdx:
-				case clockSetScreenIdx:
+				case clockShowDisplayIdx:
+				case clockSetDisplayIdx:
 #endif // useClockDisplay
 #ifdef useBigDTE
-				case bigDTEscreenIdx:
+				case bigDTEdisplayIdx:
 #endif // useBigDTE
 #ifdef useBigFE
-				case bigFEscreenIdx:
+				case bigFEdisplayIdx:
 #endif // useBigFE
 #ifdef useBigTTE
-				case bigTTEscreenIdx:
+				case bigTTEdisplayIdx:
 #endif // useBigTTE
 					bigDigit::loadCGRAMnumberFont();
 					break;
@@ -151,13 +151,13 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 			{
 
 #ifdef useBigDTE
-				case bigDTEscreenIdx:
+				case bigDTEdisplayIdx:
 #endif // useBigDTE
 #ifdef useBigFE
-				case bigFEscreenIdx:
+				case bigFEdisplayIdx:
 #endif // useBigFE
 #ifdef useBigTTE
-				case bigTTEscreenIdx:
+				case bigTTEdisplayIdx:
 #endif // useBigTTE
 #if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
 					displayStatus(str, cursorPos);
@@ -165,11 +165,11 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 
 #endif // defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
 #ifdef useClockDisplay
-				case clockShowScreenIdx:
-					printStatusMessage(PSTR("Clock\r"));
+				case clockShowDisplayIdx:
+					text::statusOut(devLCD, PSTR("Clock" tcEOSCR));
 					break;
 
-				case clockSetScreenIdx:
+				case clockSetDisplayIdx:
 					break;
 
 #endif // useClockDisplay
@@ -183,13 +183,13 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 			{
 
 #ifdef useBigDTE
-				case bigDTEscreenIdx:
+				case bigDTEdisplayIdx:
 					outputNumber(tripIdx, tDistanceToEmpty, 4);
 					break;
 
 #endif // useBigDTE
 #ifdef useBigFE
-				case bigFEscreenIdx:
+				case bigFEdisplayIdx:
 					i = outputNumber(tripIdx, tFuelEcon, 3) - calcFormatFuelEconomyIdx;
 
 					text::stringOut(devLCD, msTripNameString, cursorPos);
@@ -199,17 +199,17 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 
 #endif // useBigFE
 #ifdef useBigTTE
-				case bigTTEscreenIdx:
+				case bigTTEdisplayIdx:
 					outputTime(ull2str(mBuff1, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
 					break;
 
 #endif // useBigTTE
 #ifdef useClockDisplay
-				case clockShowScreenIdx:
+				case clockShowDisplayIdx:
 					outputTime(ull2str(mBuff1, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
 					break;
 
-				case clockSetScreenIdx:
+				case clockSetDisplayIdx:
 					outputTime(pBuff, (timer0Status & t0sShowCursor), cursorPos);
 					break;
 
@@ -337,10 +337,10 @@ static void bigDigit::outputDigit(const char * digitDefStr, uint8_t xPos, uint8_
 static void bigDigit::displayStatus(const char * str, uint8_t cursorPos)
 {
 
-	initStatusLine();
+	text::initStatus(devLCD);
 	text::stringOut(devLCD, msTripNameString, cursorPos);
 	text::stringOut(devLCD, str); // briefly display screen name
-	execStatusLine();
+	delayS(holdDelay);
 
 }
 

@@ -231,16 +231,16 @@ static uint8_t EEPROM::powerUpCheck(void)
 
 	b = SWEET64::runPrgm(prgmInitEEPROM, 0); // perform EEPROM initialization if required, and cause MPGuino initialization when done
 
-#ifdef useScreenEditor
+#if defined(useScreenEditor)
 	if (b)
 	{
 
-		uint8_t t = eePtrScreensStart;
-		for (uint8_t x = 0; x < mainScreenDisplayFormatSize; x++) writeVal(t++, (unsigned long)(pgm_read_byte(&mainScreenDisplayFormats[(unsigned int)(x)])));
+		uint8_t t = eePtrDisplayPagesStart;
+		for (uint8_t x = 0; x < mainDisplayFormatSize; x++) writeVal(t++, (uint16_t)(pgm_read_word(&mainDisplayPageFormats[(uint16_t)(x)])));
 
 	}
 
-#endif // useScreenEditor
+#endif // defined(useScreenEditor)
 	initGuino();
 
 	return b;
@@ -259,7 +259,7 @@ static void EEPROM::initGuinoHardware(void)
 	EIMSK &= ~((1 << INT3) | (1 << INT2)); // disable fuel injector sense interrupts
 
 	EICRA |= ((1 << ISC31) | (1 << ISC30) | (1 << ISC21) | (1 << ISC20)); // set injector sense pin control
-	EICRA &= ~(1 << (EEPROM::readVal(pInjEdgeTriggerIdx) ? ISC30 : ISC20));
+	EICRA &= ~(1 << (readByte(pInjEdgeTriggerIdx) ? ISC30 : ISC20));
 
 	EIFR |= ((1 << INTF3) | (1 << INTF2)); // clear fuel injector sense flag
 	EIMSK |= ((1 << INT3) | (1 << INT2)); // enable fuel injector sense interrupts
@@ -275,7 +275,7 @@ static void EEPROM::initGuinoHardware(void)
 	EIMSK &= ~((1 << INT5) | (1 << INT4)); // disable fuel injector sense interrupts
 
 	EICRB |= ((1 << ISC51) | (1 << ISC50) | (1 << ISC41) | (1 << ISC40)); // set injector sense pin control
-	EICRB &= ~(1 << (EEPROM::readVal(pInjEdgeTriggerIdx) ? ISC50 : ISC40));
+	EICRB &= ~(1 << (readByte(pInjEdgeTriggerIdx) ? ISC50 : ISC40));
 
 	EIFR |= ((1 << INTF5) | (1 << INTF4)); // clear fuel injector sense flag
 	EIMSK |= ((1 << INT5) | (1 << INT4)); // enable fuel injector sense interrupts
@@ -293,7 +293,7 @@ static void EEPROM::initGuinoHardware(void)
 	EIMSK &= ~((1 << INT1) | (1 << INT0)); // disable fuel injector sense interrupts
 
 	EICRA |= ((1 << ISC11) | (1 << ISC10) | (1 << ISC01) | (1 << ISC00)); // set injector sense pin control
-	EICRA &= ~(1 << (EEPROM::readVal(pInjEdgeTriggerIdx) ? ISC10 : ISC00));
+	EICRA &= ~(1 << (readByte(pInjEdgeTriggerIdx) ? ISC10 : ISC00));
 
 	EIFR |= ((1 << INTF1) | (1 << INTF0)); // clear fuel injector sense flag
 	EIMSK |= ((1 << INT1) | (1 << INT0)); // enable fuel injector sense interrupts
@@ -331,7 +331,7 @@ static void EEPROM::initGuinoHardware(void)
 	ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
 
 #endif // useAnalogRead
-	VSSpause = readVal(pVSSpauseIdx);
+	VSSpause = readByte(pVSSpauseIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -345,10 +345,10 @@ static void EEPROM::initGuinoSoftware(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (readVal(pMetricModeIdx)) metricFlag |= metricMode;
+	if (readByte(pMetricModeIdx)) metricFlag |= metricMode;
 	else metricFlag &= ~(metricMode);
 
-	if (readVal(pAlternateFEidx)) metricFlag |= alternateFEmode;
+	if (readByte(pAlternateFEidx)) metricFlag |= alternateFEmode;
 	else metricFlag &= ~(alternateFEmode);
 
 	SWEET64::runPrgm(prgmInitMPGuino, 0); // calculate multiple MPGuino system values for use within code
@@ -363,10 +363,10 @@ static void EEPROM::initGuinoSoftware(void)
 	bgFEvsSsupport::reset();
 
 #endif // useBarFuelEconVsSpeed
-#ifdef useWindowTripFilter
+#if defined(useWindowTripFilter)
 	tripSupport::resetWindowFilter();
 
-#endif // useWindowTripFilter
+#endif // defined(useWindowTripFilter)
 }
 
 static void EEPROM::initGuino(void) // initialize MPGuino base hardware and basic system settings
@@ -396,7 +396,7 @@ static void EEPROM::writeVal(uint8_t eePtr, uint32_t value)
 
 }
 
-static uint8_t EEPROM::readVal(uint8_t eePtr)
+static uint8_t EEPROM::readByte(uint8_t eePtr)
 {
 
 	uint64_t val;
@@ -408,6 +408,20 @@ static uint8_t EEPROM::readVal(uint8_t eePtr)
 
 }
 
+#if defined(useScreenEditor)
+static uint16_t EEPROM::readWord(uint8_t eePtr)
+{
+
+	uint64_t val;
+	union union_64 * vee = (union union_64 *) &val;
+
+	read64(vee, eePtr);
+
+	return vee->ui[0];
+
+}
+
+#endif // defined(useScreenEditor)
 static void EEPROM::read64(union union_64 * an, uint8_t parameterIdx)
 {
 
@@ -507,9 +521,9 @@ static uint16_t EEPROM::getAddress(uint8_t eePtr)
 	if (eePtr >= eePtrEnd) eePtr = eePtrEnd;
 
 	if (eePtr < eePtrStorageEnd) t = (uint16_t)(pgm_read_byte(&paramAddrs[eePtr]));
-#ifdef useScreenEditor
-	else if ((eePtr >= eePtrScreensStart) && (eePtr < eePtrScreensEnd)) t = 2 * (eePtr - eePtrScreensStart) + eeAdrScreensStart;
-#endif // useScreenEditor
+#if defined(useScreenEditor)
+	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = 2 * (eePtr - eePtrDisplayPagesStart) + eeAdrScreensStart;
+#endif // defined(useScreenEditor)
 	else t = eeAdrStorageEnd;
 
 	return t;

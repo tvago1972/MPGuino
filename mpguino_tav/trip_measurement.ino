@@ -218,7 +218,7 @@ static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 				retVal = pTankTripVSSpulseIdx + dataIdx;
 				break;
 
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 			case EEPROMeocIdleCurrentIdx:
 				retVal = pCurrIEOCvssPulseIdx + dataIdx;
 				break;
@@ -227,7 +227,7 @@ static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 				retVal = pTankIEOCvssPulseIdx + dataIdx;
 				break;
 
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 			default:
 				retVal = 0;
 				break;
@@ -245,12 +245,19 @@ static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 static void tripSupport::init(void)
 {
 
-	rawTripIdx = raw0tripIdx;
-#ifdef trackIdleEOCdata
-	rawEOCidleTripIdx = raw0eocIdleTripIdx;
-#endif // trackIdleEOCdata
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	curRawTripIdx = raw0tripIdx;
+#if defined(trackIdleEOCdata)
+	curRawEOCidleTripIdx = raw0eocIdleTripIdx;
+#endif // defined(trackIdleEOCdata)
 
 	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
+
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 
@@ -258,63 +265,49 @@ static void tripSupport::idleProcess(void)
 {
 
 	uint8_t oldSREG;
-	uint8_t i;
-	uint8_t j;
 	uint8_t k;
 	uint8_t m;
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	i = rawTripIdx; // save old trip variable index
-	rawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
+	curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
+#if defined(trackIdleEOCdata)
+	curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
+#endif // defined(trackIdleEOCdata)
 
-#ifdef trackIdleEOCdata
-	j = rawEOCidleTripIdx; // save old EOC/idle trip variable index
-	rawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
-
-#endif // trackIdleEOCdata
 	SREG = oldSREG; // restore interrupt flag status
 
-	for (uint8_t x = 0; x < tUScount; x++)
+	for (uint8_t x = 0; x < tripUpdateListSize; x++)
 	{
 
-		k = translateTripIndex(tripUpdateSrcList, x) & 0x7F;
-		m = translateTripIndex(tripUpdateDestList, x);
+		k = translateTripIndex(x, 0);
+		m = translateTripIndex(x, 1);
 
-		if (m)
+		if (m & 0x80) // if transfer bit set
 		{
 
-			if (m & 0x80) tripVar::transfer(k, m & 0x7F);
-			else tripVar::update(k, m);
+			tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
+			tripVar::reset(k); // reset source trip variable
 
 		}
+		else tripVar::update(k, m); // otherwise, just do trip update
 
 	}
 
-	tripVar::reset(i); // reset old raw trip variable
-#ifdef trackIdleEOCdata
-	tripVar::reset(j); // reset old EOC/idle raw trip variable
-#endif // trackIdleEOCdata
-
-#ifdef useWindowTripFilter
+#if defined(useWindowTripFilter)
 	if (awakeFlags & aAwakeOnVehicle)
 	{
 
-		if (EEPROM::readVal(pWindowTripFilterIdx))
-		{
-
-			wtpCurrentIdx++;
-			if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
-
-		}
+		wtpCurrentIdx++;
+		if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
 
 	}
 
-#endif // useWindowTripFilter
+#endif // defined(useWindowTripFilter)
 }
 
-static uint8_t tripSupport::translateTripIndex(const uint8_t tripTranslateList[], uint8_t tripListPos)
+static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex)
 {
 
 #ifdef useBarFuelEconVsTime
@@ -323,28 +316,28 @@ static uint8_t tripSupport::translateTripIndex(const uint8_t tripTranslateList[]
 	uint8_t i;
 	uint8_t j;
 
-	j = pgm_read_byte(&tripTranslateList[(unsigned int)(tripListPos)]);
+	j = pgm_read_byte(&tripUpdateList[(unsigned int)(tripTransferIdx)][(unsigned int)(tripDirIndex)]);
 	i = j & 0x7F; // strip off upper bit for now, to look at the trip index in question
 
 	switch (i)
 	{
 
 		case 0x7F:		// replace generic raw trip index with old raw trip index
-			i = rawTripIdx ^ (raw0tripIdx ^ raw1tripIdx);
+			i = curRawTripIdx ^ (raw0tripIdx ^ raw1tripIdx);
 			break;
 
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 		case 0x7E:		// replace generic idle/eoc raw trip index with old idle/eoc raw trip index
-			i = rawEOCidleTripIdx ^ (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx);
+			i = curRawEOCidleTripIdx ^ (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx);
 			break;
 
-#endif // trackIdleEOCdata
-#ifdef useWindowTripFilter
+#endif // defined(trackIdleEOCdata)
+#if defined(useWindowTripFilter)
 		case 0x7D:		// replace generic window trip index with current window trip index
 			i = wtpCurrentIdx;
 			break;
 
-#endif // useWindowTripFilter
+#endif // defined(useWindowTripFilter)
 #ifdef useBarFuelEconVsTime
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
 			oldSREG = SREG; // save interrupt flag status
@@ -401,7 +394,7 @@ static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 
 			text::gotoXY(devLCD, 0, 1); // go to next line
 
-			if (EEPROM::readVal(pgm_read_byte(&tripSignatureList[(uint16_t)(tripSlot)])) == guinosig) text::stringOut(devLCD, PSTR("Present"));
+			if (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(tripSlot)])) == guinosig) text::stringOut(devLCD, PSTR("Present"));
 			else text::stringOut(devLCD, PSTR("Empty"));
 
 			text::newLine(devLCD);
@@ -420,7 +413,7 @@ static void tripSupport::goSaveTank(void)
 {
 
 	tripSlot = 1;
-	cursor::moveAbsolute(tripSaveScreenIdx, 0);
+	cursor::moveAbsolute(tripSaveDisplayIdx, 0);
 
 }
 
@@ -428,32 +421,32 @@ static void tripSupport::goSaveCurrent(void)
 {
 
 	tripSlot = 0;
-	cursor::moveAbsolute(tripSaveScreenIdx, 0);
+	cursor::moveAbsolute(tripSaveDisplayIdx, 0);
 
 }
 
 static void tripSupport::select(void)
 {
 
-	switch (screenCursor[(unsigned int)(menuLevel)])
+	switch (displayCursor[(unsigned int)(menuLevel)])
 	{
 
 		case 0: // save
 			doWriteTrip(tripSlot);
 			displayStatus(tripSlot, PSTR("Save"));
-			doReturnToMainScreen();
+			mainDisplay::returnToMain();
 			break;
 
 		case 1: // load
 			doReadTrip(tripSlot);
 			displayStatus(tripSlot, PSTR("Load"));
-			doReturnToMainScreen();
+			mainDisplay::returnToMain();
 			break;
 
 		case 2: // reset
 			doResetTrip(tripSlot);
 			displayStatus(tripSlot, PSTR("Reset"));
-			doReturnToMainScreen();
+			mainDisplay::returnToMain();
 			break;
 
 		default:
@@ -468,7 +461,7 @@ static uint8_t tripSupport::doAutoAction(uint8_t taaMode)
 
 	uint8_t retVal = 0;
 
-	if (EEPROM::readVal(pAutoSaveActiveIdx))
+	if (EEPROM::readByte(pAutoSaveActiveIdx))
 	{
 
 		for (uint8_t x = 0; x < 2; x++)
@@ -510,11 +503,11 @@ static uint8_t tripSupport::doWriteTrip(uint8_t tripSlot)
 static void tripSupport::displayStatus(uint8_t tripSlot, const char * str)
 {
 
-	initStatusLine();
+	text::initStatus(devLCD);
 	text::stringOut(devLCD, msTripNameString, tripSlot + 1);
 	text::stringOut(devLCD, PSTR(" Trip "));
 	text::stringOut(devLCD, str);
-	execStatusLine();
+	delayS(holdDelay);
 
 }
 
@@ -526,9 +519,9 @@ static void tripSupport::doResetTrip(uint8_t tripSlot)
 
 #endif // useSavedTrips
 	tripVar::reset(pgm_read_byte(&tripSelectList[(unsigned int)(tripSlot)]));
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	tripVar::reset(pgm_read_byte(&tripSelectList[(unsigned int)(tripSlot + 2)]));
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 
 #if useBarFuelEconVsSpeed || usePartialRefuel
 	if (tripSlot)
@@ -563,7 +556,7 @@ static void tripSupport::resetCurrent(void)
 
 }
 
-#ifdef useWindowTripFilter
+#if defined(useWindowTripFilter)
 static void tripSupport::resetWindowFilter(void)
 {
 
@@ -573,14 +566,14 @@ static void tripSupport::resetWindowFilter(void)
 
 }
 
-#endif // useWindowTripFilter
+#endif // defined(useWindowTripFilter)
 #ifdef useChryslerMAPCorrection
 /* Chrysler returnless fuel pressure correction display section */
 
 static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
 	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
-	instrBranchIfLT, 3,								// if not, continue
+	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
@@ -595,7 +588,7 @@ static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
 	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
-	instrBranchIfLT, 3,								// if not, continue
+	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
@@ -622,13 +615,6 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-const uint8_t pressureCorrectScreenFormats[4][2] PROGMEM = {
-	 {(mpMAPpressureIdx - mpMAPpressureIdx),	0x80 | tPressureChannel}		// Pressures
-	,{(mpBaroPressureIdx - mpMAPpressureIdx),	0x80 | tPressureChannel}
-	,{(mpFuelPressureIdx - mpMAPpressureIdx),	0x80 | tPressureChannel}
-	,{(mpInjPressureIdx - mpMAPpressureIdx),	0x80 | tPressureChannel}
-};
-
 static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
 
@@ -642,14 +628,14 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 
 		case menuEntryIdx:
 		case menuCursorUpdateIdx:
-			printStatusMessage(pressureCorrectScreenFuncNames, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, pressureCorrectScreenFuncNames, cursorPos); // briefly display screen name
 
 		case menuOutputDisplayIdx:
-#ifdef useSpiffyTripLabels
-			displayMainScreenFunctions(pressureCorrectScreenFormats, cursorPos, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-			displayMainScreenFunctions(pressureCorrectScreenFormats, cursorPos);
-#endif // useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0, msTripBitPattern);
+#else // defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0);
+#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
@@ -658,6 +644,13 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 	}
 
 	return retVal;
+
+}
+
+static uint16_t pressureCorrect::getPressureCorrectPageFormats(uint8_t formatIdx)
+{
+
+	return pgm_read_word(&pressureCorrectPageFormats[(uint16_t)(formatIdx)]);
 
 }
 

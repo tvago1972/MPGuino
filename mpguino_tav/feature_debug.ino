@@ -128,10 +128,10 @@ static void systemInfo::showCPUload(void)
 static void systemInfo::showCPUloading(void)
 {
 
-	initStatusLine();
+	text::initStatus(devLCD);
 	showCPUload();
 	text::charOut(devLCD, 0x0D);
-	execStatusLine();
+	delayS(holdDelay);
 
 }
 
@@ -445,7 +445,7 @@ static const uint8_t prgmWriteTripMeasurementValue[] PROGMEM = {
 static const uint8_t terminalButtonCount = 6;
 
 static const char terminalButtonChars[] PROGMEM = {
-	"lcrLCR\0"
+	"lcrLCR" tcEOS
 };
 
 static const uint8_t terminalButtonValues[] PROGMEM = {
@@ -461,7 +461,7 @@ static const uint8_t terminalButtonValues[] PROGMEM = {
 static const uint8_t terminalButtonCount = 10;
 
 static const char terminalButtonChars[] PROGMEM = {
-	"lcrudLCRUD\0"
+	"lcrudLCRUD" tcEOS
 };
 
 static const char terminalButtonValues[] PROGMEM = {
@@ -479,19 +479,19 @@ static const char terminalButtonValues[] PROGMEM = {
 
 #endif // useLegacyButtons
 const char terminalActivityFlagStr[] PROGMEM = {
-	"activityFlags: \0"
-	"EngOff" "\xEC" "running\0"
-	"VehStop" "\xEC" "moving\0"
-	"NoButtons" "\xEC" "pressed\0"
-	"Parked" "\xEC" "notparked\0"
-	"Inactive" "\xEC" "active\0"
-	"FuelRate" "\xEC" "fuelecon\0"
+	"activityFlags: " tcEOS
+	"EngOff" tcOTOG "running" tcEOS
+	"VehStop" tcOTOG "moving" tcEOS
+	"NoButtons" tcOTOG "pressed" tcEOS
+	"Parked" tcOTOG "notparked" tcEOS
+	"Inactive" tcOTOG "active" tcEOS
+	"FuelRate" tcOTOG "fuelecon" tcEOS
 #ifdef useTWIbuttons
-	"TWIsample" "\xEC" "twi\0"
+	"TWIsample" tcOTOG "twi" tcEOS
 #else // useTWIbuttons
-	"1" "\xEC" "0\0"
+	"1" tcOTOG "0" tcEOS
 #endif // useTWIbuttons
-	"1" "\xEC" "0\0"
+	"1" tcOTOG "0" tcEOS
 };
 
 static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
@@ -558,7 +558,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 	text::charOut(devDebugTerminal, '-');
 	text::hexByteOut(devDebugTerminal, EEPROM::getLength(lineNumber));
 	text::charOut(devDebugTerminal, '-');
-	text::hexByteOut(devDebugTerminal, EEPROM::getAddress(lineNumber));
+	text::hexWordOut(devDebugTerminal, EEPROM::getAddress(lineNumber));
 	if (lineNumber < eePtrSettingsEnd)
 	{
 
@@ -568,7 +568,8 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		text::stringOut(devDebugTerminal, PSTR(")"));
 
 	}
-	else
+#if defined(useEEPROMtripStorage)
+	else if (lineNumber < eePtrSavedTripsEnd)
 	{
 
 		text::charOut(devDebugTerminal, ' ');
@@ -577,6 +578,18 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		text::charOut(devDebugTerminal, ' ');
 
 	}
+#endif // defined(useEEPROMtripStorage)
+#if defined(useScreenEditor)
+	else if (lineNumber < eePtrDisplayPagesEnd)
+	{
+
+		text::charOut(devDebugTerminal, ' ');
+		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
+		text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
+		text::charOut(devDebugTerminal, ' ');
+
+	}
+#endif // defined(useScreenEditor)
 
 }
 
@@ -623,7 +636,7 @@ static void terminal::outputDecimalValue(uint8_t lineNumber)
 		text::hexByteOut(devDebugTerminal, decWindow);
 		text::charOut(devDebugTerminal, ' ');
 		text::hexByteOut(devDebugTerminal, decPlace);
-		text::stringOut(devDebugTerminal, PSTR("\xEF" "    "));
+		text::stringOut(devDebugTerminal, PSTR(tcCR "    "));
 
 	}
 
@@ -691,7 +704,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
     [y]<[x]R - read trip variable x into trip variable y
                 default for x and y is terminal trip variable
                 if no x or y specified, lists available trip variables
-           S - output system status
            I - inject button press
                 short (l, c, r, u, d)
                  long (L, C, R, U, D)
@@ -715,7 +727,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 	]ir r r r     << injects 4 successive short press r into MPGuino
 
 	]irc R LC r   << injects short press r+c, long press r, long press l+c, short press r into MPGuino
-	
+
 	]300          << stores 768 into the 64-bit math accumulator
 
 	]*f           << multiplies 64-bit math accumulator contents by 15
@@ -771,7 +783,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						if (inpIdx == tBuffLength)
 						{
 
-							text::stringOut(devDebugTerminal, PSTR("\\\r"));
+							text::stringOut(devDebugTerminal, PSTR("\\" tcEOSCR));
 							terminalState = 0;
 
 						}
@@ -917,7 +929,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						else
 						{
 
-							terminalCmd = 0; // reset pending command
 							terminalSource = terminalByte; // save source start byte value
 							terminalMode &= ~(tmInputMask); // clear input mode processing bits
 							terminalMode |= (tmInitHex | tmSourceReadIn); // shift to hex input
@@ -931,7 +942,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						else
 						{
 
-							terminalCmd = 0; // reset pending command
 							terminalTarget = terminalByte; // save source start byte value
 							terminalMode &= ~(tmInputMask); // clear input mode processing bits
 							terminalMode |= (tmInitHex | tmTargetReadIn); // shift to hex input
@@ -952,11 +962,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 						}
 
-						break;
-
-					case 'S':   // print system status
-						terminal::outputFlags(activityFlags, terminalActivityFlagStr);
-						chr = '\\'; // reset input mode and pending command
 						break;
 
 					case 'I':   // inject button press
@@ -1022,7 +1027,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						{
 
 							// if no target was read in, assume terminal trip index
-							if ((terminalMode & tmTargetReadIn) == 0) terminalTarget = terminalIdx; 
+							if ((terminalMode & tmTargetReadIn) == 0) terminalTarget = terminalIdx;
 
 							// if no source was read in, assume terminal trip index
 							if ((terminalMode & tmByteReadIn) == 0) terminalByte = terminalIdx;
@@ -1033,14 +1038,14 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								if (terminalTarget >= tripSlotTotalCount)
 								{
 
-									text::stringOut(devDebugTerminal, PSTR("Invalid target trip variable specified\r"));
+									text::stringOut(devDebugTerminal, PSTR("Invalid target trip variable specified" tcEOSCR));
 									terminalState = 0;
 
 								}
 								else if (terminalByte >= tripSlotTotalCount)
 								{
 
-									text::stringOut(devDebugTerminal, PSTR("Invalid source trip variable specified\r"));
+									text::stringOut(devDebugTerminal, PSTR("Invalid source trip variable specified" tcEOSCR));
 									terminalState = 0;
 
 								}
@@ -1069,6 +1074,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							{
 
 								terminalCmd = chr; // save command for later
+								terminalState = 32; // this command could print a lot of different lines, so handle this command one iteration at a time
 								chr = '$'; // do unified list output preparation
 
 							}
@@ -1126,19 +1132,20 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								break;
 
 							case 0:
+								terminal::outputFlags(activityFlags, terminalActivityFlagStr);
 							case '+':	// add
 							case '-':	// subtract
 							case '*':	// multiply
 							case '/':	// divide
 							case '=':	// output last result
-								if (terminalMode & (tmByteReadIn | tmSourceReadIn | tmTargetReadIn)) processMath(terminalCmd);
+								processMath(terminalCmd);
 
 								SWEET64::runPrgm(prgmFetchResultValue, 0);
 								text::charOut(devDebugTerminal, '=');
 								text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
 								text::stringOut(devDebugTerminal, PSTR(" (0x"));
 								text::hexLWordOut(devDebugTerminal, &s64reg[s64reg7]);
-								text::stringOut(devDebugTerminal, PSTR(")" "\xEF"));
+								text::stringOut(devDebugTerminal, PSTR(")" tcCR));
 
 								break;
 
@@ -1206,7 +1213,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							break;
 
 						case 'P':   // list available stored parameters
-							maxLine = eePtrStorageEnd;
+							maxLine = eePtrEnd;
 #ifdef useDebugTerminalLabels
 							labelList = parmLabels;
 #endif // useDebugTerminalLabels
@@ -1265,7 +1272,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						if (terminalSource >= maxLine)
 						{
 
-							text::stringOut(devDebugTerminal, PSTR("index start value too large\r"));
+							text::stringOut(devDebugTerminal, PSTR("index start value too large" tcEOSCR));
 							terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 						}
@@ -1280,7 +1287,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								if (terminalByte >= maxLine)
 								{
 
-									text::stringOut(devDebugTerminal, PSTR("index end value too large\r"));
+									text::stringOut(devDebugTerminal, PSTR("index end value too large" tcEOSCR));
 									terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 								}
@@ -1307,7 +1314,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							if (terminalByte >= maxLine)
 							{
 
-								text::stringOut(devDebugTerminal, PSTR("index value too large\r"));
+								text::stringOut(devDebugTerminal, PSTR("index value too large" tcEOSCR));
 								terminalState = 0; // go back to terminal state 0 - initialize input and print prompt character
 
 							}
@@ -1330,7 +1337,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 				{
 
 					terminalState = nextTerminalState; // go fetch next command
-					terminalCmd = 0; // reset any pending commands
 					terminalMode = tmInitHex; // clear all read-in byte addressing values, and shift to parsing a generic input value
 
 				}
@@ -1391,7 +1397,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // useDebugTerminal
 #ifdef useSimulatedFIandVSS
-static uint8_t debugReading::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
 
 	uint8_t retVal = 0;
@@ -1404,7 +1410,7 @@ static uint8_t debugReading::displayHandler(uint8_t cmd, uint8_t cursorPos, uint
 
 		case menuEntryIdx:
 		case menuCursorUpdateIdx:
-			printStatusMessage(debugScreenFuncNames, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, debugScreenFuncNames, cursorPos); // briefly display screen name
 			retVal = (debugFlags & debugEnableFlags);
 			switch (cursorPos)
 			{
@@ -1432,11 +1438,11 @@ static uint8_t debugReading::displayHandler(uint8_t cmd, uint8_t cursorPos, uint
 			if ((debugFlags & debugEnableFlags) ^ retVal) configurePorts();
 
 		case menuOutputDisplayIdx:
-#ifdef useSpiffyTripLabels
-			displayMainScreenFunctions(debugScreenFormats, 0, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-			displayMainScreenFunctions(debugScreenFormats, 0);
-#endif // useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0, msTripBitPattern);
+#else // defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0);
+#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
@@ -1448,7 +1454,14 @@ static uint8_t debugReading::displayHandler(uint8_t cmd, uint8_t cursorPos, uint
 
 }
 
-static void debugReading::configurePorts(void)
+static uint16_t signalSim::getSignalSimPageFormats(uint8_t formatIdx)
+{
+
+	return pgm_read_word(&signalSimPageFormats[(uint16_t)(formatIdx)]);
+
+}
+
+static void signalSim::configurePorts(void)
 {
 
 	uint8_t oldSREG;
@@ -1550,7 +1563,7 @@ static void debugReading::configurePorts(void)
 
 }
 
-static void debugReading::idleProcessFuel(void)
+static void signalSim::idleProcessFuel(void)
 {
 
 	debugFIPidx++;
@@ -1596,7 +1609,7 @@ static void debugReading::idleProcessFuel(void)
 
 }
 
-static void debugReading::idleProcessVSS(void)
+static void signalSim::idleProcessVSS(void)
 {
 
 	debugVSSidx++;

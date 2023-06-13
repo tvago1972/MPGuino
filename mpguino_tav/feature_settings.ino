@@ -154,10 +154,10 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 	{
 
 #ifdef useLegacyLCD
-		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readVal(pContrastIdx)); // adjust contrast
+		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readByte(pContrastIdx)); // adjust contrast
 #endif // useLegacyLCD
 #ifdef useAdafruitRGBLCDshield
-		if ((parameterIdx == pLCDcolorIdx) && (brightnessIdx)) LCD::setRGBcolor(EEPROM::readVal(pLCDcolorIdx)); // adjust backlight color
+		if ((parameterIdx == pLCDcolorIdx) && (brightnessIdx)) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
 #endif // useAdafruitRGBLCDshield
 
 	}
@@ -245,24 +245,24 @@ static void parameterEdit::entry(void)
 
 	numberEditObj.callingScreenLevel = menuLevel;
 
-	cursor::moveAbsolute(parameterEditScreenIdx, 255);
+	cursor::moveAbsolute(parameterEditDisplayIdx, 255);
 
 }
 
 static void parameterEdit::findLeft(void)
 {
 
-	screenCursor[(unsigned int)(parameterEditScreenIdx)] = 9;
+	displayCursor[(unsigned int)(parameterEditDisplayIdx)] = 9;
 
 	// do a nice thing and put the edit cursor at the first non zero number
-	for (uint8_t x = 9; x < 10; x--) if (pBuff[(unsigned int)(x)] != ' ') screenCursor[(unsigned int)(parameterEditScreenIdx)] = x;
+	for (uint8_t x = 9; x < 10; x--) if (pBuff[(unsigned int)(x)] != ' ') displayCursor[(unsigned int)(parameterEditDisplayIdx)] = x;
 
 }
 
 static void parameterEdit::findRight(void)
 {
 
-	screenCursor[(unsigned int)(parameterEditScreenIdx)] = 9;
+	displayCursor[(unsigned int)(parameterEditDisplayIdx)] = 9;
 
 }
 
@@ -307,7 +307,7 @@ static void parameterEdit::changeDigitDown(void)
 static void parameterEdit::changeDigit(uint8_t digitDir)
 {
 
-	uint8_t cp = screenCursor[(unsigned int)(parameterEditScreenIdx)];
+	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
 	uint8_t c = '0';
 	uint8_t d = ' ';
 
@@ -363,7 +363,7 @@ static void parameterEdit::changeDigit(uint8_t digitDir)
 static void parameterEdit::save(void)
 {
 
-	uint8_t cp = screenCursor[(unsigned int)(parameterEditScreenIdx)];
+	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
 	uint8_t retVal;
 
 	switch (cp)
@@ -385,7 +385,7 @@ static void parameterEdit::save(void)
 
 		default:
 			cp = 10;
-			screenCursor[(unsigned int)(parameterEditScreenIdx)] = cp;
+			displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
 			displayHandler(menuCursorUpdateIdx, cp, 1);
 			break;
 
@@ -396,14 +396,14 @@ static void parameterEdit::save(void)
 static void parameterEdit::cancel(void)
 {
 
-	uint8_t cp = screenCursor[(unsigned int)(parameterEditScreenIdx)];
+	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
 	const char * str;
 
 	if (cp != 11)
 	{
 
 		cp = 11;
-		screenCursor[(unsigned int)(parameterEditScreenIdx)] = cp;
+		displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
 		displayHandler(menuCursorUpdateIdx, cp, 1);
 
 	}
@@ -417,12 +417,6 @@ static void parameterEdit::cancel(void)
 }
 
 /* MPGuino parameter settings edit section */
-
-static const char pseStatusMessages[] PROGMEM = {
-	"Param Unchanged\r"
-	"Param Changed\r"
-	"Param Reverted\r"
-};
 
 static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
@@ -442,39 +436,39 @@ static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 			switch (menuLevel)
 			{
 
-				case settingScreenIdx:
+				case displaySettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsDispStart;
 					break;
 
-				case fuelSettingsScreenIdx:
+				case fuelSettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsInjStart;
 					break;
 
-				case VSSsettingsScreenIdx:
+				case VSSsettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsVSSstart;
 					break;
 
-				case tankSettingsScreenIdx:
+				case tankSettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsTankStart;
 					break;
 
 #ifdef useChryslerMAPCorrection
-				case CRFICsettingsScreenIdx:
+				case CRFICsettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsCRFICstart;
 					break;
 
 #endif // useChryslerMAPCorrection
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-				case acdSettingsScreenIdx:
+				case acdSettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsACDstart;
 					break;
 
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-				case timeoutSettingsScreenIdx:
+				case timeoutSettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsTimeoutStart;
 					break;
 
-				case miscSettingsScreenIdx:
+				case miscSettingsDisplayIdx:
 					numberEditObj.parameterIdx = cursorPos + eePtrSettingsMiscStart;
 					break;
 
@@ -520,9 +514,9 @@ static uint8_t partialRefuel::displayHandler(uint8_t cmd, uint8_t cursorPos, uin
 
 		case menuCursorUpdateIdx:
 		case menuOutputDisplayIdx:
-			text::stringOut(devLCD, partialRefuelFuncNames, screenCursor[(unsigned int)(menuLevel)]); // print trip function name at top left
+			text::stringOut(devLCD, partialRefuelFuncNames, displayCursor[(unsigned int)(menuLevel)]); // print trip function name at top left
 			text::stringOut(devLCD, pBuff); // print value
-			text::stringOut(devLCD, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" "*1K\r"));
+			text::stringOut(devLCD, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON "*1K" tcEOSCR));
 			break;
 
 		default:
@@ -537,14 +531,14 @@ static uint8_t partialRefuel::displayHandler(uint8_t cmd, uint8_t cursorPos, uin
 static void partialRefuel::entry(void)
 {
 
-	cursor::moveAbsolute(partialRefuelScreenIdx, 0);
+	cursor::moveAbsolute(partialRefuelDisplayIdx, 0);
 
 }
 
 static void partialRefuel::select(void)
 {
 
-	switch (screenCursor[(unsigned int)(menuLevel)])
+	switch (displayCursor[(unsigned int)(menuLevel)])
 	{
 
 		case 0: // go edit partial refuel value
@@ -562,19 +556,19 @@ static void partialRefuel::select(void)
 static void partialRefuel::longSelect(void)
 {
 
-	switch (screenCursor[(unsigned int)(menuLevel)])
+	switch (displayCursor[(unsigned int)(menuLevel)])
 	{
 
 		case 1: // reset partial refuel quantity
 			SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
 			parameterEdit::sharedFunctionCall(nesSaveParameter);
-			printStatusMessage(PSTR("PartialFuel RST"));
-			doReturnToMainScreen();
+			text::statusOut(devLCD, PSTR("PartialFuel RST"));
+			mainDisplay::returnToMain();
 			break;
 
 		case 2: // tank trip reset
 			tripSupport::resetTank();
-			doReturnToMainScreen();
+			mainDisplay::returnToMain();
 			break;
 
 		default:

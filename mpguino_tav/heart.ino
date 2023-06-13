@@ -987,14 +987,14 @@ ISR( INT1_vect )
 
 			}
 
-#ifdef trackIdleEOCdata
-			if (awakeFlags & aAwakeVehicleMoving) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, rawTripIdx); // add to fuel injector total cycle accumulator
-			else tripVar::add64(collectedEngCycleCount, engineRotationPeriod, rawEOCidleTripIdx); // add to idle fuel injector total cycle accumulator
+#if defined(trackIdleEOCdata)
+			if (awakeFlags & aAwakeVehicleMoving) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx); // add to fuel injector total cycle accumulator
+			else tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawEOCidleTripIdx); // add to idle fuel injector total cycle accumulator
 
-#else // trackIdleEOCdata
-			tripVar::add64(collectedEngCycleCount, engineRotationPeriod, rawTripIdx); // add to fuel injector total cycle accumulator
+#else // defined(trackIdleEOCdata)
+			tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx); // add to fuel injector total cycle accumulator
 
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #ifdef useDragRaceFunction
 			// add to distance acceleration fuel injector total cycle accumulator
 			if (accelerationFlags & accelTestActive) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
@@ -1013,27 +1013,27 @@ ISR( INT1_vect )
 			thisInjectorPulseLength >>= 12; // divide by differential fuel pressure correction factor denominator
 
 #endif // useChryslerMAPCorrection
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving, save injector measurements in active raw trip variable
 			{
 
-				collectedInjPulseCount[(uint16_t)(rawTripIdx)]++; // add to fuel injector pulse count
-				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, rawTripIdx); // add to fuel injector open cycle accumulator
+				collectedInjPulseCount[(uint16_t)(curRawTripIdx)]++; // add to fuel injector pulse count
+				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawTripIdx); // add to fuel injector open cycle accumulator
 
 			}
 			else // if vehicle is not moving, save injector measurements in active idle/EOC raw trip variable
 			{
 
-				collectedInjPulseCount[(uint16_t)(rawEOCidleTripIdx)]++; // add to idle fuel injector pulse count
-				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, rawEOCidleTripIdx); // add to idle fuel injector open cycle accumulator
+				collectedInjPulseCount[(uint16_t)(curRawEOCidleTripIdx)]++; // add to idle fuel injector pulse count
+				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawEOCidleTripIdx); // add to idle fuel injector open cycle accumulator
 
 			}
 
-#else // trackIdleEOCdata
-			collectedInjPulseCount[(uint16_t)(rawTripIdx)]++; // add to fuel injector pulse count
-			tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, rawTripIdx); // add to fuel injector open cycle accumulator
+#else // defined(trackIdleEOCdata)
+			collectedInjPulseCount[(uint16_t)(curRawTripIdx)]++; // add to fuel injector pulse count
+			tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawTripIdx); // add to fuel injector open cycle accumulator
 
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #ifdef useDragRaceFunction
 			if (accelerationFlags & accelTestActive)
 			{
@@ -1239,27 +1239,27 @@ static void updateVSS(unsigned long thisVSStime)
 
 		}
 
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 		if (awakeFlags & aAwakeEngineRunning)
 		{
 
-			collectedVSSpulseCount[(unsigned int)(rawTripIdx)]++;
-			tripVar::add64(collectedVSScycleCount, cycleLength, rawTripIdx); // add to VSS cycle accumulator
+			collectedVSSpulseCount[(unsigned int)(curRawTripIdx)]++;
+			tripVar::add64(collectedVSScycleCount, cycleLength, curRawTripIdx); // add to VSS cycle accumulator
 
 		}
 		else // if the engine is not running, vehicle is in EOC mode
 		{
 
-			collectedVSSpulseCount[(unsigned int)(rawEOCidleTripIdx)]++;
-			tripVar::add64(collectedVSScycleCount, cycleLength, rawEOCidleTripIdx); // add to EOC VSS cycle accumulator
+			collectedVSSpulseCount[(unsigned int)(curRawEOCidleTripIdx)]++;
+			tripVar::add64(collectedVSScycleCount, cycleLength, curRawEOCidleTripIdx); // add to EOC VSS cycle accumulator
 
 		}
 
-#else // trackIdleEOCdata
-		collectedVSSpulseCount[(unsigned int)(rawTripIdx)]++;
-		tripVar::add64(collectedVSScycleCount, cycleLength, rawTripIdx); // add to VSS cycle accumulator
+#else // defined(trackIdleEOCdata)
+		collectedVSSpulseCount[(unsigned int)(curRawTripIdx)]++;
+		tripVar::add64(collectedVSScycleCount, cycleLength, curRawTripIdx); // add to VSS cycle accumulator
 
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #ifdef useCoastDownCalculator
 		if (coastdownFlags & (cdtActive | cdTakeSample)) // if coastdown test is active
 		{
@@ -1845,7 +1845,7 @@ static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle
 
 }
 
-static void delay0(unsigned int ms)
+static void delay0(uint16_t ms)
 {
 
 	uint8_t oldSREG;
@@ -1857,13 +1857,30 @@ static void delay0(unsigned int ms)
 		cli(); // disable interrupts
 
 		timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
-		timer0Command |= t0cDoDelay; // signal request to timer
+		timer0Command |= (t0cDoDelay); // signal request to timer
 
 		SREG = oldSREG; // restore interrupt flag status
 
 	}
 
 	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+
+}
+
+static void delayS(uint16_t ms)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	displayPauseCount = ms; // request a set number of timer tick delays per millisecond
+
+	if (ms) timer0Command |= (t0cDisplayDelay); // if display delay requested, make it active
+	else timer0Command &= ~(t0cDisplayDelay); // otherwise, cancel display delay
+
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 

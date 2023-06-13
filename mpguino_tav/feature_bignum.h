@@ -49,10 +49,10 @@ namespace bigDigit /* Big Digit output support section prototype */
 
 #ifdef useBigFE
 static const char bigFElabels[] PROGMEM = {
-	"MPG\r"
-	"L100\r"
-	"G100\r"
-	"KPL\r"
+	"MPG" tcEOSCR
+	"L100" tcEOSCR
+	"G100" tcEOSCR
+	"KPL" tcEOSCR
 };
 
 #endif // useBigFE

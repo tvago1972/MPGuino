@@ -12,12 +12,8 @@
 
 #ifdef useIsqrt
 static unsigned int iSqrt(unsigned int n);
-#endif // useIsqrt
-static unsigned long str2ull(char * strBuffer);
-static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t &decPos, char &zeroChar, uint8_t &digCnt, uint8_t flg);
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx);
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag);
 
+#endif // useIsqrt
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
@@ -101,9 +97,9 @@ static const uint8_t e20 =	e19 + 1;	// trace on
 static const uint8_t e21 =	e20 + 1;	// trace save
 static const uint8_t e22 =	e21 + 1;	// trace off
 static const uint8_t e23 =	e22 + 1;	// load index
-static const uint8_t e24 =	e23 + 1;	// load index eeprom
+static const uint8_t e24 =	e23 + 1;	// load index EEPROM
 static const uint8_t e25 =	e24 + 1;	// compare index
-static const uint8_t e26 =	e25 + 1;	// load index eeprom parameter length
+static const uint8_t e26 =	e25 + 1;	// load index EEPROM parameter length
 static const uint8_t e27 =	e26 + 1;	// call
 static const uint8_t e28 =	e27 + 1;	// jump
 static const uint8_t e29 =	e28 + 1;	// load jump register
@@ -125,8 +121,8 @@ static const uint8_t mxxMask = 0b00000111;
 static const uint8_t i00 =	0;			// no operation
 static const uint8_t i01 =	i00 + 8;	// load rX with rY
 static const uint8_t i02 =	i01 + 8;	// swap rX rY
-static const uint8_t i03 =	i02 + 8;	// load rX with eeprom
-static const uint8_t i04 =	i03 + 8;	// store eeprom rX
+static const uint8_t i03 =	i02 + 8;	// load rX with EEPROM
+static const uint8_t i04 =	i03 + 8;	// store EEPROM rX
 static const uint8_t i05 =	i04 + 8;	// load rX with main program
 static const uint8_t i06 =	i05 + 8;	// store main program rX
 static const uint8_t i07 =	i06 + 8;	// load rX with volatile
@@ -137,7 +133,7 @@ static const uint8_t i11 =	i10 + 8;	// store rX byte to bargraph data array
 static const uint8_t i12 =	i11 + 8;	// load rX with denominator for constant
 static const uint8_t i13 =	i12 + 8;	// load rX with numerator for constant
 static const uint8_t i14 =	i13 + 8;	// load rX with const
-static const uint8_t i15 =	i14 + 8;	// load rX with eeprom init
+static const uint8_t i15 =	i14 + 8;	// load rX with EEPROM init
 static const uint8_t i16 =	i15 + 8;	// load rX with voltage
 static const uint8_t i17 =	i16 + 8;	// load rX with FEvT trip variable
 static const uint8_t i18 =	i17 + 8;	// load rX with trip variable
@@ -275,7 +271,7 @@ static const uint8_t instrJump =					instrCallImplied + 1;					// jump to indexe
 /*
 
 	operands specifying 64-bit registers take the form of YX as a hexadecimal value
-	
+
 	e.g., instrLdReg, 0x24,
 
 	means "load 64-bit register 4 with the contents of 64-bit register 2"
@@ -283,7 +279,7 @@ static const uint8_t instrJump =					instrCallImplied + 1;					// jump to indexe
 */
 static const uint8_t instrLdReg =					instrJump + 1;							// load 64-bit register X with contents of 64-bit register Y
 static const uint8_t instrLdRegByteFromIndex =		instrLdReg + 1;							// load 64-bit register X with primary index byte value
-static const uint8_t instrLdRegByte =				instrLdRegByteFromIndex + 1;			// load 64-bit register X with immediate byte value	
+static const uint8_t instrLdRegByte =				instrLdRegByteFromIndex + 1;			// load 64-bit register X with immediate byte value
 static const uint8_t instrLdRegByteFromY =			instrLdRegByte + 1;						// load 64-bit register X with value of specified byte index into 64-bit register Y
 static const uint8_t instrLdRegTripVar =			instrLdRegByteFromY + 1;				// load 64-bit register X with specified trip specified read-in register
 static const uint8_t instrLdRegTripVarIndexed =		instrLdRegTripVar + 1;					// load 64-bit register X with indexed trip specified read-in register
@@ -394,119 +390,119 @@ static const uint8_t maxValidSWEET64instr =			nextAllowedValue;
 
 #ifdef useSWEET64trace
 static const char opcodeList[] PROGMEM = {
-	"instrTestReg\r"
-	"instrTestIndex\r"
-	"instrCmpXtoY\r"
-	"instrCmpIndex\r"
-	"instrBranchIfMclear\r"
-	"instrBranchIfMset\r"
-	"instrBranchIfZclear\r"
-	"instrBranchIfZset\r"
-	"instrBranchIfCclear\r"
-	"instrBranchIfCset\r"
-	"instrBranchIfLT\r"
-	"instrBranchIfGTorE\r"
-	"instrBranchIfMetricMode\r"
-	"instrBranchIfSAEmode\r"
-	"instrBranchIfFuelOverDist\r"
-	"instrBranchIfDistOverFuel\r"
-	"instrSkip\r"
-	"instrLdReg\r"
-	"instrLdRegByteFromIndex\r"
-	"instrLdRegByte\r"
-	"instrLdRegByteFromY\r"
-	"instrLdRegTripVar\r"
-	"instrLdRegTripVarIndexed\r"
-	"instrLdRegTripVarOffset\r"
-	"instrLdRegTripVarIndexedRV\r"
-	"instrStRegTripVarIndexed\r"
-	"instrStRegTripVarIndexedRV\r"
-	"instrLdRegConst\r"
-	"instrDoBCDadjust\r"
-	"instrLdRegEEPROM\r"
-	"instrLdRegEEPROMindexed\r"
-	"instrLdRegEEPROMindirect\r"
-	"instrLdRegEinit\r"
-	"instrLdRegEinitIndexed\r"
-	"instrStRegEEPROM\r"
-	"instrStRegEEPROMindexed\r"
-	"instrStRegEEPROMindirect\r"
-	"instrLdRegMain\r"
-	"instrLdRegMainIndexed\r"
-	"instrLdRegMainOffset\r"
-	"instrStRegMain\r"
-	"instrStRegMainIndexed\r"
-	"instrLdRegVolatile\r"
-	"instrLdRegVolatileIndexed\r"
-	"instrStRegVolatile\r"
-	"instrStRegVolatileIndexed\r"
-	"instrLxdI\r"
-	"instrLxdIEEPROM\r"
-	"instrLxdIEEPROMindexed\r"
-	"instrLxdIParamLength\r"
-	"instrLxdIParamLengthIndexed\r"
-	"instrLdRegNumer\r"
-	"instrLdRegDenom\r"
-	"instrCall\r"
-	"instrJump\r"
-	"instrSwapReg\r"
-	"instrSubYfromX\r"
-	"instrSubMainFromX\r"
-	"instrAddYtoX\r"
-	"instrAdjustQuotient\r"
-	"instrAddByteToX\r"
-	"instrAddConstToX\r"
-	"instrAddEEPROMtoX\r"
-	"instrAddMainToX\r"
-	"instrAddIndexToX\r"
-	"instrMul2by1\r"
-	"instrMul2byByte\r"
-	"instrMul2byConst\r"
-	"instrMul2byEEPROM\r"
-	"instrMul2byMain\r"
-	"instrMul2byVolatile\r"
-	"instrMul2byTripVarIndexed\r"
-	"instrDiv2by1\r"
-	"instrDiv2byConst\r"
-	"instrDiv2byEEPROM\r"
-	"instrDiv2byMain\r"
-	"instrDiv2byTripVarIndexed\r"
-	"instrDiv2byByte\r"
-	"instrShiftRegLeft\r"
-	"instrShiftRegRight\r"
-	"instrAddIndex\r"
-	"instrTraceOn\r"
-	"instrTraceOff\r"
-	"instrTraceSave\r"
-	"instrTraceRestore\r"
-	"instrTraceDone\r"
-	"instrLdJumpReg\r"
-	"instrClearFlag\r"
-	"instrSetFlag\r"
+	"instrTestReg" tcEOSCR
+	"instrTestIndex" tcEOSCR
+	"instrCmpXtoY" tcEOSCR
+	"instrCmpIndex" tcEOSCR
+	"instrBranchIfMclear" tcEOSCR
+	"instrBranchIfMset" tcEOSCR
+	"instrBranchIfZclear" tcEOSCR
+	"instrBranchIfZset" tcEOSCR
+	"instrBranchIfCclear" tcEOSCR
+	"instrBranchIfCset" tcEOSCR
+	"instrBranchIfLT" tcEOSCR
+	"instrBranchIfGTorE" tcEOSCR
+	"instrBranchIfMetricMode" tcEOSCR
+	"instrBranchIfSAEmode" tcEOSCR
+	"instrBranchIfFuelOverDist" tcEOSCR
+	"instrBranchIfDistOverFuel" tcEOSCR
+	"instrSkip" tcEOSCR
+	"instrLdReg" tcEOSCR
+	"instrLdRegByteFromIndex" tcEOSCR
+	"instrLdRegByte" tcEOSCR
+	"instrLdRegByteFromY" tcEOSCR
+	"instrLdRegTripVar" tcEOSCR
+	"instrLdRegTripVarIndexed" tcEOSCR
+	"instrLdRegTripVarOffset" tcEOSCR
+	"instrLdRegTripVarIndexedRV" tcEOSCR
+	"instrStRegTripVarIndexed" tcEOSCR
+	"instrStRegTripVarIndexedRV" tcEOSCR
+	"instrLdRegConst" tcEOSCR
+	"instrDoBCDadjust" tcEOSCR
+	"instrLdRegEEPROM" tcEOSCR
+	"instrLdRegEEPROMindexed" tcEOSCR
+	"instrLdRegEEPROMindirect" tcEOSCR
+	"instrLdRegEinit" tcEOSCR
+	"instrLdRegEinitIndexed" tcEOSCR
+	"instrStRegEEPROM" tcEOSCR
+	"instrStRegEEPROMindexed" tcEOSCR
+	"instrStRegEEPROMindirect" tcEOSCR
+	"instrLdRegMain" tcEOSCR
+	"instrLdRegMainIndexed" tcEOSCR
+	"instrLdRegMainOffset" tcEOSCR
+	"instrStRegMain" tcEOSCR
+	"instrStRegMainIndexed" tcEOSCR
+	"instrLdRegVolatile" tcEOSCR
+	"instrLdRegVolatileIndexed" tcEOSCR
+	"instrStRegVolatile" tcEOSCR
+	"instrStRegVolatileIndexed" tcEOSCR
+	"instrLxdI" tcEOSCR
+	"instrLxdIEEPROM" tcEOSCR
+	"instrLxdIEEPROMindexed" tcEOSCR
+	"instrLxdIParamLength" tcEOSCR
+	"instrLxdIParamLengthIndexed" tcEOSCR
+	"instrLdRegNumer" tcEOSCR
+	"instrLdRegDenom" tcEOSCR
+	"instrCall" tcEOSCR
+	"instrJump" tcEOSCR
+	"instrSwapReg" tcEOSCR
+	"instrSubYfromX" tcEOSCR
+	"instrSubMainFromX" tcEOSCR
+	"instrAddYtoX" tcEOSCR
+	"instrAdjustQuotient" tcEOSCR
+	"instrAddByteToX" tcEOSCR
+	"instrAddConstToX" tcEOSCR
+	"instrAddEEPROMtoX" tcEOSCR
+	"instrAddMainToX" tcEOSCR
+	"instrAddIndexToX" tcEOSCR
+	"instrMul2by1" tcEOSCR
+	"instrMul2byByte" tcEOSCR
+	"instrMul2byConst" tcEOSCR
+	"instrMul2byEEPROM" tcEOSCR
+	"instrMul2byMain" tcEOSCR
+	"instrMul2byVolatile" tcEOSCR
+	"instrMul2byTripVarIndexed" tcEOSCR
+	"instrDiv2by1" tcEOSCR
+	"instrDiv2byConst" tcEOSCR
+	"instrDiv2byEEPROM" tcEOSCR
+	"instrDiv2byMain" tcEOSCR
+	"instrDiv2byTripVarIndexed" tcEOSCR
+	"instrDiv2byByte" tcEOSCR
+	"instrShiftRegLeft" tcEOSCR
+	"instrShiftRegRight" tcEOSCR
+	"instrAddIndex" tcEOSCR
+	"instrTraceOn" tcEOSCR
+	"instrTraceOff" tcEOSCR
+	"instrTraceSave" tcEOSCR
+	"instrTraceRestore" tcEOSCR
+	"instrTraceDone" tcEOSCR
+	"instrLdJumpReg" tcEOSCR
+	"instrClearFlag" tcEOSCR
+	"instrSetFlag" tcEOSCR
 #ifdef useIsqrt
-	"instrIsqrt\r"
+	"instrIsqrt" tcEOSCR
 #endif // useIsqrt
 #if defined(useAnalogRead)
-	"instrLdRegVoltage\r"
-	"instrLdRegVoltageIndexed\r"
+	"instrLdRegVoltage" tcEOSCR
+	"instrLdRegVoltageIndexed" tcEOSCR
 #endif // useAnalogRead
 #ifdef useBarFuelEconVsTime
-	"instrLdRegTripFEvTindexed\r"
+	"instrLdRegTripFEvTindexed" tcEOSCR
 #endif // useBarFuelEconVsTime
 #ifdef useBarGraph
-	"instrStRegBGdataIndexed\r"
+	"instrStRegBGdataIndexed" tcEOSCR
 #endif // useBarGraph
 #if defined(useMatrixMath)
-	"instrLdRegXColIndexedRow\r"
-	"instrStRegXColIndexedRow\r"
-	"instrLdRegRColIndexedRow\r"
-	"instrStRegRColIndexedRow\r"
-	"instrLdRegEIndexedRow\r"
-	"instrStRegEIndexedRow\r"
-	"instrLdRegCIndexedRow\r"
-	"instrStRegCIndexedRow\r"
+	"instrLdRegXColIndexedRow" tcEOSCR
+	"instrStRegXColIndexedRow" tcEOSCR
+	"instrLdRegRColIndexedRow" tcEOSCR
+	"instrStRegRColIndexedRow" tcEOSCR
+	"instrLdRegEIndexedRow" tcEOSCR
+	"instrStRegEIndexedRow" tcEOSCR
+	"instrLdRegCIndexedRow" tcEOSCR
+	"instrStRegCIndexedRow" tcEOSCR
 #endif // defined(useMatrixMath)
-	"instrDone\r"
+	"instrDone" tcEOSCR
 };
 
 #endif // useSWEET64trace
@@ -902,17 +898,17 @@ const uint8_t idxMaxConstant =				nextAllowedValue;
 #ifdef useDebugTerminalLabels
 static const char terminalConstIdxNames[] PROGMEM = {
 	"idxTen"
-	"\r"
+	tcEOSCR
 
 	"idxOneHundred"
-	"\r"
+	tcEOSCR
 
 	"idxOneThousand"
 	"/idxDecimalPoint"
-	"\r"
+	tcEOSCR
 
 	"idxTenThousand"
-	"\r"
+	tcEOSCR
 
 	"idxOneHundredThousand"
 	"/idxMetricFE"
@@ -922,66 +918,66 @@ static const char terminalConstIdxNames[] PROGMEM = {
 #ifdef useImperialGallon
 	"/idxDenomImperialGallon"
 #endif // useImperialGallon
-	"\r"
+	tcEOSCR
 
 	"idxOneMillion"
 	"/idxMicroSecondsPerSecond"
 	"/idxDenomDistance"
-	"\r"
+	tcEOSCR
 
 	"idxTenMillion"
 #ifdef useIsqrt
 	"/idxDenomPressure"
 #endif // useIsqrt
-	"\r"
+	tcEOSCR
 
 	"idxOneHundredMillion"
 	"/idxBCDdivisor"
 #ifdef useCoastDownCalculator
 	"/idxDenomArea"
 #endif // useCoastDownCalculator
-	"\r"
+	tcEOSCR
 
 	"idxOneBillion"
 	"/idxDenomVolume"
 #ifdef useVehicleMass
 	"/idxNumerMass"
 #endif // useVehicleMass
-	"\r"
+	tcEOSCR
 
-	"idxCycles0PerSecond\r"
-	"idxCycles0PerTick\r"
-	"idxTicksPerSecond\r"
-	"idxNumerDistance\r"
-	"idxNumerVolume\r"
-	"idxSecondsPerHour\r"
+	"idxCycles0PerSecond" tcEOSCR
+	"idxCycles0PerTick" tcEOSCR
+	"idxTicksPerSecond" tcEOSCR
+	"idxNumerDistance" tcEOSCR
+	"idxNumerVolume" tcEOSCR
+	"idxSecondsPerHour" tcEOSCR
 #ifdef useIsqrt
-	"idxNumerPressure\r"
-	"idxCorrectionFactor\r"
+	"idxNumerPressure" tcEOSCR
+	"idxCorrectionFactor" tcEOSCR
 #endif // useIsqrt
 #if defined(useAnalogRead)
-	"idxNumerVoltage\r"
-	"idxDenomVoltage\r"
+	"idxNumerVoltage" tcEOSCR
+	"idxDenomVoltage" tcEOSCR
 #endif // useAnalogRead
 #ifdef useCarVoltageOutput
-	"idxResistanceR5\r"
-	"idxResistanceR6\r"
+	"idxResistanceR5" tcEOSCR
+	"idxResistanceR6" tcEOSCR
 #endif // useCarVoltageOutput
 #ifdef useVehicleMass
-	"idxDenomMass\r"
+	"idxDenomMass" tcEOSCR
 #endif // useVehicleMass
 #ifdef useCoastDownCalculator
-	"idxNumerArea\r"
-	"idxDenomDensity\r"
+	"idxNumerArea" tcEOSCR
+	"idxDenomDensity" tcEOSCR
 #endif // useCoastDownCalculator
 #ifdef useClockDisplay
-	"idxSecondsPerDay\r"
+	"idxSecondsPerDay" tcEOSCR
 #endif // useClockDisplay
 #ifdef useImperialGallon
-	"idxNumerImperialGallon\r"
+	"idxNumerImperialGallon" tcEOSCR
 #endif // useImperialGallon
 #ifdef useDragRaceFunction
-	"idxPowerFactor\r"
+	"idxPowerFactor" tcEOSCR
 #endif // useDragRaceFunction
 };
 
@@ -1136,10 +1132,4 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 
 	,0x00		// total entry length == 0 for end of list
 };
-
-const char overFlowStr[] PROGMEM = "----------";
-const char overFlow9Str[] PROGMEM = "9999999999";
-
-const uint8_t dfOverflow9s =			0b10000000;
-const uint8_t dfIgnoreDecimalPoint =	0b01000000;
 

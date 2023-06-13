@@ -126,9 +126,9 @@ void doOutputJSON(void) //skybolt added json output function
 	text::stringOut(devLogOutput, PSTR("{\"title\":\""));
 
 	if (reserveQuantity == 0) text::stringOut(devLogOutput, PSTR("fumes remaining, ")); // fumes left
-	else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" " remaining, ")); // reserve remaining fuel left
+	else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " remaining, ")); // reserve remaining fuel left
 
-	doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" " e-reserve\",\n")); // bingo remaining fuel left
+	doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " e-reserve\",\n")); // bingo remaining fuel left
 	//  doOutputJSONnumber(instantIdx, tEngineSpeed, 0, PSTR(" RPM\",\n")); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
 
 	switch (subtitleCount1)
@@ -137,22 +137,22 @@ void doOutputJSON(void) //skybolt added json output function
 		case 2:
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"fuel used: "));
 
-			doOutputJSONnumber(currentIdx, tFuelUsed, 3, PSTR(" trip " "\xEB" "gal" "\xEC" "L" "\xED" "; ")); // current trip fuel used
-			doOutputJSONnumber(tankIdx, tFuelUsed, 3, PSTR(" tank " "\xEB" "gal" "\xEC" "L" "\xED" "; ")); // tank trip fuel used
-			doOutputJSONnumber(instantIdx, tFuelRate, 3, PSTR(" using " "\xEB" "gal" "\xEC" "L" "\xED" "/hr\",\n")); // current rate of fuel burn in units/time
+			doOutputJSONnumber(currentIdx, tFuelUsed, 3, PSTR(" trip " tcOMOFF "gal" tcOTOG "L" tcOON "; ")); // current trip fuel used
+			doOutputJSONnumber(tankIdx, tFuelUsed, 3, PSTR(" tank " tcOMOFF "gal" tcOTOG "L" tcOON "; ")); // tank trip fuel used
+			doOutputJSONnumber(instantIdx, tFuelRate, 3, PSTR(" using " tcOMOFF "gal" tcOTOG "L" tcOON "/hr\",\n")); // current rate of fuel burn in units/time
 
 			break;
 
 		case 1:
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"eco stats: "));
-#ifdef trackIdleEOCdata
-			doOutputJSONnumber(eocIdleTankIdx, tFuelUsed, 3, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" " used@idle, "));
-			doOutputJSONnumber(eocIdleTankIdx, tDistance, 1, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " fuel cut\",\n"));
-#else // trackIdleEOCdata
+#if defined(trackIdleEOCdata)
+			doOutputJSONnumber(eocIdleTankIdx, tFuelUsed, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " used@idle, "));
+			doOutputJSONnumber(eocIdleTankIdx, tDistance, 1, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " fuel cut\",\n"));
+#else // defined(trackIdleEOCdata)
 			if (reserveQuantity == 0) text::stringOut(devLogOutput, PSTR("fumes remaining, ")); // fumes left
-			else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" " remaining, ")); // reserve remaining fuel left
-			doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " "\xEB" "gal" "\xEC" "L" "\xED" " e-reserve\",\n")); // bingo remaining fuel left
-#endif // trackIdleEOCdata
+			else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " remaining, ")); // reserve remaining fuel left
+			doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " e-reserve\",\n")); // bingo remaining fuel left
+#endif // defined(trackIdleEOCdata)
 
 			break;
 
@@ -174,27 +174,27 @@ void doOutputJSON(void) //skybolt added json output function
 
 	// second graph, distance
 	text::stringOut(devLogOutput, PSTR("{\"title\":\""));
-	doOutputJSONnumber(prgmReserveDistanceToEmpty, tankIdx, 2, PSTR("\xEB" "mi" "\xEC" "km" "\xED" " to e, ")); // distance to bingo
-	doOutputJSONnumber(prgmBingoDistanceToEmpty, tankIdx, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " e-reserve\",\n")); // distance to fully empty tank from bingo
+	doOutputJSONnumber(prgmReserveDistanceToEmpty, tankIdx, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON " to e, ")); // distance to bingo
+	doOutputJSONnumber(prgmBingoDistanceToEmpty, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " e-reserve\",\n")); // distance to fully empty tank from bingo
 
 	switch (subtitleCount1)
 	{
 
 		case 2:
 			//   text::stringOut(devLogOutput, PSTR("\"subtitle\":\"trip/tank distance: "));
-			//   doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" "/")); // current trip distance
-			//   doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" "\",\n")); // current trip distance
+			//   doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON "/")); // current trip distance
+			//   doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // current trip distance
 
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\""));
-			doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " trip distance, ")); // current trip distance
-			doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " tank distance\",\n")); // current trip distance
+			doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " trip distance, ")); // current trip distance
+			doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " tank distance\",\n")); // current trip distance
 
 			break;
 
 		case 1:
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\""));
-			doOutputJSONnumber(prgmReserveDistance, tankIdx, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " safe range, ")); // reserve range
-			doOutputJSONnumber(prgmRangeDistance, tankIdx, 2, PSTR(" " "\xEB" "mi" "\xEC" "km" "\xED" " dry range\",\n")); // distance to fully empty tank
+			doOutputJSONnumber(prgmReserveDistance, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " safe range, ")); // reserve range
+			doOutputJSONnumber(prgmRangeDistance, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " dry range\",\n")); // distance to fully empty tank
 
 			break;
 
@@ -212,7 +212,7 @@ void doOutputJSON(void) //skybolt added json output function
 	doOutputJSONnumber(tankIdx, tDistanceToEmpty, 2, PSTR("]},\n\n")); // line is distance to empty
 
 	// third graph, econ
-	text::stringOut(devLogOutput, PSTR("{\"title\":\"")); //\xeb gal \xec L \xed/
+	text::stringOut(devLogOutput, PSTR("{\"title\":\"")); // gal or L
 
 #ifdef useDragRaceFunction
 	// there was a bug in some of the drag cancel logic when using Adafruit. I disabled some statements
@@ -242,7 +242,7 @@ void doOutputJSON(void) //skybolt added json output function
 	else // else not racing or waiting, go to normal
 	{
 
-		text::stringOut(devLogOutput, PSTR("trip/tank/inst: ")); //\xebgal\xecL\xed/
+		text::stringOut(devLogOutput, PSTR("trip/tank/inst: ")); // gal or L
 		doOutputJSONnumber(currentIdx, tFuelEcon, 3, PSTR("/ ")); // current fuel economy
 		doOutputJSONnumber(tankIdx, tFuelEcon, 3, PSTR("/ ")); // tank fuel economy
 		reserveQuantity = SWEET64::doCalculate(instantIdx, tFuelEcon);
@@ -261,35 +261,35 @@ void doOutputJSON(void) //skybolt added json output function
 			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(": "));
 			doOutputJSONnumber(dragHalfSpeedIdx, tAccelTestTime, 2, PSTR("/")); // 0-30 time
 			doOutputJSONnumber(dragFullSpeedIdx, tAccelTestTime, 2, PSTR(", ")); // 0-60 time
-			doOutputJSONnumber(dragDistanceIdx, tDistance * 1, 2, PSTR("\xEB" "mi" "\xEC" "km" "\xED" " in ")); // trap distance
+			doOutputJSONnumber(dragDistanceIdx, tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON " in ")); // trap distance
 			doOutputJSONnumber(dragDistanceIdx, tAccelTestTime, 2, PSTR(" @")); // trap time
-			doOutputJSONnumber(dragDistanceIdx, tSpeed, 3, PSTR("\xEB" "mph" "\xEC" "kph" "\xED" "; ")); // trap speed
-			doOutputJSONnumber(dragHalfSpeedIdx, tEstimatedEnginePower, 0, PSTR("\xeB" "hp" "\xEC" "kW" "\xED" " @")); // estimated engine power
-			doOutputJSONnumber(dragHalfSpeedIdx, tDragSpeed, 0, PSTR("\xEB" "mph" "\xEC" "kph" "\xED" "\",\n")); // max speed
+			doOutputJSONnumber(dragDistanceIdx, tSpeed, 3, PSTR(tcOMOFF "mph" tcOTOG "kph" tcOON "; ")); // trap speed
+			doOutputJSONnumber(dragHalfSpeedIdx, tEstimatedEnginePower, 0, PSTR(tcOMOFF "hp" tcOTOG "kW" tcOON " @")); // estimated engine power
+			doOutputJSONnumber(dragHalfSpeedIdx, tDragSpeed, 0, PSTR(tcOMOFF "mph" tcOTOG "kph" tcOON "\",\n")); // max speed
 
 			break;
 
 		case 2:
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"accel fuel: "));
 
-			doOutputJSONnumber(dragHalfSpeedIdx, tFuelUsed, 3, PSTR("\xEB" "ga" "\xEC" "L" "\xED" " to ")); // 0-half fuel
+			doOutputJSONnumber(dragHalfSpeedIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // 0-half fuel
 			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx) / 2, 0, PSTR(", ")); // 0-half speed
-			doOutputJSONnumber(dragFullSpeedIdx, tFuelUsed, 3, PSTR("\xEB" "ga" "\xEC" "L" "\xED" " to ")); // 0-full fuel
+			doOutputJSONnumber(dragFullSpeedIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // 0-full fuel
 			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(", ")); // 0-full speed
-			doOutputJSONnumber(dragDistanceIdx, tFuelUsed, 3, PSTR("\xEB" "ga" "\xEC" "L" "\xED" " to ")); //trap fuel
-			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR("\xEB" "mi" "\xEC" "km" "\xED" "\",\n")); // "to [trap distance]"  \xebft\xecm\xed;
+			doOutputJSONnumber(dragDistanceIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // trap fuel
+			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // "to [trap distance]"
 
 			break;
 
 		case 1:
 			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"accel fuel: "));
 
-			doOutputJSONnumber(dragHalfSpeedIdx, tFuelEcon, 3, PSTR("\xEB" "mpg" "\xEC" "L100" "\xED" " to ")); // 0-30 mpg
+			doOutputJSONnumber(dragHalfSpeedIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); // 0-30 mpg
 			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx) / 2, 0, PSTR(", ")); // 0-half speed
-			doOutputJSONnumber(dragFullSpeedIdx, tFuelEcon, 3, PSTR("\xEB" "mpg" "\xEC" "L100" "\xED" " to ")); // 0-60 mpg
+			doOutputJSONnumber(dragFullSpeedIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); // 0-60 mpg
 			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(", ")); // 0-60 speed
-			doOutputJSONnumber(dragDistanceIdx, tFuelEcon, 3, PSTR("\xEB" "mpg" "\xEC" "L100" "\xED" " to ")); //trap mpg
-			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR("\xEB" "mi" "\xEC" "km" "\xED" "\",\n")); // "to [trap distance]"  \xebft\xecm\xed;
+			doOutputJSONnumber(dragDistanceIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); //trap mpg
+			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // "to [trap distance]"
 
 			break;
 
@@ -313,7 +313,7 @@ void doOutputJSON(void) //skybolt added json output function
 	// instantaneous fuel economy, do not let scale exceed 999
 	doOutputJSONnumber(min(999000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 3, PSTR("]"));
 
-	text::stringOut(devLogOutput, PSTR("\}]\n\r")); // end JSON payload, and go trigger read on python.script
+	text::stringOut(devLogOutput, PSTR("\}]\n" tcEOSCR)); // end JSON payload, and go trigger read on python.script
 
 } // end sendJson function
 

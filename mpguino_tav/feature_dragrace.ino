@@ -134,14 +134,14 @@ void accelerationTest::goDisplay(void)
 	{
 
 		// display status message for new state
-		printStatusMessage(accelTestStateMsgs, accelTestState);
+		text::statusOut(devLCD, accelTestStateMsgs, accelTestState);
 
 	}
 
 #ifdef useSpiffyTripLabels
-	displayMainScreenFunctions(dragRaceScreenFormats, screenCursor[(unsigned int)(dragRaceIdx)], 136, 0, drTripBitPattern);
+	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0, drTripBitPattern);
 #else // useSpiffyTripLabels
-	displayMainScreenFunctions(dragRaceScreenFormats, screenCursor[(unsigned int)(dragRaceIdx)]);
+	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)]);
 #endif // useSpiffyTripLabels
 
 }
@@ -153,11 +153,11 @@ void accelerationTest::goTrigger(void)
 	{
 
 		case 1: // vehicle is still moving - can't trigger drag mode
-			printStatusMessage(PSTR("Stop vehicle"));
+			text::statusOut(devLCD, PSTR("Stop vehicle"));
 			break;
 
 		case 2: // vehicle engine has stopped - can't trigger drag mode
-			printStatusMessage(PSTR("Start Engine"));
+			text::statusOut(devLCD, PSTR("Start Engine"));
 			break;
 
 		case 3: // acceleration test manually cancelled, so force manual trigger mode
@@ -332,7 +332,7 @@ void accelerationTest::idleProcess(void)
 		if (accelerationFlags & accelTestFinished)
 		{
 
-			if (EEPROM::readVal(pDragAutoFlagIdx))
+			if (EEPROM::readByte(pDragAutoFlagIdx))
 			{
 
 				if (accelerationTest::triggerTest() == 0) accelTestState = 1;

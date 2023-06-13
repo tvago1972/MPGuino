@@ -23,7 +23,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 	{
 
 #ifdef useBarFuelEconVsTime
-		case barFEvTscreenIdx:
+		case barFEvTdisplayIdx:
 			labelList = barFEvTfuncNames;
 
 			graphCursorPos = bgDataSize - 1;
@@ -39,7 +39,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 
 #endif // useBarFuelEconVsTime
 #ifdef useBarFuelEconVsSpeed
-		case barFEvSscreenIdx:
+		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
 
 			if (FEvSpdTripIdx < tripSlotCount) i = FEvSpdTripIdx - FEvsSpeedIdx + 1;
@@ -93,7 +93,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 
 		case menuEntryIdx:
 		case menuCursorUpdateIdx:
-			printStatusMessage(labelList, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, labelList, cursorPos); // briefly display screen name
 
 		case menuOutputDisplayIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);

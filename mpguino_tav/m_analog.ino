@@ -117,14 +117,14 @@ ISR( ADC_vect )
 }
 
 #endif // defined(useAnalogRead)
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
  /* ADC voltage display section */
 
-const uint8_t analogReadScreenFormats[4][2] PROGMEM = {
-	 {analog0Idx,				0x80 | tAnalogChannel}	// Voltages
-	,{analog1Idx,				0x80 | tAnalogChannel}
-	,{analog2Idx,				0x80 | tAnalogChannel}
-	,{analog3Idx,				0x80 | tAnalogChannel}
+static const uint16_t analogReadPageFormats[4] PROGMEM = {
+	 (analog0Idx << 8 ) |	(0x80 | tAnalogChannel)	// Voltages
+	,(analog1Idx << 8 ) |	(0x80 | tAnalogChannel)
+	,(analog2Idx << 8 ) |	(0x80 | tAnalogChannel)
+	,(analog3Idx << 8 ) |	(0x80 | tAnalogChannel)
 };
 
 static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
@@ -140,14 +140,14 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos, 
 
 		case menuEntryIdx:
 		case menuCursorUpdateIdx:
-			printStatusMessage(analogReadScreenFuncNames, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, analogReadScreenFuncNames, cursorPos); // briefly display screen name
 
 		case menuOutputDisplayIdx:
-#ifdef useSpiffyTripLabels
-			displayMainScreenFunctions(analogReadScreenFormats, cursorPos, 136, 0, msTripBitPattern);
-#else // useSpiffyTripLabels
-			displayMainScreenFunctions(analogReadScreenFormats, cursorPos);
-#endif // useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0, msTripBitPattern);
+#else // defined(useSpiffyTripLabels)
+			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);
+#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
@@ -159,4 +159,11 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos, 
 
 }
 
-#endif // useDebugAnalog
+static uint16_t analogReadViewer::getAnalogReadPageFormats(uint8_t formatIdx)
+{
+
+	return pgm_read_word(&analogReadPageFormats[(uint16_t)(formatIdx)]);
+
+}
+
+#endif // defined(useDebugAnalog)

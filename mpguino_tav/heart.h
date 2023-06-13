@@ -12,7 +12,8 @@ static void initHardware(void);
 static void doGoDeepSleep(void);
 #endif // useDeepSleep
 static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
-static void delay0(unsigned int ms);
+static void delay0(uint16_t ms);
+static void delayS(uint16_t ms);
 static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
 static void performSleepMode(uint8_t sleepMode);
 
@@ -247,94 +248,94 @@ static const uint8_t mpVariableMaxIdx =				nextAllowedValue;
 #ifdef useDebugTerminalLabels
 static const char terminalVolatileVarLabels[] PROGMEM = {
 #ifdef useCPUreading
-	"vSystemCycleIdx\r"						// timer0
+	"vSystemCycleIdx" tcEOSCR					// timer0
 #endif // useCPUreading
 #ifdef useSoftwareClock
-	"vClockCycleIdx\r"						// timer0
+	"vClockCycleIdx" tcEOSCR					// timer0
 #endif // useSoftwareClock
-	"vVehicleStopTimeoutIdx\r"				// timer0
-	"vEngineOffTimeoutIdx\r"				// timer0
-	"vButtonTimeoutIdx\r"					// timer0
-	"vParkTimeoutIdx\r"						// timer0
-	"vActivityTimeoutIdx\r"					// timer0
-	"vDetectVehicleStopIdx\r"				// vss
-	"vDetectEngineOffIdx\r"					// fi open
-	"vMaximumVSSperiodIdx\r"				// vss
-	"vMaximumEnginePeriodIdx\r"				// fi close
-	"vInjectorOpenDelayIdx\r"				// fi close
-	"vInjectorCloseDelayIdx\r"				// fi close
-	"vInjectorTotalDelayIdx\r"				// fi close
-	"vInjectorValidMaxWidthIdx\r"			// fi close
+	"vVehicleStopTimeoutIdx" tcEOSCR			// timer0
+	"vEngineOffTimeoutIdx" tcEOSCR				// timer0
+	"vButtonTimeoutIdx" tcEOSCR					// timer0
+	"vParkTimeoutIdx" tcEOSCR					// timer0
+	"vActivityTimeoutIdx" tcEOSCR				// timer0
+	"vDetectVehicleStopIdx" tcEOSCR				// vss
+	"vDetectEngineOffIdx" tcEOSCR				// fi open
+	"vMaximumVSSperiodIdx" tcEOSCR				// vss
+	"vMaximumEnginePeriodIdx" tcEOSCR			// fi close
+	"vInjectorOpenDelayIdx" tcEOSCR				// fi close
+	"vInjectorCloseDelayIdx" tcEOSCR			// fi close
+	"vInjectorTotalDelayIdx" tcEOSCR			// fi close
+	"vInjectorValidMaxWidthIdx" tcEOSCR			// fi close
 #ifdef useChryslerMAPCorrection
-	"vInjectorCorrectionIdx\r"				// fi close
+	"vInjectorCorrectionIdx" tcEOSCR			// fi close
 #endif // useChryslerMAPCorrection
 #ifdef useBarFuelEconVsTime
-	"vFEvsTimePeriodTimeoutIdx\r"			// timer0
+	"vFEvsTimePeriodTimeoutIdx" tcEOSCR			// timer0
 #endif // useBarFuelEconVsTime
 #ifdef useDebugCPUreading
-	"vInterruptAccumulatorIdx\r"			// all interrupts
+	"vInterruptAccumulatorIdx" tcEOSCR			// all interrupts
 #endif // useDebugCPUreading
 #ifdef useDragRaceFunction
-	"vDragInstantSpeedIdx\r"				// vss
-	"vAccelHalfPeriodValueIdx\r"			// vss
-	"vAccelFullPeriodValueIdx\r"			// vss
-	"vAccelDistanceValueIdx\r"				// vss
+	"vDragInstantSpeedIdx" tcEOSCR				// vss
+	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
+	"vAccelFullPeriodValueIdx" tcEOSCR			// vss
+	"vAccelDistanceValueIdx" tcEOSCR			// vss
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
-	"vCoastdownPeriodIdx\r"					// timer0, vss
-	"vCoastdownMeasurement1Idx\r"			// vss
-	"vCoastdownMeasurement2Idx\r"			// vss
-	"vCoastdownMeasurement3Idx\r"			// vss
-	"vCoastdownMeasurement4Idx\r"			// vss
+	"vCoastdownPeriodIdx" tcEOSCR				// timer0, vss
+	"vCoastdownMeasurement1Idx" tcEOSCR			// vss
+	"vCoastdownMeasurement2Idx" tcEOSCR			// vss
+	"vCoastdownMeasurement3Idx" tcEOSCR			// vss
+	"vCoastdownMeasurement4Idx" tcEOSCR			// vss
 #endif // useCoastDownCalculator
 //#ifdef useDebugTerminal
-	"vDebugValue1Idx\r"
-	"vDebugValue2Idx\r"
-	"vDebugValue3Idx\r"
-	"vDebugValue4Idx\r"
+	"vDebugValue1Idx" tcEOSCR
+	"vDebugValue2Idx" tcEOSCR
+	"vDebugValue3Idx" tcEOSCR
+	"vDebugValue4Idx" tcEOSCR
 //#endif // useDebugTerminal
 };
 
 static const char terminalMainProgramVarLabels[] PROGMEM = {
-	"mpCyclesPerVolumeIdx\r"				// main program only
-	"mpTankSizeIdx\r"						// main program only
-	"mpBingoTankSizeIdx\r"					// main program only
+	"mpCyclesPerVolumeIdx" tcEOSCR				// main program only
+	"mpTankSizeIdx" tcEOSCR						// main program only
+	"mpBingoTankSizeIdx" tcEOSCR				// main program only
 #ifdef usePartialRefuel
-	"mpPartialRefuelTankSize\r"				// main program only
+	"mpPartialRefuelTankSize" tcEOSCR			// main program only
 #endif // usePartialRefuel
 #ifdef useChryslerMAPCorrection
-	"mpMAPpressureIdx\r"					// main program only
-	"mpBaroPressureIdx\r"					// main program only
-	"mpFuelPressureIdx\r"					// main program only
-	"mpInjPressureIdx\r"					// main program only
-	"mpAnalogMAPfloorIdx\r"					// main program only
-	"mpAnalogMAPnumerIdx\r"					// main program only
-	"mpAnalogMAPdenomIdx\r"					// main program only
+	"mpMAPpressureIdx" tcEOSCR					// main program only
+	"mpBaroPressureIdx" tcEOSCR					// main program only
+	"mpFuelPressureIdx" tcEOSCR					// main program only
+	"mpInjPressureIdx" tcEOSCR					// main program only
+	"mpAnalogMAPfloorIdx" tcEOSCR				// main program only
+	"mpAnalogMAPnumerIdx" tcEOSCR				// main program only
+	"mpAnalogMAPdenomIdx" tcEOSCR				// main program only
 #ifdef useChryslerBaroSensor
-	"mpAnalogBaroFloorIdx\r"				// main program only
-	"mpAnalogBaroNumerIdx\r"				// main program only
-	"mpAnalogBaroDenomIdx\r"				// main program only
+	"mpAnalogBaroFloorIdx" tcEOSCR				// main program only
+	"mpAnalogBaroNumerIdx" tcEOSCR				// main program only
+	"mpAnalogBaroDenomIdx" tcEOSCR				// main program only
 #endif // useChryslerBaroSensor
 #endif // useChryslerMAPCorrection
 #ifdef useBarFuelEconVsSpeed
-	"mpFEvsSpeedMinThresholdIdx\r"			// main program only
-	"mpFEvsSpeedQuantumIdx\r"				// main program only
+	"mpFEvsSpeedMinThresholdIdx" tcEOSCR		// main program only
+	"mpFEvsSpeedQuantumIdx" tcEOSCR				// main program only
 #endif // useBarFuelEconVsSpeed
 #ifdef useCPUreading
-	"mpMainLoopAccumulatorIdx\r"			// main program only
-	"mpIdleAccumulatorIdx\r"				// main program only
-	"mpAvailableRAMidx\r"					// main program only
+	"mpMainLoopAccumulatorIdx" tcEOSCR			// main program only
+	"mpIdleAccumulatorIdx" tcEOSCR				// main program only
+	"mpAvailableRAMidx" tcEOSCR					// main program only
 #ifdef useDebugCPUreading
-	"mpDebugAccMainLoopIdx\r"				// main program only
-	"mpDebugAccIdleIdx\r"					// main program only
-	"mpDebugAccIdleProcessIdx\r"			// main program only
-	"mpDebugAccInterruptIdx\r"				// main program only
-	"mpDebugAccDisplayIdx\r"				// main program only
-	"mpDebugAccSWEET64idx\r"				// main program only
-	"mpDebugAccS64multIdx\r"				// main program only
-	"mpDebugCountS64multIdx\r"				// main program only
-	"mpDebugAccS64divIdx\r"					// main program only
-	"mpDebugCountS64divIdx\r"				// main program only
+	"mpDebugAccMainLoopIdx" tcEOSCR				// main program only
+	"mpDebugAccIdleIdx" tcEOSCR					// main program only
+	"mpDebugAccIdleProcessIdx" tcEOSCR			// main program only
+	"mpDebugAccInterruptIdx" tcEOSCR			// main program only
+	"mpDebugAccDisplayIdx" tcEOSCR				// main program only
+	"mpDebugAccSWEET64idx" tcEOSCR				// main program only
+	"mpDebugAccS64multIdx" tcEOSCR				// main program only
+	"mpDebugCountS64multIdx" tcEOSCR			// main program only
+	"mpDebugAccS64divIdx" tcEOSCR				// main program only
+	"mpDebugCountS64divIdx" tcEOSCR				// main program only
 #endif // useDebugCPUreading
 #endif // useCPUreading
 };

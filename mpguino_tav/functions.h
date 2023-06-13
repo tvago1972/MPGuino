@@ -13,13 +13,6 @@ typedef struct
 } calcFuncObj;
 
 static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-#ifdef useSpiffyTripLabels
-static void displayMainScreenFunctions(const uint8_t localScreenFormatList[][2], uint8_t cursorPos, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4]);
-static void displayFunction(uint8_t readingIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4]);
-#else // useSpiffyTripLabels
-static void displayMainScreenFunctions(const uint8_t localScreenFormatList[][2], uint8_t cursorPos);
-static void displayFunction(uint8_t readingIdx, uint8_t tripIdx, uint8_t calcIdx);
-#endif // useSpiffyTripLabels
 
 // calculation indexes into SWEET64 S64programList[] for display functions to either screen or logging output
 //
@@ -148,64 +141,64 @@ static const uint8_t tParseCharacterToReg =			nextAllowedValue;
 
 #if (useDebugTerminalLabels) || (useSWEET64trace)
 static const char terminalTripFuncNames[] PROGMEM = {
-	"tEngineRunTime\r"					// engine runtime (hhmmss)
-	"tRangeTime\r"						// estimated total runtime from full tank (hhmmss)
-	"tReserveTime\r"					// estimated reserve runtime from full tank (hhmmss)
-	"tBingoTime\r"						// estimated bingo fuel runtime from full tank (hhmmss)
-	"tTimeToEmpty\r"					// estimated remaining total tank engine runtime (hhmmss)
-	"tReserveTimeToEmpty\r"				// estimated remaining reserve engine runtime (hhmmss)
-	"tBingoTimeToEmpty\r"				// estimated bingo quantity engine runtime (hhmmss)
-	"tMotionTime\r"						// time vehicle in motion (hhmmss)
-	"tInjectorOpenTime\r"				// fuel used (microseconds)
-	"tInjectorTotalTime\r"				// engine run time (microseconds)
-	"tVSStotalTime\r"					// time vehicle in motion (microseconds)
-	"tEngineSpeed\r"					// engine speed (1/m)
-	"tInjectorPulseCount\r"				// fuel injector pulse count
-	"tVSSpulseCount\r"					// VSS pulse count
+	"tEngineRunTime" tcEOSCR				// engine runtime (hhmmss)
+	"tRangeTime" tcEOSCR					// estimated total runtime from full tank (hhmmss)
+	"tReserveTime" tcEOSCR					// estimated reserve runtime from full tank (hhmmss)
+	"tBingoTime" tcEOSCR					// estimated bingo fuel runtime from full tank (hhmmss)
+	"tTimeToEmpty" tcEOSCR					// estimated remaining total tank engine runtime (hhmmss)
+	"tReserveTimeToEmpty" tcEOSCR			// estimated remaining reserve engine runtime (hhmmss)
+	"tBingoTimeToEmpty" tcEOSCR				// estimated bingo quantity engine runtime (hhmmss)
+	"tMotionTime" tcEOSCR					// time vehicle in motion (hhmmss)
+	"tInjectorOpenTime" tcEOSCR				// fuel used (microseconds)
+	"tInjectorTotalTime" tcEOSCR			// engine run time (microseconds)
+	"tVSStotalTime" tcEOSCR					// time vehicle in motion (microseconds)
+	"tEngineSpeed" tcEOSCR					// engine speed (1/m)
+	"tInjectorPulseCount" tcEOSCR			// fuel injector pulse count
+	"tVSSpulseCount" tcEOSCR				// VSS pulse count
 #ifdef useFuelCost
-	"tFuelCostUsed\r"					// cost of fuel quantity used
-	"tFuelCostTank\r"					// full tank fuel cost in currency units
-	"tFuelCostReserve\r"				// reserve fuel quantity fuel cost in currency units
-	"tFuelCostBingo\r"					// bingo fuel quantity cost in currency units
-	"tFuelCostRemaining\r"				// value of estimated remaining fuel quantity in currency units
-	"tFuelCostReserveRemaining\r"		// value of estimated remaining reserve fuel quantity in currency units
-	"tFuelCostBingoRemaining\r"			// value of estimated remaining bingo fuel quantity in currency units
-	"tFuelRateCost\r"					// fuel rate cost in currency units
+	"tFuelCostUsed" tcEOSCR					// cost of fuel quantity used
+	"tFuelCostTank" tcEOSCR					// full tank fuel cost in currency units
+	"tFuelCostReserve" tcEOSCR				// reserve fuel quantity fuel cost in currency units
+	"tFuelCostBingo" tcEOSCR				// bingo fuel quantity cost in currency units
+	"tFuelCostRemaining" tcEOSCR			// value of estimated remaining fuel quantity in currency units
+	"tFuelCostReserveRemaining" tcEOSCR		// value of estimated remaining reserve fuel quantity in currency units
+	"tFuelCostBingoRemaining" tcEOSCR		// value of estimated remaining bingo fuel quantity in currency units
+	"tFuelRateCost" tcEOSCR					// fuel rate cost in currency units
 #endif // useFuelCost
 #ifdef useDebugAnalog
-	"tAnalogChannel\r"					// DC voltage
+	"tAnalogChannel" tcEOSCR				// DC voltage
 #endif // useDebugAnalog
 #ifdef useCarVoltageOutput
-	"tAlternatorChannel\r"				// DC voltage
+	"tAlternatorChannel" tcEOSCR			// DC voltage
 #endif // useCarVoltageOutput
 #ifdef useDragRaceFunction
-	"tAccelTestTime\r"					// acceleration test time (s.s)
+	"tAccelTestTime" tcEOSCR				// acceleration test time (s.s)
 #endif // useDragRaceFunction
-	"tFuelUsed\r"						// fuel quantity used (SI/SAE)
-	"tFuelRate\r"						// fuel consumption rate (SI/SAE)
-	"tDistance\r"						// vehicle distance traveled (SI/SAE)
-	"tSpeed\r"							// vehicle speed (SI/SAE)
-	"tRemainingFuel\r"					// estimated total remaining fuel quantity (SI/SAE)
-	"tReserveRemainingFuel\r"			// estimated reserve remaining fuel quantity (SI/SAE)
-	"tBingoRemainingFuel\r"				// estimated bingo remaining fuel quantity (SI/SAE)
-	"tRangeDistance\r"					// estimated total fuel tank distance (SI/SAE)
-	"tReserveDistance\r"				// estimated reserve fuel tank distance (SI/SAE)
-	"tBingoDistance\r"					// estimated bingo fuel tank distance (SI/SAE)
-	"tDistanceToEmpty\r"				// estimated remaining distance (SI/SAE)
-	"tReserveDistanceToEmpty\r"			// estimated reserve remaining distance (SI/SAE)
-	"tBingoDistanceToEmpty\r"			// estimated bingo remaining distance (SI/SAE)
+	"tFuelUsed" tcEOSCR						// fuel quantity used (SI/SAE)
+	"tFuelRate" tcEOSCR						// fuel consumption rate (SI/SAE)
+	"tDistance" tcEOSCR						// vehicle distance traveled (SI/SAE)
+	"tSpeed" tcEOSCR						// vehicle speed (SI/SAE)
+	"tRemainingFuel" tcEOSCR				// estimated total remaining fuel quantity (SI/SAE)
+	"tReserveRemainingFuel" tcEOSCR			// estimated reserve remaining fuel quantity (SI/SAE)
+	"tBingoRemainingFuel" tcEOSCR			// estimated bingo remaining fuel quantity (SI/SAE)
+	"tRangeDistance" tcEOSCR				// estimated total fuel tank distance (SI/SAE)
+	"tReserveDistance" tcEOSCR				// estimated reserve fuel tank distance (SI/SAE)
+	"tBingoDistance" tcEOSCR				// estimated bingo fuel tank distance (SI/SAE)
+	"tDistanceToEmpty" tcEOSCR				// estimated remaining distance (SI/SAE)
+	"tReserveDistanceToEmpty" tcEOSCR		// estimated reserve remaining distance (SI/SAE)
+	"tBingoDistanceToEmpty" tcEOSCR			// estimated bingo remaining distance (SI/SAE)
 #ifdef useFuelCost
-	"tFuelCostPerDistance\r"			// fuel cost per unit distance (SI/SAE)
-	"tDistancePerFuelCost\r"			// distance per unit fuel cost (SI/SAE)
+	"tFuelCostPerDistance" tcEOSCR			// fuel cost per unit distance (SI/SAE)
+	"tDistancePerFuelCost" tcEOSCR			// distance per unit fuel cost (SI/SAE)
 #endif // useFuelCost
 #ifdef useChryslerMAPCorrection
-	"tPressureChannel\r"				// absolute pressure (SI/SAE)
+	"tPressureChannel" tcEOSCR				// absolute pressure (SI/SAE)
 #endif // useChryslerMAPCorrection
 #ifdef useDragRaceFunction
-	"tEstimatedEnginePower\r"			// estimated engine power (SI/SAE)
-	"tDragSpeed\r"						// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
+	"tEstimatedEnginePower" tcEOSCR			// estimated engine power (SI/SAE)
+	"tDragSpeed" tcEOSCR					// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
 #endif // useDragRaceFunction
-	"tFuelEcon\r"						// fuel economy (SI/SAE)
+	"tFuelEcon" tcEOSCR						// fuel economy (SI/SAE)
 };
 
 #endif // (useDebugTerminalLabels) || (useSWEET64trace)
@@ -683,12 +676,12 @@ static const uint8_t prgmLoadCurrentFromEEPROM[] PROGMEM = {
 	instrLxdI, EEPROMcurrentIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, currentIdx,
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLxdI, EEPROMeocIdleCurrentIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, eocIdleCurrentIdx,
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLdRegByte, 0x02, 1,
 	instrDone
@@ -700,12 +693,12 @@ static const uint8_t prgmSaveCurrentToEEPROM[] PROGMEM = {
 	instrLxdI, currentIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, EEPROMcurrentIdx,
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLxdI, eocIdleCurrentIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, EEPROMeocIdleCurrentIdx,
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 	instrJump, tSaveTrip,
 };
 
@@ -725,12 +718,12 @@ static const uint8_t prgmLoadTankFromEEPROM[] PROGMEM = {
 	instrLxdI, EEPROMtankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, tankIdx,
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLxdI, EEPROMeocIdleTankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, eocIdleTankIdx,
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLdRegByte, 0x02, 1,
 	instrDone
@@ -746,12 +739,12 @@ static const uint8_t prgmSaveTankToEEPROM[] PROGMEM = {
 	instrLxdI, tankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, EEPROMtankIdx,
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	instrCall, tSaveTrip,
 	instrLxdI, eocIdleTankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, EEPROMeocIdleTankIdx,
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 	instrJump, tSaveTrip,
 };
 
@@ -1067,8 +1060,8 @@ const uint8_t calcFormatFuelRateCostIdx =			calcFormatFuelCostIdx + 1;				// fue
 #define nextAllowedValue calcFormatFuelRateCostIdx + 1
 #endif // useFuelCost
 #if defined(useAnalogRead)
-const uint8_t calcFormatAnalogReadIdx =				nextAllowedValue;						// voltage
-#define nextAllowedValue calcFormatAnalogReadIdx + 1
+const uint8_t calcFormatanalogDisplayIdx =				nextAllowedValue;						// voltage
+#define nextAllowedValue calcFormatanalogDisplayIdx + 1
 #endif // useAnalogRead
 #ifdef useDragRaceFunction
 const uint8_t calcFormatTimeInTenthsSecIdx =		nextAllowedValue;						// time in tenths of seconds
@@ -1099,46 +1092,46 @@ const uint8_t calcFormatIdxCount =					nextAllowedValue;
 
 #ifdef useDebugTerminal
 static const char terminalFormats[] PROGMEM = {
-	"hhmmss\0"
-	"ms\0"
-	"rev/min\0"
-	"pulses\0"
+	"hhmmss" tcEOS
+	"ms" tcEOS
+	"rev/min" tcEOS
+	"pulses" tcEOS
 #ifdef useFuelCost
-	"cost\0"
-	"cost/hour\0"
+	"cost" tcEOS
+	"cost/hour" tcEOS
 #endif // useFuelCost
 #if defined(useAnalogRead)
-	"V(dc)\0"
+	"V(dc)" tcEOS
 #endif // useAnalogRead
 #ifdef useDragRaceFunction
-	"tenths\0"
+	"tenths" tcEOS
 #endif // useDragRaceFunction
-	"gallon\0"
-	"liter\0"
-	"gallon/hour\0"
-	"liter/hour\0"
-	"mile\0"
-	"km\0"
-	"MPH\0"
-	"kPH\0"
+	"gallon" tcEOS
+	"liter" tcEOS
+	"gallon/hour" tcEOS
+	"liter/hour" tcEOS
+	"mile" tcEOS
+	"km" tcEOS
+	"MPH" tcEOS
+	"kPH" tcEOS
 #ifdef useFuelCost
-	"cost/mile\0"
-	"cost/km\0"
-	"mile/cost\0"
-	"km/cost\0"
+	"cost/mile" tcEOS
+	"cost/km" tcEOS
+	"mile/cost" tcEOS
+	"km/cost" tcEOS
 #endif // useFuelCost
 #ifdef useChryslerMAPCorrection
-	"psia\0"
-	"kPa\0"
+	"psia" tcEOS
+	"kPa" tcEOS
 #endif // useChryslerMAPCorrection
 #ifdef useDragRaceFunction
-	"WHP\0"
-	"kW\0"
+	"WHP" tcEOS
+	"kW" tcEOS
 #endif // useDragRaceFunction
-	"MPG\0"
-	"L/100km\0"
-	"gal/100miles\0"
-	"LPK\0"
+	"MPG" tcEOS
+	"L/100km" tcEOS
+	"gal/100miles" tcEOS
+	"LPK" tcEOS
 };
 
 #endif // useDebugTerminal
@@ -1169,10 +1162,10 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 	,calcFormatFuelRateCostIdx					// tFuelRateCost - fuel rate cost in currency units
 #endif // useFuelCost
 #ifdef useDebugAnalog
-	,calcFormatAnalogReadIdx					// tAnalogChannel - DC voltage
+	,calcFormatanalogDisplayIdx					// tAnalogChannel - DC voltage
 #endif // useDebugAnalog
 #ifdef useCarVoltageOutput
-	,calcFormatAnalogReadIdx					// tAlternatorChannel - DC voltage
+	,calcFormatanalogDisplayIdx					// tAlternatorChannel - DC voltage
 #endif // useCarVoltageOutput
 #ifdef useDragRaceFunction
 	,calcFormatTimeInTenthsSecIdx				// tAccelTestTime - acceleration test time (s.s)
@@ -1223,8 +1216,8 @@ const uint8_t calcFormatDecimalPlaces[(unsigned int)(calcFormatIdxCount)] PROGME
 	,2	// SI fuel quantity
 	,2	// SAE fuel rate
 	,2	// SI fuel rate
-	,3	// SAE distance travelled
-	,3	// SI distance travelled
+	,1	// SAE distance travelled
+	,1	// SI distance travelled
 	,1	// SAE speed
 	,1	// SI speed
 #ifdef useFuelCost
@@ -1241,10 +1234,10 @@ const uint8_t calcFormatDecimalPlaces[(unsigned int)(calcFormatIdxCount)] PROGME
 	,1	// SAE horsepower
 	,1	// SI horsepower
 #endif // useDragRaceFunction
-	,2	// SAE fuel economy
-	,2	// SI fuel economy
-	,2	// alternate SAE fuel economy
-	,2	// alternate SI fuel economy
+	,1	// SAE fuel economy
+	,1	// SI fuel economy
+	,1	// alternate SAE fuel economy
+	,1	// alternate SI fuel economy
 };
 
 const uint8_t calcFormatLabelText[(unsigned int)(calcFormatIdxCount)] PROGMEM = { // S64programList
@@ -1296,7 +1289,7 @@ static const uint8_t isValidFlag =		0b00100000;
 
 static const uint8_t isValidCalcObj =	0b11000000;
 
-#ifdef useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
 const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGMEM = { // S64programList
 	// time in HHmmSS format
 	 {0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
@@ -1423,70 +1416,4 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGM
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00010000, 0b00011100}
 };
 
-#endif // useSpiffyTripLabels
-const uint8_t dfBitShift = 5;
-const uint8_t dfFunctionMask =		0b00011111;
-const uint8_t dfTripMask =			0b11100000;
-
-// local trip indexes for main screen trip function display variables
-#define nextAllowedValue 0
-const uint8_t msInstantIdx =			nextAllowedValue;
-const uint8_t msCurrentIdx =			msInstantIdx + 1;
-const uint8_t msTankIdx =				msCurrentIdx + 1;
-#define nextAllowedValue msTankIdx + 1
-#ifdef trackIdleEOCdata
-const uint8_t msEOCidleCurrentIdx =		nextAllowedValue;
-const uint8_t msEOCidleTankIdx =		msEOCidleCurrentIdx + 1;
-const uint8_t msEOCidleInstantIdx =		msEOCidleTankIdx + 1;
-#define nextAllowedValue msEOCidleInstantIdx + 1
-#endif // trackIdleEOCdata
-
-#ifdef useScreenEditor
-const uint8_t dfMaxTripCount = nextAllowedValue;
-
-#endif // useScreenEditor
-const uint8_t lblInstantIdx =			(msInstantIdx << dfBitShift)	| instantIdx;
-const uint8_t lblCurrentIdx =			(msCurrentIdx << dfBitShift)	| currentIdx;
-const uint8_t lblTankIdx =				(msTankIdx << dfBitShift)		| tankIdx;
-#ifdef trackIdleEOCdata
-const uint8_t lblEOCidleCurrentIdx =	(msEOCidleCurrentIdx << dfBitShift)	| eocIdleCurrentIdx;
-const uint8_t lblEOCidleTankIdx =		(msEOCidleTankIdx << dfBitShift)	| eocIdleTankIdx;
-const uint8_t lblEOCidleInstantIdx =	(msEOCidleInstantIdx << dfBitShift)	| eocIdleInstantIdx;
-#endif // trackIdleEOCdata
-
-// trip index translation list
-const uint8_t msTripList[] PROGMEM = {
-	instantIdx
-	,currentIdx
-	,tankIdx
-#ifdef trackIdleEOCdata
-	,eocIdleCurrentIdx
-	,eocIdleTankIdx
-	,eocIdleInstantIdx
-#endif // trackIdleEOCdata
-};
-
-#ifdef useSpiffyTripLabels
-// display variable trip labels
-const uint8_t msTripBitPattern[][4] PROGMEM = {
-	 {0b00000000, 0b00000111, 0b00000010, 0b00000111} // I
- 	,{0b00000000, 0b00000011, 0b00000100, 0b00000011} // C
-	,{0b00000000, 0b00000111, 0b00000010, 0b00000010} // T
-#ifdef trackIdleEOCdata
-	,{0b00000000, 0b00000011, 0b00000100, 0b00000110} // italic C
-	,{0b00000000, 0b00000111, 0b00000010, 0b00000100} // italic T
-	,{0b00000000, 0b00000011, 0b00000010, 0b00000110} // italic I
-#endif // trackIdleEOCdata
-};
-
-#endif // useSpiffyTripLabels
-const char msTripNameString[] PROGMEM = {
-	"INST\0"
-	"CURR\0"
-	"TANK\0"
-#ifdef trackIdleEOCdata
-	"cC/I\0"
-	"tC/I\0"
-	"iC/I\0"
-#endif // trackIdleEOCdata
-};
+#endif // defined(useSpiffyTripLabels)

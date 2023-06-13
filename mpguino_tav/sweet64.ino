@@ -318,11 +318,11 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					swap64(regX, regY);
 					break;
 
-				case i03:	// load rX with eeprom
+				case i03:	// load rX with EEPROM
 					EEPROM::read64(regX, operand);
 					break;
 
-				case i04:	// store eeprom rX
+				case i04:	// store EEPROM rX
 					EEPROM::write64(regX, operand);
 					break;
 
@@ -363,7 +363,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					init64(regX, pgm_read_dword(&convNumbers[(uint16_t)(operand)]));
 					break;
 
-				case i15:	// load rX with eeprom init
+				case i15:	// load rX with EEPROM init
 					init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
 					break;
 
@@ -770,8 +770,8 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					tripIdx = operand;
 					break;
 
-				case e24:	// load index eeprom
-					tripIdx = EEPROM::readVal(operand);
+				case e24:	// load index EEPROM
+					tripIdx = EEPROM::readByte(operand);
 					break;
 
 				case e25:	// compare index
@@ -786,7 +786,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 					break;
 
-				case e26:	// load index eeprom parameter length
+				case e26:	// load index EEPROM parameter length
 					tripIdx = EEPROM::getLength(operand);
 					break;
 
@@ -1766,7 +1766,7 @@ static void SWEET64::init64byt(union union_64 * an, uint8_t byt)
 
 #ifdef useAssemblyLanguage
 	asm volatile(
-		"	st	%a0,   %A1	\n"
+		"	st	%a0,   %A1			\n"
 		"	std	%a0+1, __zero_reg__	\n"
 		"	std	%a0+2, __zero_reg__	\n"
 		"	std	%a0+3, __zero_reg__	\n"
@@ -1789,10 +1789,10 @@ static void SWEET64::init64(union union_64 * an, unsigned long dWordL)
 
 #ifdef useAssemblyLanguage
 	asm volatile(
-		"	st	%a0,   %A1	\n"
-		"	std	%a0+1, %B1	\n"
-		"	std	%a0+2, %C1	\n"
-		"	std	%a0+3, %D1	\n"
+		"	st	%a0,   %A1			\n"
+		"	std	%a0+1, %B1			\n"
+		"	std	%a0+2, %C1			\n"
+		"	std	%a0+3, %D1			\n"
 		"	std	%a0+4, __zero_reg__	\n"
 		"	std	%a0+5, __zero_reg__	\n"
 		"	std	%a0+6, __zero_reg__	\n"
@@ -1864,320 +1864,3 @@ static unsigned int iSqrt(unsigned int n)
 }
 
 #endif // useIsqrt
-static const uint8_t prgmMultiplyBy100[] PROGMEM = {
-	instrMul2byByte, 100,								// multiply result by 100
-	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmMultiplyBy10[] PROGMEM = {
-	instrMul2byByte, 10,								// multiply result by 10
-	instrAddIndexToX, 0x02		,						// add whatever's in the trip variable index to result
-	instrDone											// exit to caller
-};
-
-static unsigned long str2ull(char * strBuffer)
-{
-
-	uint8_t c;
-	uint8_t n;
-
-	uint8_t x;
-	uint8_t f;
-	uint8_t loopFlag;
-
-	x = 0;
-	n = 0;
-	f = 1;
-	loopFlag = 1;
-
-	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-
-	while ((loopFlag) && (x < 17))
-	{
-
-		if ((c = strBuffer[(unsigned int)(x++)])) // if a non-NULL character is read in
-		{
-
-			n *= 10; // shift accumulator left one digit
-			if (c != ' ') n += (uint8_t)(c) - 48; // if character is not a leading space, go add it to accumulator
-			f= 1 - f; // flip-flop the SWEET64 addition flag
-
-			if (f)
-			{
-
-				SWEET64::runPrgm(prgmMultiplyBy100, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 100 + n
-				n = 0;
-
-			}
-
-		}
-		else loopFlag = 0; // otherwise, terminate loop upon receipt of a NULL character
-
-	}
-
-	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
-
-	return ((union union_64 *)(&s64reg[s64reg2]))->ul[0];
-
-}
-
-static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t &decPos, char &zeroChar, uint8_t &digCnt, uint8_t flg)
-{
-
-	decPos--; // bump down decimal position
-
-	if ((value) || (decPos == 1)) // if either this digit is not zero, or at 1s position
-	{
-
-		value += '0'; // shift value into character 0-9 range
-		zeroChar = '0'; // turn leading zero character into a 0
-
-	}
-	else value = zeroChar; // otherwise, use previously defined leading zero character
-
-	if (value != ' ') digCnt++;
-
-	if ((decPos == 0) && (flg)) strBuffer[(uint16_t)(strPos++)] = '.'; // if at 1/10ths position, store a decimal point
-	strBuffer[(uint16_t)(strPos++)] = value; // store converted character value
-
-}
-
-// converts the 64-digit number stored in SWEET64 register 2 into an up-to 10-digit decimal number string
-// a SWEET64 indexed program is called to do the initial processing of the number from 64-bit to an initial BCD string
-// the SWEET64 program must specify the leading zero character and the number of BCD bytes
-//
-// the returned string will always have at least one digit at the rightmost string position
-// the string is terminated with a NULL character
-//
-// this routine can handle numbers up to 9999999999
-//
-// if called with prgmIdx = tRoundOffNumber, also inserts the decimal point in the string specified by the value in decimalPlaces
-//
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
-{
-
-	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
-
-	uint8_t l;
-	uint8_t value;
-	uint8_t strPos;
-	uint8_t decPos;
-	uint8_t digCnt;
-	uint8_t flg;
-	char zeroChar;
-
-	SWEET64::doCalculate(decimalPlaces, prgmIdx); // call SWEET64 routine to perform decimal point rounding to next nearest decimal place
-
-	l = tmpPtr2->u8[6];	// load total length of binary-coded decimal bytes of converted number
-
-	if (l == 255) strcpy_P(strBuffer, overFlowStr); // if length is 255, this number overflowed
-	else
-	{
-
-		if (prgmIdx == tRoundOffNumber) flg = 1; // if using tRoundOffNumber to process number, do decimal conversion
-		else flg = 0;
-
-		if (flg) decPos = 11 - decimalPlaces; // if using tRoundOffNumber, compute decimal position
-		else decPos = 11;
-
-		zeroChar = (char)(tmpPtr2->u8[7]);	// load leading zero character
-		strPos = 0; // set initial string buffer position
-		digCnt = 0; // set initial digit count
-
-		for (uint8_t x = 0; x < l; x++) // go through all of the binary-coded decimal bytes of converted number
-		{
-
-			value = tmpPtr2->u8[(uint16_t)(x)];	// load a binary-coded decimal byte of number
-
-			storeDigit(value / 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 10's place digit in string buffer
-			storeDigit(value % 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 1's place digit in string buffer
-
-		}
-
-		strBuffer[(unsigned int)(strPos++)] = 0; // mark end of string buffer with a NULL character
-		strBuffer[(unsigned int)(strPos++)] = digCnt; // store digit count at 1 past the string buffer end
-
-	}
-
-	return strBuffer; // return pointer to string buffer containing the number
-
-}
-
-static const uint8_t prgmAutoRangeNumber[] PROGMEM = {
-	instrLdReg, 0x23,									// save contents of register 2
-	instrAddIndex, 0xFE,								// bump window length down by 2
-	instrCmpIndex, 0xFF,								// was window length 1 digit?
-	instrBranchIfE, 8,									// if so, go process corner case
-	instrCmpIndex, 9,									// check window length for validity
-	instrBranchIfLT, 9,									// if valid, skip ahead
-	instrLxdI, 8,										// assume window length of 8 digits
-	instrSkip, 5,										// skip ahead
-	instrLdRegConst, 0x02, idxDecimalPoint,				// window length is 1 digit, load equivalent of decimal formatting term
-	instrSkip, 4,										// skip ahead
-
-//cont:
-	instrLdRegConstIndexed, 0x02,						// load power of 10 corresponding to window into register 2
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
-
-//cont2:
-	instrLxdI, 0,										// initialize decimal count with 0
-	instrCmpXtoY, 0x32,									// compare register 2 contents to initial window value
-	instrBranchIfGT, 18,								// if larger or equal, there are no decimal digits to output
-	instrAddIndex, 1,									// bump decimal count up by 1
-	instrDiv2byByte, 10,								// shift window right 1 digit (should be 0.1 equivalent)
-	instrCmpXtoY, 0x32,									// compare register 2 contents to initial window value
-	instrBranchIfGT, 10,								// if register 2 contents are not less than window, go save decimal count
-	instrAddIndex, 1,									// bump decimal count up by 1 
-	instrDiv2byByte, 10,								// shift window right 1 digit (should be 0.01 equivalent)
-	instrCmpXtoY, 0x32,									// compare register 2 contents to initial window value
-	instrBranchIfGT, 2,									// if register 2 contents are not less than window, go save decimal count
-	instrAddIndex, 1,									// bump decimal count up by 1
-
-//storeDecCnt:
-	instrLdRegByteFromIndex, 0x02,						// save obtained decimal count
-	instrSwapReg, 0x32,									// swap register 2 contents with obtained decimal count
-	instrDone											// exit to caller
-};
-
-// converts the 64-digit number stored in SWEET64 register 2 into an up-to 10-digit decimal number string
-//
-// this routine is called to perform initial conversion into a 10 character long string containing
-//    the up-to 10 digit number with inserted decimal point as appropriate, and leading spaces
-//
-// this routine will autorange the number being converted to automatically support the number of decimal digits being output
-//    unless disabled
-//
-// if no window length is specified, this routine just removes all leading spaces
-//
-// decimalFlag currently has two bits defined:
-// 1xxx xxxx - fill overflow string from all 9s instead of all '-' characters
-// x1xx xxxx - ignore decimal point character in window length consideration (used in useBigNumberDisplay)
-//
-// sample debug monitor outputs:
-//
-// ]0<6.2u (overflow='-', do not ignore decimal point)        ]c0<6.2u (overflow='9', ignore decimal point) 
-// 00: 00 06 02                                               00: c0 06 02
-//     0000000000000005 -   0.01 -                                0000000000000005 -    0.01 -
-// 01: 0000000000000037 -   0.06 -                            01: 0000000000000037 -    0.06 -
-// 02: 000000000000022B -   0.56 -                            02: 000000000000022B -    0.56 -
-// 03: 00000000000015B3 -   5.56 -                            03: 00000000000015B3 -    5.56 -
-// 04: 000000000000D903 -  55.56 -                            04: 000000000000D903 -   55.56 -
-// 05: 0000000000087A23 - 555.56 -                            05: 0000000000087A23 -  555.56 -
-// 06: 000000000054C563 - 5555.6 -                            06: 000000000054C563 - 5555.56 -
-// 07: 00000000034FB5E3 -  55556 -                            07: 00000000034FB5E3 - 55555.6 -
-// 08: 00000000211D1AE3 - 555556 -                            08: 00000000211D1AE3 - 555556 -
-// 09: 000000014B230CE3 - ------ -                            09: 000000014B230CE3 - 999999 -
-// 0A: 0000000CEF5E80E3 - ------ -                            0A: 0000000CEF5E80E3 - 999999 -
-// 0B: 0000008159B108E3 - ------ -                            0B: 0000008159B108E3 - 999999 -
-// 0C: 0000050D80EA58E3 - ------ -                            0C: 0000050D80EA58E3 - 999999 -
-// 0D: 00003287092778E3 - ------ -                            0D: 00003287092778E3 - 999999 -
-//
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag) // format number for output
-{
-
-	union union_64 * tmpPtr3 = (union union_64 *)(&s64reg[s64reg3]);
-
-	uint8_t d;
-	uint8_t e;
-	uint8_t f;
-
-	if (decimalPlaces > 3) decimalPlaces = 0; // if too many decimal digits specified, reset to 0
-
-	if ((windowLength > 10) || (windowLength < 2)) windowLength = 0; // validity check for window length
-	else if (decimalPlaces > (windowLength - 1)) decimalPlaces = windowLength - 1; // ensure complete number fits window
-
-	f = ((decimalFlag & dfIgnoreDecimalPoint) ? 0 : 1); // shrink window if decimal point is considered
-
-	SWEET64::runPrgm(prgmAutoRangeNumber, windowLength - f); // fetch supportable decimal digit count for window
-	d = tmpPtr3->u8[0];
-
-	if (decimalPlaces > d) decimalPlaces = d; // if supportable digit count is less than specified, use supportable instead
-
-	ull2str(strBuffer, decimalPlaces, tRoundOffNumber); // perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
-
-	if (strBuffer[2] == '-') f = 1; // if number overflowed
-	else
-	{
-
-		f = 0; // initially signal no overflow occurred
-		d = 0;
-
-		if (windowLength) // if there is a valid windowLength
-		{
-
-			e = ((decimalPlaces) ? strBuffer[12] - decimalPlaces: strBuffer[11]); // get whole digit count
-			d = 9 - decimalPlaces; // compute position of decimal 1s position
-
-			if (windowLength == e) // if window length == whole digit count
-			{
-
-				strBuffer[(uint16_t)(++d)] = 0; // replace the decimal point with a null
-				d -= windowLength; // set up for left adjust string copy
-
-			}
-			else if (windowLength < e) // if window length < whole digit count
-			{
-
-				f = 1; // signal that number overflowed
-				d = 0; // signal 'do not perform string copy'
-
-			}
-			else // window length > whole digit count
-			{
-
-				d -= (e - 1); // point to largest whole digit stored
-
-				// adjust window length if instructed to ignore the decimal point for length consideration
-				f = windowLength;
-				if ((decimalFlag & dfIgnoreDecimalPoint) && (decimalPlaces)) f++;
-
-				// find the string end position minus adjusted window length
-				e = ((decimalPlaces) ? 11 : 10) - f;
-
-				// if string end position minus window length is less than the position for the largest whole digit, use it instead
-				if (e < d) d = e;
-
-				// catch the special case where the string has decimal point but no decimals
-				if (strBuffer[(uint16_t)(d + f - 1)] == '.') d--;
-
-				strBuffer[(uint16_t)(d + f)] = 0; // mark end of string
-
-				f = 0;
-
-			}
-
-		}
-		else // no windowLength specified, just eliminate leading spaces
-		{
-
-			d = 0;
-
-			while (strBuffer[(uint16_t)(d)] == ' ' && (d < 11)) d++; // find position of first non-blank character
-
-		}
-
-		if (d) // move string buffer left to remove extra spaces, and to move number into window if required
-		{
-
-			e = 0;
-
-			while (d < 12) strBuffer[(uint16_t)(e++)] = strBuffer[(uint16_t)(d++)];
-
-		}
-
-	}
-
-	if (f) // if an overflow occurred
-	{
-
-		strcpy_P(strBuffer, ((decimalFlag & dfOverflow9s) ? overFlow9Str : overFlowStr)); // copy overflow string into buffer
-
-		if (windowLength) strBuffer[(unsigned int)(windowLength)] = 0; // mark new end of string buffer
-
-	}
-
-	return strBuffer;
-
-}
-

@@ -1,16 +1,3 @@
-#ifdef useDebugAnalog
-namespace analogReadViewer /* ADC voltage display section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
-
-}
-
-const char analogReadScreenFuncNames[] PROGMEM = {
-	"Voltages\r"
-};
-
-#endif // useDebugAnalog
 #if defined(useAnalogRead)
 volatile uint8_t analogCommand;
 
@@ -262,3 +249,17 @@ const uint8_t analogChannelValue[(unsigned int)(dfMaxAnalogCount)] PROGMEM = { /
 };
 
 #endif // defined(useAnalogRead)
+#if defined(useDebugAnalog)
+namespace analogReadViewer /* ADC voltage display section prototype */
+{
+
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint16_t getAnalogReadPageFormats(uint8_t formatIdx);
+
+}
+
+static const char analogReadScreenFuncNames[] PROGMEM = {
+	"Voltages" tcEOSCR
+};
+
+#endif // defined(useDebugAnalog)

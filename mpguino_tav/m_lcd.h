@@ -151,7 +151,10 @@ const uint8_t lcdSendFlags =				lcdSendNybble | 0x03;
 uint8_t LCDgotoXYaddress;
 uint8_t LCDaddressX;
 uint8_t LCDaddressY;
+
 #endif // use4BitLCD
+uint8_t brightnessIdx;
+
 #ifdef useLegacyLCD
 #ifdef useInvertedLegacyLCDbrightness
 const uint8_t brightness[] PROGMEM = { 255, 214, 171, 127 }; //middle button cycles through these brightness settings
@@ -162,10 +165,10 @@ const uint8_t brightness[] PROGMEM = { 0, 41, 84, 128 }; //middle button cycles 
 const uint8_t brightnessLength = ( sizeof(brightness) / sizeof(uint8_t) ); // size of brightness table
 
 const char brightString[] PROGMEM = {
-	"LOW\x11\r"
-	"MED\x10\r"
-	"HIGH\x0F\r"
-	"OFF\x12\r"
+	"LOW" tcLCDLO tcEOSCR
+	"MED" tcLCDMED tcEOSCR
+	"HIGH" tcLCDHI tcEOSCR
+	"OFF" tcLCDOFF tcEOSCR
 };
 
 #endif // useLegacyLCD
@@ -173,10 +176,9 @@ const char brightString[] PROGMEM = {
 const uint8_t brightnessLength = 2;
 
 const char brightString[] PROGMEM = {
-	"ON\x11\r"
-	"OFF\x12\r"
+	"ON" tcLCDLO tcEOSCR
+	"OFF" tcLCDOFF tcEOSCR
 };
 
 #endif // useBinaryLCDbrightness
-
 #endif // useLCDoutput

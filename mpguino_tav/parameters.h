@@ -5,7 +5,10 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 	static void initGuino(void);
 	static void initGuinoHardware(void);
 	static void initGuinoSoftware(void);
-	static uint8_t readVal(uint8_t eePtr);
+	static uint8_t readByte(uint8_t eePtr);
+#if defined(useScreenEditor)
+	static uint16_t readWord(uint8_t eePtr);
+#endif // defined(useScreenEditor)
 	static void writeVal(uint8_t eePtr, uint32_t value);
 	static void read64(union union_64 * an, uint8_t parameterIdx);
 	static void write64(union union_64 * an, uint8_t parameterIdx);
@@ -46,9 +49,6 @@ const uint8_t pSizeVoltageOffset =			12;
 #ifdef useDataLoggingOutput
 const uint8_t pSizeSerialDataLogging =		1;
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-const uint8_t pSizeWindowTripFilter =		1;
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 const uint8_t pSizeFEvsTime =				16;
 #endif // useBarFuelEconVsTime
@@ -157,7 +157,7 @@ const uint8_t pSizeTankTripVSScycleIdx =	64;
 const uint8_t pSizeTankTripInjPulseIdx =	32;
 const uint8_t pSizeTankTripInjCycleIdx =	64;
 const uint8_t pSizeTankTripEngCycleIdx =	64;
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 const uint8_t pSizeCurrIEOCvssPulseIdx =	32;
 const uint8_t pSizeCurrIEOCvssCycleIdx =	64;
 const uint8_t pSizeCurrIEOCinjPulseIdx =	32;
@@ -168,7 +168,7 @@ const uint8_t pSizeTankIEOCvssCycleIdx =	64;
 const uint8_t pSizeTankIEOCinjPulseIdx =	32;
 const uint8_t pSizeTankIEOCinjCycleIdx =	64;
 const uint8_t pSizeTankIEOCengCycleIdx =	64;
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #endif // useEEPROMtripStorage
 
 #define byteSize(bitLength) ((((bitLength & 0x07) != 0)? 1 : 0) + (bitLength / 8))
@@ -211,10 +211,6 @@ const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-const unsigned int pAddressWindowTripFilter =			nextAllowedValue;
-#define nextAllowedValue pAddressWindowTripFilter + byteSize(pSizeWindowTripFilter)
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 const unsigned int pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
@@ -345,7 +341,7 @@ const uint8_t pAddressTankTripInjPulseIdx =				pAddressTankTripVSScycleIdx + byt
 const uint8_t pAddressTankTripInjCycleIdx =				pAddressTankTripInjPulseIdx + byteSize(pSizeTankTripInjPulseIdx);
 const uint8_t pAddressTankTripEngCycleIdx =				pAddressTankTripInjCycleIdx + byteSize(pSizeTankTripInjCycleIdx);
 #define nextAllowedValue pAddressTankTripEngCycleIdx + byteSize(pSizeTankTripEngCycleIdx)
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 const uint8_t pAddressCurrIEOCvssPulseIdx =				nextAllowedValue;
 const uint8_t pAddressCurrIEOCvssCycleIdx =				pAddressCurrIEOCvssPulseIdx + byteSize(pSizeCurrIEOCvssPulseIdx);
 const uint8_t pAddressCurrIEOCinjPulseIdx =				pAddressCurrIEOCvssCycleIdx + byteSize(pSizeCurrIEOCvssCycleIdx);
@@ -357,17 +353,17 @@ const uint8_t pAddressTankIEOCinjPulseIdx =				pAddressTankIEOCvssCycleIdx + byt
 const uint8_t pAddressTankIEOCinjCycleIdx =				pAddressTankIEOCinjPulseIdx + byteSize(pSizeTankIEOCinjPulseIdx);
 const uint8_t pAddressTankIEOCengCycleIdx =				pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
 #define nextAllowedValue pAddressTankIEOCengCycleIdx + byteSize(pSizeTankIEOCengCycleIdx)
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #endif // useEEPROMtripStorage
 
 const unsigned int eeAdrSettingsEnd =					nextAllowedValue;
 
-#ifdef useScreenEditor
+#if defined(useScreenEditor)
 const unsigned int eeAdrScreensStart =					nextAllowedValue;
-const unsigned int eeAdrScreensEnd =					eeAdrScreensStart + 2 * mainScreenDisplayFormatSize;
+const unsigned int eeAdrScreensEnd =					eeAdrScreensStart + 2 * mainDisplayFormatSize;
 #define nextAllowedValue eeAdrScreensEnd
 
-#endif // useScreenEditor
+#endif // defined(useScreenEditor)
 const unsigned int eeAdrStorageEnd =					nextAllowedValue;
 
 #define nextAllowedValue 0
@@ -412,10 +408,6 @@ const uint8_t pVoltageOffset =				nextAllowedValue;
 const uint8_t pSerialDataLoggingIdx =		nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-const uint8_t pWindowTripFilterIdx =		nextAllowedValue;
-#define nextAllowedValue pWindowTripFilterIdx + 1
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 const uint8_t pFEvsTimeIdx =				nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
@@ -590,7 +582,7 @@ const uint8_t pTankTripInjPulseIdx =		pTankTripVSScycleIdx + 1;
 const uint8_t pTankTripInjCycleIdx =		pTankTripInjPulseIdx + 1;
 const uint8_t pTankTripEngCycleIdx =		pTankTripInjCycleIdx + 1;
 #define nextAllowedValue pTankTripEngCycleIdx + 1
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 const uint8_t pCurrIEOCvssPulseIdx =		nextAllowedValue;
 const uint8_t pCurrIEOCvssCycleIdx =		pCurrIEOCvssPulseIdx + 1;
 const uint8_t pCurrIEOCinjPulseIdx =		pCurrIEOCvssCycleIdx + 1;
@@ -602,7 +594,7 @@ const uint8_t pTankIEOCinjPulseIdx =		pTankIEOCvssCycleIdx + 1;
 const uint8_t pTankIEOCinjCycleIdx =		pTankIEOCinjPulseIdx + 1;
 const uint8_t pTankIEOCengCycleIdx =		pTankIEOCinjCycleIdx + 1;
 #define nextAllowedValue pTankIEOCengCycleIdx + 1
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 
 const uint8_t eePtrSavedTripsEnd = 			nextAllowedValue;
 const uint8_t eePtrSavedTripsLen = 			eePtrSavedTripsEnd - eePtrSavedTripsStart;
@@ -610,185 +602,248 @@ const uint8_t eePtrSavedTripsLen = 			eePtrSavedTripsEnd - eePtrSavedTripsStart;
 #endif // useEEPROMtripStorage
 const uint8_t eePtrStorageEnd =				nextAllowedValue;
 
-#ifdef useScreenEditor
-const uint8_t eePtrScreensStart =			nextAllowedValue;
-const uint8_t eePtrScreensEnd =				eePtrScreensStart + mainScreenDisplayFormatSize;
-#define nextAllowedValue eePtrScreensEnd
+#if defined(useScreenEditor)
+const uint8_t eePtrDisplayPagesStart =		nextAllowedValue;
+const uint8_t eePtrDisplayPagesEnd =		eePtrDisplayPagesStart + mainDisplayFormatSize;
+#define nextAllowedValue eePtrDisplayPagesEnd
 
-#endif // useScreenEditor
+#endif // defined(useScreenEditor)
 const uint8_t eePtrEnd =					nextAllowedValue;
 
 /* labels for parameters definitions above */
 
 const char parmLabels[] PROGMEM = {
-	"MPGuinoSig\r"
+	"MPGuinoSig" tcEOSCR
 
 // display settings
 
 #ifdef useLegacyLCD
-	"Contrast\r"
+	"Contrast" tcEOSCR
 #endif // useLegacyLCD
 #ifdef useAdafruitRGBLCDshield
-	"LCD BG Color\r"
+	"LCD BG Color" tcEOSCR
 #endif // useAdafruitRGBLCDshield
-	"Metric 1-Yes\r"
-	"AltFEformat 1-Y\r"
+	"Metric 1-Yes" tcEOSCR
+	"AltFEformat 1-Y" tcEOSCR
 #ifdef useFuelCost
 #ifdef useImperialGallon
-	"Price*1000/" "\xEB" "ImpGa" "\xEC" "L" "\xED" "\r"
+	"Price*1000/" tcOMOFF "ImpGa" tcOTOG "L" tcOON tcEOSCR
 #else  // useImperialGallon
-	"Price*1000/" "\xEB" "USgal" "\xEC" "\xED" "\r"
+	"Price*1000/" tcOMOFF "USgal" tcOTOG tcOON tcEOSCR
 #endif // useImperialGallon
 #endif // useFuelCost
 #if defined(useOutputPins)
-	"OutPtPin 1 Mode\r"
-	"OutPtPin 2 Mode\r"
+	"OutPtPin 1 Mode" tcEOSCR
+	"OutPtPin 2 Mode" tcEOSCR
 #endif // defined(useOutputPins)
 #ifdef useCarVoltageOutput
-	"V(diode)*1000\r"
+	"V(diode)*1000" tcEOSCR
 #endif // useCarVoltageOutput
 #ifdef useDataLoggingOutput
-	"DLogSerial 1-Yes\r"
+	"DLogSerial 1-Yes" tcEOSCR
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-	"FE Filter 1-Y\r"
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
-	"FE/Time Period s\r"
+	"FE/Time Period s" tcEOSCR
 #endif // useBarFuelEconVsTime
 #ifdef useBarFuelEconVsSpeed
-	"bgLower*1000 " "\xEB" "MPH" "\xEC" "kph" "\xED" "\r"
-	"bgSize*1000 " "\xEB" "MPH" "\xEC" "kph" "\xED" "\r"
+	"bgLower*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
+	"bgSize*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
 #endif // useBarFuelEconVsSpeed
 
 // fuel injection settings
 
 #ifdef useIsqrt
-	"P(Fuel) " "\xEB" "psig*1K" "\xEC" "Pa" "\xED" "\r"
+	"P(Fuel) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
 #endif // useIsqrt
 #ifdef useCalculatedFuelFactor
-	"P(Ref) " "\xEB" "psig*1K" "\xEC" "Pa" "\xED" "\r"
-	"Injector Count\r"
-	"InjSiz cc/min*1K\r"
+	"P(Ref) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
+	"Injector Count" tcEOSCR
+	"InjSiz cc/min*1K" tcEOSCR
 #endif // useCalculatedFuelFactor
-	"Microsec/USgal\r"
-	"InjTrg 0-Dn 1-Up\r"
-	"Inj Delay (us)\r"
-	"InjCloseDly (us)\r"
-	"Revs/Inj Pulse\r"
-	"Min good RPM\r"
+	"Microsec/USgal" tcEOSCR
+	"InjTrg 0-Dn 1-Up" tcEOSCR
+	"Inj Delay (us)" tcEOSCR
+	"InjCloseDly (us)" tcEOSCR
+	"Revs/Inj Pulse" tcEOSCR
+	"Min good RPM" tcEOSCR
 
 // vehicle speed sensor settings
 
-	"VSS Pulses/" "\xEB" "Mile" "\xEC" "km" "\xED" "\r"
-	"VSS Delay (ms)\r"
-	"Min Speed " "\xEB" "MPH" "\xEC" "KPH" "\xED" "*1K \r"
+	"VSS Pulses/" tcOMOFF "Mile" tcOTOG "km" tcOON tcEOSCR
+	"VSS Delay (ms)" tcEOSCR
+	"Min Speed " tcOMOFF "MPH" tcOTOG "KPH" tcOON "*1K " tcEOSCR
 
 // fuel tank size settings
 
 #ifdef useImperialGallon
-	"Tank*1000 " "\xEB" "ImpGal" "\xEC" "L" "\xED" "\r"
-	"Bingo*1000 " "\xEB" "ImpGal" "\xEC" "L" "\xED" "\r"
+	"Tank*1000 " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
+	"Bingo*1000 " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
 #else // useImperialGallon
-	"Tank*1000 " "\xEB" "USgal" "\xEC" "L" "\xED" "\r"
-	"Bingo*1000 " "\xEB" "USgal" "\xEC" "L" "\xED" "\r"
+	"Tank*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
+	"Bingo*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
 #endif // useImperialGallon
 #ifdef useChryslerMAPCorrection
 
 // Chrysler settings
 
-	"MAPfloor (mV)\r"
-	"MAPceiling (mV)\r"
-	"MAPrng " "\xEB" "psi*1000" "\xEC" "Pa" "\xED" "\r"
-	"MAPofst " "\xEB" "psi*1000" "\xEC" "Pa" "\xED" "\r"
+	"MAPfloor (mV)" tcEOSCR
+	"MAPceiling (mV)" tcEOSCR
+	"MAPrng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
+	"MAPofst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
 #ifdef useChryslerBaroSensor
-	"BaroFloor (mV)\r"
-	"BaroCeiling (mV)\r"
-	"BaroRng " "\xEB" "psi*1000" "\xEC" "Pa" "\xED" "\r"
-	"BaroOfst " "\xEB" "psi*1000" "\xEC" "Pa" "\xED" "\r"
+	"BaroFloor (mV)" tcEOSCR
+	"BaroCeiling (mV)" tcEOSCR
+	"BaroRng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
+	"BaroOfst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
 #else // useChryslerBaroSensor
-	"BaroPrs " "\xEB" "psi*1000" "\xEC" "Pa" "\xED" "\r"
+	"BaroPrs " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
 #endif // useChryslerBaroSensor
 #endif // useChryslerMAPCorrection
 
 // drag race / coastdown calc settings
 
 #ifdef useVehicleMass
-	"" "\xEB" "Weight" "\xEC" "Mass" "\xED" " (\xeblbs" "\xEC" "kg" "\xED" ")\r"
+	tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
 #endif // useVehicleMass
 #ifdef useCoastDownCalculator
-	"FrArea*1000 " "\xEB" "ft" "\xEC" "m" "\xED" "^2\r"
-	"rho*1000 " "\xEB" "lb/yd" "\xEC" "kg/m" "\xED" "^3\r"
-	"C(d) * 1000\r"
-	"C(v) * 1000\r"
-	"C(rr) * 1000\r"
-	"Cd SamplePd (s)\r"
+	"FrArea*1000 " tcOMOFF "ft" tcOTOG "m" tcOON "^2" tcEOSCR
+	"rho*1000 " tcOMOFF "lb/yd" tcOTOG "kg/m" tcOON "^3" tcEOSCR
+	"C(d) * 1000" tcEOSCR
+	"C(v) * 1000" tcEOSCR
+	"C(rr) * 1000" tcEOSCR
+	"Cd SamplePd (s)" tcEOSCR
 #endif // useCoastDownCalculator
 #ifdef useDragRaceFunction
-	"DragSpd " "\xEB" "MPH" "\xEC" "kph" "\xED" "*1000\r"
-	"DragDist " "\xEB" "mi" "\xEC" "km" "\xED" "*1000\r"
-	"DragAutoTrigger\r"
+	"DragSpd " tcOMOFF "MPH" tcOTOG "kph" tcOON "*1000" tcEOSCR
+	"DragDist " tcOMOFF "mi" tcOTOG "km" tcOON "*1000" tcEOSCR
+	"DragAutoTrigger" tcEOSCR
 #endif // useDragRaceFunction
 
 // timeout settings
 
-	"Idle Timeout (s)\r"
-	"EOC Timeout (s)\r"
-	"BtnPress T/O (s)\r"
-	"Park Timeout (s)\r"
-	"OFF Timeout (s)\r"
-	"WakeEngRst CURR\r"
-	"WakeVSSRst CURR\r"
+	"Idle Timeout (s)" tcEOSCR
+	"EOC Timeout (s)" tcEOSCR
+	"BtnPress T/O (s)" tcEOSCR
+	"Park Timeout (s)" tcEOSCR
+	"OFF Timeout (s)" tcEOSCR
+	"WakeEngRst CURR" tcEOSCR
+	"WakeVSSRst CURR" tcEOSCR
 #ifdef useSavedTrips
-	"AutoSaveTrip 1-Y\r"
+	"AutoSaveTrip 1-Y" tcEOSCR
 #endif // useSavedTrips
 
 // miscellaneous settings
 
-	"Scratchpad(odo?)\r"
+	"Scratchpad(odo?)" tcEOSCR
 
 // settings inaccessible from the menu
 
 #ifdef usePartialRefuel
 #ifdef useImperialGallon
-	"Refill*1K " "\xEB" "ImpGal" "\xEC" "L" "\xED" "\r"
+	"Refill*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
 #ifdef useEEPROMtripStorage
-	"RefillSave*1K " "\xEB" "ImpGal" "\xEC" "L" "\xED" "\r"
+	"RefillSave*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
 #endif // useEEPROMtripStorage
 #else // useImperialGallon
-	"Refill*1K " "\xEB" "USgal" "\xEC" "L" "\xED" "\r"
+	"Refill*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
 #ifdef useEEPROMtripStorage
-	"RefillSave*1K " "\xEB" "USgal" "\xEC" "L" "\xED" "\r"
+	"RefillSave*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
 #endif // useEEPROMtripStorage
 #endif // useImperialGallon
 #endif // usePartialRefuel
 #ifdef useDebugTerminalLabels
 #ifdef useEEPROMtripStorage
-	"CurrTripSig\r"
-	"TankTripSig\r"
-	"CurrVSSpulse\r"
-	"CurrVSScycle\r"
-	"CurrInjPulse\r"
-	"CurrInjCycle\r"
-	"CurrEngCycle\r"
-	"TankVSSpulse\r"
-	"TankVSScycle\r"
-	"TankInjPulse\r"
-	"TankInjCycle\r"
-	"TankEngCycle\r"
-#ifdef trackIdleEOCdata
-	"CurrIEOCvssPulse\r"
-	"CurrIEOCvssCycle\r"
-	"CurrIEOCinjPulse\r"
-	"CurrIEOCinjCycle\r"
-	"CurrIEOCengCycle\r"
-	"TankIEOCvssPulse\r"
-	"TankIEOCvssCycle\r"
-	"TankIEOCinjPulse\r"
-	"TankIEOCinjCycle\r"
-	"TankIEOCengCycle\r"
-#endif // trackIdleEOCdata
+	"CurrTripSig" tcEOSCR
+	"TankTripSig" tcEOSCR
+	"CurrVSSpulse" tcEOSCR
+	"CurrVSScycle" tcEOSCR
+	"CurrInjPulse" tcEOSCR
+	"CurrInjCycle" tcEOSCR
+	"CurrEngCycle" tcEOSCR
+	"TankVSSpulse" tcEOSCR
+	"TankVSScycle" tcEOSCR
+	"TankInjPulse" tcEOSCR
+	"TankInjCycle" tcEOSCR
+	"TankEngCycle" tcEOSCR
+#if defined(trackIdleEOCdata)
+	"CurrIEOCvssPulse" tcEOSCR
+	"CurrIEOCvssCycle" tcEOSCR
+	"CurrIEOCinjPulse" tcEOSCR
+	"CurrIEOCinjCycle" tcEOSCR
+	"CurrIEOCengCycle" tcEOSCR
+	"TankIEOCvssPulse" tcEOSCR
+	"TankIEOCvssCycle" tcEOSCR
+	"TankIEOCinjPulse" tcEOSCR
+	"TankIEOCinjCycle" tcEOSCR
+	"TankIEOCengCycle" tcEOSCR
+#endif // defined(trackIdleEOCdata)
 #endif // useEEPROMtripStorage
+#if defined(useScreenEditor)
+	"P00F00" tcEOSCR
+	"P00F01" tcEOSCR
+	"P00F02" tcEOSCR
+	"P00F03" tcEOSCR
+
+	"P01F00" tcEOSCR
+	"P01F01" tcEOSCR
+	"P01F02" tcEOSCR
+	"P01F03" tcEOSCR
+
+	"P02F00" tcEOSCR
+	"P02F01" tcEOSCR
+	"P02F02" tcEOSCR
+	"P02F03" tcEOSCR
+
+	"P03F00" tcEOSCR
+	"P03F01" tcEOSCR
+	"P03F02" tcEOSCR
+	"P03F03" tcEOSCR
+
+	"P04F00" tcEOSCR
+	"P04F01" tcEOSCR
+	"P04F02" tcEOSCR
+	"P04F03" tcEOSCR
+
+	"P05F00" tcEOSCR
+	"P05F01" tcEOSCR
+	"P05F02" tcEOSCR
+	"P05F03" tcEOSCR
+
+#if defined(trackIdleEOCdata)
+	"P06F00" tcEOSCR
+	"P06F01" tcEOSCR
+	"P06F02" tcEOSCR
+	"P06F03" tcEOSCR
+
+#endif // defined(trackIdleEOCdata)
+	"P07F00" tcEOSCR
+	"P07F01" tcEOSCR
+	"P07F02" tcEOSCR
+	"P07F03" tcEOSCR
+
+	"P08F00" tcEOSCR
+	"P08F01" tcEOSCR
+	"P08F02" tcEOSCR
+	"P08F03" tcEOSCR
+
+#if defined(trackIdleEOCdata)
+	"P09F00" tcEOSCR
+	"P09F01" tcEOSCR
+	"P09F02" tcEOSCR
+	"P09F03" tcEOSCR
+
+	"P10F00" tcEOSCR
+	"P10F01" tcEOSCR
+	"P10F02" tcEOSCR
+	"P10F03" tcEOSCR
+
+#endif // defined(trackIdleEOCdata)
+	"P11F00" tcEOSCR
+	"P11F01" tcEOSCR
+	"P11F02" tcEOSCR
+	"P11F03" tcEOSCR
+
+#endif // defined(useScreenEditor)
 #endif // useDebugTerminalLabels
 };
 
@@ -828,9 +883,6 @@ const uint8_t paramsLength[] PROGMEM = {
 #ifdef useDataLoggingOutput
 	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-	,(pSizeWindowTripFilter & 0x07)												// Window Trip Filter Enable
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
 #endif // useBarFuelEconVsTime
@@ -943,7 +995,7 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeTankTripInjPulseIdx & 0x07)											// Tank Trip injector pulse count storage
 	,(pSizeTankTripInjCycleIdx & 0x07)											// Tank Trip injector open cycle accumulator storage
 	,(pSizeTankTripEngCycleIdx & 0x07)											// Tank Trip engine revolution cycle accumulator storage
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	,(pSizeCurrIEOCvssPulseIdx & 0x07)											// Current Idle/EOC Trip VSS pulse count storage
 	,(pSizeCurrIEOCvssCycleIdx & 0x07)											// Current Idle/EOC Trip VSS cycle accumulator storage
 	,(pSizeCurrIEOCinjPulseIdx & 0x07)											// Current Idle/EOC Trip injector pulse count storage
@@ -954,7 +1006,7 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeTankIEOCinjPulseIdx & 0x07)											// Tank Idle/EOC Trip injector pulse count storage
 	,(pSizeTankIEOCinjCycleIdx & 0x07)											// Tank Idle/EOC Trip injector open cycle accumulator storage
 	,(pSizeTankIEOCengCycleIdx & 0x07)											// Tank Idle/EOC Trip engine revolution cycle accumulator storage
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #endif // useEEPROMtripStorage
 };
 
@@ -986,9 +1038,6 @@ const uint8_t paramAddrs[] PROGMEM = {
 #ifdef useDataLoggingOutput
 	,(uint8_t)(pAddressSerialDataLogging)			// Serial Data Logging Enable
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-	,(uint8_t)(pAddressWindowTripFilter)			// Window Trip Filter Enable
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 	,(uint8_t)(pAddressFEvsTime)					// Period Of FE over Time Bar Graph Bar (s)
 #endif // useBarFuelEconVsTime
@@ -1100,7 +1149,7 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressTankTripInjPulseIdx)			// Tank Trip injector pulse count storage
 	,(uint8_t)(pAddressTankTripInjCycleIdx)			// Tank Trip injector open cycle accumulator storage
 	,(uint8_t)(pAddressTankTripEngCycleIdx)			// Tank Trip engine revolution cycle accumulator storage
-#ifdef trackIdleEOCdata
+#if defined(trackIdleEOCdata)
 	,(uint8_t)(pAddressCurrIEOCvssPulseIdx)			// Current Idle/EOC Trip VSS pulse count storage
 	,(uint8_t)(pAddressCurrIEOCvssCycleIdx)			// Current Idle/EOC Trip VSS cycle accumulator storage
 	,(uint8_t)(pAddressCurrIEOCinjPulseIdx)			// Current Idle/EOC Trip injector pulse count storage
@@ -1111,7 +1160,7 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressTankIEOCinjPulseIdx)			// Tank Idle/EOC Trip injector pulse count storage
 	,(uint8_t)(pAddressTankIEOCinjCycleIdx)			// Tank Idle/EOC Trip injector open cycle accumulator storage
 	,(uint8_t)(pAddressTankIEOCengCycleIdx)			// Tank Idle/EOC Trip engine revolution cycle accumulator storage
-#endif // trackIdleEOCdata
+#endif // defined(trackIdleEOCdata)
 #endif // useEEPROMtripStorage
 };
 
@@ -1145,9 +1194,6 @@ const uint32_t params[] PROGMEM = {
 #ifdef useDataLoggingOutput
 	,1					// Serial Data Logging Enable
 #endif // useDataLoggingOutput
-#ifdef useWindowTripFilter
-	,1					// Window Trip Filter Enable
-#endif // useWindowTripFilter
 #ifdef useBarFuelEconVsTime
 	,5					// Length Of BarGraph Bar (s)
 #endif // useBarFuelEconVsTime

@@ -21,19 +21,19 @@ static const uint8_t dLIcount = (sizeof(dataLogInstr) / sizeof(uint8_t));
 #endif // useDataLoggingOutput
 #ifdef useJSONoutput
 const char JSONaccelTestStateMsgs[] PROGMEM = {
-	"\0"
-	"Drag Ready\0"
-	"Testing\0"
-	"Drag Finished\0"
-	"Drag Cancelled\0"
-	"Distance reached\0"
-	"Half-speed reached\0"
-	"Half-speed and distance reached\0"
-	"Full speed reached\0"
-	"Full speed and distance reached\0"
-	"Full speed and half-speed reached\0"
-	"Full speed, half-speed, and distance reached\0"
-	"Drag Test Failure\0"
+	tcEOS
+	"Drag Ready" tcEOS
+	"Testing" tcEOS
+	"Drag Finished" tcEOS
+	"Drag Cancelled" tcEOS
+	"Distance reached" tcEOS
+	"Half-speed reached" tcEOS
+	"Half-speed and distance reached" tcEOS
+	"Full speed reached" tcEOS
+	"Full speed and distance reached" tcEOS
+	"Full speed and half-speed reached" tcEOS
+	"Full speed, half-speed, and distance reached" tcEOS
+	"Drag Test Failure" tcEOS
 };
 
 #endif // useJSONoutput

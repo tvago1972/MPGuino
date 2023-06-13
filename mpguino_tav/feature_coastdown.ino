@@ -66,7 +66,7 @@ void coastdown::goDisplay(void)
 
 	}
 
-	if (msgPtr) printStatusMessage(msgPtr);
+	if (msgPtr) text::statusOut(devLCD, msgPtr);
 
 	if (coastdownFlags & cdtActive) // coastdown test is in progress - display changes accordingly
 	{
@@ -88,7 +88,7 @@ void coastdown::goDisplay(void)
 	else
 	{
 
-		i = screenCursor[(unsigned int)(coastdownIdx)] + pCoefficientDidx;
+		i = displayCursor[(unsigned int)(coastdownIdx)] + pCoefficientDidx;
 
 		SWEET64::runPrgm(prgmFetchParameterValue, i);
 		ull2str(pBuff, 0, tFormatToNumber);
