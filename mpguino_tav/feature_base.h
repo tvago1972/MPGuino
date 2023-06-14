@@ -20,9 +20,9 @@ namespace mainDisplay /* main display section prototype */
 
 };
 
-static const uint8_t dfBitShift = 5;
-static const uint8_t dfFunctionMask =		0b00011111;
-static const uint8_t dfTripMask =			0b11100000;
+static const uint8_t dfBitShift = 3;
+static const uint8_t dfTripMask =			0b11111000;
+static const uint8_t dfFunctionMask =		0b00000111;
 
 // local trip indexes for main screen trip function display variables
 #define nextAllowedValue 0
@@ -39,13 +39,13 @@ static const uint8_t msEOCidleInstantIdx =	msEOCidleTankIdx + 1;
 
 static const uint8_t msMaxTripCount =		nextAllowedValue;
 
-static const uint8_t lblInstantIdx =		(msInstantIdx << dfBitShift)	| instantIdx;
-static const uint8_t lblCurrentIdx =		(msCurrentIdx << dfBitShift)	| currentIdx;
-static const uint8_t lblTankIdx =			(msTankIdx << dfBitShift)		| tankIdx;
+static const uint8_t lblInstantIdx =		(instantIdx << dfBitShift)				| msInstantIdx;
+static const uint8_t lblCurrentIdx =		(currentIdx << dfBitShift)				| msCurrentIdx;
+static const uint8_t lblTankIdx =			(tankIdx << dfBitShift)					| msTankIdx;
 #if defined(trackIdleEOCdata)
-static const uint8_t lblEOCidleCurrentIdx =	(msEOCidleCurrentIdx << dfBitShift)	| eocIdleCurrentIdx;
-static const uint8_t lblEOCidleTankIdx =	(msEOCidleTankIdx << dfBitShift)	| eocIdleTankIdx;
-static const uint8_t lblEOCidleInstantIdx =	(msEOCidleInstantIdx << dfBitShift)	| eocIdleInstantIdx;
+static const uint8_t lblEOCidleCurrentIdx =	(eocIdleCurrentIdx << dfBitShift)		| msEOCidleCurrentIdx;
+static const uint8_t lblEOCidleTankIdx =	(eocIdleTankIdx << dfBitShift)			| msEOCidleTankIdx;
+static const uint8_t lblEOCidleInstantIdx =	(eocIdleInstantIdx << dfBitShift)		| msEOCidleInstantIdx;
 #endif // defined(trackIdleEOCdata)
 
 // trip index translation list
@@ -201,24 +201,17 @@ namespace displayEdit /* Programmable main display page edit support section pro
 #if defined(useButtonCrossConfig)
 	static void changeItemDown(void);
 #endif // useButtonCrossConfig
+	static void changeItem(uint8_t changeDir);
 
 };
 
-void doCursorUpdateScreenEdit(void);
-void doScreenEditBump(void);
-void doSaveScreen(void);
-void doScreenReturnToMain(void);
-
 static uint8_t basePageIdx;
+static uint8_t formatEditIdx;
+static uint8_t formatFunctionFlag;
 static uint16_t displayEditPageFormats[(uint16_t)(4)];
 
-uint8_t screenTripValue = 0;
-uint8_t screenFunctionValue = 0;
-uint8_t screenEditDirty = 0;
-
-const uint8_t screenEditFlag_dirty =	0x80;
-
-const char seFormatRevertedString[] PROGMEM = "DisplayEdit Canx";
-const char seExitScreenEditString[] PROGMEM = "Screen Display";
+static const char deFormatReverted[] PROGMEM = "DisplayEdit Canx";
+static const char deFormatNoChange[] PROGMEM = "Disp Unchanged";
+static const char deFormatSaved[] PROGMEM = "Disp Changed";
 
 #endif // defined(useScreenEditor)

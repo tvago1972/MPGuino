@@ -236,7 +236,7 @@ static uint8_t EEPROM::powerUpCheck(void)
 	{
 
 		uint8_t t = eePtrDisplayPagesStart;
-		for (uint8_t x = 0; x < mainDisplayFormatSize; x++) writeVal(t++, (uint16_t)(pgm_read_word(&mainDisplayPageFormats[(uint16_t)(x)])));
+		for (uint8_t x = 0; x < mainDisplayFormatSize; x++) writeVal(t++, (uint32_t)(pgm_read_word(&mainDisplayPageFormats[(uint16_t)(x)])));
 
 	}
 

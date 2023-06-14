@@ -166,14 +166,14 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	else
 	{
 
-		localTripIdx = (tripIdx & dfTripMask) >> dfBitShift; // extract local trip index
-		tripIdx = (tripIdx & dfFunctionMask);  // extract calculation trip index
+		localTripIdx = (tripIdx & dfFunctionMask); // extract local trip index
+		tripIdx = (tripIdx & dfTripMask) >> dfBitShift; // extract calculation trip index
 
 	}
 
 #else // defined(useSpiffyTripLabels)
 	if (calcIdx & 0x80) calcIdx &= 0x7F; // if trip index translation bit is set, trip index is immediately usable
-	else tripIdx &= (dfFunctionMask);  // otherwise, extract calculation trip index
+	else tripIdx = (tripIdx & dfTripMask) >> dfBitShift; // otherwise, extract calculation trip index
 
 #endif // defined(useSpiffyTripLabels)
 	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? 0 : 0x1F); // determine if trip label component should blink or not
@@ -262,19 +262,20 @@ static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 			for (uint8_t x = 0; x < 4; x++) displayEditPageFormats[(uint16_t)(x)] = mainDisplay::getMainDisplayPageFormat(basePageIdx + x);
 
 		case menuCursorUpdateIdx:
-			
+			formatEditIdx = cursorPos / 2;
+			formatFunctionFlag = (cursorPos & 1);
+
 		case menuOutputDisplayIdx:
-			retVal = cursorPos / 2;
 			for (uint8_t x = 0; x < 4; x++)
 			{
 
 				tripBlink = 0;
 				calcBlink = 0;
 
-				if (x == retVal)
+				if (x == formatEditIdx)
 				{
 
-					if (cursorPos & 1) calcBlink = 170;
+					if (formatFunctionFlag) calcBlink = 170;
 					else tripBlink = 170;
 
 				}
@@ -291,7 +292,6 @@ static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 			LCD::flushCGRAM();
 
 #endif // defined(useSpiffyTripLabels)
-			retVal = 0;
 			break;
 
 		default:
@@ -313,28 +313,37 @@ static void displayEdit::entry(void)
 static void displayEdit::cancel(void)
 {
 
-	cursor::screenLevelEntry(seFormatRevertedString, mainDisplayIdx);
+	cursor::screenLevelEntry(deFormatReverted, mainDisplayIdx);
 
 }
 
 static void displayEdit::set(void)
 {
 
+	const char * str;
 
+	metricFlag &= ~(EEPROMbulkChangeFlag);
+
+	for (uint8_t x = 0; x < 4; x++) EEPROM::writeVal(basePageIdx + x + eePtrDisplayPagesStart, (uint32_t)(displayEditPageFormats[(uint16_t)(x)]));
+
+	if (metricFlag & EEPROMbulkChangeFlag) str = deFormatSaved;
+	else str = deFormatNoChange;
+
+	cursor::screenLevelEntry(str, mainDisplayIdx);
 
 }
 
 static void displayEdit::readInitial(void)
 {
 
-
+	displayEditPageFormats[(uint16_t)(formatEditIdx)] = pgm_read_word(&mainDisplayPageFormats[(uint16_t)(basePageIdx + formatEditIdx)]);
 
 }
 
 static void displayEdit::changeItemUp(void)
 {
 
-
+	changeItem(1);
 
 }
 
@@ -342,90 +351,35 @@ static void displayEdit::changeItemUp(void)
 static void displayEdit::changeItemDown(void)
 {
 
-
+	changeItem(255);
 
 }
 
 #endif // useButtonCrossConfig
-void doCursorUpdateScreenEdit(void)
+static void displayEdit::changeItem(uint8_t changeDir)
 {
 
-	uint8_t b;
+	union union_16 * dEPF = (union union_16 *)(&displayEditPageFormats[(uint16_t)(formatEditIdx)]);
 
-	b = displayCursor[(unsigned int)(displayEditDisplayIdx)];
-	b &= ~screenEditFlag_dirty;
-
-	if ((screenEditDirty & ~screenEditFlag_dirty) ^ b) // if cursor moved to a different screen function altogether
+	if (formatFunctionFlag) // modify the function portion of the format value
 	{
 
-		screenTripValue = EEPROM::readByte(b + eePtrDisplayPagesStart);
-		screenFunctionValue = EEPROM::readByte(b + eePtrDisplayPagesStart + 1);
+		dEPF->u8[0] += changeDir; // adjust trip function index
 
-		if (screenEditDirty & screenEditFlag_dirty) // if previous screen function was changed but not saved
-		{
-
-			text::statusOut(devLCD, seFormatRevertedString);
-
-		}
-
-		screenEditDirty = b; // save current cursor position of screen function being edited
-		screenEditDirty &= ~screenEditFlag_dirty; // mark screen function as not modified
+		if (dEPF->u8[0] >= dfMaxValDisplayCount) dEPF->u8[0] = ( changeDir == 1 ? 0 : dfMaxValDisplayCount - 1); // boundary check
 
 	}
-
-}
-
-void doScreenEditBump(void)
-{
-
-	uint8_t b;
-
-	b = (displayCursor[(unsigned int)(displayEditDisplayIdx)] & 0x01); // figure out whether trip variable or trip function is being modified
-	screenEditDirty |= screenEditFlag_dirty; // mark current screen function as modified
-
-	if (b) // if trip function is being modified
+	else // modify the trip portion of the format value
 	{
 
-		screenFunctionValue++;
-		if (screenFunctionValue == dfMaxValDisplayCount) screenFunctionValue = 0;
+		dEPF->u8[1] &= dfFunctionMask; // strip off trip variable index
+		dEPF->u8[1] += changeDir; // adjust trip label index
+
+		if (dEPF->u8[1] >= msMaxTripCount) dEPF->u8[1] = ( changeDir == 1 ? 0 : msMaxTripCount - 1); // boundary check
+
+		dEPF->u8[1] |= (pgm_read_byte(&msTripList[(uint16_t)(dEPF->u8[1])]) << dfBitShift); // combine with new corresponding trip variable index
 
 	}
-	else // otherwise, trip variable is being modified
-	{
-
-		screenTripValue++;
-		if (screenTripValue == msMaxTripCount) screenTripValue = 0;
-
-	}
-
-}
-
-void doSaveScreen(void)
-{
-
-	uint8_t b;
-
-	b = displayCursor[(unsigned int)(displayEditDisplayIdx)];
-
-	// generate and save new screen function from trip variable and trip function
-	EEPROM::writeVal(eePtrDisplayPagesStart + b, (unsigned long)(screenTripValue));
-	EEPROM::writeVal(eePtrDisplayPagesStart + b + 1, (unsigned long)(screenFunctionValue));
-	screenEditDirty &= ~screenEditFlag_dirty;
-
-	text::statusOut(devLCD, PSTR("Format saved"));
-
-}
-
-void doScreenReturnToMain(void)
-{
-
-	const char * str;
-
-	if (screenEditDirty & screenEditFlag_dirty) str = seFormatRevertedString;
-	else str = seExitScreenEditString;
-
-	displayCursor[(unsigned int)(mainDisplayIdx)] = (displayCursor[(unsigned int)(displayEditDisplayIdx)] >> 3);
-	cursor::screenLevelEntry(str, topScreenLevel);
 
 }
 

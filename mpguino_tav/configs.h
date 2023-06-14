@@ -38,14 +38,15 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 // selectable options - any conflicts will be reported at compile time
 //
-#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
+//#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 //#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
-//#define useSpiffyBigChars true
+//#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 //#define useBigFE true						// Show big fuel economy displays
 //#define useBigDTE true						// Show big distance-to-empty displays
 //#define useBigTTE true						// Show big time-to-empty displays
-#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+//#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
+//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 //#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
@@ -61,16 +62,15 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useDragRaceFunction true			// (inw) Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
-#define useScreenEditor true				// (inw) Ability to change any of (8 to 14, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 //#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 
 // performance enhancement options - all may be chosen independently of one another
 //
-#define useBufferedLCD true					// Speed up non-serial LCD output
+//#define useBufferedLCD true					// Speed up non-serial LCD output
 //#define useBufferedSerial0Port true			// Speed up serial port 0 output (including serial LCD)
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output (including serial LCD)
-#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
@@ -101,7 +101,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 //#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true				// Allows observation of button mapping
-#define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
+//#define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
 //#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 //#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useObsoleteMult64 true					// use obsolete slower bit-based 64-bit multiplication
@@ -220,9 +220,9 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useBarGraph true
 #endif // useBarFuelEconVsSpeed
 
-#if useSpiffyTripLabels || useBigDigitDisplay || useBarGraph
+#if defined(useSpiffyTripLabels) || useBigDigitDisplay || useBarGraph
 #define useLCDgraphics true
-#endif // useSpiffyTripLabels || useBigDigitDisplay || useBarGraph
+#endif // defined(useSpiffyTripLabels) || useBigDigitDisplay || useBarGraph
 
 #ifdef useCalculatedFuelFactor
 #define useIsqrt true

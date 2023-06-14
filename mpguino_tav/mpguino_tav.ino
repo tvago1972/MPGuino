@@ -467,11 +467,15 @@ static const buttonVariable bpListMenu[] PROGMEM = {
 	,{buttonsUp,		menu::noSupport}
 };
 
-static const buttonVariable bpListMain[] PROGMEM = {
+static const buttonVariable bpListMainDisplay[] PROGMEM = {
 	 {btnShortPressR,	cursor::shortRight}
 	,{btnShortPressL,	cursor::shortLeft}
 	,{btnLongPressR,	cursor::longRight}
 	,{btnLongPressL,	cursor::longLeft}
+#if defined(useScreenEditor)
+	,{btnLongPressC,	displayEdit::entry}
+	,{btnShortPressLR,	displayEdit::entry}
+#endif // defined(useScreenEditor)
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	cursor::longRight}
 		,{btnShortPressU,	menu::doNextBright}
@@ -486,9 +490,6 @@ static const buttonVariable bpListMain[] PROGMEM = {
 		,{btnShortPressDR,	tripSupport::goSaveCurrent}
 		,{btnShortPressDL,	tripSupport::goSaveTank}
 	#endif // useSavedTrips
-	#if defined(useScreenEditor)
-		,{btnLongPressC,	displayEdit::entry}
-	#endif // defined(useScreenEditor)
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
@@ -501,9 +502,6 @@ static const buttonVariable bpListMain[] PROGMEM = {
 	#else // usePartialRefuel
 		,{btnLongPressLC,	tripSupport::resetTank}
 	#endif // usePartialRefuel
-	#if defined(useScreenEditor)
-		,{btnLongPressC,	displayEdit::entry}
-	#endif // defined(useScreenEditor)
 	#ifdef useCPUreading
 		,{btnLongPressLCR,	systemInfo::showCPUloading}
 	#endif // useCPUreading
@@ -511,6 +509,26 @@ static const buttonVariable bpListMain[] PROGMEM = {
 	,{buttonsUp,		menu::noSupport}
 };
 
+#if defined(useScreenEditor)
+static const buttonVariable bpListMainDisplayEdit[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressL,	displayEdit::cancel}
+	,{btnLongPressLR,	displayEdit::cancel}
+	,{btnLongPressC,	displayEdit::set}
+	,{btnShortPressLR,	displayEdit::set}
+	,{btnLongPressR,	displayEdit::readInitial}
+#if defined(useButtonCrossConfig)
+		,{btnShortPressU,	displayEdit::changeItemUp}
+		,{btnShortPressD,	displayEdit::changeItemDown}
+		,{btnShortPressC,	displayEdit::set}
+#else // defined(useButtonCrossConfig)
+		,{btnShortPressC,	displayEdit::changeItemUp}
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		menu::noSupport}
+};
+
+#endif // defined(useScreenEditor)
 static const buttonVariable bpListSetting[] PROGMEM = {
 	 {btnShortPressR,	cursor::shortRight}
 	,{btnShortPressL,	cursor::shortLeft}
@@ -596,7 +614,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 
 #endif // useBigDigitDisplay
 #ifdef useClockDisplay
-static const buttonVariable bpListClockShow[] PROGMEM = {
+static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	cursor::shortRight}
 	,{btnShortPressL,	cursor::shortLeft}
 	,{btnLongPressR,	cursor::longRight}
@@ -787,26 +805,6 @@ static const buttonVariable bpListBarGraph[] PROGMEM = {
 };
 
 #endif // useBarGraph
-#if defined(useScreenEditor)
-static const buttonVariable bpListScreenEdit[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	displayEdit::cancel}
-	,{btnLongPressLR,	displayEdit::cancel}
-	,{btnLongPressC,	displayEdit::set}
-	,{btnShortPressLR,	displayEdit::set}
-	,{btnLongPressR,	displayEdit::readInitial}
-#if defined(useButtonCrossConfig)
-		,{btnShortPressU,	displayEdit::changeItemUp}
-		,{btnShortPressD,	displayEdit::changeItemDown}
-		,{btnShortPressC,	displayEdit::set}
-#else // defined(useButtonCrossConfig)
-		,{btnShortPressC,	displayEdit::changeItemUp}
-#endif // defined(useButtonCrossConfig)
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // defined(useScreenEditor)
 #ifdef useButtonCrossConfig
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
@@ -1004,7 +1002,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following screen entries are in the top-down menu list
 
-	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler,		bpListMain}
+	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler,		bpListMainDisplay}
 #ifdef useBigFE
 	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}
 #endif // useBigFE
@@ -1024,7 +1022,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{CPUmonDisplayIdx,				mainDisplayIdx | 0x80,				displayCountUser,	1,							systemInfo::displayHandler,			bpListCPUmonitor}
 #endif // useCPUreading
 #ifdef useClockDisplay
-	,{clockShowDisplayIdx,			mainDisplayIdx | 0x80,				displayCountUser,	1,							bigDigit::displayHandler,			bpListClockShow}
+	,{clockShowDisplayIdx,			mainDisplayIdx | 0x80,				displayCountUser,	1,							bigDigit::displayHandler,			bpListClockDisplay}
 #endif // useClockDisplay
 	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx | 0x80,	1,					eePtrSettingsDispLen,		settings::displayHandler,			bpListSetting}
 	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx | 0x80,		1,					eePtrSettingsInjLen,		settings::displayHandler,			bpListSetting}
@@ -1071,7 +1069,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{0,							partialRefuelDisplayIdx | 0x80,		1,					3,							partialRefuel::displayHandler,		bpListPartialRefuel}
 #endif // usePartialRefuel
 #if defined(useScreenEditor)
-	,{0,							displayEditDisplayIdx | 0x80,		1,					8,							displayEdit::displayHandler,		bpListScreenEdit}
+	,{0,							displayEditDisplayIdx | 0x80,		1,					8,							displayEdit::displayHandler,		bpListMainDisplayEdit}
 #endif // defined(useScreenEditor)
 };
 
