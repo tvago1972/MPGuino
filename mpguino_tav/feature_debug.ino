@@ -918,9 +918,9 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #if defined(useDebugTerminalHelp)
 					case '?':   // display help
+						terminalCmd = chr;
 						terminalLine = 0; // initialize terminal output line
 						terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
-						chr = '\\'; // reset input mode and pending command
 						break;
 
 #endif // defined(useDebugTerminalHelp)
