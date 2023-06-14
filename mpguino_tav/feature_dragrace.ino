@@ -51,19 +51,19 @@ const uint8_t drDragFullSpeedIdx =	drDragHalfSpeedIdx + 1;
 const uint8_t drDragDistanceIdx =	drDragFullSpeedIdx + 1;
 #define nextAllowedValue drDragDistanceIdx + 1
 
-const uint8_t lblDragHalfSpeedIdx =	(drDragHalfSpeedIdx << dfBitShift)	| dragHalfSpeedIdx;
-const uint8_t lblDragFullSpeedIdx =	(drDragFullSpeedIdx << dfBitShift)	| dragFullSpeedIdx;
-const uint8_t lblDragDistanceIdx =	(drDragDistanceIdx << dfBitShift)	| dragDistanceIdx;
+const uint8_t lblDragHalfSpeedIdx =	(dragHalfSpeedIdx << dfBitShift)	| drDragHalfSpeedIdx;
+const uint8_t lblDragFullSpeedIdx =	(dragFullSpeedIdx << dfBitShift)	| drDragFullSpeedIdx;
+const uint8_t lblDragDistanceIdx =	(dragDistanceIdx << dfBitShift)		| drDragDistanceIdx;
 
-#ifdef useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
 // display variable trip labels
 const uint8_t drTripBitPattern[][4] PROGMEM = {
-	{0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
+	 {0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
 	,{0b00000000, 0b00000010, 0b00000101, 0b00000010} // full circle
 	,{0b00000000, 0b00000110, 0b00000101, 0b00000110} // D
 };
 
-#endif // useSpiffyTripLabels
+#endif // defined(useSpiffyTripLabels)
 const uint8_t dragRaceScreenFormats[] PROGMEM = {
 	 {lblDragDistanceIdx,	tFuelEcon}
 	,{lblDragDistanceIdx,	tDragSpeed}						// for calculations, it really doesn't matter what trip index is used here
@@ -138,11 +138,11 @@ void accelerationTest::goDisplay(void)
 
 	}
 
-#ifdef useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
 	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0, drTripBitPattern);
-#else // useSpiffyTripLabels
-	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)]);
-#endif // useSpiffyTripLabels
+#else // defined(useSpiffyTripLabels)
+	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0);
+#endif // defined(useSpiffyTripLabels)
 
 }
 

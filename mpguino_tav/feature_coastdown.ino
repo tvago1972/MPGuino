@@ -74,11 +74,11 @@ void coastdown::goDisplay(void)
 		coastdownCharIdx &= 0x07;
 		text::newLine(devLCD);
 
-#ifdef useSpiffyTripLabels
+#if defined(useSpiffyTripLabels)
 		displayFunction(2, lblInstantIdx, tSpeed, 136, 0, msTripBitPattern); // call main screen function display routine
-#else // useSpiffyTripLabels
-		displayFunction(2, lblInstantIdx, tSpeed); // call main screen function display routine
-#endif // useSpiffyTripLabels
+#else // defined(useSpiffyTripLabels)
+		displayFunction(2, lblInstantIdx, tSpeed, 136, 0); // call main screen function display routine
+#endif // defined(useSpiffyTripLabels)
 
 		text::gotoXY(devLCD, 8, 1);
 		text::stringOut(devLCD, PSTR(" ACTIVE"));
