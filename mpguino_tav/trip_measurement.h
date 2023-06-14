@@ -350,7 +350,7 @@ static const uint8_t tripUpdateList[(uint16_t)(tripUpdateListSize)][2] PROGMEM =
 	,{instantIdx				,currentIdx}				// update current trip with old raw trip
 	,{instantIdx				,tankIdx}					// update tank trip with old raw trip
 #if defined(useBarFuelEconVsTime)
-	,{instantIdx				,0x7C}	 					// update (or transfer) fuel econ vs time bargraph trip with instant trip
+	,{instantIdx				,0x7C}	 					// update fuel econ vs time bargraph trip with instant trip
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 	,{instantIdx				,0x7B}						// update fuel econ vs speed bargraph trip with instant trip

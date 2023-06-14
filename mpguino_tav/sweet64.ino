@@ -375,7 +375,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 #endif // useAnalogRead
 #ifdef useBarFuelEconVsTime
 				case i17:	// load rX with FEvT trip variable
-					instr = calcFEvTperiodIdx; // get current fuel econ vs time trip variable
+					instr = FEvTperiodIdx; // get current fuel econ vs time trip variable
 					instr -= FEvsTimeIdx; // translate out of trip index space
 
 					if (operand >= bgDataSize) operand = 0; // shift index

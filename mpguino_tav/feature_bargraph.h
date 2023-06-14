@@ -72,8 +72,6 @@ static const char bgSpaces[] PROGMEM = {
 #ifdef useBarFuelEconVsTime
 volatile uint8_t FEvTperiodIdx;
 
-uint8_t calcFEvTperiodIdx; // used for calculations, graphing
-
 static const char barFEvTfuncNames[] PROGMEM = {
 	"FuelUsed / Time" tcEOSCR
 	"Distance / Time" tcEOSCR

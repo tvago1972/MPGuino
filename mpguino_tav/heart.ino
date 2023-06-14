@@ -211,7 +211,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #ifdef useBarFuelEconVsTime
-	if (timer0Command & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx | 0x80; // initialize fuel econ vs time trip index variable
+	if (timer0Command & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx; // initialize fuel econ vs time trip index variable
 	else
 	{
 
@@ -220,10 +220,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			timer0Command |= (t0cResetFEvTime);
-			FEvTperiodIdx &= 0x7F; // strip off transfer bit, if present
 			FEvTperiodIdx++;
 			if (FEvTperiodIdx > FEvsTimeEndIdx) FEvTperiodIdx -= bgDataSize;
-			FEvTperiodIdx |= 0x80; // next trip variable interaction will be a transfer
 
 		}
 
@@ -233,6 +231,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		timer0Command &= ~(t0cResetFEvTime);
+		tripVar::reset(FEvTperiodIdx); // reset source trip variable
 		FEvTimeCount = volatileVariables[(uint16_t)(vFEvsTimePeriodTimeoutIdx)];
 
 	}

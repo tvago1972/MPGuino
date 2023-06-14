@@ -45,7 +45,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 //#define useBigFE true						// Show big fuel economy displays
 //#define useBigDTE true						// Show big distance-to-empty displays
 //#define useBigTTE true						// Show big time-to-empty displays
-//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 //#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useSavedTrips true					// Ability to save current or tank trips to EEPROM

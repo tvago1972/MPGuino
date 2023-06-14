@@ -340,16 +340,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 #endif // defined(useWindowTripFilter)
 #ifdef useBarFuelEconVsTime
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
-			oldSREG = SREG; // save interrupt flag status
-			cli(); // disable interrupts to make the next operations atomic
-
-			j = FEvTperiodIdx; // current exchange could either be an update or a transfer
-			i = j & 0x7F; // work with below trip index validation mechanism
-
-			FEvTperiodIdx = i; // ensure that future trip variable exchanges are updates
-			calcFEvTperiodIdx = i;
-
-			SREG = oldSREG; // restore interrupt flag status
+			i = FEvTperiodIdx;
 			break;
 
 #endif // useBarFuelEconVsTime

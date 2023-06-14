@@ -34,7 +34,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, u
 			line0CalcIdx = line1CalcIdx;
 			line0TripIdx = currentIdx;
 
-			line1TripIdx = calcFEvTperiodIdx;
+			line1TripIdx = FEvTperiodIdx;
 			break;
 
 #endif // useBarFuelEconVsTime
