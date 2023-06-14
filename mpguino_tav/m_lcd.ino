@@ -1,12 +1,6 @@
 #ifdef useLCDoutput
 /* LCD hardware support section */
 
-#ifdef useLCDgraphics
-const uint8_t cgramFlagDirty =		0b10000000;
-
-uint8_t CGRAMbuffer[64]; // used by LCD output routine
-
-#endif useLCDgraphics
 static void LCD::init(void)
 {
 
@@ -16,10 +10,10 @@ static void LCD::init(void)
 #endif // use4BitLCD
 	devLCD.chrOut = LCD::writeData;
 
-#ifdef useLCDgraphics
+#if defined(useLCDgraphics)
 	for (uint8_t x = 0; x < 64; x++) CGRAMbuffer[(uint16_t)(x)] = cgramFlagDirty;
 
-#endif useLCDgraphics
+#endif // defined(useLCDgraphics)
 #ifdef useParallaxSerialLCDmodule
 	devLCDserial.controlFlags &= ~(odvFlagCRLF);
 
@@ -236,7 +230,7 @@ static void LCD::shutdown(void)
 #endif // use4BitLCD
 }
 
-#ifdef useLCDgraphics
+#if defined(useLCDgraphics)
 static void LCD::loadCGRAMcharacter(uint8_t chr, char * chrData)
 {
 
@@ -338,7 +332,7 @@ static void LCD::flushCGRAM(void)
 
 }
 
-#endif // useLCDgraphics
+#endif // defined(useLCDgraphics)
 static void LCD::setBrightness(uint8_t idx)
 {
 
@@ -750,17 +744,6 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 	changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
 
 }
-
-//const unsigned long t1CyclesPerSecond = (unsigned long)(systemProcessorSpeed * 1000000ul); // (systemProcessorSpeed * 1000000 / (timer 1 prescaler))
-
-//const unsigned int delayLCD15000usTick = (unsigned int)(ceil)((double)(15200ul * t1CyclesPerSecond) / (double)(510ul * 1000000ul)); // initial LCD delay for 4-bit initialization
-//const unsigned int delayLCD04100usTick = (unsigned int)(ceil)((double)(4100ul * t1CyclesPerSecond) / (double)(510ul * 1000000ul)); // secondary LCD delay for 4-bit initialization
-//const unsigned int delayLCD00100usTick = (unsigned int)(ceil)((double)(100ul * t1CyclesPerSecond) / (double)(510ul * 1000000ul)); // final LCD delay for 4-bit initialization
-//const unsigned int delayLCD00040usTick = (unsigned int)(ceil)((double)(40ul * t1CyclesPerSecond) / (double)(510ul * 1000000ul)); // normal LCD character transmission delay
-const unsigned int delayLCD15000usTick = (unsigned int)(ceil)((double)(15200ul * F_CPU) / (double)(510ul * 1000000ul)) - 1; // initial LCD delay for 4-bit initialization
-const unsigned int delayLCD04100usTick = (unsigned int)(ceil)((double)(4100ul * F_CPU) / (double)(510ul * 1000000ul)) - 1; // secondary LCD delay for 4-bit initialization
-const unsigned int delayLCD00100usTick = (unsigned int)(ceil)((double)(100ul * F_CPU) / (double)(510ul * 1000000ul)) - 1; // final LCD delay for 4-bit initialization
-const unsigned int delayLCD00040usTick = (unsigned int)(ceil)((double)(40ul * F_CPU) / (double)(510ul * 1000000ul)); // normal LCD character transmission delay
 
 static void LCD::outputNybble(uint8_t LCDchar)
 {
