@@ -59,9 +59,9 @@ const uint8_t pSizeBarSpeedQuantumIdx =		24;
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 const uint8_t pSizeSysFuelPressure =		32;
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 const uint8_t pSizeRefFuelPressure =		32;
 const uint8_t pSizeInjectorCount =			8;
@@ -223,10 +223,10 @@ const unsigned int pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + by
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 const unsigned int pAddressSysFuelPressure =			nextAllowedValue;
 #define nextAllowedValue pAddressSysFuelPressure + byteSize(pSizeSysFuelPressure)
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 const unsigned int pAddressRefFuelPressure =			nextAllowedValue;
 const unsigned int pAddressInjectorCount =				pAddressRefFuelPressure + byteSize(pSizeRefFuelPressure);
@@ -425,10 +425,10 @@ const uint8_t eePtrSettingsDispLen =		eePtrSettingsDispEnd - eePtrSettingsDispSt
 
 const uint8_t eePtrSettingsInjStart =		nextAllowedValue;
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 const uint8_t pSysFuelPressureIdx =			nextAllowedValue;
 #define nextAllowedValue pSysFuelPressureIdx + 1
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 const uint8_t pRefFuelPressureIdx =			nextAllowedValue;
 const uint8_t pInjectorCountIdx =			pRefFuelPressureIdx + 1;
@@ -652,9 +652,9 @@ const char parmLabels[] PROGMEM = {
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 	"P(Fuel) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 	"P(Ref) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
 	"Injector Count" tcEOSCR
@@ -893,9 +893,9 @@ const uint8_t paramsLength[] PROGMEM = {
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 	,(pSizeSysFuelPressure & 0x07) | pfSoftwareInitMPGuino						// Fuel System Pressure (Pa or * 1000 psig)
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 	,(pSizeRefFuelPressure & 0x07) | pfCalculateFuelParams						// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
 	,(pSizeInjectorCount & 0x07) | pfCalculateFuelParams						// Fuel Injector Count
@@ -1048,9 +1048,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 	,(uint8_t)(pAddressSysFuelPressure)				// Fuel System Pressure (Pa or * 1000 psig)
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 	,(uint8_t)(pAddressRefFuelPressure)				// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
 	,(uint8_t)(pAddressInjectorCount)				// Fuel Injector Count
@@ -1204,9 +1204,9 @@ const uint32_t params[] PROGMEM = {
 
 // fuel injection settings
 
-#ifdef useIsqrt
+#if defined(useFuelPressure)
 	,43500				// Fuel System Pressure (Pa or * 1000 psig)
-#endif // useIsqrt
+#endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 	,43500				// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
 	,6					// Fuel Injector Count

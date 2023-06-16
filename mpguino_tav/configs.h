@@ -51,7 +51,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 //#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 //#define useFuelCost true					// Show fuel cost
-//#define useCPUreading true					// Show CPU loading and available RAM usage
+#define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
@@ -98,10 +98,10 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useDebugTerminal true					// (inw) terminal interface between PC and MPGuino
 #define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
 #define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
-//#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
+#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true				// Allows observation of button mapping
-//#define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
+#define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
 //#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 //#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useObsoleteMult64 true					// use obsolete slower bit-based 64-bit multiplication
@@ -224,8 +224,15 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useLCDgraphics true
 #endif // defined(useSpiffyTripLabels) || useBigDigitDisplay || useBarGraph
 
+#if defined(useDebugTerminal)
+#define useIsqrt true
+#define usePressure true
+#endif // defined(useDebugTerminal)
+
 #ifdef useCalculatedFuelFactor
 #define useIsqrt true
+#define usePressure true
+#define useFuelPressure true
 #endif // useCalculatedFuelFactor
 
 #ifdef useDebugAnalog
@@ -253,6 +260,8 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 #ifdef useChryslerMAPCorrection
 #define useIsqrt true
+#define usePressure true
+#define useFuelPressure true
 #define useAnalogRead true
 #else // useChryslerMAPCorrection
 #undef useChryslerBaroSensor

@@ -371,6 +371,10 @@ static const uint8_t prgmUpdateDecimalValue[] PROGMEM = {
 };
 
 static const uint8_t prgmPerformMathOperation[] PROGMEM = {
+#if defined(useIsqrt)
+	instrCmpIndex, '_',									// if math operation is '_', do square root
+	instrBranchIfE, 47,
+#endif // defined(useIsqrt)
 	instrTestIndex,										// if math operation is null, do assignment
 	instrBranchIfE, 27,
 	instrCmpIndex, '=',									// if math operation is '=', do assignment
@@ -408,6 +412,14 @@ static const uint8_t prgmPerformMathOperation[] PROGMEM = {
 //division:
 	instrDiv2by1,										// perform division
 	instrLdReg, 0x27,									// save math result
+#if defined(useIsqrt)
+	instrDone,											// exit to caller
+
+//sqrt:
+	instrLdReg, 0x72,									// load terminal register into register 2
+	instrIsqrt,	0x02,									// perform square root function
+	instrLdReg, 0x27,									// save math result
+#endif // defined(useIsqrt)
 	instrDone											// exit to caller
 };
 
@@ -659,7 +671,7 @@ static void terminal::processMath(uint8_t cmd)
 	if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 	if (terminalMode & tmSourceReadIn) decPlace = terminalSource; // if decimal count specified, save it
 	// save terminal register contents for later
-	if (terminalMode & tmByteReadIn) SWEET64::runPrgm(prgmPerformMathOperation, cmd);
+	if ((terminalMode & tmByteReadIn) || (cmd == '_')) SWEET64::runPrgm(prgmPerformMathOperation, cmd);
 
 }
 
@@ -691,10 +703,11 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
                 [z] - decimal window length (optional)
                 [y] - decimal digit count (optional)
           +x - adds x to math accumulator
-		  -x - subtracts x from math accumulator
-		  *x - multiplies math accumulator by x
-		  /x - divides math accumulator by x
-		  =x - enters a number x into the 64-bit math accumulator
+          -x - subtracts x from math accumulator
+          *x - multiplies math accumulator by x
+          /x - divides math accumulator by x
+          |  - finds square root of math accumulator
+          =x - enters a number x into the 64-bit math accumulator
 
   x:Py [y] [y]... - store one or more y values, starting at stored parameter x
   x:Vy [y] [y]... - store one or more y values, starting at volatile variable x
@@ -973,6 +986,9 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 					case '-':	// subtract
 					case '*':	// multiply
 					case '/':	// divide
+#if defined(useIsqrt)
+					case '_':	// square root
+#endif // defined(useIsqrt)
 					case '=':	// output last result
 						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
@@ -1137,6 +1153,9 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							case '-':	// subtract
 							case '*':	// multiply
 							case '/':	// divide
+#if defined(useIsqrt)
+							case '_':	// square root
+#endif // defined(useIsqrt)
 							case '=':	// output last result
 								processMath(terminalCmd);
 

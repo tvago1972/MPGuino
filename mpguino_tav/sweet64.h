@@ -11,7 +11,7 @@
 */
 
 #ifdef useIsqrt
-static unsigned int iSqrt(unsigned int n);
+static uint32_t iSqrt(uint32_t input);
 
 #endif // useIsqrt
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
@@ -50,7 +50,7 @@ static const uint8_t r03 =	r02 + 32;	// set rX = r5, rY = r1
 static const uint8_t r04 =	r03 + 32;	// fetch rP and rS from program
 static const uint8_t r05 =	r04 + 32;	// set rP = r5, rS = r2
 static const uint8_t r06 =	r05 + 32;	// fetch rP from program, set rS = r5, and rX to r5
-static const uint8_t r07 =	r06 + 32;	//
+static const uint8_t r07 =	r06 + 32;	// set rX = r5, rY = r2
 
 static const uint8_t rxxMask =	0b11100000;
 
@@ -114,7 +114,7 @@ static const uint8_t m03 =	m02 + 1;	// compare		na = rP - rS
 static const uint8_t m04 =	m03 + 1;	// test			r5
 static const uint8_t m05 =	m04 + 1;	// multiply		r2 = r2 * r5
 static const uint8_t m06 =	m05 + 1;	// divide		r2 = r2 / r5 rmdr r1 and qadj r5
-static const uint8_t m07 =	m06 + 1;	//
+static const uint8_t m07 =	m06 + 1;
 
 static const uint8_t mxxMask = 0b00000111;
 
@@ -350,10 +350,10 @@ static const uint8_t instrClearFlag =				instrLdJumpReg + 1;						// clear SWEET
 static const uint8_t instrSetFlag =					instrClearFlag + 1;						// set SWEET64 status flag
 #define nextAllowedValue instrSetFlag + 1
 
-#ifdef useIsqrt
-static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer square root on 64-bit register
+#if defined(useIsqrt)
+static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer square root on lower 32 bits of 64-bit register
 #define nextAllowedValue instrIsqrt + 1
-#endif // useIsqrt
+#endif // defined(useIsqrt)
 
 #if defined(useAnalogRead)
 static const uint8_t instrLdRegVoltage =			nextAllowedValue;						// load 64-bit register with specified raw 10-bit analog voltage value
@@ -479,9 +479,9 @@ static const char opcodeList[] PROGMEM = {
 	"instrLdJumpReg" tcEOSCR
 	"instrClearFlag" tcEOSCR
 	"instrSetFlag" tcEOSCR
-#ifdef useIsqrt
+#if defined(useIsqrt)
 	"instrIsqrt" tcEOSCR
-#endif // useIsqrt
+#endif // defined(useIsqrt)
 #if defined(useAnalogRead)
 	"instrLdRegVoltage" tcEOSCR
 	"instrLdRegVoltageIndexed" tcEOSCR
@@ -612,9 +612,9 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,r00 | p02 | s00	// instrLdJumpReg
 	,r00 | p01 | s00	// instrClearFlag
 	,r00 | p01 | s00	// instrSetFlag
-#ifdef useIsqrt
+#if defined(useIsqrt)
 	,r01 | p00 | s00	// instrIsqrt
-#endif // useIsqrt
+#endif // defined(useIsqrt)
 #if defined(useAnalogRead)
 	,r01 | p01 | s00	// instrLdRegVoltage
 	,r01 | p02 | s00	// instrLdRegVoltageIndexed
@@ -732,9 +732,9 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e29				// instrLdJumpReg
 	,e30				// instrClearFlag
 	,e31				// instrSetFlag
-#ifdef useIsqrt
+#if defined(useIsqrt)
 	,m00 | i28			// instrIsqrt
-#endif // useIsqrt
+#endif // defined(useIsqrt)
 #if defined(useAnalogRead)
 	,m00 | i16			// instrLdRegVoltage
 	,m00 | i16			// instrLdRegVoltageIndexed
@@ -833,9 +833,9 @@ const uint8_t idxMicroSecondsPerSecond	=	idxOneMillion;					// microseconds per 
 const uint8_t idxDenomDistance =			idxOneMillion;					// denominator to convert miles to kilometers
 
 const uint8_t idxTenMillion =				idxOneMillion + 1;
-#ifdef useIsqrt
+#if defined(usePressure)
 const uint8_t idxDenomPressure =			idxTenMillion;					// denominator to convert psig to kPa
-#endif // useIsqrt
+#endif // defined(usePressure)
 
 const uint8_t idxOneHundredMillion =		idxTenMillion + 1;
 const uint8_t idxBCDdivisor =				idxOneHundredMillion;			// divisor to separate lower 4 BCD bytes from 5th byte
@@ -856,11 +856,11 @@ const uint8_t idxNumerDistance =			idxTicksPerSecond + 1;			// numerator to conv
 const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
 const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// seconds per hour
 #define nextAllowedValue idxSecondsPerHour + 1
-#ifdef useIsqrt
+#if defined(usePressure)
 const uint8_t idxNumerPressure =			nextAllowedValue;				// numerator to convert psig to kPa
 const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor seed for square root function
 #define nextAllowedValue idxCorrectionFactor + 1
-#endif // useIsqrt
+#endif // defined(usePressure)
 #if defined(useAnalogRead)
 const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
 const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
@@ -926,9 +926,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	tcEOSCR
 
 	"idxTenMillion"
-#ifdef useIsqrt
+#if defined(usePressure)
 	"/idxDenomPressure"
-#endif // useIsqrt
+#endif // defined(usePressure)
 	tcEOSCR
 
 	"idxOneHundredMillion"
@@ -951,10 +951,10 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerDistance" tcEOSCR
 	"idxNumerVolume" tcEOSCR
 	"idxSecondsPerHour" tcEOSCR
-#ifdef useIsqrt
+#if defined(usePressure)
 	"idxNumerPressure" tcEOSCR
 	"idxCorrectionFactor" tcEOSCR
-#endif // useIsqrt
+#endif // defined(usePressure)
 #if defined(useAnalogRead)
 	"idxNumerVoltage" tcEOSCR
 	"idxDenomVoltage" tcEOSCR
@@ -982,6 +982,8 @@ static const char terminalConstIdxNames[] PROGMEM = {
 };
 
 #endif // useDebugTerminalLabels
+
+static const uint32_t correctionFactor =	4096ul;
 // SWEET64 conversion factor value table
 //
 // the order of the values, representing the powers of 10 between 10 and 1000000000, is vitally important to the
@@ -1011,9 +1013,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 									// idxDenomDistance - denominator to convert miles to kilometers
 
 	,10000000ul						// idxTenMillion
-#ifdef useIsqrt
+#if defined(usePressure)
 									// idxDenomPressure - denominator to convert psig to kPa
-#endif // useIsqrt
+#endif // defined(usePressure)
 
 	,100000000ul					// idxOneHundredMillion
 									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
@@ -1033,10 +1035,10 @@ static const uint32_t convNumbers[] PROGMEM = {
 	,1609344ul						// idxNumerDistance - numerator to convert miles to kilometers
 	,3785411784ul					// idxNumerVolume - numerator to convert US gallons to liters
 	,3600ul							// idxSecondsPerHour - seconds per hour
-#ifdef useIsqrt
+#if defined(usePressure)
 	,68947573ul						// idxNumerPressure - numerator to convert psig to kPa
-	,4096ul							// idxCorrectionFactor - correction factor seed for square root function
-#endif // useIsqrt
+	,correctionFactor				// idxCorrectionFactor - correction factor seed for square root function
+#endif // defined(usePressure)
 #if defined(useAnalogRead)
 	,1024ul							// idxNumerVoltage - numerator to convert volts DC to ADC steps
 	,5000ul							// idxDenomVoltage - denominator to convert volts DC to ADC steps

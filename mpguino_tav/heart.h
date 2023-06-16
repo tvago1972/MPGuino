@@ -240,6 +240,11 @@ static const uint8_t mpDebugCountS64multIdx =		mpDebugAccS64multIdx + 1;			// mu
 static const uint8_t mpDebugAccS64divIdx =			mpDebugCountS64multIdx + 1;			// div64 stopwatch direct measurement
 static const uint8_t mpDebugCountS64divIdx =		mpDebugAccS64divIdx + 1;			// div64 direct measurement counter
 #define nextAllowedValue mpDebugCountS64divIdx + 1
+#if defined(useIsqrt)
+static const uint8_t mpDebugAccS64sqrtIdx =			nextAllowedValue;					// iSqrt stopwatch direct measurement
+static const uint8_t mpDebugCountS64sqrtIdx =		mpDebugAccS64sqrtIdx + 1;			// iSqrt direct measurement counter
+#define nextAllowedValue mpDebugCountS64sqrtIdx + 1
+#endif // defined(useIsqrt)
 #endif // useDebugCPUreading
 #endif // useCPUreading
 
@@ -336,6 +341,10 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpDebugCountS64multIdx" tcEOSCR			// main program only
 	"mpDebugAccS64divIdx" tcEOSCR				// main program only
 	"mpDebugCountS64divIdx" tcEOSCR				// main program only
+#if defined(useIsqrt)
+	"mpDebugAccS64sqrtIdx" tcEOSCR				// main program only
+	"mpDebugCountS64sqrtIdx" tcEOSCR			// main program only
+#endif // defined(useIsqrt)
 #endif // useDebugCPUreading
 #endif // useCPUreading
 };

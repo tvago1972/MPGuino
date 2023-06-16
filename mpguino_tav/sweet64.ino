@@ -222,6 +222,10 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 				operand = 0x05;
 				break;
 
+			case r07:	// set rX = r5, rY = r2
+				operand = 0x25;	// signal to move register 2 contents to arithmetic register 5
+				break;
+
 			default:	// invalid rxx code detected, exit program
 				loopFlag = 0;
 				break;
@@ -517,7 +521,14 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 #endif // defined(useMatrixMath)
 #ifdef useIsqrt
 				case i28:	// integer square root
-					regX->ui[0] = iSqrt(regX->ui[0]);
+#ifdef useDebugCPUreading
+					mathStart = systemInfo::cycles0(); // record starting time
+#endif // useDebugCPUreading
+					regX->ul[0] = iSqrt(regX->ul[0]);
+#ifdef useDebugCPUreading
+					mainProgramVariables[(uint16_t)(mpDebugAccS64sqrtIdx)] += systemInfo::findCycleLength(mathStart, systemInfo::cycles0());
+					mainProgramVariables[(uint16_t)(mpDebugCountS64sqrtIdx)]++;
+#endif // useDebugCPUreading
 					break;
 
 #endif // useIsqrt
@@ -884,7 +895,7 @@ static uint8_t SWEET64::fetchByte(const uint8_t * &prgmPtr)
 
 }
 
-static void SWEET64::copy64(union union_64 * an, union union_64 * ann)
+static void SWEET64::copy64(union union_64 * an, union union_64 * ann) // an = ann
 {
 
 #ifdef useAssemblyLanguage
@@ -1761,6 +1772,51 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 }
 
 #endif // useSWEET64div
+#if defined(useIsqrt)
+// 32-bit integer square root based on digit-by-digit method
+//
+// original algorithm developed by Andrija Radovic found at https://www.andrijar.com/algorithms/algorithms.htm#qusr
+//
+// this implementation does not rely at all on multiplies or divides
+//
+static uint32_t iSqrt(uint32_t input)
+{
+
+	uint32_t output; // square root, running (2 * x * dx) term
+	uint32_t test;
+
+	uint32_t X2; // (x ^ 2) term
+	uint32_t DX2; // (dx ^ 2) term
+
+	output = 0;
+	X2 = 0;
+
+	DX2 = 1073741824; // set initial (dx ^ 2) term to 2 ^ 30
+
+    do
+	{
+
+		test = X2 + output + DX2; // form test value
+
+		output >>= 1;
+
+		if (input >= test) // if input number is greater than or equal to current test value
+		{
+
+			X2 = test; // save new (x ^ 2) term
+			output += DX2; // add (dx ^ 2) term to running (2 * x * dx) term
+
+		}
+
+		DX2 >>= 2;
+
+	} while (DX2);
+
+	return output;
+
+}
+
+#endif // defined(useIsqrt)
 static void SWEET64::init64byt(union union_64 * an, uint8_t byt)
 {
 
@@ -1833,34 +1889,3 @@ static void SWEET64::flagSet64(uint8_t n, uint8_t z, uint8_t c)
 
 }
 
-#ifdef useIsqrt
-static unsigned int iSqrt(unsigned int n)
-{
-
-	unsigned long w = 4096; // square factor guess
-	unsigned int t = 4096; // proposed square root
-	int d; // difference between guess and proposed
-	int od = 0;
-
-	for (uint8_t x = 0; x < 6; x++)
-	{
-
-		od = d;
-		d = n - (unsigned int)w;
-		d >>= 1;
-		t += d;
-
-		od += d;
-
-		if ((d == 0) || (od == 0)) break;
-
-		w = (unsigned long)t * (unsigned long)t;
-		w >>= 12;
-
-	}
-
-	return t;
-
-}
-
-#endif // useIsqrt

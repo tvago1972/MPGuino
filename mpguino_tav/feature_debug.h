@@ -255,10 +255,13 @@ static const char terminalHelp[] PROGMEM = {
 	"                [z] - decimal window length (optional)" tcEOSCR
 	"                [y] - decimal digit count (optional)" tcEOSCR
 	"          +x - adds x to math accumulator" tcEOSCR
-	"		  -x - subtracts x from math accumulator" tcEOSCR
-	"		  *x - multiplies math accumulator by x" tcEOSCR
-	"		  /x - divides math accumulator by x" tcEOSCR
-	"		  =x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
+	"          -x - subtracts x from math accumulator" tcEOSCR
+	"          *x - multiplies math accumulator by x" tcEOSCR
+#if defined(useIsqrt)
+	"          |  - finds square root of math accumulator" tcEOSCR
+#endif // defined(useIsqrt)
+	"          /x - divides math accumulator by x" tcEOSCR
+	"          =x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
 	"  x:Py [y] [y]... - store one or more y values, starting at stored parameter x" tcEOSCR
 	"  x:Vy [y] [y]... - store one or more y values, starting at volatile variable x" tcEOSCR
 	"  x:My [y] [y]... - store one or more y values, starting at main program variable x" tcEOSCR
