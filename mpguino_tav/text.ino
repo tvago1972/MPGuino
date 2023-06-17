@@ -354,7 +354,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 //
 // sample debug monitor outputs:
 //
-// ]0<6.2u (overflow='-', do not ignore decimal point)        ]c0<6.2u (overflow='9', ignore decimal point) 
+// ]0<6.2u (overflow='-', do not ignore decimal point)        ]c0<6.2u (overflow='9', ignore decimal point)
 // 00: 00 06 02                                               00: c0 06 02
 //     0000000000000005 -   0.01 -                                0000000000000005 -    0.01 -
 // 01: 0000000000000037 -   0.06 -                            01: 0000000000000037 -    0.06 -

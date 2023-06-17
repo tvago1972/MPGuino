@@ -73,7 +73,7 @@ static const uint8_t prgmAutoRangeNumber[] PROGMEM = {
 	instrDiv2byByte, 10,								// shift window right 1 digit (should be 0.1 equivalent)
 	instrCmpXtoY, 0x32,									// compare register 2 contents to initial window value
 	instrBranchIfGT, 10,								// if register 2 contents are not less than window, go save decimal count
-	instrAddIndex, 1,									// bump decimal count up by 1 
+	instrAddIndex, 1,									// bump decimal count up by 1
 	instrDiv2byByte, 10,								// shift window right 1 digit (should be 0.01 equivalent)
 	instrCmpXtoY, 0x32,									// compare register 2 contents to initial window value
 	instrBranchIfGT, 2,									// if register 2 contents are not less than window, go save decimal count

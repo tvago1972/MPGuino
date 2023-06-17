@@ -222,10 +222,6 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 				operand = 0x05;
 				break;
 
-			case r07:	// set rX = r5, rY = r2
-				operand = 0x25;	// signal to move register 2 contents to arithmetic register 5
-				break;
-
 			default:	// invalid rxx code detected, exit program
 				loopFlag = 0;
 				break;
@@ -1788,6 +1784,87 @@ static uint32_t iSqrt(uint32_t input)
 	uint32_t X2; // (x ^ 2) term
 	uint32_t DX2; // (dx ^ 2) term
 
+#if defined(useAssemblyLanguage)
+	asm volatile(
+		"	mov		%A0, __zero_reg__	\n"	// zero out output term
+		"	mov		%B0, __zero_reg__	\n"
+		"	mov		%C0, __zero_reg__	\n"
+		"	mov		%D0, __zero_reg__	\n"
+		"	mov		%A1, __zero_reg__	\n"	// zero out X2 term
+		"	mov		%B1, __zero_reg__	\n"
+		"	mov		%C1, __zero_reg__	\n"
+		"	mov		%D1, __zero_reg__	\n"
+		"	mov		%A2, __zero_reg__	\n"	// initialize DX2 term to 1073741824
+		"	mov		%B2, __zero_reg__	\n"
+		"	mov		%C2, __zero_reg__	\n"
+		"	ldi		%D2, 0x40			\n"
+
+		"sq64_mloop%=:					\n"
+		"	mov		%A3, %A1			\n"	// initialize test term with X2 term
+		"	mov		%B3, %B1			\n"
+		"	mov		%C3, %C1			\n"
+		"	mov		%D3, %D1			\n"
+		"	add		%A3, %A0			\n"	// add 2 * X * DX term to test term
+		"	adc		%B3, %B0			\n"
+		"	adc		%C3, %C0			\n"
+		"	adc		%D3, %D0			\n"
+		"	add		%A3, %A2			\n"	// add DX2 term to test term
+		"	adc		%B3, %B2			\n"
+		"	adc		%C3, %C2			\n"
+		"	adc		%D3, %D2			\n"
+		"	lsr		%D0					\n"	// divide output term by 2
+		"	ror		%C0					\n"
+		"	ror		%B0					\n"
+		"	ror		%A0					\n"
+
+		"	cp		%A4, %A3			\n"	// compare test term to input term
+		"	cpc		%B4, %B3			\n"
+		"	cpc		%C4, %C3			\n"
+		"	cpc		%D4, %D3			\n"
+		"	brlt	sq64_cont%=			\n" // if input term < test term, skip
+		"	mov		%A1, %A3			\n"	// save new (x ^ 2) term
+		"	mov		%B1, %B3			\n"
+		"	mov		%C1, %C3			\n"
+		"	mov		%D1, %D3			\n"
+		"	add		%A0, %A2			\n"	// add (dx ^ 2) term to running (2 * x * dx) term
+		"	adc		%B0, %B2			\n"
+		"	adc		%C0, %C2			\n"
+		"	adc		%D0, %D2			\n"
+		"sq64_cont%=:					\n"
+		"	lsr		%D2					\n"	// divide DX2 by 2
+		"	ror		%C2					\n"
+		"	ror		%B2					\n"
+		"	ror		%A2					\n"
+		"	brcs	sq64_exit%=			\n"
+		"	lsr		%D2					\n"	// divide DX2 by 2 again
+		"	ror		%C2					\n"
+		"	ror		%B2					\n"
+		"	ror		%A2					\n"
+		"	brcc	sq64_mloop%=		\n"
+		"sq64_exit%=:					\n"
+		: "+r" (output), "+r" (X2), "+d" (DX2)
+		: "r" (test), "r" (input)
+	);
+/*
+
+	asm volatile(
+
+		"	lsr		%D2					\n"	// divide DX2 by 2
+		"	ror		%C2					\n"
+		"	ror		%B2					\n"
+		"	ror		%A2					\n"
+		"	brcs	sq64_exit%=			\n"
+		"	lsr		%D2					\n"	// divide DX2 by 2 again
+		"	ror		%C2					\n"
+		"	ror		%B2					\n"
+		"	ror		%A2					\n"
+		"	brcc	sq64_mloop%=		\n"
+
+		: "+r" (output), "+r" (X2), "+r" (DX2), "=r" (test)
+		: "r" (input)
+	);
+*/
+#else // defined(useAssemblyLanguage)
 	output = 0;
 	X2 = 0;
 
@@ -1812,6 +1889,7 @@ static uint32_t iSqrt(uint32_t input)
 
 	} while (DX2);
 
+#endif // defined(useAssemblyLanguage)
 	return output;
 
 }

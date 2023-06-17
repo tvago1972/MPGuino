@@ -161,41 +161,6 @@ static uint8_t barGraphSupport::rescaleData(uint8_t byt, uint8_t uBound)
 
 }
 
-/*
-static int16_t barGraphSupport::sqrrt(uint16_t num)
-{
-
-	int16_t x;
-	int16_t c;
-	int16_t d;
-
-	x = num;
-	c = 0;
-	d = (1 << 14);
-
-	while (d > num) d >>= 2;
-
-	while (d)
-	{
-
-		if (x >= (c + d))
-		{
-
-			x -= (c + d);
-			c = (c >> 1) + d;
-
-		}
-		else c >>= 1;
-
-		d >>= 2;
-
-	}
-
-	return c;
-
-}
-*/
-
 static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8_t diffFlag)
 {
 

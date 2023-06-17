@@ -59,7 +59,7 @@ static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
 
 #ifdef useCalculatedFuelFactor
 static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
-	instrLdRegConst, 0x02, idxCorrectionFactor,			// obtain reference correction factor
+	instrLdRegConst, 0x02, idxCorrectionFactor2,		// obtain reference correction factor
 	instrMul2byEEPROM, pSysFuelPressureIdx,				// multiply by this vehicle's stored fuel system absolute pressure
 	instrDiv2byEEPROM, pRefFuelPressureIdx,				// divide by the fuel injector reference absolute pressure
 	instrIsqrt, 0x02,									// perform square root on result

@@ -311,7 +311,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 static const uint8_t tripUpdateListSize = 3				// base trip update count
 #if defined(trackIdleEOCdata)
 	+ 4													// count of idle/EOC trips to be updated
-#endif // defined(trackIdleEOCdata)             
+#endif // defined(trackIdleEOCdata)
 #if defined(useBarFuelEconVsTime)
 	+ 1													// count of fuel econ vs time bargraph trips to be updated
 #endif // defined(useBarFuelEconVsTime)
@@ -346,7 +346,7 @@ static const uint8_t tripUpdateList[(uint16_t)(tripUpdateListSize)][2] PROGMEM =
 	,{eocIdleInstantIdx			,instantIdx}				// update instant trip with idle instant trip
 	,{eocIdleInstantIdx			,eocIdleCurrentIdx}			// update idle current trip with old raw idle trip
 	,{eocIdleInstantIdx			,eocIdleTankIdx}			// update idle tank trip with old raw idle trip
-#endif // defined(trackIdleEOCdata)             
+#endif // defined(trackIdleEOCdata)
 	,{instantIdx				,currentIdx}				// update current trip with old raw trip
 	,{instantIdx				,tankIdx}					// update tank trip with old raw trip
 #if defined(useBarFuelEconVsTime)

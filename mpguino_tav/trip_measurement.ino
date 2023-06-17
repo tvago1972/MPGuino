@@ -592,7 +592,7 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
 	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
 	instrStRegMain, 0x02, mpInjPressureIdx,				// store differential pressure across the fuel injector
-	instrMul2byConst, idxCorrectionFactor,				// set up for iSqrt
+	instrMul2byConst, idxCorrectionFactor2,				// set up for iSqrt
 	instrDiv2byMain, mpFuelPressureIdx,					// divide by the fuel system differential pressure
 	instrTestReg, 0x02,									// test whether overflow occurred
 	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it

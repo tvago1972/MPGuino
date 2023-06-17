@@ -50,7 +50,7 @@ static const uint8_t r03 =	r02 + 32;	// set rX = r5, rY = r1
 static const uint8_t r04 =	r03 + 32;	// fetch rP and rS from program
 static const uint8_t r05 =	r04 + 32;	// set rP = r5, rS = r2
 static const uint8_t r06 =	r05 + 32;	// fetch rP from program, set rS = r5, and rX to r5
-static const uint8_t r07 =	r06 + 32;	// set rX = r5, rY = r2
+static const uint8_t r07 =	r06 + 32;	// 
 
 static const uint8_t rxxMask =	0b11100000;
 
@@ -858,8 +858,9 @@ const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// seconds per hour
 #define nextAllowedValue idxSecondsPerHour + 1
 #if defined(usePressure)
 const uint8_t idxNumerPressure =			nextAllowedValue;				// numerator to convert psig to kPa
-const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor seed for square root function
-#define nextAllowedValue idxCorrectionFactor + 1
+const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor used for fuel calculations
+const uint8_t idxCorrectionFactor2 =		idxCorrectionFactor + 1;		// correction factor squared for square root function
+#define nextAllowedValue idxCorrectionFactor2 + 1
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
 const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
@@ -954,6 +955,7 @@ static const char terminalConstIdxNames[] PROGMEM = {
 #if defined(usePressure)
 	"idxNumerPressure" tcEOSCR
 	"idxCorrectionFactor" tcEOSCR
+	"idxCorrectionFactor2" tcEOSCR
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
 	"idxNumerVoltage" tcEOSCR
@@ -1029,39 +1031,40 @@ static const uint32_t convNumbers[] PROGMEM = {
 									// idxNumerMass - numerator to convert pounds to kilograms
 #endif // useVehicleMass
 
-	,t0CyclesPerSecond				// idxCycles0PerSecond - timer0 clock cycles per second
-	,256ul							// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-	,t0TicksPerSecond				// idxTicksPerSecond - timer0 clock ticks per second
-	,1609344ul						// idxNumerDistance - numerator to convert miles to kilometers
-	,3785411784ul					// idxNumerVolume - numerator to convert US gallons to liters
-	,3600ul							// idxSecondsPerHour - seconds per hour
+	,t0CyclesPerSecond						// idxCycles0PerSecond - timer0 clock cycles per second
+	,256ul									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
+	,t0TicksPerSecond						// idxTicksPerSecond - timer0 clock ticks per second
+	,1609344ul								// idxNumerDistance - numerator to convert miles to kilometers
+	,3785411784ul							// idxNumerVolume - numerator to convert US gallons to liters
+	,3600ul									// idxSecondsPerHour - seconds per hour
 #if defined(usePressure)
-	,68947573ul						// idxNumerPressure - numerator to convert psig to kPa
-	,correctionFactor				// idxCorrectionFactor - correction factor seed for square root function
+	,68947573ul								// idxNumerPressure - numerator to convert psig to kPa
+	,correctionFactor						// idxCorrectionFactor - correction factor used for fuel calculations
+	,correctionFactor * correctionFactor	// idxCorrectionFactor2 - correction factor squared for square root function
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
-	,1024ul							// idxNumerVoltage - numerator to convert volts DC to ADC steps
-	,5000ul							// idxDenomVoltage - denominator to convert volts DC to ADC steps
+	,1024ul									// idxNumerVoltage - numerator to convert volts DC to ADC steps
+	,5000ul									// idxDenomVoltage - denominator to convert volts DC to ADC steps
 #endif // useAnalogRead
 #ifdef useCarVoltageOutput
-	,9600ul							// idxResistanceR5 - resistor next to ground (via meelis11)
-	,27000ul						// idxResistanceR6 - resistor next to diode  (via meelis11)
+	,9600ul									// idxResistanceR5 - resistor next to ground (via meelis11)
+	,27000ul								// idxResistanceR6 - resistor next to diode  (via meelis11)
 #endif // useCarVoltageOutput
 #ifdef useVehicleMass
-	,2204622621ul					// idxDenomMass - denominator to convert pounds to kilograms
+	,2204622621ul							// idxDenomMass - denominator to convert pounds to kilograms
 #endif // useVehicleMass
 #ifdef useCoastDownCalculator
-	,9290304ul						// idxNumerArea - numerator to convert square feet to square meters
-	,168555ul						// idxDenomDensity - denominator to convert SAE density to metric density
+	,9290304ul								// idxNumerArea - numerator to convert square feet to square meters
+	,168555ul								// idxDenomDensity - denominator to convert SAE density to metric density
 #endif // useCoastDownCalculator
 #ifdef useClockDisplay
-	,86400ul						// idxSecondsPerDay - number of seconds in a day
+	,86400ul								// idxSecondsPerDay - number of seconds in a day
 #endif // useClockDisplay
 #ifdef useImperialGallon
-	,454609ul						// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
+	,454609ul								// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
 #endif // useImperialGallon
 #ifdef useDragRaceFunction
-	,22840ul						// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+	,22840ul								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #endif // useDragRaceFunction
 };
 

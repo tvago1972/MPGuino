@@ -9,7 +9,6 @@ namespace barGraphSupport /* Bar Graph support section prototype */
 	static void graphData(uint8_t cursorPos, uint8_t calcIdx, uint8_t diffFlag);
 	static void drawLine(uint8_t color, uint8_t startX, uint8_t startY, uint8_t endX, uint8_t endY);
 	static void draw(uint8_t color, uint8_t xPos, uint8_t yPos);
-//	static int16_t sqrrt(uint16_t num);
 
 };
 
