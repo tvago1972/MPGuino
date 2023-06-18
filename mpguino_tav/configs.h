@@ -95,18 +95,16 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 // program measurement and debugging tools
 //
-#define useDebugTerminal true					// (inw) terminal interface between PC and MPGuino
+#define useDebugTerminal true					// terminal interface between PC and MPGuino
 #define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
 #define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
 #define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
-//#define useSWEET64trace true					// Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
+//#define useSWEET64trace true					// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true				// Allows observation of button mapping
 #define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
 //#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 //#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
-//#define useObsoleteMult64 true					// use obsolete slower bit-based 64-bit multiplication
 //#define useSWEET64mult true						// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
-//#define useObsoleteDiv64 true					// use obsolete slower 64-bit division
 //#define useSWEET64div true						// shift div64 from native C++ to SWEET64 bytecode (saves 220 bytes)
 
 // these #defines are used to select various features to support the above choices
@@ -242,21 +240,6 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #ifndef useCPUreading
 #undef useDebugCPUreading
 #endif // useCPUreading
-
-#ifndef useObsoleteMult64
-#undef useSWEET64mult
-#endif // useObsoleteMult64
-
-#ifdef useObsoleteDiv64
-#undef useDiv64Assembly
-#else // useObsoleteDiv64
-#ifdef useAssemblyLanguage
-#define useDiv64Assembly true
-#else // useAssemblyLanguage
-#undef useDiv64Assembly
-#endif // useAssemblyLanguage
-#undef useSWEET64div
-#endif // useObsoleteMult64
 
 #ifdef useChryslerMAPCorrection
 #define useIsqrt true

@@ -1266,31 +1266,6 @@ static void SWEET64::mult64(void)
 
 	union union_64 * an = (union union_64 *)(&s64reg[s64reg2]);	// multiplier in an, result to an
 	union union_64 * multiplicand = (union union_64 *)(&s64reg[s64reg5]);	// define multiplicand term as register 5
-#ifdef useObsoleteMult64
-	union union_64 * multiplier = (union union_64 *)(&s64reg[s64reg4]);	// define multiplier term as register 4
-
-	copy64(multiplier, an); // load multiplier into register 4
-	init64byt(an, 0); // zero out result
-
-	sbc64(multiplicand, multiplier, 0); // is multiplier less than multiplicand?
-
-	if (SWEET64processorFlags & SWEET64carryFlag) swap64(multiplicand, multiplier); // if not, swap them around
-
-	registerTest64(multiplier);
-
-	while (!(SWEET64processorFlags & SWEET64zeroFlag)) // while multiplier is non-zero
-	{
-
-		shr64(multiplier); // shift multiplier right by one bit
-
-		if (SWEET64processorFlags & SWEET64carryFlag) adc64(an, multiplicand); // if the low bit of multiplier is set, add multiplicand to result
-
-		SWEET64processorFlags &= ~(SWEET64carryFlag);
-		shl64(multiplicand); // shift multiplicand left by one bit
-
-	}
-
-#else // useObsoleteMult64
 #ifdef useAssemblyLanguage
 
 	asm volatile(
@@ -1458,7 +1433,6 @@ static void SWEET64::mult64(void)
 	}
 
 #endif // useAssemblyLanguage
-#endif // useObsoleteMult64
 }
 
 #ifndef useSWEET64div
@@ -1467,7 +1441,7 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 
 	union union_64 * ann = (union union_64 *)(&s64reg[s64reg1]);	// remainder in ann
 	union union_64 * divisor = (union union_64 *)(&s64reg[s64reg5]);
-#ifdef useDiv64Assembly
+#if defined(useAssemblyLanguage)
 
 	asm volatile(
 		"	push	r28				\n"		// save Y reg original contents
@@ -1680,7 +1654,7 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		: "x" (ann), "z" (divisor)
 	);
 
-#else // useDiv64Assembly
+#else // defined(useAssemblyLanguage)
 	union union_64 * an = (union union_64 *)(&s64reg[s64reg2]);	// quotient in an
 
 	uint8_t x;
@@ -1764,7 +1738,7 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 
 	}
 
-#endif // useDiv64Assembly
+#endif // defined(useAssemblyLanguage)
 }
 
 #endif // useSWEET64div
@@ -1779,92 +1753,103 @@ static uint32_t iSqrt(uint32_t input)
 {
 
 	uint32_t output; // square root, running (2 * x * dx) term
+#if defined(useAssemblyLanguage)
+
+	asm volatile(
+		"	push	r4					\n"	// save original contents for test reg
+		"	push	r5					\n"
+		"	push	r6					\n"
+		"	push	r7					\n"
+		"	push	r8					\n"	// save original contents for X2 reg
+		"	push	r9					\n"
+		"	push	r10					\n"
+		"	push	r11					\n"
+		"	push	r12					\n"	// save original contents for DX2 reg
+		"	push	r13					\n"
+		"	push	r14					\n"
+		"	push	r28					\n"
+
+		"	mov		%A0, __zero_reg__	\n"	// zero out output reg
+		"	mov		%B0, __zero_reg__	\n"
+		"	mov		%C0, __zero_reg__	\n"
+		"	mov		%D0, __zero_reg__	\n"
+		"	mov		r8, __zero_reg__	\n"	// zero out X2 reg
+		"	mov		r9, __zero_reg__	\n"
+		"	mov		r10, __zero_reg__	\n"
+		"	mov		r11, __zero_reg__	\n"
+		"	mov		r12, __zero_reg__	\n"	// initialize DX2 reg with 1073741824
+		"	mov		r13, __zero_reg__	\n"
+		"	mov		r14, __zero_reg__	\n"
+		"	ldi		r28, 0x80			\n"
+
+		"sq64_mloop%=:					\n"
+		"	lsr		r28					\n"	// divide DX2 reg by 2
+		"	ror		r14					\n"
+		"	ror		r13					\n"
+		"	ror		r12					\n"
+		"	mov		r4, r8				\n"	// initialize test reg with X2 reg
+		"	mov		r5, r9				\n"
+		"	mov		r6, r10				\n"
+		"	mov		r7, r11				\n"
+		"	add		r4, %A0				\n"	// add 2 * X * DX reg to test reg
+		"	adc		r5, %B0				\n"
+		"	adc		r6, %C0				\n"
+		"	adc		r7, %D0				\n"
+		"	add		r4, r12				\n"	// add DX2 reg to test reg
+		"	adc		r5, r13				\n"
+		"	adc		r6, r14				\n"
+		"	adc		r7, r28				\n"
+		"	lsr		%D0					\n"	// divide output reg by 2
+		"	ror		%C0					\n"
+		"	ror		%B0					\n"
+		"	ror		%A0					\n"
+
+		"	cp		%A1, r4				\n"	// compare test reg to input reg
+		"	cpc		%B1, r5				\n"
+		"	cpc		%C1, r6				\n"
+		"	cpc		%D1, r7				\n"
+		"	brlt	sq64_cont%=			\n" // if input reg < test reg, skip
+
+		"	mov		r8, r4				\n"	// save new (x ^ 2) reg
+		"	mov		r9, r5				\n"
+		"	mov		r10, r6				\n"
+		"	mov		r11, r7				\n"
+		"	add		%A0, r12			\n"	// add (dx ^ 2) reg to running (2 * x * dx) reg
+		"	adc		%B0, r13			\n"
+		"	adc		%C0, r14			\n"
+		"	adc		%D0, r28			\n"
+
+		"sq64_cont%=:					\n"
+		"	lsr		r28					\n"	// divide DX2 reg by 2
+		"	ror		r14					\n"
+		"	ror		r13					\n"
+		"	ror		r12					\n"
+		"	brcc	sq64_mloop%=		\n"
+		"sq64_exit%=:					\n"
+
+		"	pop	r28						\n"	// restore original contents of DX2 reg
+		"	pop	r14						\n"
+		"	pop	r13						\n"
+		"	pop	r12						\n"
+		"	pop	r11						\n"	// restore original contents of X2 reg
+		"	pop	r10						\n"
+		"	pop	r9						\n"
+		"	pop	r8						\n"
+		"	pop	r7						\n"	// restore original contents of test reg
+		"	pop	r6						\n"
+		"	pop	r5						\n"
+		"	pop	r4						\n"
+
+		: "+d" (output)						// ensure this is in r16-r31 space
+		: "d" (input)						// ensure this is in r16-r31 space
+	);
+
+#else // defined(useAssemblyLanguage)
 	uint32_t test;
 
 	uint32_t X2; // (x ^ 2) term
 	uint32_t DX2; // (dx ^ 2) term
 
-#if defined(useAssemblyLanguage)
-	asm volatile(
-		"	mov		%A0, __zero_reg__	\n"	// zero out output term
-		"	mov		%B0, __zero_reg__	\n"
-		"	mov		%C0, __zero_reg__	\n"
-		"	mov		%D0, __zero_reg__	\n"
-		"	mov		%A1, __zero_reg__	\n"	// zero out X2 term
-		"	mov		%B1, __zero_reg__	\n"
-		"	mov		%C1, __zero_reg__	\n"
-		"	mov		%D1, __zero_reg__	\n"
-		"	mov		%A2, __zero_reg__	\n"	// initialize DX2 term to 1073741824
-		"	mov		%B2, __zero_reg__	\n"
-		"	mov		%C2, __zero_reg__	\n"
-		"	ldi		%D2, 0x40			\n"
-
-		"sq64_mloop%=:					\n"
-		"	mov		%A3, %A1			\n"	// initialize test term with X2 term
-		"	mov		%B3, %B1			\n"
-		"	mov		%C3, %C1			\n"
-		"	mov		%D3, %D1			\n"
-		"	add		%A3, %A0			\n"	// add 2 * X * DX term to test term
-		"	adc		%B3, %B0			\n"
-		"	adc		%C3, %C0			\n"
-		"	adc		%D3, %D0			\n"
-		"	add		%A3, %A2			\n"	// add DX2 term to test term
-		"	adc		%B3, %B2			\n"
-		"	adc		%C3, %C2			\n"
-		"	adc		%D3, %D2			\n"
-		"	lsr		%D0					\n"	// divide output term by 2
-		"	ror		%C0					\n"
-		"	ror		%B0					\n"
-		"	ror		%A0					\n"
-
-		"	cp		%A4, %A3			\n"	// compare test term to input term
-		"	cpc		%B4, %B3			\n"
-		"	cpc		%C4, %C3			\n"
-		"	cpc		%D4, %D3			\n"
-		"	brlt	sq64_cont%=			\n" // if input term < test term, skip
-		"	mov		%A1, %A3			\n"	// save new (x ^ 2) term
-		"	mov		%B1, %B3			\n"
-		"	mov		%C1, %C3			\n"
-		"	mov		%D1, %D3			\n"
-		"	add		%A0, %A2			\n"	// add (dx ^ 2) term to running (2 * x * dx) term
-		"	adc		%B0, %B2			\n"
-		"	adc		%C0, %C2			\n"
-		"	adc		%D0, %D2			\n"
-		"sq64_cont%=:					\n"
-		"	lsr		%D2					\n"	// divide DX2 by 2
-		"	ror		%C2					\n"
-		"	ror		%B2					\n"
-		"	ror		%A2					\n"
-		"	brcs	sq64_exit%=			\n"
-		"	lsr		%D2					\n"	// divide DX2 by 2 again
-		"	ror		%C2					\n"
-		"	ror		%B2					\n"
-		"	ror		%A2					\n"
-		"	brcc	sq64_mloop%=		\n"
-		"sq64_exit%=:					\n"
-		: "+r" (output), "+r" (X2), "+d" (DX2)
-		: "r" (test), "r" (input)
-	);
-/*
-
-	asm volatile(
-
-		"	lsr		%D2					\n"	// divide DX2 by 2
-		"	ror		%C2					\n"
-		"	ror		%B2					\n"
-		"	ror		%A2					\n"
-		"	brcs	sq64_exit%=			\n"
-		"	lsr		%D2					\n"	// divide DX2 by 2 again
-		"	ror		%C2					\n"
-		"	ror		%B2					\n"
-		"	ror		%A2					\n"
-		"	brcc	sq64_mloop%=		\n"
-
-		: "+r" (output), "+r" (X2), "+r" (DX2), "=r" (test)
-		: "r" (input)
-	);
-*/
-#else // defined(useAssemblyLanguage)
 	output = 0;
 	X2 = 0;
 
@@ -1955,15 +1940,6 @@ static void SWEET64::flagSet64(uint8_t n, uint8_t z, uint8_t c)
 	flagSet((n & 0x80), SWEET64minusFlag);
 	flagSet((z == 0), SWEET64zeroFlag);
 	flagSet((c), SWEET64carryFlag);
-
-//	if (n & 0x80) SWEET64processorFlags |= (SWEET64minusFlag);
-//	else SWEET64processorFlags &= ~(SWEET64minusFlag);
-
-//	if (z) SWEET64processorFlags &= ~(SWEET64zeroFlag);
-//	else SWEET64processorFlags |= (SWEET64zeroFlag);
-
-//	if (c) SWEET64processorFlags |= (SWEET64carryFlag);
-//	else SWEET64processorFlags &= ~(SWEET64carryFlag);
 
 }
 
