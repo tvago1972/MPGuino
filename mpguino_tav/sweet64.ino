@@ -1250,15 +1250,6 @@ static void SWEET64::registerTest64(union union_64 * an)
 	flagSet((z == 0), SWEET64zeroFlag);
 	flagSet((v == 0), SWEET64overflowFlag);
 
-//	if (m & 0x80) SWEET64processorFlags |= (SWEET64minusFlag);
-//	else SWEET64processorFlags &= ~(SWEET64minusFlag);
-
-//	if (z) SWEET64processorFlags &= ~(SWEET64zeroFlag);
-//	else SWEET64processorFlags |= (SWEET64zeroFlag);
-
-//	if (v) SWEET64processorFlags &= ~(SWEET64overflowFlag);
-//	else SWEET64processorFlags |= (SWEET64overflowFlag);
-
 }
 
 static void SWEET64::mult64(void)
@@ -1756,89 +1747,89 @@ static uint32_t iSqrt(uint32_t input)
 #if defined(useAssemblyLanguage)
 
 	asm volatile(
-		"	push	r4					\n"	// save original contents for test reg
-		"	push	r5					\n"
-		"	push	r6					\n"
-		"	push	r7					\n"
-		"	push	r8					\n"	// save original contents for X2 reg
-		"	push	r9					\n"
-		"	push	r10					\n"
-		"	push	r11					\n"
-		"	push	r12					\n"	// save original contents for DX2 reg
-		"	push	r13					\n"
-		"	push	r14					\n"
-		"	push	r28					\n"
+		"	push	r4				\n"		// save original contents for test reg
+		"	push	r5				\n"
+		"	push	r6				\n"
+		"	push	r7				\n"
+		"	push	r8				\n"		// save original contents for X2 reg
+		"	push	r9				\n"
+		"	push	r10				\n"
+		"	push	r11				\n"
+		"	push	r12				\n"		// save original contents for DX2 reg
+		"	push	r13				\n"
+		"	push	r14				\n"
+		"	push	r28				\n"
 
-		"	mov		%A0, __zero_reg__	\n"	// zero out output reg
-		"	mov		%B0, __zero_reg__	\n"
-		"	mov		%C0, __zero_reg__	\n"
-		"	mov		%D0, __zero_reg__	\n"
-		"	mov		r8, __zero_reg__	\n"	// zero out X2 reg
-		"	mov		r9, __zero_reg__	\n"
-		"	mov		r10, __zero_reg__	\n"
-		"	mov		r11, __zero_reg__	\n"
-		"	mov		r12, __zero_reg__	\n"	// initialize DX2 reg with 1073741824
-		"	mov		r13, __zero_reg__	\n"
-		"	mov		r14, __zero_reg__	\n"
-		"	ldi		r28, 0x80			\n"
+		"	clr		%A0				\n"		// zero out output reg
+		"	clr		%B0				\n"
+		"	clr		%C0				\n"
+		"	clr		%D0				\n"
+		"	clr		r8				\n"		// zero out X2 reg
+		"	clr		r9				\n"
+		"	clr		r10				\n"
+		"	clr		r11				\n"
+		"	clr		r12				\n"		// initialize DX2 reg with 1073741824
+		"	clr		r13				\n"
+		"	clr		r14				\n"
+		"	ldi		r28, 0x80		\n"
 
-		"sq64_mloop%=:					\n"
-		"	lsr		r28					\n"	// divide DX2 reg by 2
-		"	ror		r14					\n"
-		"	ror		r13					\n"
-		"	ror		r12					\n"
-		"	mov		r4, r8				\n"	// initialize test reg with X2 reg
-		"	mov		r5, r9				\n"
-		"	mov		r6, r10				\n"
-		"	mov		r7, r11				\n"
-		"	add		r4, %A0				\n"	// add 2 * X * DX reg to test reg
-		"	adc		r5, %B0				\n"
-		"	adc		r6, %C0				\n"
-		"	adc		r7, %D0				\n"
-		"	add		r4, r12				\n"	// add DX2 reg to test reg
-		"	adc		r5, r13				\n"
-		"	adc		r6, r14				\n"
-		"	adc		r7, r28				\n"
-		"	lsr		%D0					\n"	// divide output reg by 2
-		"	ror		%C0					\n"
-		"	ror		%B0					\n"
-		"	ror		%A0					\n"
+		"sq64_mloop%=:				\n"
+		"	lsr		r28				\n"		// divide DX2 reg by 2
+		"	ror		r14				\n"
+		"	ror		r13				\n"
+		"	ror		r12				\n"
+		"	mov		r4, r8			\n"		// initialize test reg with X2 reg
+		"	mov		r5, r9			\n"
+		"	mov		r6, r10			\n"
+		"	mov		r7, r11			\n"
+		"	add		r4, %A0			\n"		// add 2 * X * DX reg to test reg
+		"	adc		r5, %B0			\n"
+		"	adc		r6, %C0			\n"
+		"	adc		r7, %D0			\n"
+		"	add		r4, r12			\n"		// add DX2 reg to test reg
+		"	adc		r5, r13			\n"
+		"	adc		r6, r14			\n"
+		"	adc		r7, r28			\n"
+		"	lsr		%D0				\n"		// divide output reg by 2
+		"	ror		%C0				\n"
+		"	ror		%B0				\n"
+		"	ror		%A0				\n"
 
-		"	cp		%A1, r4				\n"	// compare test reg to input reg
-		"	cpc		%B1, r5				\n"
-		"	cpc		%C1, r6				\n"
-		"	cpc		%D1, r7				\n"
-		"	brlt	sq64_cont%=			\n" // if input reg < test reg, skip
+		"	cp		%A1, r4			\n"		// compare test reg to input reg
+		"	cpc		%B1, r5			\n"
+		"	cpc		%C1, r6			\n"
+		"	cpc		%D1, r7			\n"
+		"	brlt	sq64_cont%=		\n" 	// if input reg < test reg, skip
 
-		"	mov		r8, r4				\n"	// save new (x ^ 2) reg
-		"	mov		r9, r5				\n"
-		"	mov		r10, r6				\n"
-		"	mov		r11, r7				\n"
-		"	add		%A0, r12			\n"	// add (dx ^ 2) reg to running (2 * x * dx) reg
-		"	adc		%B0, r13			\n"
-		"	adc		%C0, r14			\n"
-		"	adc		%D0, r28			\n"
+		"	mov		r8, r4			\n"		// save new (x ^ 2) reg
+		"	mov		r9, r5			\n"
+		"	mov		r10, r6			\n"
+		"	mov		r11, r7			\n"
+		"	add		%A0, r12		\n"		// add (dx ^ 2) reg to running (2 * x * dx) reg
+		"	adc		%B0, r13		\n"
+		"	adc		%C0, r14		\n"
+		"	adc		%D0, r28		\n"
 
-		"sq64_cont%=:					\n"
-		"	lsr		r28					\n"	// divide DX2 reg by 2
-		"	ror		r14					\n"
-		"	ror		r13					\n"
-		"	ror		r12					\n"
-		"	brcc	sq64_mloop%=		\n"
-		"sq64_exit%=:					\n"
+		"sq64_cont%=:				\n"
+		"	lsr		r28				\n"		// divide DX2 reg by 2
+		"	ror		r14				\n"
+		"	ror		r13				\n"
+		"	ror		r12				\n"
+		"	brcc	sq64_mloop%=	\n"
+		"sq64_exit%=:				\n"
 
-		"	pop	r28						\n"	// restore original contents of DX2 reg
-		"	pop	r14						\n"
-		"	pop	r13						\n"
-		"	pop	r12						\n"
-		"	pop	r11						\n"	// restore original contents of X2 reg
-		"	pop	r10						\n"
-		"	pop	r9						\n"
-		"	pop	r8						\n"
-		"	pop	r7						\n"	// restore original contents of test reg
-		"	pop	r6						\n"
-		"	pop	r5						\n"
-		"	pop	r4						\n"
+		"	pop	r28					\n"		// restore original contents of DX2 reg
+		"	pop	r14					\n"
+		"	pop	r13					\n"
+		"	pop	r12					\n"
+		"	pop	r11					\n"		// restore original contents of X2 reg
+		"	pop	r10					\n"
+		"	pop	r9					\n"
+		"	pop	r8					\n"
+		"	pop	r7					\n"		// restore original contents of test reg
+		"	pop	r6					\n"
+		"	pop	r5					\n"
+		"	pop	r4					\n"
 
 		: "+d" (output)						// ensure this is in r16-r31 space
 		: "d" (input)						// ensure this is in r16-r31 space

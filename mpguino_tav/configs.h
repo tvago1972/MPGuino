@@ -87,6 +87,7 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
+#define useStatusBar true						// (inw) displays a graphical bar for use with MPG display
 //#define useBluetooth true					// (inw) Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
@@ -194,13 +195,13 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useBigTimeDisplay true
 #endif // useBigTTE
 
-#ifdef useBigDTE
-#define useBigNumberDisplay true
-#endif // useBigDTE
-
 #ifdef useBigFE
 #define useBigNumberDisplay true
 #endif // useBigFE
+
+#ifdef useBigDTE
+#define useBigNumberDisplay true
+#endif // useBigDTE
 
 #ifdef useBigTimeDisplay
 #define useBigDigitDisplay true
@@ -209,6 +210,10 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #ifdef useBigNumberDisplay
 #define useBigDigitDisplay true
 #endif // useBigDTE
+
+#if defined(useStatusBar)
+#define useBigDigitDisplay true
+#endif // defined(useStatusBar)
 
 #ifdef useBarFuelEconVsTime
 #define useBarGraph true

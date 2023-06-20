@@ -44,6 +44,11 @@ Vehicle interface pins
     (if configured) Baro PF2 (ADC2), A3
     (if configured) Valt PF2 (ADC2), A2
 
+  MPGuino Colour Touch by abbalooga
+    injector sense open  PE4 (INT4), Digital 2
+    injector sense close PE5 (INT5), Digital 3
+    speed                PK0 (PCINT16), A8
+
 -------------------------------------
 configuration for alternator voltage input to MPGuino (via meelis11)
 
@@ -53,12 +58,14 @@ configuration for alternator voltage input to MPGuino (via meelis11)
                      |
                      |  R6      R5
                      o--VVV--o--VVV------------------o ground
-                        27k  |  9.6k
                              |
-                             |                         R6 (JBD)
+                             |
+                             |                         R6    (JBD)
                              o-----------------------o PC2 - legacy MPGuino hardware
                                                        PF2 - Arduino Mega 2560
-                                                       PF6 - TinkerKit! LCD module
+R5             R6                                      PF6 - TinkerKit! LCD module
+9.6K           27K - original meelis11                 PK9 - MPGuino Colour Touch by abbalooga
+10K            51K - MPGuino Colour Touch
 
 -------------------------------------
 sensor configuration for Chrysler MAP/baro sensor
@@ -111,6 +118,17 @@ sensor configuration for Chrysler MAP/baro sensor
          |       NGC POWERTRAIN CONTROL MODULE        |
           --------------------------------------------
                  (older Chrysler PCMs similar)
+
+-------------------------------------
+
+TFT Pins
+  MPGuino Colour Touch by abbalooga
+    CS         PL2, Digital 47
+    RESET      PL5, Digital 44
+    DC         PL1, Digital 48
+    SDI (MOSI) PB2, Digital 51
+    SCK        PB1, Digital 52
+    LED        PB6, Digital 12, controlled by PWM on OC1B
 
 -------------------------------------
 
@@ -167,6 +185,16 @@ LCD Pins - Adafruit RGB LCD Shield
   Arduino Mega 2560
     SCL     PD0 (SCL), Digital 21
     SDA     PD1 (SDA), Digital 20
+
+-------------------------------------
+
+Touchscreen Pins
+  MPGuino Colour Touch by abbalooga
+    T_CLK      PB5, Digital 11, software SPI
+    T_CS       PB4, Digital 10
+    T_DIN      PH6, Digital 9, software SPI
+    T_DO       PH5, Digital 8, software SPI
+    T_IRQ      PH4, Digital 7
 
 -------------------------------------
 
@@ -288,17 +316,27 @@ Expansion outputs
 
 -------------------------------------
 
-Logging outputs
+Bluetooth I/O
+  MPGuino Colour Touch by abbalooga
+    RX      D3 (TXD1), Digital 18   (USART1)
+    TX      D2 (RXD1), Digital 19
+
+-------------------------------------
+
+Logging Output / Debug Monitor I/O
   legacy MPGuino hardware
-    RX      D1 (TXD), Digital 1		(USART)
+    RX      D1 (TXD), Digital 1     (USART)
+    TX      D0 (RXD), Digital 0
 
   Arduino Mega 2560
-    RX      E1 (TXD0), Digital 1	(USART0)
+    RX      E1 (TXD0), Digital 1    (USART0)
+    TX      E0 (RXD0), Digital 0
     - or -
-    RX      D3 (TXD1), Digital 18	(USART1)
+    RX      D3 (TXD1), Digital 18   (USART1)
+    TX      D2 (RXD1), Digital 19
 
   TinkerKit! LCD module
-    D-								(USB)
+    D-                              (USB)
     D+
 
  Program overview
@@ -367,6 +405,7 @@ static const uint8_t mainDisplayFormatSize = mainDisplayPageCount * 4;
 #include "m_twi.h"
 #include "m_usb.h"
 #include "m_lcd.h"
+#include "m_tft.h"
 #include "functions.h"
 #include "text.h"
 #include "feature_base.h"
@@ -841,6 +880,10 @@ static const buttonVariable bpListCoastdown[] PROGMEM = {
 #define nextAllowedValue 0
 static const uint8_t mainDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue mainDisplayIdx + 1
+#if defined(useStatusBar)
+static const uint8_t statusBarIdx =				nextAllowedValue;
+#define nextAllowedValue statusBarIdx + 1
+#endif // defined(useStatusBar)
 #ifdef useBigFE
 static const uint8_t bigFEdisplayIdx =				nextAllowedValue;
 #define nextAllowedValue bigFEdisplayIdx + 1
@@ -1003,6 +1046,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 // the following screen entries are in the top-down menu list
 
 	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler,		bpListMainDisplay}
+#if defined(useStatusBar)
+	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	66,							bigDigit::displayHandler,			bpListBigNum}
+#endif // defined(useStatusBar)
 #ifdef useBigFE
 	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}
 #endif // useBigFE
@@ -1060,7 +1106,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{0,							menuDisplayIdx | 0x80,				1,					displayCountVisible,		menu::displayHandler,				bpListMenu}
 	,{0,							parameterEditDisplayIdx | 0x80,		1,					12,							parameterEdit::displayHandler,		bpListParameterEdit}
 #ifdef useClockDisplay
-	,{0,							clockSetDisplayIdx | 0x80,			1,					4,							bigDigit::displayHandler,			bpListClockSet}
+	,{0,							clockSetDisplayIdx | 0x80,			1,					4,							clockSet::displayHandler,			bpListClockSet}
 #endif // useClockDisplay
 #ifdef useSavedTrips
 	,{0,							tripSaveDisplayIdx,					1,					3,							tripSupport::displayHandler,		bpListTripSave}
