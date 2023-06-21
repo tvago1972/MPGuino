@@ -4,6 +4,9 @@ namespace LCD /* LCD hardware support section prototype */
 
 	static void init(void);
 	static void shutdown(void);
+#if defined(useLCDfonts)
+	static void loadCGRAMfont(const char * fontPtr);
+#endif // defined(useLCDfonts)
 #if defined(useLCDgraphics)
 	static void loadCGRAMcharacter(uint8_t chr, char * chrData);
 	static void writeCGRAMbyte(uint8_t cgrAddress, uint8_t chr);

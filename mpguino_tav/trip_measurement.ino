@@ -424,19 +424,19 @@ static void tripSupport::select(void)
 
 		case 0: // save
 			doWriteTrip(tripSlot);
-			displayStatus(tripSlot, PSTR("Save"));
+			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Save"));
 			mainDisplay::returnToMain();
 			break;
 
 		case 1: // load
 			doReadTrip(tripSlot);
-			displayStatus(tripSlot, PSTR("Load"));
+			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Load"));
 			mainDisplay::returnToMain();
 			break;
 
 		case 2: // reset
 			doResetTrip(tripSlot);
-			displayStatus(tripSlot, PSTR("Reset"));
+			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Reset"));
 			mainDisplay::returnToMain();
 			break;
 
@@ -491,17 +491,6 @@ static uint8_t tripSupport::doWriteTrip(uint8_t tripSlot)
 }
 
 #endif // useSavedTrips
-static void tripSupport::displayStatus(uint8_t tripSlot, const char * str)
-{
-
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, msTripNameString, tripSlot + 1);
-	text::stringOut(devLCD, PSTR(" Trip "));
-	text::stringOut(devLCD, str);
-	delayS(holdDelay);
-
-}
-
 static void tripSupport::doResetTrip(uint8_t tripSlot)
 {
 
@@ -535,7 +524,7 @@ static void tripSupport::resetTank(void)
 {
 
 	doResetTrip(1);
-	displayStatus(1, PSTR("Reset"));
+	text::statusOut(devLCD, msTripNameString, 2, PSTR(" Trip Reset"));
 
 }
 
@@ -543,7 +532,7 @@ static void tripSupport::resetCurrent(void)
 {
 
 	doResetTrip(0);
-	displayStatus(0, PSTR("Reset"));
+	text::statusOut(devLCD, msTripNameString, 1, PSTR(" Trip Reset"));
 
 }
 

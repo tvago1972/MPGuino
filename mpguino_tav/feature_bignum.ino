@@ -95,55 +95,37 @@ static void clockSet::cancel(void)
 }
 
 #endif // useClockDisplay
-#ifdef useBigDigitDisplay
-/* Big Digit Output support section */
+#if defined(useStatusBar)
+/* Status Bar Output support section */
 
-static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+// normalizes instant fuel economy relative to either current or tank trip fuel economy, then converts to the range 0-255
+//
+static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch (trip distance)
+	instrLdRegTripVar, 0x01, instantIdx, rvInjCycleIdx,	// fetch (inst quantity)
+	instrMul2by1,										// calculate (inst distance) * (trip quantity) as left term
+	instrSwapReg, 0x23,									// swap right term and (trip quantity) values
+	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch (trip quantity)
+	instrLdRegTripVar, 0x01, instantIdx, rvVSSpulseIdx,	// fetch (inst distance)
+	instrMul2by1,										// calculate (inst quantity) * (trip distance) as right term
+	instrBranchIfFuelOverDist, 2,						// if MPGuino is in fuel/dist mode, skip ahead
+	instrSwapReg, 0x23,									// swap the numerator and denominator terms around
+
+//cont:
+	instrMul2byByte, 3,									// set such that if inst FE == trip FE, output 2/3
+	instrLdReg, 0x21,									// move into denominator position
+	instrLdReg, 0x32,									// get numerator term
+	instrMul2byByte, 2,									// set such that if inst FE == trip FE, output 2/3
+	instrMul2byByte, 0xFF,								// convert to range 0-255
+	instrDiv2by1,										// 
+	instrDone											// exit to caller
+};
+
+static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
 {
 
 	uint8_t retVal = 0;
-	uint8_t thisMenuLevel = menuLevel;
-#if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
-	uint8_t tripIdx = pgm_read_byte(&msTripList[(unsigned int)(cursorPos)]);
-	char * str;
-#endif // defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
-#ifdef useBigFE
-	uint8_t i;
-#endif // useBigFE
-
-	switch (thisMenuLevel)
-	{
-
-#if defined(useStatusBar)
-		case statusBarIdx:
-			break;
-
-#endif // defined(useStatusBar)
-#ifdef useBigFE
-		case bigFEdisplayIdx:
-			str = PSTR(" Fuel Econ" tcEOSCR);
-			break;
-
-#endif // useBigFE
-#ifdef useBigDTE
-		case bigDTEdisplayIdx:
-			str = PSTR(" DistToEmpty" tcEOSCR);
-			break;
-
-#endif // useBigDTE
-#ifdef useBigTTE
-		case bigTTEdisplayIdx:
-			str = PSTR(" TimeToEmpty" tcEOSCR);
-			break;
-
-#endif // useBigTTE
-		default:
-#ifdef useClockDisplay
-			if (cursorPos == 255) thisMenuLevel = clockShowDisplayIdx;
-#endif // useClockDisplay
-			break;
-
-	}
+	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos + 1)]);
 
 	switch (cmd)
 	{
@@ -152,103 +134,16 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 			break;
 
 		case menuEntryIdx:
-			switch (thisMenuLevel)
-			{
-
-#ifdef useBigFE
-				case bigFEdisplayIdx:
-#endif // useBigFE
-#ifdef useBigDTE
-				case bigDTEdisplayIdx:
-#endif // useBigDTE
-#ifdef useBigTTE
-				case bigTTEdisplayIdx:
-#endif // useBigTTE
-#ifdef useClockDisplay
-				case clockShowDisplayIdx:
-#endif // useClockDisplay
-					loadCGRAMfont(bigDigitFont);
-
-					LCD::flushCGRAM();
-
-					break;
-
-				default:
-					break;
-
-			}
-
 		case menuCursorUpdateIdx:
-			switch (thisMenuLevel)
-			{
-
-#ifdef useBigFE
-				case bigFEdisplayIdx:
-#endif // useBigFE
-#ifdef useBigDTE
-				case bigDTEdisplayIdx:
-#endif // useBigDTE
-#ifdef useBigTTE
-				case bigTTEdisplayIdx:
-#endif // useBigTTE
-#if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
-					displayStatus(str, cursorPos);
-					break;
-
-#endif // defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
-#ifdef useClockDisplay
-				case clockShowDisplayIdx:
-					text::statusOut(devLCD, PSTR("Clock" tcEOSCR));
-					break;
-
-#endif // useClockDisplay
-				default:
-					break;
-
-			}
-
+			text::statusOut(devLCD, msTripNameString, cursorPos + 1, PSTR(" vs INST" tcEOSCR));
 		case menuOutputDisplayIdx:
-			switch (thisMenuLevel)
-			{
-
-#if defined(useStatusBar)
-				case statusBarIdx:
-					outputStatusBar(cursorPos * 4 + 1);
-					break;
-
-#endif // defined(useStatusBar)
-#ifdef useBigFE
-				case bigFEdisplayIdx:
-					i = outputNumber(tripIdx, tFuelEcon, 3) - calcFormatFuelEconomyIdx;
-
-					text::stringOut(devLCD, msTripNameString, cursorPos);
-					text::gotoXY(devLCD, 12, 1);
-					text::stringOut(devLCD, bigFElabels, i);
-					break;
-
-#endif // useBigFE
-#ifdef useBigDTE
-				case bigDTEdisplayIdx:
-					outputNumber(tripIdx, tDistanceToEmpty, 4);
-					break;
-
-#endif // useBigDTE
-#ifdef useBigTTE
-				case bigTTEdisplayIdx:
-					outputTime(ull2str(mBuff1, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
-					break;
-
-#endif // useBigTTE
-#ifdef useClockDisplay
-				case clockShowDisplayIdx:
-					outputTime(ull2str(mBuff1, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
-					break;
-
-#endif // useClockDisplay
-				default:
-					break;
-
-			}
+			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
+			text::charOut(devLCD, ' ', 8);
+#if defined(useSpiffyTripLabels)
+			mainDisplay::outputFunction(3, (lblInstantIdx << 8 ) | (tFuelEcon), 136, 0, msTripBitPattern);
+#else // defined(useSpiffyTripLabels)
+			mainDisplay::outputFunction(3, (lblInstantIdx << 8 ) | (tFuelEcon), 136, 0);
+#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
@@ -260,58 +155,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 
 }
 
-static void bigDigit::loadCGRAMfont(const char * fontPtr)
-{
-
-	uint8_t numChars;
-
-	numChars = pgm_read_byte(fontPtr++); // get the number of characters in the font
-
-	for (uint8_t chr = 0; chr < numChars * 8; chr++) LCD::writeCGRAMbyte(chr, pgm_read_byte(fontPtr++)); // copy the CGRAM character data into RAM
-
-}
-
-#ifdef useBigTimeDisplay
-static void bigDigit::outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos)
-{
-
-	val[4] = val[0];
-	val[5] = val[1];
-	val[6] = ':';
-	val[7] = val[2];
-	val[8] = val[3];
-	val[9] = 0;
-
-	if ((blinkFlag) == 0) // if it's time to blink something
-	{
-
-		if (blinkPos== 4) val[6] = ';'; // if hh:mm separator is selected, blink it
-		else if (blinkPos < 2) val[(unsigned int)(blinkPos + 4)] = ' '; // if digit 0 or 1 is selected, blink it
-		else if (blinkPos < 4) val[(unsigned int)(blinkPos + 5)] = ' '; // otherwise, if digit 2 or 3 is selected, blink it
-
-	}
-
-	outputNumberString(&val[4]);
-
-}
-
-#endif // useBigTimeDisplay
-#ifdef useBigNumberDisplay
-static uint8_t bigDigit::outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength)
-{
-
-	calcFuncObj thisCalcFuncObj;
-
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
-	outputNumberString(thisCalcFuncObj.strBuffer); // output the number
-
-	return thisCalcFuncObj.calcFmtIdx; // for big MPG label
-
-}
-
-#endif // useBigNumberDisplay
-#if defined(useStatusBar)
-static void bigDigit::outputStatusBar(uint16_t val) // takes an input number between 0 and 255, anything outside is out of range
+static void statusBar::outputStatusBar(uint16_t val) // takes an input number between 0 and 255, anything outside is out of range
 {
 
 	uint8_t flg;
@@ -322,7 +166,7 @@ static void bigDigit::outputStatusBar(uint16_t val) // takes an input number bet
 	if (val < 256) // determine translated range and left endcap character
 	{
 
-		loadCGRAMfont(statusBarFont); // load initial status bar custom characters
+		LCD::loadCGRAMfont(statusBarFont); // load initial status bar custom characters
 
 		val *= (uint16_t)(statusBarLength);
 		val /= 255;
@@ -376,7 +220,7 @@ static void bigDigit::outputStatusBar(uint16_t val) // takes an input number bet
 	else
 	{
 
-		loadCGRAMfont(statusBarOverflowFont); // load initial status bar overflow custom characters
+		LCD::loadCGRAMfont(statusBarOverflowFont); // load initial status bar overflow custom characters
 
 		text::charOut(devLCD, 0xF0);
 		text::charOut(devLCD, 0xF2, 14);
@@ -389,7 +233,7 @@ static void bigDigit::outputStatusBar(uint16_t val) // takes an input number bet
 
 }
 
-static void bigDigit::writeStatusBarElement(uint8_t chr, uint8_t val)
+static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 {
 
 	uint8_t cgrAddress;
@@ -412,6 +256,200 @@ static void bigDigit::writeStatusBarElement(uint8_t chr, uint8_t val)
 }
 
 #endif // defined(useStatusBar)
+#ifdef useBigDigitDisplay
+/* Big Digit Output support section */
+
+static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+{
+
+	uint8_t retVal = 0;
+	uint8_t thisMenuLevel = menuLevel;
+#if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
+	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos)]);
+	char * str;
+#endif // defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
+#ifdef useBigFE
+	uint8_t i;
+#endif // useBigFE
+
+	switch (thisMenuLevel)
+	{
+
+#ifdef useBigFE
+		case bigFEdisplayIdx:
+			str = PSTR(" Fuel Econ" tcEOSCR);
+			break;
+
+#endif // useBigFE
+#ifdef useBigDTE
+		case bigDTEdisplayIdx:
+			str = PSTR(" DistToEmpty" tcEOSCR);
+			break;
+
+#endif // useBigDTE
+#ifdef useBigTTE
+		case bigTTEdisplayIdx:
+			str = PSTR(" TimeToEmpty" tcEOSCR);
+			break;
+
+#endif // useBigTTE
+		default:
+#ifdef useClockDisplay
+			if (cursorPos == 255) thisMenuLevel = clockShowDisplayIdx;
+#endif // useClockDisplay
+			break;
+
+	}
+
+	switch (cmd)
+	{
+
+		case menuExitIdx:
+			break;
+
+		case menuEntryIdx:
+			switch (thisMenuLevel)
+			{
+
+#ifdef useBigFE
+				case bigFEdisplayIdx:
+#endif // useBigFE
+#ifdef useBigDTE
+				case bigDTEdisplayIdx:
+#endif // useBigDTE
+#ifdef useBigTTE
+				case bigTTEdisplayIdx:
+#endif // useBigTTE
+#ifdef useClockDisplay
+				case clockShowDisplayIdx:
+#endif // useClockDisplay
+					LCD::loadCGRAMfont(bigDigitFont);
+
+					LCD::flushCGRAM();
+
+					break;
+
+				default:
+					break;
+
+			}
+
+		case menuCursorUpdateIdx:
+			switch (thisMenuLevel)
+			{
+
+#ifdef useBigFE
+				case bigFEdisplayIdx:
+#endif // useBigFE
+#ifdef useBigDTE
+				case bigDTEdisplayIdx:
+#endif // useBigDTE
+#ifdef useBigTTE
+				case bigTTEdisplayIdx:
+#endif // useBigTTE
+#if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
+					text::statusOut(devLCD, msTripNameString, cursorPos, str);
+					break;
+
+#endif // defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
+#ifdef useClockDisplay
+				case clockShowDisplayIdx:
+					text::statusOut(devLCD, PSTR("Clock" tcEOSCR));
+					break;
+
+#endif // useClockDisplay
+				default:
+					break;
+
+			}
+
+		case menuOutputDisplayIdx:
+			switch (thisMenuLevel)
+			{
+
+#ifdef useBigFE
+				case bigFEdisplayIdx:
+					i = outputNumber(tripIdx, tFuelEcon, 3) - calcFormatFuelEconomyIdx;
+
+					text::gotoXY(devLCD, 12, 0);
+					text::stringOut(devLCD, msTripNameString, cursorPos);
+					text::gotoXY(devLCD, 12, 1);
+					text::stringOut(devLCD, bigFElabels, i);
+					break;
+
+#endif // useBigFE
+#ifdef useBigDTE
+				case bigDTEdisplayIdx:
+					outputNumber(tripIdx, tDistanceToEmpty, 4);
+					break;
+
+#endif // useBigDTE
+#ifdef useBigTTE
+				case bigTTEdisplayIdx:
+					outputTime(ull2str(mBuff1, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
+					break;
+
+#endif // useBigTTE
+#ifdef useClockDisplay
+				case clockShowDisplayIdx:
+					outputTime(ull2str(mBuff1, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
+					break;
+
+#endif // useClockDisplay
+				default:
+					break;
+
+			}
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
+#ifdef useBigTimeDisplay
+static void bigDigit::outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos)
+{
+
+	val[4] = val[0];
+	val[5] = val[1];
+	val[6] = ':';
+	val[7] = val[2];
+	val[8] = val[3];
+	val[9] = 0;
+
+	if ((blinkFlag) == 0) // if it's time to blink something
+	{
+
+		if (blinkPos== 4) val[6] = ';'; // if hh:mm separator is selected, blink it
+		else if (blinkPos < 2) val[(unsigned int)(blinkPos + 4)] = ' '; // if digit 0 or 1 is selected, blink it
+		else if (blinkPos < 4) val[(unsigned int)(blinkPos + 5)] = ' '; // otherwise, if digit 2 or 3 is selected, blink it
+
+	}
+
+	outputNumberString(&val[4]);
+
+}
+
+#endif // useBigTimeDisplay
+#ifdef useBigNumberDisplay
+static uint8_t bigDigit::outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength)
+{
+
+	calcFuncObj thisCalcFuncObj;
+
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
+	outputNumberString(thisCalcFuncObj.strBuffer); // output the number
+
+	return thisCalcFuncObj.calcFmtIdx; // for big MPG label
+
+}
+
+#endif // useBigNumberDisplay
 static void bigDigit::outputNumberString(char * str)
 {
 
@@ -460,16 +498,6 @@ static void bigDigit::outputDigit(const char * digitDefStr, uint8_t xPos, uint8_
 	text::gotoXY(devLCD, xPos, yPos);
 	text::stringOut(devLCD, digitDefStr, strIdx);
 	text::charOut(devLCD, endChar);
-
-}
-
-static void bigDigit::displayStatus(const char * str, uint8_t cursorPos)
-{
-
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, msTripNameString, cursorPos);
-	text::stringOut(devLCD, str); // briefly display screen name
-	delayS(holdDelay);
 
 }
 

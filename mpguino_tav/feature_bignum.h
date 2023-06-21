@@ -30,218 +30,16 @@ static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
 };
 
 #endif // useClockDisplay
-#ifdef useBigDigitDisplay
-namespace bigDigit /* Big Digit output support section prototype */
+#if defined(useStatusBar)
+namespace statusBar /* Status Bar Output support section prototype */
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
-	static void loadCGRAMfont(const char * fontPtr);
-#ifdef useBigTimeDisplay
-	static void outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos);
-#endif // useBigTimeDisplay
-#ifdef useBigNumberDisplay
-	static uint8_t outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
-#endif // useBigNumberDisplay
-#if defined(useStatusBar)
 	static void outputStatusBar(uint16_t val);
 	static void writeStatusBarElement(uint8_t chr, uint8_t val);
-#endif // defined(useStatusBar)
-	static void outputNumberString(char * str);
-	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
-	static void displayStatus(const char * str, uint8_t cursorPos);
 
 };
 
-#ifdef useBigFE
-static const char bigFElabels[] PROGMEM = {
-	"MPG" tcEOSCR
-	"L100" tcEOSCR
-	"G100" tcEOSCR
-	"KPL" tcEOSCR
-};
-
-#endif // useBigFE
-#ifdef useSpiffyBigChars
-static const char bigDigitChars1[] PROGMEM = {
-	0xF6, 0xF0, 0xF7, 0,
-	0xF0, 0xF4, 0x20, 0,
-	0xF2, 0xF2, 0xF7, 0,
-	0xF0, 0xF2, 0xF7, 0,
-	0xF4, 0xF1, 0xF4, 0,
-	0xF4, 0xF2, 0xF2, 0,
-	0xF6, 0xF2, 0xF2, 0,
-	0xF0, 0xF0, 0xF5, 0,
-	0xF6, 0xF2, 0xF7, 0,
-	0xF6, 0xF2, 0xF7, 0,
-	0x20, 0x20, 0x20, 0,
-	0xF1, 0xF1, 0xF1, 0
-};
-
-static const char bigDigitChars2[] PROGMEM = {
-	0xF3, 0xF1, 0xF5, 0,
-	0x20, 0xF4, 0x20, 0,
-	0xF4, 0xF1, 0xF1, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0x20, 0x20, 0xF4, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0xF3, 0xF1, 0xF5, 0,
-	0x20, 0xF6, 0x20, 0,
-	0xF3, 0xF1, 0xF5, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0x20, 0x20, 0x20, 0,
-	0x20, 0x20, 0x20, 0
-};
-
-static const char bigDigitFont[] PROGMEM = {
-	8, // number of characters in font
-
-	0b00011111, // char 0xF0
-	0b00011111,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-
-	0b00000000, // char 0xF1
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00011111,
-	0b00011111,
-
-	0b00011111, // char 0xF2
-	0b00011111,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00011111,
-	0b00011111,
-
-	0b00011111, // char 0xF3
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00001111,
-	0b00000111,
-
-	0b00011111, // char 0xF4
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-
-	0b00011111, // char 0xF5
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011110,
-	0b00011100,
-
-	0b00000111, // char 0xF6
-	0b00001111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-
-	0b00011100, // char 0xF7
-	0b00011110,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111
-};
-
-#else // useSpiffyBigChars
-static const char bigDigitChars1[] PROGMEM = {
-	0xF3, 0xF0, 0xF3, 0,
-	0xF0, 0xF3, 0x20, 0,
-	0xF2, 0xF2, 0xF3, 0,
-	0xF0, 0xF2, 0xF3, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0xF3, 0xF2, 0xF2, 0,
-	0xF3, 0xF2, 0xF2, 0,
-	0xF0, 0xF0, 0xF3, 0,
-	0xF3, 0xF2, 0xF3, 0,
-	0xF3, 0xF2, 0xF3, 0,
-	0x20, 0x20, 0x20, 0,
-	0xF1, 0xF1, 0xF1, 0
-};
-
-static const char bigDigitChars2[] PROGMEM = {
-	0xF3, 0xF1, 0xF3, 0,
-	0xF1, 0xF3, 0xF1, 0,
-	0xF3, 0xF1, 0xF1, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0x20, 0x20, 0xF3, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0x20, 0xF3, 0x20, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0x20, 0x20, 0x20, 0,
-	0x20, 0x20, 0x20, 0
-};
-
-static const char bigDigitFont[] PROGMEM = {
-	4, // number of characters in font
-
-	0b00011111, // char 0xF0
-	0b00011111,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-
-	0b00000000, // char 0xF1
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00011111,
-	0b00011111,
-
-	0b00011111, // char 0xF2
-	0b00011111,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00000000,
-	0b00011111,
-	0b00011111,
-
-	0b00011111, // char 0xF3
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-	0b00011111,
-};
-
-#endif // useSpiffyBigChars
-#endif // useBigDigitDisplay
-#if defined(useStatusBar)
 // format for below entries is as follows:
 //
 // 0bxxxy yyyy
@@ -436,3 +234,208 @@ static const uint8_t statusBarOverflowFont[] PROGMEM = {
 };
 
 #endif // defined(useStatusBar)
+#ifdef useBigDigitDisplay
+namespace bigDigit /* Big Digit output support section prototype */
+{
+
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+#ifdef useBigTimeDisplay
+	static void outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos);
+#endif // useBigTimeDisplay
+#ifdef useBigNumberDisplay
+	static uint8_t outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
+#endif // useBigNumberDisplay
+	static void outputNumberString(char * str);
+	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
+
+};
+
+#ifdef useBigFE
+static const char bigFElabels[] PROGMEM = {
+	"MPG" tcEOSCR
+	"L100" tcEOSCR
+	"G100" tcEOSCR
+	"KPL" tcEOSCR
+};
+
+#endif // useBigFE
+#ifdef useSpiffyBigChars
+static const char bigDigitChars1[] PROGMEM = {
+	0xF6, 0xF0, 0xF7, 0,
+	0xF0, 0xF4, 0x20, 0,
+	0xF2, 0xF2, 0xF7, 0,
+	0xF0, 0xF2, 0xF7, 0,
+	0xF4, 0xF1, 0xF4, 0,
+	0xF4, 0xF2, 0xF2, 0,
+	0xF6, 0xF2, 0xF2, 0,
+	0xF0, 0xF0, 0xF5, 0,
+	0xF6, 0xF2, 0xF7, 0,
+	0xF6, 0xF2, 0xF7, 0,
+	0x20, 0x20, 0x20, 0,
+	0xF1, 0xF1, 0xF1, 0
+};
+
+static const char bigDigitChars2[] PROGMEM = {
+	0xF3, 0xF1, 0xF5, 0,
+	0x20, 0xF4, 0x20, 0,
+	0xF4, 0xF1, 0xF1, 0,
+	0xF1, 0xF1, 0xF5, 0,
+	0x20, 0x20, 0xF4, 0,
+	0xF1, 0xF1, 0xF5, 0,
+	0xF3, 0xF1, 0xF5, 0,
+	0x20, 0xF6, 0x20, 0,
+	0xF3, 0xF1, 0xF5, 0,
+	0xF1, 0xF1, 0xF5, 0,
+	0x20, 0x20, 0x20, 0,
+	0x20, 0x20, 0x20, 0
+};
+
+static const char bigDigitFont[] PROGMEM = {
+	8, // number of characters in font
+
+	0b00011111, // char 0xF0
+	0b00011111,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+
+	0b00000000, // char 0xF1
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00011111,
+	0b00011111,
+
+	0b00011111, // char 0xF2
+	0b00011111,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00011111,
+	0b00011111,
+
+	0b00011111, // char 0xF3
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00001111,
+	0b00000111,
+
+	0b00011111, // char 0xF4
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+
+	0b00011111, // char 0xF5
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011110,
+	0b00011100,
+
+	0b00000111, // char 0xF6
+	0b00001111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+
+	0b00011100, // char 0xF7
+	0b00011110,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111
+};
+
+#else // useSpiffyBigChars
+static const char bigDigitChars1[] PROGMEM = {
+	0xF3, 0xF0, 0xF3, 0,
+	0xF0, 0xF3, 0x20, 0,
+	0xF2, 0xF2, 0xF3, 0,
+	0xF0, 0xF2, 0xF3, 0,
+	0xF3, 0xF1, 0xF3, 0,
+	0xF3, 0xF2, 0xF2, 0,
+	0xF3, 0xF2, 0xF2, 0,
+	0xF0, 0xF0, 0xF3, 0,
+	0xF3, 0xF2, 0xF3, 0,
+	0xF3, 0xF2, 0xF3, 0,
+	0x20, 0x20, 0x20, 0,
+	0xF1, 0xF1, 0xF1, 0
+};
+
+static const char bigDigitChars2[] PROGMEM = {
+	0xF3, 0xF1, 0xF3, 0,
+	0xF1, 0xF3, 0xF1, 0,
+	0xF3, 0xF1, 0xF1, 0,
+	0xF1, 0xF1, 0xF3, 0,
+	0x20, 0x20, 0xF3, 0,
+	0xF1, 0xF1, 0xF3, 0,
+	0xF3, 0xF1, 0xF3, 0,
+	0x20, 0xF3, 0x20, 0,
+	0xF3, 0xF1, 0xF3, 0,
+	0xF1, 0xF1, 0xF3, 0,
+	0x20, 0x20, 0x20, 0,
+	0x20, 0x20, 0x20, 0
+};
+
+static const char bigDigitFont[] PROGMEM = {
+	4, // number of characters in font
+
+	0b00011111, // char 0xF0
+	0b00011111,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+
+	0b00000000, // char 0xF1
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00011111,
+	0b00011111,
+
+	0b00011111, // char 0xF2
+	0b00011111,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00000000,
+	0b00011111,
+	0b00011111,
+
+	0b00011111, // char 0xF3
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+	0b00011111,
+};
+
+#endif // useSpiffyBigChars
+#endif // useBigDigitDisplay

@@ -1113,6 +1113,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 									button::inject(terminalByte); // inject the parsed button press value into timer0
 									terminalState = 14;
+
 									i = 0;
 
 								}
@@ -1126,6 +1127,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 									parameterEdit::onEEPROMchange(prgmPtr, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
 									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
+
 									i = 0;
 
 								}
@@ -1141,6 +1143,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 									SWEET64::runPrgm(prgmPtr, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
 									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
+
 									i = 0;
 
 								}

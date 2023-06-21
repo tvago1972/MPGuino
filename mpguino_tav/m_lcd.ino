@@ -230,6 +230,19 @@ static void LCD::shutdown(void)
 #endif // use4BitLCD
 }
 
+#if defined(useLCDfonts)
+static void LCD::loadCGRAMfont(const char * fontPtr)
+{
+
+	uint8_t numChars;
+
+	numChars = pgm_read_byte(fontPtr++); // get the number of characters in the font
+
+	for (uint8_t chr = 0; chr < numChars * 8; chr++) writeCGRAMbyte(chr, pgm_read_byte(fontPtr++)); // copy the CGRAM character data into RAM
+
+}
+
+#endif // defined(useLCDfonts)
 #if defined(useLCDgraphics)
 static void LCD::loadCGRAMcharacter(uint8_t chr, char * chrData)
 {

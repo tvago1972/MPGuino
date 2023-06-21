@@ -4,11 +4,11 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 {
 
 	uint8_t retVal = 0;
-
 #if defined(trackIdleEOCdata)
-	pageFunc pageFormatFunc;
 
+	pageFunc pageFormatFunc;
 #endif // defined(trackIdleEOCdata)
+
 	switch (cmd)
 	{
 
@@ -32,28 +32,31 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 
 				case (afVehicleStoppedFlag | afButtonFlag):
 					pageFormatFunc = getMainIdlePageFormats;
+					retVal = 0;
 					break;
 
 				case (afEngineOffFlag | afButtonFlag):
 					pageFormatFunc = getMainEOCpageFormats;
+					retVal = 0;
 					break;
 
 				default:
 					pageFormatFunc = getMainDisplayPageFormat;
+					retVal = cursorPos;
 					break;
 
 			}
 
 #if defined(useSpiffyTripLabels)
-			outputPage(pageFormatFunc, 0, 136, 0, msTripBitPattern);
+			outputPage(pageFormatFunc, retVal, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
-			outputPage(pageFormatFunc, 0, 136, 0);
+			outputPage(pageFormatFunc, retVal, 136, 0);
 #endif // defined(useSpiffyTripLabels)
 #else // defined(trackIdleEOCdata)
 #if defined(useSpiffyTripLabels)
-			outputPage(getMainDisplayPageFormat, 0, 136, 0, msTripBitPattern);
+			outputPage(getMainDisplayPageFormat, cursorPos, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
-			outputPage(getMainDisplayPageFormat, 0, 136, 0);
+			outputPage(getMainDisplayPageFormat, cursorPos, 136, 0);
 #endif // defined(useSpiffyTripLabels)
 #endif // defined(trackIdleEOCdata)
 

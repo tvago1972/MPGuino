@@ -96,18 +96,30 @@ static void text::stringOut(interfaceDevice &dev, char * str)
 
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * s, uint8_t strIdx)
-{
-
-	statusOut(dev, findStr(s, strIdx));
-
-}
-
-static void text::statusOut(interfaceDevice &dev, const char * s)
+static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str)
 {
 
 	initStatus(dev);
-	stringOut(dev, s);
+	stringOut(dev, findStr(sList, strIdx));
+	stringOut(dev, str);
+	gotoXY(dev, 0, 0); // go to the first line
+	delayS(holdDelay);
+
+}
+
+static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx)
+{
+
+	statusOut(dev, findStr(sList, strIdx));
+
+}
+
+static void text::statusOut(interfaceDevice &dev, const char * str)
+{
+
+	initStatus(dev);
+	stringOut(dev, str);
+	gotoXY(dev, 0, 0); // go to the first line
 	delayS(holdDelay);
 
 }

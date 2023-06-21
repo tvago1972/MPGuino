@@ -211,10 +211,6 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useBigDigitDisplay true
 #endif // useBigDTE
 
-#if defined(useStatusBar)
-#define useBigDigitDisplay true
-#endif // defined(useStatusBar)
-
 #ifdef useBarFuelEconVsTime
 #define useBarGraph true
 #endif // useBarFuelEconVsTime
@@ -223,9 +219,13 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useBarGraph true
 #endif // useBarFuelEconVsSpeed
 
-#if defined(useSpiffyTripLabels) || useBigDigitDisplay || useBarGraph
+#if defined(useBigDigitDisplay) || defined(useStatusBar)
+#define useLCDfonts true
+#endif // defined(useBigDigitDisplay) || defined(useStatusBar)
+
+#if defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
 #define useLCDgraphics true
-#endif // defined(useSpiffyTripLabels) || useBigDigitDisplay || useBarGraph
+#endif // defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
 
 #if defined(useDebugTerminal)
 #define useIsqrt true

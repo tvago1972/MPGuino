@@ -616,7 +616,7 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	,{buttonsUp,		menu::noSupport}
 };
 
-#ifdef useBigDigitDisplay
+#if defined(useBigDigitDisplay) || defined(useStatusBar)
 static const buttonVariable bpListBigNum[] PROGMEM = {
 	 {btnShortPressR,	cursor::shortRight}
 	,{btnShortPressL,	cursor::shortLeft}
@@ -651,7 +651,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 	,{buttonsUp,		menu::noSupport}
 };
 
-#endif // useBigDigitDisplay
+#endif // defined(useBigDigitDisplay) || defined(useStatusBar)
 #ifdef useClockDisplay
 static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	cursor::shortRight}
@@ -1047,7 +1047,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler,		bpListMainDisplay}
 #if defined(useStatusBar)
-	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	66,							bigDigit::displayHandler,			bpListBigNum}
+	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	2,							statusBar::displayHandler,			bpListBigNum}
 #endif // defined(useStatusBar)
 #ifdef useBigFE
 	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}

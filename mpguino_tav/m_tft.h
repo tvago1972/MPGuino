@@ -1,4 +1,4 @@
-#elif defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
 
 #define SPI_DATA 11		// pin 17 / PB3 / MOSI
 #define SPI_CLOCK 13	// pin 19 / PB5 / SCK

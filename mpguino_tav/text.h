@@ -13,7 +13,8 @@ namespace text /* text string output section prototype */
 
 	static void setModeOnCondition(interfaceDevice &dev, uint8_t condition, uint8_t odvFlag);
 	static void stringOut(interfaceDevice &dev, char * str);
-	static void statusOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
+	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str);
+	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx);
 	static void statusOut(interfaceDevice &dev, const char * str);
 	static void stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
 	static void stringOut(interfaceDevice &dev, const char * str);

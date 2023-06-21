@@ -28,7 +28,6 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 	static uint8_t doWriteTrip(uint8_t tripSlot);
 	static uint8_t doAutoAction(uint8_t taaMode);
 #endif // useSavedTrips
-	static void displayStatus(uint8_t tripSlot, const char * str);
 	static void doResetTrip(uint8_t tripSlot);
 	static void resetCurrent(void);
 	static void resetTank(void);
