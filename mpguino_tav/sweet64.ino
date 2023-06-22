@@ -1157,7 +1157,7 @@ static void SWEET64::sbc64(union union_64 * an, union union_64 * ann, uint8_t sb
 
 	asm volatile (
 		"	clc						\n"
-		"	mov	%A2, __zero_reg__	\n"		// initialize zero flag
+		"	clr	%A2					\n"		// initialize zero flag
 		"	ldi	%A4, 8				\n"		// initialize counter
 
 		"l_sub64%=:					\n"
@@ -1170,15 +1170,14 @@ static void SWEET64::sbc64(union union_64 * an, union union_64 * ann, uint8_t sb
 
 		"c_sub64%=:					\n"
 		"	or	%A2, %A3			\n"		// update zero flag
-//		"	adiw	%a0, 1			\n"		// this does not work for some reason
-		"	ld	__tmp_reg__, %a0+	\n"		// there is apparently no way to directly increment %a0
+		"	ld	%A1, %a0+			\n"		// there is apparently no way to directly increment %a0
 		"	dec	%A4					\n"
 		"	brne l_sub64%=			\n"
 
 		"	mov	%A1, __zero_reg__	\n"		// initialize carry flag
 		"	adc	%A1, __zero_reg__	\n"		// save carry flag
-		: "+e" (an), "+r" (c), "+r" (z), "+r" (m), "+r" (x)
-		: "e" (ann), "r" (sbcFlag)
+		: "+e" (an), "+d" (c), "+d" (z), "+d" (m), "+d" (x)
+		: "e" (ann), "d" (sbcFlag)
 	);
 #else // useAssemblyLanguage
 	uint16_t enn;
@@ -1433,8 +1432,10 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 	union union_64 * ann = (union union_64 *)(&s64reg[s64reg1]);	// remainder in ann
 	union union_64 * divisor = (union union_64 *)(&s64reg[s64reg5]);
 #if defined(useAssemblyLanguage)
+	uint8_t v; // overflow result
 
 	asm volatile(
+		"	push	r30				\n"		// save Z[0] reg original contents
 		"	push	r28				\n"		// save Y reg original contents
 		"	push	r29				\n"
 		"	push	r25				\n"
@@ -1453,13 +1454,13 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	push	r27				\n"
 
 		"	clr	r25					\n"		// initialize zero-test register
+		"	clr	r27					\n"		// no, I do not trust __zero_reg__
 
 		"	ldi	r26, 16				\n"		// point X reg to divisor register
-		"	clr	r27					\n"
 		"d64_cpd%=:					\n"
-		"	ld	r24, z				\n"		// load divisor contents into divisor register
+		"	ld	r24, z				\n"		// load divisor byte value
 		"	or	r25, r24			\n"		// also perform check if divisor is zero
-		"	st	x+, r24				\n"
+		"	st	x+, r24				\n"		// copy divisor byte value into register space
 		"	st	z+, r27				\n"		// store a zero in divisor variable
 		"	cpi	r26, 24				\n"
 		"	brne	d64_cpd%=		\n"
@@ -1467,19 +1468,18 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	pop	r27					\n"		// restore X reg original contents
 		"	pop	r26					\n"
 
-		"	tst	r25					\n"
+		"	tst	r25					\n"		// if divisor is not zero, continue ahead
 		"	brne	d64_cont1%=		\n"
 
 		"	pop	r31					\n"		// restore Z reg original contents
 		"	pop	r30					\n"
 
-		"	clr	r24					\n"		// generate overflow value
-		"	com	r24					\n"
-		"	ldi	r25, 16				\n"		// set remainder contents as overflow value
+		"	com	r25					\n"		// generate overflow value
+		"	ldi	r24, 16				\n"		// set remainder contents as overflow value
 
 		"d64_ovfl%=:				\n"
-		"	st	x+, r24				\n"		// store overflow value into remainder and quotient
-		"	dec	r25					\n"
+		"	st	x+, r25				\n"		// store overflow value into remainder and quotient
+		"	dec	r24					\n"
 		"	brne	d64_ovfl%=		\n"
 		"	rjmp	d64_exit%=		\n"		// go exit
 
@@ -1522,11 +1522,11 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	subi	r24, 8			\n"		// bump down the bit count by 8
 		"	brne	d64_loop0%=		\n"		// if bit count is non-zero, loop back
 
-		"	pop	r27					\n"		// restore X reg original contents
+		"	pop	r27					\n"		// otherwise, div64 is done - restore X reg original contents
 		"	pop	r26					\n"
 		"	pop	r31					\n"		// restore Z reg original contents
 		"	pop	r30					\n"
-		"	rjmp	d64_cont4%=		\n"		// otherwise, div64 is done
+		"	rjmp	d64_cont4%=		\n"
 
 		"d64_add%=:					\n"
 		"	add	r0, r16				\n"		// add divisor to remainder
@@ -1572,12 +1572,12 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	sbc	r7, r23				\n"
 
 		"d64_l1b%=:					\n"
-		"	tst	r7					\n"
-		"	brmi	d64_l1c%=		\n"
+		"	tst	r7					\n"		// is result < 0?
+		"	brmi	d64_l1c%=		\n"		// if so, skip ahead to check how many bits are left to process
 		"	inc	r8					\n"
 		"d64_l1c%=:					\n"
-		"	dec	r24					\n"
-		"	brne	d64_loop1%=		\n"
+		"	dec	r24					\n"		// done processing bits?
+		"	brne	d64_loop1%=		\n"		// if not, loop back
 
 		"	tst	r7					\n"
 		"	brpl	d64_cont2%=		\n"		// if last operation resulted in a positive remainder, jump ahead
@@ -1598,23 +1598,14 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	ror	r17					\n"
 		"	ror	r16					\n"
 
-		"	cp	r7, r23				\n"		// compare r8[7] to d8[7]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r6, r22				\n"		// compare r8[6] to d8[6]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r5, r21				\n"		// compare r8[5] to d8[5]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r4, r20				\n"		// compare r8[4] to d8[4]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r3, r19				\n"		// compare r8[3] to d8[3]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r2, r18				\n"		// compare r8[2] to d8[2]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r1, r17				\n"		// compare r8[1] to d8[1]
-		"	brne	d64_cont3%=		\n"		// if not equal, go figure out if less or greater
-		"	cp	r0, r16				\n"		// compare r8[0] to d8[0]
-
-		"d64_cont3%=:				\n"
+		"	cp	r0, r16				\n"		// compare remainder to divisor / 2
+		"	cpc	r1, r17				\n"
+		"	cpc	r2, r18				\n"
+		"	cpc	r3, r19				\n"
+		"	cpc	r4, r20				\n"
+		"	cpc	r5, r21				\n"
+		"	cpc	r6, r22				\n"
+		"	cpc	r7, r23				\n"
 		"	brlo	d64_cont4%=		\n"		// if remainder is less than divisor / 2, skip ahead
 		"	inc	r24					\n"
 		"	st	z, r24				\n"		// store quotient adjust value
@@ -1630,6 +1621,7 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	brne	d64_saveqr%=	\n"
 
 		"d64_exit%=:				\n"
+		"	mov	r30, r25			\n"		// save overflow flag result in Z[0] reg
 		"	ldi	r28, 25				\n"		// point Y reg to end of register contents
 		"	clr	r29					\n"
 		"d64_eloop%=:				\n"
@@ -1641,9 +1633,13 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		"	pop	r25					\n"
 		"	pop	r29					\n"		// restore Y reg original contents
 		"	pop	r28					\n"
-		:
+		"	mov %A0, r30			\n"		// save overflow result
+		"	pop	r30					\n"		// restore Z[0] reg original contents
+		: "=r" (v)
 		: "x" (ann), "z" (divisor)
 	);
+
+	flagSet(v, SWEET64overflowFlag);
 
 #else // defined(useAssemblyLanguage)
 	union union_64 * an = (union union_64 *)(&s64reg[s64reg2]);	// quotient in an
@@ -1663,10 +1659,13 @@ static void SWEET64::div64(void) // uses algorithm for non-restoring hardware di
 		init64byt(an, 1); // set quotient to 1
 		sbc64(ann, an, 1); // subtract 1 from zeroed-out remainder to generate overflow value
 		copy64(an, ann); // copy overflow value to remainder
+		SWEET64processorFlags |= (SWEET64overflowFlag); // signal that overflow occurred
 
 	}
 	else
 	{
+
+		SWEET64processorFlags &= ~(SWEET64overflowFlag); // clear overflow flag
 
 		x = 64;							// start off with a dividend size of 64 bits
 
