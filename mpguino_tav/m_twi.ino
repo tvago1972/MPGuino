@@ -1,4 +1,4 @@
-#ifdef useTWIsupport
+#if defined(useTWIsupport)
 ISR( TWI_vect )
 {
 
@@ -254,16 +254,37 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 
 }
 
-#endif // useTWIsupport
-#ifdef useAdafruitRGBLCDshield
-// initialize Adafruit RGB LGB shield to a known initial state
-void adafruitRGBLCDsupport::init(void)
+#if defined(useInterruptBasedTWI)
+static void TWI::disableISRactivity(void)
+{
+
+	changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
+	while (twiStatusFlags & twiBlockMainProgram) idleProcess(); // wait for any in-progress in-interrupt TWI activity to finish
+
+}
+
+static void TWI::enableISRactivity(void)
+{
+
+	changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
+
+}
+
+#endif // defined(useInterruptBasedTWI)
+#endif // defined(useTWIsupport)
+#if defined(useMCP23017portExpander)
+// initialize MCP23017 port expander to a known initial state
+void MCP23017portExpanderSupport::init(void)
 {
 
 	uint16_t MCP23017registers;
 
 	adafruitRGBLCDflags = 0; // initially set all control register bits to 0
 
+#if defined(useInterruptBasedTWI)
+	TWI::disableISRactivity(); // disable ISR-based TWI activity
+
+#endif // defined(useInterruptBasedTWI)
 	// we might have inadvertently entered into MCP23017 bank mode - if we didn't, we'll just end up disabling all of bank B's interrupt enable bits
 	writeRegister8Bit(MCP23017_B1_IOCON, adafruitRGBLCDflags); // write initialization value to IO control register
 
@@ -274,25 +295,41 @@ void adafruitRGBLCDsupport::init(void)
 
 	MCP23017registers = 0;
 
-	writeRegister16Bit(MCP23017_B0_GPINTENx, (union_16 *)(&MCP23017registers)); // write out interrupt enable register (the Adafruit RGB LCD shield wasn't wired to support this)
-	writeRegister16Bit(MCP23017_B0_IODIRx, (union_16 *)(&MCP23017registers)); // write out port direction (no inputs)
-	writeRegister16Bit(MCP23017_B0_IPOLx, (union_16 *)(&MCP23017registers)); // write out input pin polarity config (input bits same as GPIO bits)
-	writeRegister16Bit(MCP23017_B0_GPINTENx, (union_16 *)(&MCP23017registers)); // write out GPIO bit interrupt assignment register (no GPIO bits associated with interrupts)
-	writeRegister16Bit(MCP23017_B0_DEFVALx, (union_16 *)(&MCP23017registers)); // write out interrupt default value register (all default bits 0)
-	writeRegister16Bit(MCP23017_B0_INTCONx, (union_16 *)(&MCP23017registers)); // write out interrupt control register (all interrupts trigger on GPIO input pin change)
-	writeRegister16Bit(MCP23017_B0_GPPUx, (union_16 *)(&MCP23017registers)); // write out pull-up resistor config (no pull-up resistors)
-	writeRegister16Bit(MCP23017_B0_GPIOx, (union_16 *)(&MCP23017registers)); // write out GPIO state (all 0) - also writes out OLAT register
+	writeRegister16Bit(MCP23017_B0_GPINTENx, MCP23017registers); // write out interrupt enable register (the Adafruit RGB LCD shield wasn't wired to support this)
+	writeRegister16Bit(MCP23017_B0_GPINTENx, MCP23017registers); // write out GPIO bit interrupt assignment register (no GPIO bits associated with interrupts)
+	writeRegister16Bit(MCP23017_B0_DEFVALx, MCP23017registers); // write out interrupt default value register (all default bits 0)
+	writeRegister16Bit(MCP23017_B0_INTCONx, MCP23017registers); // write out interrupt control register (all interrupts trigger on GPIO input pin change)
+	writeRegister16Bit(MCP23017_B0_GPIOx, MCP23017registers); // write out GPIO state (all 0) - also writes out OLAT register
 
+	configureOutputPort(MCP23017registers); // finish up by initializing pin outputs and going to address byte mode
+
+#if defined(useInterruptBasedTWI)
+	TWI::enableISRactivity(); // enable ISR-based TWI activity
+
+#endif // defined(useInterruptBasedTWI)
 }
 
-void adafruitRGBLCDsupport::writeRegister16Bit(uint8_t registerAddress, union union_16 * registerValue)
+void MCP23017portExpanderSupport::configureOutputPort(uint16_t registerValue)
 {
 
-	writeRegister16Bit(registerAddress, registerValue->u8[0], registerValue->u8[1]);
+	writeRegister16Bit(MCP23017_B0_IODIRx, registerValue); // write out port direction
+	writeRegister16Bit(MCP23017_B0_GPPUx, registerValue); // write out pull-up resistor config
+	writeRegister16Bit(MCP23017_B0_IPOLx, registerValue); // write out input pin polarity config
+
+	setTransferMode(adaTWIbyteMode); // ensure address mode is in byte mode
 
 }
 
-void adafruitRGBLCDsupport::writeRegister16Bit(uint8_t registerAddress, uint8_t portAbyte, uint8_t portBbyte)
+void MCP23017portExpanderSupport::writeRegister16Bit(uint8_t registerAddress, uint16_t registerValue)
+{
+
+	union union_16 * rV = (union union_16 *)(&registerValue);
+
+	writeRegister16Bit(registerAddress, rV->u8[0], rV->u8[1]);
+
+}
+
+void MCP23017portExpanderSupport::writeRegister16Bit(uint8_t registerAddress, uint8_t portAbyte, uint8_t portBbyte)
 {
 
 	if (adafruitRGBLCDflags & afRGBLCDbankMode) setTransferMode(adaTWItoggleMode); // if address mode isn't set to access 16-bit registers, configure as such
@@ -305,7 +342,7 @@ void adafruitRGBLCDsupport::writeRegister16Bit(uint8_t registerAddress, uint8_t 
 
 }
 
-void adafruitRGBLCDsupport::writeRegister8Bit(uint8_t registerAddress, uint8_t portByte)
+void MCP23017portExpanderSupport::writeRegister8Bit(uint8_t registerAddress, uint8_t portByte)
 {
 
 	TWI::openChannelMain(adafruitRGBLCDaddress, TW_WRITE); // open TWI as master transmitter
@@ -315,7 +352,7 @@ void adafruitRGBLCDsupport::writeRegister8Bit(uint8_t registerAddress, uint8_t p
 
 }
 
-void adafruitRGBLCDsupport::setTransferMode(uint8_t mode)
+void MCP23017portExpanderSupport::setTransferMode(uint8_t mode)
 {
 
 	uint8_t address;
@@ -356,4 +393,4 @@ void adafruitRGBLCDsupport::setTransferMode(uint8_t mode)
 
 }
 
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useMCP23017portExpander)

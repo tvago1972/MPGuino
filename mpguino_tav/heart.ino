@@ -4,13 +4,15 @@
 //
 // N - prescaler, which is 64
 //
-// so this ISR gets called every 256 * 64 / (system clock) seconds (for 20 MHz clock, that is every 0.8192 ms)
+// so this ISR gets called every 256 * 64 / (system clock) seconds
+//   - 20 MHz clock -> once every 0.8192 ms
+//   - 16 MHz clock -> once every 1.024 ms
 //
 ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 {
 
 	static unsigned long lastTime;
-	static unsigned long buttonTimeoutCount;
+	static unsigned long inputTimeoutCount;
 	static unsigned long parkTimeoutCount;
 	static unsigned long activityTimeoutCount;
 	static unsigned long swapFEwithFCRcount;
@@ -20,21 +22,23 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #ifdef useBarFuelEconVsTime
 	static unsigned long FEvTimeCount;
 #endif // useBarFuelEconVsTime
+#if defined(useButtonInput)
 	static unsigned int buttonLongPressCount;
+#endif // defined(useButtonInput)
 	static unsigned int cursorCount;
 	static unsigned int loopCount;
-#ifdef useAnalogButtons
-	static unsigned int analogSampleCount;
-#endif // useAnalogButtons
 #ifdef useJSONoutput
 	static unsigned int JSONtimeoutCount;
 #endif // useJSONoutput
 	static uint8_t previousActivity;
 	static uint8_t internalFlags;
-#ifdef useTWIbuttons
+#if defined(useAnalogButtons)
+	static uint16_t analogSampleCount;
+#endif // defined(useAnalogButtons)
+#if defined(useTWIbuttons)
 	static uint8_t TWIsampleCount;
 	static uint8_t TWIsampleState;
-#endif // useTWIbuttons
+#endif // defined(useTWIbuttons)
 	unsigned long thisTime;
 
 	if (timer0Command & t0cResetTimer)
@@ -52,24 +56,26 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		activityTimeoutCount = volatileVariables[(uint16_t)(vActivityTimeoutIdx)];
 		activityFlags = (afActivityCheckFlags | afSwapFEwithFCR);
 		previousActivity = (afActivityCheckFlags);
-#ifdef useTWIbuttons
+#if defined(useTWIbuttons)
 		TWIsampleCount = TWItickLength;
 		TWIsampleState = 0;
-#endif // useTWIbuttons
+#endif // defined(useTWIbuttons)
 #if defined(useAnalogRead)
 		analogStatus = asHardwareReady;
-#ifdef useAnalogButtons
+#if defined(useAnalogButtons)
 		analogSampleCount = analogSampleTickLength;
-#endif // useAnalogButtons
-#endif // useAnalogRead
+#endif // defined(useAnalogButtons)
+#endif // defined(useAnalogRead)
 #ifdef useLegacyButtons
 		buttonDebounceCount = 0;
 #endif // useLegacyButtons
 #ifdef useBarFuelEconVsTime
 		timer0Command |= (t0cResetFEvTime);
 #endif // useBarFuelEconVsTime
+#if defined(useButtonInput)
 		buttonLongPressCount = 0;
-		buttonTimeoutCount = 0;
+#endif // defined(useButtonInput)
+		inputTimeoutCount = 0;
 		parkTimeoutCount = 0;
 		swapFEwithFCRcount = 0;
 
@@ -302,32 +308,30 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // useCoastDownCalculator
-#ifdef useTWIbuttons
+#if defined(useTWIbuttons)
 	if (TWIsampleCount)
 	{
 
 		TWIsampleCount--;
 
-		if ((twiStatusFlags & twiOpenMain) == twiBlockMainProgram) // if TWI section is finished processing, and if timer0 TWI sampling is enabled
+		if ((twiStatusFlags & twiOpenMain) == twiBlockMainProgram) // if TWI section is finished processing
 			switch (TWIsampleState)
 			{
 
 				case 0:
-#ifdef useAdafruitRGBLCDshield
 					TWI::openChannel(buttonAddress, TW_WRITE); // open TWI as master transmitter
+#if defined(useAdafruitRGBLCDshield)
 					TWI::writeByte(MCP23017_B1_GPIOA); // specify bank A GPIO pin register address
+#endif // defined(useAdafruitRGBLCDshield)
 					TWI::transmitChannel(TWI_REPEAT_START); // go write out read request, with repeated start to set up for read
-#endif // useAdafruitRGBLCDshield
 
 					TWIsampleState++; // advance to waiting for TWI sample request to finish
 
 					break;
 
 				case 1:
-#ifdef useAdafruitRGBLCDshield
 					TWI::openChannel(buttonAddress, TW_READ); // open TWI as master receiver
 					TWI::transmitChannel(TWI_STOP); // go commit to read, send stop when read is finished
-#endif // useAdafruitRGBLCDshield
 
 					TWIsampleState++; // advance to waiting for TWI sample to complete
 
@@ -337,15 +341,13 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 					if ((twiStatusFlags & twiErrorFlag) == 0)
 					{
 
-#ifdef useAdafruitRGBLCDshield
 						thisButtonState = (twiDataBuffer[0] & buttonMask); // fetch button state that was just read in
 						timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
-#endif // useAdafruitRGBLCDshield
 
 					}
 
 				default:
-					twiStatusFlags &= ~(twiBlockMainProgram);
+					twiStatusFlags &= ~(twiBlockMainProgram); // allow main program to utilize TWI
 					break;
 
 		}
@@ -356,7 +358,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		TWIsampleCount = TWItickLength;
 
-		if (timer0Command & t0cEnableTWIsample)
+		if (twiStatusFlags & twiAllowISRactivity)
 		{
 
 			twiStatusFlags |= (twiBlockMainProgram); // block main program from making any TWI requests
@@ -367,18 +369,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // useTWIbuttons
-#ifdef useAnalogButtons
+#endif // defined(useTWIbuttons)
+#if defined(useAnalogButtons)
 	if (analogSampleCount) analogSampleCount--;
 	else
 	{
 
 		analogSampleCount = analogSampleTickLength;
-		analogCommand |= (acSampleButtonChannel); // go sample analog button channel
+		if (timer0Command & t0cEnableAnalogButtons) analogCommand |= (acSampleButtonChannel); // go sample analog button channel
 
 	}
 
-#endif // useAnalogButtons
+#endif // defined(useAnalogButtons)
 #ifdef useLegacyButtons
 	if (buttonDebounceCount) // if there is a button press debounce countdown in progress
 	{
@@ -396,6 +398,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // useLegacyButtons
+#if defined(useButtonInput)
 	if (buttonLongPressCount)
 	{
 
@@ -444,17 +447,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		internalFlags &= ~(internalOutputButton);
 		internalFlags &= ~(internalProcessButtonsUp);
-		awakeFlags |= (aAwakeOnButton); // set awake status on button pressed
+		awakeFlags |= (aAwakeOnInput); // set awake status on button pressed
 		timer0Command &= ~(t0cDisplayDelay); // shut off display change delay
 		if (activityFlags & afActivityTimeoutFlag) timer0Status |= (t0sUpdateDisplay); // simply update the display if MPGuino was asleep
 		else timer0Status |= (t0sReadButton | t0sShowCursor | t0sUpdateDisplay); // otherwise, force cursor show bit, and signal that keypress was detected
 		buttonLongPressCount = 0; // reset button long-press timer
 		cursorCount = cursorDelayTick; // reset cursor count
-		activityFlags &= ~(afButtonFlag | afActivityTimeoutFlag);
-		buttonTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
+		activityFlags &= ~(afUserInputFlag | afActivityTimeoutFlag);
+		inputTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
 
 	}
 
+#endif // defined(useButtonInput)
 #ifdef useJSONoutput
 	if (JSONtimeoutCount) JSONtimeoutCount--;
 	else
@@ -515,15 +519,15 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (awakeFlags & aAwakeOnButton)
+	if (awakeFlags & aAwakeOnInput)
 	{
 
-		if (buttonTimeoutCount) buttonTimeoutCount--;
+		if (inputTimeoutCount) inputTimeoutCount--;
 		else
 		{
 
-			awakeFlags &= ~(aAwakeOnButton);
-			activityFlags |= (afButtonFlag);
+			awakeFlags &= ~(aAwakeOnInput);
+			activityFlags |= (afUserInputFlag);
 
 		}
 
@@ -592,13 +596,13 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 {
 
-#ifdef use4BitLCD
+#if defined(use4BitLCD)
 	static uint8_t value;
-#endif // use4BitLCD
-#ifdef useSimulatedFIandVSS
+#endif // defined(use4BitLCD)
+#if defined(useSimulatedFIandVSS)
 	static unsigned long debugVSSresetCount;
 	static unsigned long debugFIPresetCount;
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 #ifdef useDebugCPUreading
 	uint8_t a;
 	uint8_t b;
@@ -728,19 +732,19 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	}
 
 #endif // useSimulatedFIandVSS
-#ifdef use4BitLCD
+#if defined(useLCDoutput)
 	if (timer1Command & t1cDelayLCD)
 	{
 
 		if (lcdDelayCount) lcdDelayCount--;
-#ifdef useBufferedLCD
+#if defined(useBufferedLCD)
 		else
 		{
 
 			if (ringBuffer::isBufferNotEmpty(lcdBuffer)) // if there's at least one nybble in the LCD send buffer
 			{
 
-#ifdef useTWILCD
+#if defined(useTWI4BitLCD)
 				// if buffer is not empty and TWI hardware is ready
 				if ((twiStatusFlags & twiOpenMain) == 0)
 				{
@@ -760,7 +764,9 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 							{
 
 								TWI::openChannel(lcdAddress, TW_WRITE); // open TWI as master transmitter
+#if defined(useAdafruitRGBLCDshield)
 								TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
+#endif // defined(useAdafruitRGBLCDshield)
 								timer1Status |= (t1sDoOutputTWI); // signal to complete TWI master transmission
 
 							}
@@ -790,23 +796,26 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 					if (timer1Status & t1sDoOutputTWI) TWI::transmitChannel(TWI_STOP); // commit LCD port expander write, if required
 
 				}
-#else // useTWILCD
+
+#endif // defined(useTWI4BitLCD)
+#if defined(usePort4BitLCD)
 				value = ringBuffer::pull(lcdBuffer); // pull a buffered LCD byte
 
 				LCD::outputNybble(value); // output byte
-#endif // useTWILCD
 
+#endif // defined(usePort4BitLCD)
 			}
 			else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
 
 		}
-#else // useBufferedLCD
-		else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
-#endif // useBufferedLCD
 
+#else // defined(useBufferedLCD)
+		else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
+
+#endif // defined(useBufferedLCD)
 	}
 
-#endif // use4BitLCD
+#endif // defined(useLCDoutput)
 #ifdef useDebugCPUreading
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
@@ -1474,9 +1483,9 @@ static void initCore(void)
 	ADCSRB &= ~(1 << ACME); // disable analog comparator multiplexer
 
 	timer0Command = t0cResetTimer;
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 	timer1Command = t1cResetTimer;
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -1735,21 +1744,34 @@ static void initHardware(void)
 
 #ifdef useTWIsupport
 	TWI::init();
-#ifdef useAdafruitRGBLCDshield
-	adafruitRGBLCDsupport::init(); // go init Adafruit RGB LCD shield
-#endif // useAdafruitRGBLCDshield
+#if defined(useMCP23017portExpander)
+	MCP23017portExpanderSupport::init(); // go init MCP23017 port expander
+#endif // defined(useMCP23017portExpander)
 #endif // useTWIsupport
-#ifdef useSerial0Port
+#if defined(useSerial0Port)
 	serial0::init();
-#endif // useSerial0Port
-#ifdef useSerial1Port
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
 	serial1::init();
-#endif // useSerial1Port
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+	serial2::init();
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+	serial3::init();
+#endif // defined(useSerial3Port)
 #if defined(__AVR_ATmega32U4__)
 	usbSupport::init();
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(useButtonInput)
 	button::init();
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
 	LCD::init();
+#endif // defined(useLCDoutput)
+#if defined(useTFToutput)
+	TFT::init();
+#endif // defined(useTFToutput)
 #if defined(useActivityLED)
 	activityLED::init();
 #endif // defined(useActivityLED)
@@ -1770,17 +1792,30 @@ static void doGoDeepSleep(void)
 	activityLED::shutdown();
 #endif // defined(useActivityLED)
 	changeBitFlags(timer0Command, t0cDisplayDelay, 0); // cancel any display delays in progress
+#if defined(useTFToutput)
+	TFT::shutdown(); // shut down the TFT display
+#endif // defined(useTFToutput)
+#if defined(useLCDoutput)
 	LCD::shutdown(); // shut down the LCD display
+#endif // defined(useLCDoutput)
+#if defined(useButtonInput)
 	button::shutdown();
+#endif // defined(useButtonInput)
 #if defined(__AVR_ATmega32U4__)
 	usbSupport::shutdown();
 #endif // defined(__AVR_ATmega32U4__)
-#ifdef useSerial1Port
+#if defined(useSerial3Port)
+	serial3::shutdown();
+#endif // defined(useSerial3Port)
+#if defined(useSerial2Port)
+	serial2::shutdown();
+#endif // defined(useSerial2Port)
+#if defined(useSerial1Port)
 	serial1::shutdown();
-#endif // useSerial1Port
-#ifdef useSerial0Port
+#endif // defined(useSerial1Port)
+#if defined(useSerial0Port)
 	serial0::shutdown();
-#endif // useSerial0Port
+#endif // defined(useSerial0Port)
 #ifdef useTWIsupport
 	TWI::shutdown();
 #endif // useTWIsupport

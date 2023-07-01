@@ -1,7 +1,7 @@
 #if defined(useAnalogRead)
 // this interrupt is called upon completion of an analog to digital conversion
 //
-// this interrupt is normally initially called by timer0, and will continue as long as there are analog channel requests present
+// this interrupt is normally initially enabled by timer0, and will continue as long as there are analog channel requests present
 //
 // each analog read is immediately preceded by an analog read of the internal ground, to ensure the successive approximation capacitor network is ready to go
 //

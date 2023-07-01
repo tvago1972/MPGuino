@@ -28,9 +28,9 @@ const uint8_t pSizeSignature =				24;
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 const uint8_t pSizeContrast =				1;
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 const uint8_t pSizeLCDcolor =				3;
 #endif // useAdafruitRGBLCDshield
@@ -183,10 +183,10 @@ const unsigned int pAddressSignature =					nextAllowedValue;
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 const unsigned int pAddressContrast =					nextAllowedValue;
 #define nextAllowedValue pAddressContrast + byteSize(pSizeContrast)
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 const unsigned int pAddressLCDcolor =					nextAllowedValue;
 #define nextAllowedValue pAddressLCDcolor + byteSize(pSizeLCDcolor)
@@ -380,10 +380,10 @@ const uint8_t eePtrSettingsStart =			nextAllowedValue;
 
 const uint8_t eePtrSettingsDispStart =		nextAllowedValue;
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 const uint8_t pContrastIdx =				nextAllowedValue;
 #define nextAllowedValue pContrastIdx + 1
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 const uint8_t pLCDcolorIdx =				nextAllowedValue;
 #define nextAllowedValue pLCDcolorIdx + 1
@@ -617,9 +617,9 @@ const char parmLabels[] PROGMEM = {
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 	"Contrast" tcEOSCR
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 	"LCD BG Color" tcEOSCR
 #endif // useAdafruitRGBLCDshield
@@ -862,9 +862,9 @@ const uint8_t paramsLength[] PROGMEM = {
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 	,(pSizeContrast & 0x07) | pfChangeDisplay									// LCD Contrast
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 	,(pSizeLCDcolor & 0x07) | pfChangeDisplay									// LCD Backlight color
 #endif // useAdafruitRGBLCDshield
@@ -1017,9 +1017,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 	,(uint8_t)(pAddressContrast)					// LCD Contrast
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 	,(uint8_t)(pAddressLCDcolor)					// LCD Backlight color
 #endif // useAdafruitRGBLCDshield
@@ -1173,9 +1173,9 @@ const uint32_t params[] PROGMEM = {
 
 // display settings
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 	,55					// LCD Contrast
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 	,3					// LCD Backlight color
 #endif // useAdafruitRGBLCDshield

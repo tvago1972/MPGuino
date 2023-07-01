@@ -107,9 +107,9 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 			parameterEdit::findLeft();
 
 		case nesOnChange:
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 			if (parameterPtr == pContrastIdx) LCD::setContrast((uint8_t)(str2ull(pBuff))); // adjust contrast dynamically
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 			if (parameterPtr == pLCDcolorIdx) LCD::setRGBcolor((uint8_t)(str2ull(pBuff))); // adjust backlight color dynamically
 #endif // useAdafruitRGBLCDshield
@@ -153,9 +153,9 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 	if (metricFlag & changeDisplayFlag)
 	{
 
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readByte(pContrastIdx)); // adjust contrast
-#endif // useLegacyLCD
+#endif // defined(useLCDcontrast)
 #ifdef useAdafruitRGBLCDshield
 		if ((parameterIdx == pLCDcolorIdx) && (brightnessIdx)) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
 #endif // useAdafruitRGBLCDshield
@@ -546,7 +546,7 @@ static void partialRefuel::select(void)
 			break;
 
 		default:
-			menu::noSupport();
+			button::noSupport();
 			break;
 
 	}

@@ -1,3 +1,14 @@
+#if defined(useTFToutput)
+namespace TFT /* TFT hardware support section prototype */
+{
+
+	static void init(void);
+	static void shutdown(void);
+
+};
+
+interfaceDevice devLCD; // this will be used to emulate LCD output on the TFT screen
+
 #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
 
 #define SPI_DATA 11		// pin 17 / PB3 / MOSI
@@ -39,3 +50,4 @@
 //#define BRIGHTNESS 
 
 #endif //
+#endif // defined(useTFToutput)

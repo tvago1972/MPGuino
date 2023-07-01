@@ -1,4 +1,4 @@
-#ifdef useTWIsupport
+#if defined(useTWIsupport)
 #include <compat/twi.h>
 namespace TWI
 {
@@ -9,6 +9,10 @@ namespace TWI
 	static void openChannel(uint8_t address, uint8_t writeFlag);
 	static uint8_t writeByte(uint8_t data);
 	static void transmitChannel(uint8_t sendStop);
+#if defined(useInterruptBasedTWI)
+	static void disableISRactivity(void);
+	static void enableISRactivity(void);
+#endif // defined(useInterruptBasedTWI)
 
 }
 
@@ -23,31 +27,33 @@ const uint8_t twiDataBufferSize = 16;
 
 static uint8_t twiDataBuffer[twiDataBufferSize];
 
-volatile uint8_t twiStatusFlags;
-volatile uint8_t twiSlaveAddress;
-volatile uint8_t twiErrorCode;
-volatile uint8_t twiDataBufferIdx;
-volatile uint8_t twiDataBufferLen;
+static volatile uint8_t twiStatusFlags;
+static volatile uint8_t twiSlaveAddress;
+static volatile uint8_t twiErrorCode;
+static volatile uint8_t twiDataBufferIdx;
+static volatile uint8_t twiDataBufferLen;
 
-const uint8_t twiBlockMainProgram =		0b10000000;
-const uint8_t twiOpen =					0b01000000;
-const uint8_t twiFinished =				0b00100000;
-const uint8_t twiClose =				0b00010000;
-const uint8_t twiRemainOpen =			0b00001000;
-const uint8_t twiErrorFlag =			0b00000100;
+static const uint8_t twiBlockMainProgram =	0b10000000;
+static const uint8_t twiAllowISRactivity =	0b01000000;
+static const uint8_t twiOpen =				0b00100000;
+static const uint8_t twiFinished =			0b00010000;
+static const uint8_t twiClose =				0b00001000;
+static const uint8_t twiRemainOpen =		0b00000100;
+static const uint8_t twiErrorFlag =			0b00000010;
 
-const uint8_t twiOpenMain =				(twiOpen | twiBlockMainProgram);
+static const uint8_t twiOpenMain =			(twiOpen | twiBlockMainProgram);
 
-#endif // useTWIsupport
-#ifdef useAdafruitRGBLCDshield
-namespace adafruitRGBLCDsupport
+#endif // defined(useTWIsupport)
+#if defined(useMCP23017portExpander)
+namespace MCP23017portExpanderSupport
 {
 
-	void init(void);
-	void writeRegister16Bit(uint8_t registerAddress, union union_16 * registerValue);
-	void writeRegister16Bit(uint8_t registerAddress, uint8_t portAbyte, uint8_t portBbyte);
-	void writeRegister8Bit(uint8_t registerAddress, uint8_t portByte);
-	void setTransferMode(uint8_t mode);
+	static void init(void);
+	static void configureOutputPort(uint16_t registerValue);
+	static void writeRegister16Bit(uint8_t registerAddress, uint16_t registerValue);
+	static void writeRegister16Bit(uint8_t registerAddress, uint8_t portAbyte, uint8_t portBbyte);
+	static void writeRegister8Bit(uint8_t registerAddress, uint8_t portByte);
+	static void setTransferMode(uint8_t mode);
 
 }
 
@@ -100,4 +106,4 @@ const uint8_t adaTWItoggleMode =		0x02;
 
 const uint8_t adafruitRGBLCDaddress =	0x20;
 
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useMCP23017portExpander)

@@ -1,40 +1,55 @@
 // the following options sets preconfigured board settings, which determine hardware port usage, hardware support checking, and processor speed
 // if all of the below preconfigured board "#define"s are commented out, code will compile for an AVR microprocessor specified in either the Arduino IDE or the avr toolchain
 //
-//#define useJellyBeanDriverBoard true		// also sets LCD and button settings
-//#define useLegacyBoard true					// also sets LCD and button settings
-//#define useArduinoMega2560 true			// (inw)
-//#define useTinkerkitLCDmodule true
+//#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
+//#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
+//#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
+#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module 
+//#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
 // the below line sets the serial output speed
 //
-const unsigned long myBaudRate0 = 19200ul;	// (most Arduino boards)
-const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
+const unsigned long myBaudRate0 = 19200ul;	// (most Arduino boards, excluding TinkerKit! LCD module))
+const unsigned long myBaudRate1 = 19200ul;	// (ATmega2560 board)
+const unsigned long myBaudRate2 = 19200ul;	// (ATmega2560 board)
+const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
-// if useTinkerkitLCDmodule is used, useLegacyLCD will automatically be used, and the below options will be ignored
 //
-//#define useLegacyLCD true					// select Legacy 4-bit parallel LCD output
-//#define useParallaxSerialLCDmodule true		// select Serial Interface LCD module output
-#define useAdafruitRGBLCDshield true		// select Adafruit 4-bit RGB LCD module output
-//#define useTWILCD true						// select generic LCD 16x2 module output over TWI
+// if either useTinkerkitLCDmodule or useMPGuinoColourTouch is used, the below options will be ignored
+//
+//#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
+//#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
+//#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
+//#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
+//#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
+//#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
+
+// the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
+// LCD device options, if specified.
+//
+#define LCDcharWidth 16
+#define LCDcharHeight 2
 
 // the below options only work if useParallaxSerialLCDmodule is selected. If useParallaxSerialLCDmodule is not selected, the below options will not be inserted at all
 //
 //#define useLCDserialPort0 true				// select serial LCD module output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useLCDserialPort1 true				// select serial LCD module output on serial port channel 1 (Atmega2560 board)
+//#define useLCDserialPort1 true				// select serial LCD module output on serial port channel 1 (ATmega2560 board)
+//#define useLCDserialPort2 true				// select serial LCD module output on serial port channel 2 (ATmega2560 board)
+//#define useLCDserialPort3 true				// select serial LCD module output on serial port channel 3 (ATmega2560 board)
 
 // the below option only works if useLegacyLCD is selected. If useLegacyLCD is not selected, the below option will not be inserted at all
 //
 //#define useInvertedLegacyLCDbrightness true	// For alternate LCD backlight connections
 
-// only one of the below button options may be chosen - choosing more than one will cause a compilation error to occur
+// only one of the below hardware button options may be chosen - choosing more than one will cause a compilation error to occur
 //
 // note: if useAdafruitRGBLCDshield is selected, useLegacyButtons will be ignored
+//       if useMPGuinoColourTouch is selected, all hardware button choices will be ignored
 //
 //#define useLegacyButtons true
 //#define useAnalogMuxButtons true
-//#define useParallax5PositionSwitch true
+#define useParallax5PositionSwitch true
 
 // selectable options - any conflicts will be reported at compile time
 //
@@ -67,27 +82,33 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 // performance enhancement options - all may be chosen independently of one another
 //
-//#define useBufferedLCD true					// Speed up non-serial LCD output
-//#define useBufferedSerial0Port true			// Speed up serial port 0 output (including serial LCD)
-//#define useBufferedSerial1Port true			// Speed up serial port 1 output (including serial LCD)
-//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+#define useBufferedLCD true					// Speed up LCD output
+#define useBufferedSerial0Port true			// Speed up serial port 0 output
+//#define useBufferedSerial1Port true			// Speed up serial port 1 output
+//#define useBufferedSerial2Port true			// Speed up serial port 2 output
+//#define useBufferedSerial3Port true			// Speed up serial port 3 output
+#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
 //
 //#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useLoggingSerialPort1 true		// select logging output on serial port channel 1 (Atmega2560 board)
+//#define useLoggingSerialPort1 true		// select logging output on serial port channel 1 (ATmega2560 board)
+//#define useLoggingSerialPort2 true		// select logging output on serial port channel 2 (ATmega2560 board)
+//#define useLoggingSerialPort3 true		// select logging output on serial port channel 3 (ATmega2560 board)
 //#define useLoggingUSBserial true			// select logging output on USB CDC output (TinkerKit! LCD module)
 
 // debug terminal I/O port options - choose one or the other with useDebugTerminal, or an error will result
 //
-#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (Atmega2560 board)
+//#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
+//#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board)
+//#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
+//#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalUSBserial true		// select USB CDC output for PC-MPGuino terminal interface (TinkerKit! LCD module)
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
-#define useStatusBar true						// (inw) displays a graphical bar for use with MPG display
+#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
 //#define useBluetooth true					// (inw) Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
@@ -96,62 +117,51 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 
 // program measurement and debugging tools
 //
-#define useDebugTerminal true					// terminal interface between PC and MPGuino
-#define useDebugTerminalHelp true				// entering '?' in debug terminal displays brief help
-#define useDebugTerminalLabels true				// nice labels for various terminal interface output lists - requires useDebugTerminal
-#define useDebugCPUreading true					// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
-//#define useSWEET64trace true					// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
-//#define useTestButtonValues true				// Allows observation of button mapping
-#define useSimulatedFIandVSS true				// forces simulation of VSS and fuel injector events
-//#define useActivityLED true						// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
-//#define useDebugAnalog true						// forces ADC support to be compiled in, along with a dedicated analog screen
-//#define useSWEET64mult true						// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
-//#define useSWEET64div true						// shift div64 from native C++ to SWEET64 bytecode (saves 220 bytes)
+//#define useDebugTerminal true				// terminal interface between PC and MPGuino
+#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
+#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
+#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
+//#define useDebugCPUreading true				// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
+//#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
+//#define useTestButtonValues true			// Allows observation of button mapping
+#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
+//#define useActivityLED true					// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
+//#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
+//#define useSWEET64mult true					// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
+//#define useSWEET64div true					// shift div64 from native C++ to SWEET64 bytecode (saves 220 bytes)
 
 // these #defines are used to select various features to support the above choices
 // do not mess with them, or compilation errors will occur
 //
-#ifdef useArduinoMega2560
-#ifdef useTinkerkitLCDmodule
-#error *** CANNOT configure for both ArduinoMega2560 and TinkerkitLCDmodule!!! ***
-#endif // useTinkerkitLCDmodule
-#endif // useArduinoMega2560
 
-#ifdef useArduinoMega2560
-#ifdef useJellyBeanDriverBoard
-#error *** CANNOT configure for both ArduinoMega2560 and JellyBeanDriverBoard!!! ***
-#endif // useJellyBeanDriverBoard
-#endif // useArduinoMega2560
+#if ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
+#error *** Pre-defined MPGuino board conflict exists!!! ***
+#endif // ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
 
-#ifdef useArduinoMega2560
-#ifdef useLegacyBoard
-#error *** CANNOT configure for both ArduinoMega2560 and LegacyBoard!!! ***
-#endif // useLegacyBoard
-#endif // useArduinoMega2560
+#if not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
+#warning *** Unknown board - hardware features may not work! ***
+#endif // not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
 
-#ifdef useTinkerkitLCDmodule
-#ifdef useJellyBeanDriverBoard
-#error *** CANNOT configure for both TinkerkitLCDmodule and JellyBeanDriverBoard!!! ***
-#endif // useJellyBeanDriverBoard
-#endif // useTinkerkitLCDmodule
-
-#ifdef useTinkerkitLCDmodule
-#ifdef useLegacyBoard
-#error *** CANNOT configure for both TinkerkitLCDmodule and LegacyBoard!!! ***
-#endif // useLegacyBoard
-#endif // useTinkerkitLCDmodule
-
-#ifdef useJellyBeanDriverBoard
-#ifdef useLegacyBoard
-#error *** CANNOT configure for both JellyBeanDriverBoard and LegacyBoard!!! ***
-#endif // useLegacyBoard
-#endif // useJellyBeanDriverBoard
-
-#ifdef useTinkerkitLCDmodule
-#ifdef useLegacyButtons
+#if defined(useTinkerkitLCDmodule) && defined(useLegacyButtons)
 #error *** CANNOT configure for TinkerkitLCDmodule and Legacy Buttons!!! ***
-#endif // useLegacyButtons
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule) && defined(useLegacyButtons)
+
+#if defined(useMPGuinoColourTouch)
+#define useTFToutput true
+#define useTouchScreenInput true
+#define useBluetooth true
+#define useCarVoltageOutput true
+#undef useLegacyButtons
+#undef useAnalogMuxButtons
+#undef useParallax5PositionSwitch
+#undef useDebugButtonInjection
+#undef useLegacyLCD
+#undef useDFR0009LCD
+#undef useAdafruitRGBLCDshield
+#undef useParallaxSerialLCDmodule
+#undef useSainSmart2004LCD
+#undef useGenericTWILCD
+#endif // defined(useMPGuinoColourTouch)
 
 #ifdef useArduinoMega2560
 #if !defined(__AVR_ATmega2560__)
@@ -163,10 +173,19 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #if !defined(__AVR_ATmega32U4__)
 #error *** useTinkerkitLCDmodule requires compilation for ATmega32U4 board!!! ***
 #endif // !defined(__AVR_ATmega32U4__)
-#define useLegacyLCD true
+#define usePort4BitLCD true
+#define useLCDcontrast true
+#define LCDcharWidth 16
+#define LCDcharHeight 2
+#undef useDFR0009LCD
+#undef useAdafruitRGBLCDshield
+#undef useParallaxSerialLCDmodule
+#undef useSainSmart2004LCD
+#undef useGenericTWILCD
+#undef useLegacyLCD
 #endif // useTinkerkitLCDmodule
 
-#if defined (useJellyBeanDriverBoard) || defined (useLegacyBoard)
+#if defined(useJellyBeanDriverBoard) || defined(useLegacyBoard)
 #if !defined(__AVR_ATmega328P__)
 #error *** Legacy/JBD boards require compilation for ATmega328 board!!! ***
 #endif // !defined(__AVR_ATmega328P__)
@@ -175,16 +194,73 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #ifdef useJellyBeanDriverBoard
 #define F_CPU = 20000000UL; // redefine F_CPU
 #endif // useJellyBeanDriverBoard
+#undef useDFR0009LCD
+#undef useAdafruitRGBLCDshield
 #undef useParallaxSerialLCDmodule
+#undef useSainSmart2004LCD
+#undef useGenericTWILCD
 #undef useAnalogMuxButtons
 #undef useParallax5PositionSwitch
-#undef useAdafruitRGBLCDshield
 #undef useActivityLED
-#endif // defined (useJellyBeanDriverBoard) || defined (useLegacyBoard)
+#endif // defined(useJellyBeanDriverBoard) || defined(useLegacyBoard)
 
-#if not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
-#warning *** Unknown board - hardware features may not work! ***
-#endif // not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
+// LCD defines and sanity checks
+
+#if ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDshield) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
+#error *** MPGuino can only use exactly one LCD device!!! ***
+#endif // ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDshield) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
+
+#if defined(useLegacyLCD)
+#define LCDcharWidth 16
+#define LCDcharHeight 2
+#define usePort4BitLCD true
+#undef useSerialLCD
+#undef useTWI4BitLCD
+#define useLCDcontrast true
+#endif // defined(useLegacyLCD)
+
+#if defined(useDFR0009LCD)
+#define LCDcharWidth 16
+#define LCDcharHeight 2
+#define usePort4BitLCD true
+#undef useSerialLCD
+#undef useTWI4BitLCD
+#endif // defined(useDFR0009LCD)
+
+#if defined(useParallaxSerialLCDmodule)
+#define LCDcharWidth 16
+#define LCDcharHeight 2
+#define useSerialLCD true
+#undef usePort4BitLCD
+#undef useTWI4BitLCD
+#endif // defined(useParallaxSerialLCDmodule)
+
+#if defined(useGenericTWILCD)
+#define useTWI4BitLCD true
+#undef usePort4BitLCD
+#undef useSerialLCD
+#endif // defined(useGenericTWILCD)
+
+#if defined(useSainSmart2004LCD)
+#define LCDcharWidth 20
+#define LCDcharHeight 4
+#define useTWI4BitLCD true
+#undef usePort4BitLCD
+#undef useSerialLCD
+#endif // defined(useSainSmart2004LCD)
+
+#if defined(useAdafruitRGBLCDshield)
+#define LCDcharWidth 16
+#define LCDcharHeight 2
+#define useTWI4BitLCD true
+#define useMCP23017portExpander true
+#undef usePort4BitLCD
+#undef useSerialLCD
+#if !defined(useAnalogButtons)
+#undef useLegacyButtons
+#define useTWIbuttons true
+#endif // !defined(useAnalogButtons)
+#endif // defined(useAdafruitRGBLCDshield)
 
 #ifdef useSoftwareClock
 #define useClockDisplay true
@@ -268,48 +344,87 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useMatrixMath true
 #endif // useFuelParamCalculator
 
-#ifdef useParallaxSerialLCDmodule
-#define useSerialLCD true
-#define useLCDoutput true
+#if defined(useSerialLCD)
 #define useBinaryLCDbrightness true
-#endif // useParallaxSerialLCDmodule
-
-#if not(useSerialLCD)
+#else // defined(useSerialLCD)
 #undef useLCDserialPort0
 #undef useLCDserialPort1
-#endif // not(useSerialLCD)
+#undef useLCDserialPort2
+#undef useLCDserialPort3
+#endif // defined(useSerialLCD)
 
-#if not(useJSONoutput) && not(useDataLoggingOutput)
+#if !defined(useJSONoutput) && !defined(useDataLoggingOutput)
 #undef useLoggingSerialPort0
 #undef useLoggingSerialPort1
+#undef useLoggingSerialPort2
+#undef useLoggingSerialPort3
 #undef useLoggingUSBserial
-#endif // not(useJSONoutput) && not(useDataLoggingOutput)
+#endif // !defined(useJSONoutput) && !defined(useDataLoggingOutput)
 
-#if not(useDebugTerminal)
+#if !defined(useDebugTerminal)
 #undef useDebugTerminalSerialPort0
 #undef useDebugTerminalSerialPort1
+#undef useDebugTerminalSerialPort2
+#undef useDebugTerminalSerialPort3
 #undef useDebugTerminalUSBserial
-#undef useSWEET64trace
+#undef useDebugButtonInjection
+#undef useDebugTerminalLabels
+#undef useDebugTerminalHelp
 #undef useDebugCPUreading
-#endif // not(useDebugTerminal)
+#undef useSWEET64trace
+#endif // !defined(useDebugTerminal)
 
-#ifdef useLCDserialPort0
+#if defined(useLCDserialPort0)
 #define useSerial0Port true
 #define devLCDserial devSerial0
 #define LCDserialPort serial0
-#ifdef useBufferedSerial0Port
+#if defined(useBufferedLCD)
+#undef useBufferedLCD
+#define useBufferedSerial0Port true
+#endif // defined(useBufferedLCD)
+#if defined(useBufferedSerial0Port)
 #define LCDserialBuffer serial0Buffer
-#endif // useBufferedSerial0Port
-#endif // useLCDserialPort0
+#endif // defined(useBufferedSerial0Port)
+#endif // defined(useLCDserialPort0)
 
-#ifdef useLCDserialPort1
+#if defined(useLCDserialPort1)
 #define useSerial1Port true
 #define devLCDserial devSerial1
 #define LCDserialPort serial1
-#ifdef useBufferedSerial1Port
+#if defined(useBufferedLCD)
+#undef useBufferedLCD
+#define useBufferedSerial1Port true
+#endif // defined(useBufferedLCD)
+#if defined(useBufferedSerial1Port)
 #define LCDserialBuffer serial1Buffer
-#endif // useBufferedSerial1Port
-#endif // useLCDserialPort1
+#endif // defined(useBufferedSerial1Port)
+#endif // defined(useLCDserialPort1)
+
+#if defined(useLCDserialPort2)
+#define useSerial2Port true
+#define devLCDserial devSerial2
+#define LCDserialPort serial2
+#if defined(useBufferedLCD)
+#undef useBufferedLCD
+#define useBufferedSerial2Port true
+#endif // defined(useBufferedLCD)
+#if defined(useBufferedSerial2Port)
+#define LCDserialBuffer serial2Buffer
+#endif // defined(useBufferedSerial2Port)
+#endif // defined(useLCDserialPort2)
+
+#if defined(useLCDserialPort3)
+#define useSerial3Port true
+#define devLCDserial devSerial3
+#define LCDserialPort serial3
+#if defined(useBufferedLCD)
+#undef useBufferedLCD
+#define useBufferedSerial3Port true
+#endif // defined(useBufferedLCD)
+#if defined(useBufferedSerial3Port)
+#define LCDserialBuffer serial3Buffer
+#endif // defined(useBufferedSerial3Port)
+#endif // defined(useLCDserialPort3)
 
 #ifdef useLoggingSerialPort0
 #define useSerial0Port true
@@ -322,6 +437,18 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define devLogOutput devSerial1
 #define outputLoggingSplash true
 #endif // useLoggingSerialPort1
+
+#ifdef useLoggingSerialPort2
+#define useSerial2Port true
+#define devLogOutput devSerial2
+#define outputLoggingSplash true
+#endif // useLoggingSerialPort2
+
+#ifdef useLoggingSerialPort3
+#define useSerial3Port true
+#define devLogOutput devSerial3
+#define outputLoggingSplash true
+#endif // useLoggingSerialPort3
 
 #ifdef useLoggingUSBserial
 #define useUSBserial true
@@ -343,42 +470,59 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define outputDebugTerminalSplash true
 #endif // useDebugTerminalSerialPort1
 
+#ifdef useDebugTerminalSerialPort2
+#define useSerial2Port true
+#define useSerial2PortInput true
+#define devDebugTerminal devSerial2
+#define outputDebugTerminalSplash true
+#endif // useDebugTerminalSerialPort2
+
+#ifdef useDebugTerminalSerialPort3
+#define useSerial3Port true
+#define useSerial3PortInput true
+#define devDebugTerminal devSerial3
+#define outputDebugTerminalSplash true
+#endif // useDebugTerminalSerialPort3
+
 #ifdef useDebugTerminalUSBserial
 #define useUSBserial true
 #define devDebugTerminal devUSB
 #define outputDebugTerminalSplash true
 #endif // useDebugTerminalUSBserial
 
-#if defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedLCD) || defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useUSBserial)
+#if defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedSerial2Port) || defined(useBufferedSerial3Port) \
+	|| defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useSerial2PortInput) || defined(useSerial3PortInput) \
+	|| defined(useBufferedLCD) \
+	|| defined(useUSBserial)
 #define useBuffering true
-#endif // defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedLCD) || defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useUSBserial)
+#endif
 
-#if useAnalogMuxButtons || useParallax5PositionSwitch
-#define useAnalogButtons true
-#endif // useAnalogMuxButtons || useParallax5PositionSwitch
-
-#ifdef useLegacyLCD
-#define use4BitLCD true
-#endif // useLegacyLCD
-
-#ifdef useAdafruitRGBLCDshield
-#define useTWILCD true
-#ifndef useAnalogButtons
+#if defined(useTouchScreenInput)
 #undef useLegacyButtons
-#define useTWIbuttons true
-#endif // useAnalogButtons
-#endif // useAdafruitRGBLCDshield
+#undef useAnalogMuxButtons
+#undef useParallax5PositionSwitch
+#undef useAnalogButtons
+#undef useTWIbuttons
+#undef useDebugButtonInjection
+#endif // defined(useTouchScreenInput)
 
-#ifdef useTWILCD
+#if defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
+#define useAnalogButtons true
+#endif // defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
+
+#if defined(useTWI4BitLCD)
 #define useTWIsupport true
-#define use4BitLCD true
 #define useBinaryLCDbrightness true
-#endif // useTWILCD
+#endif // defined(useTWI4BitLCD)
 
-#ifdef use4BitLCD
-#define useTimer1Interrupt true
+#if defined(usePort4BitLCD) || defined(useTWI4BitLCD)
+#define use4BitLCD true
+#endif // defined(usePort4BitLCD) || defined(useTWI4BitLCD)
+
+#if defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 #define useLCDoutput true
-#endif // use4BitLCD
+#define useTimer1Interrupt true
+#endif // defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 
 #ifdef useAnalogButtons
 #define useAnalogRead true
@@ -387,9 +531,10 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #endif // useTestButtonValues
 #endif // useAnalogButtons
 
-#ifdef useTWIbuttons
+#if defined(useTWIbuttons)
 #define useTWIsupport true
-#endif // useTWIbuttons
+#define useInterruptBasedTWI true
+#endif // defined(useTWIbuttons)
 
 #ifdef useSimulatedFIandVSS
 #define useTimer1Interrupt true
@@ -420,43 +565,43 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #define useEEPROMtripStorage true
 #endif // useSavedTrips
 
+#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
+#define useButtonInput true
+#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
+
+#if !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
+#define useDebugButtons true
+#endif // !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
+
 // this section catches configuration errors
 
-#ifdef useTWIsupport
-#ifdef useLegacyButtons
-#if !defined(__AVR_ATmega2560__)
+#if !defined(useTouchScreenInput) && !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && !defined(useDebugButtonInjection)
+#error *** MPGuino input configuration not specified!!! ***
+#endif // !defined(useTouchScreenInput) && !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && !defined(useDebugButtonInjection)
+
+#if defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
 #error *** CANNOT configure for Legacy pushbuttons and TwoWire support!!! ***
-#endif // !defined(__AVR_ATmega2560__)
-#endif // useLegacyButtons
-#endif // useTWIsupport
+#endif // defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
 
-#if not(useLegacyButtons) && not(useAnalogButtons) && not(useTWIbuttons)
-#error *** MPGuino button configuration not specified!!! ***
-#endif // not(useLegacyButtons) && not(useAnalogButtons) && not(useTWIbuttons)
+#if ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
+#error *** Button hardware configuration error detected!!! ***
+#endif // ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
 
-#if defined(useLegacyButtons) && defined(useAnalogButtons) || defined(useLegacyButtons) && defined(useTWIbuttons)
-#error *** Button conflict exists between Legacy buttons and something else!!! ***
-#endif // defined(useLegacyButtons) && defined(useAnalogButtons) || defined(useLegacyButtons) && defined(useTWIbuttons)
+#if ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useDebugTerminalSerialPort0) ) > 1
+#error *** Serial Port 0 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useDebugTerminalSerialPort0) ) > 1
 
-#if defined(useAnalogButtons) && defined(useTWIbuttons)
-#error *** Button conflict exists between Analog buttons and something else!!! ***
-#endif // defined(useAnalogButtons) && defined(useTWIbuttons)
+#if ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useDebugTerminalSerialPort1) ) > 1
+#error *** Serial Port 1 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useDebugTerminalSerialPort1) ) > 1
 
-#if defined(useLCDserialPort0) && defined(useLoggingSerialPort0) || defined(useLCDserialPort0) && defined(useDebugTerminalSerialPort0)
-#error *** Serial Port 0 conflict exists between Serial LCD and something else!!! ***
-#endif // defined(useLCDserialPort0) && defined(useLoggingSerialPort0) || defined(useLCDserialPort0) && defined(useDebugTerminalSerialPort0)
+#if ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useDebugTerminalSerialPort2) ) > 1
+#error *** Serial Port 2 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useDebugTerminalSerialPort2) ) > 1
 
-#if defined(useLoggingSerialPort0) && defined(useDebugTerminalSerialPort0)
-#error *** Serial Port 0 conflict exists between Logging Output and something else!!! ***
-#endif // defined(useLoggingSerialPort0) && defined(useDebugTerminalSerialPort0)
-
-#if defined(useLCDserialPort1) && defined(useLoggingSerialPort1) || defined(useLCDserialPort1) && defined(useDebugTerminalSerialPort1)
-#error *** Serial Port 1 conflict exists between Serial LCD and something else!!! ***
-#endif // defined(useLCDserialPort1) && defined(useLoggingSerialPort1) || defined(useLCDserialPort1) && defined(useDebugTerminalSerialPort1)
-
-#if defined(useLoggingSerialPort1) && defined(useDebugTerminalSerialPort1)
-#error *** Serial Port 1 conflict exists between Logging Output and something else!!! ***
-#endif // defined(useLoggingSerialPort1) && defined(useDebugTerminalSerialPort1)
+#if ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useDebugTerminalSerialPort3) ) > 1
+#error *** Serial Port 3 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useDebugTerminalSerialPort3) ) > 1
 
 #if defined(useDebugTerminalUSBserial) && defined(useLoggingUSBserial)
 #error *** USB port conflict exists between Logging Output and something else!!! ***
@@ -466,40 +611,26 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #error *** CANNOT use useJSONoutput and useDataLoggingOutput!!! ***
 #endif // defined(useJSONoutput) && defined(useDataLoggingOutput)
 
-#ifdef useSerialLCD
-#if defined(useLCDserialPort0) && defined(useLCDserialPort1)
-#error *** CANNOT use Serial Port 0 and Serial Port 1 for Serial LCD Output!!! ***
-#endif // defined(useLCDserialPort0) && defined(useLCDserialPort1)
-#if not(useLCDserialPort0) && not(useLCDserialPort1)
-#error *** Serial LCD Output needs a serial port assigned to it!!! ***
-#endif // not(useLCDserialPort0) && not(useLCDserialPort1)
-#endif // useSerialLCD
+#if defined(useSerialLCD)
+#if ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
+#error *** Serial LCD Output requires exactly one serial output port!!! ***
+#endif // ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
+#endif // defined(useSerialLCD)
 
-#ifdef useDebugTerminal
-#if useDebugTerminalSerialPort0 && useDebugTerminalSerialPort1 || useDebugTerminalSerialPort0 && useDebugTerminalUSBserial || useDebugTerminalSerialPort1 && useDebugTerminalUSBserial
-#error *** CANNOT use more than one I/O port for Terminal Output!!! ***
-#endif // useDebugTerminalSerialPort0 && useDebugTerminalSerialPort1 || useDebugTerminalSerialPort0 && useDebugTerminalUSBserial || useDebugTerminalSerialPort1 && useDebugTerminalUSBserial
-#if not(useDebugTerminalSerialPort0) && not(useDebugTerminalSerialPort1) && not(useDebugTerminalUSBserial)
-#error *** Terminal Output needs an I/O port assigned to it!!! ***
-#endif // not(useDebugTerminalSerialPort0) && not(useDebugTerminalSerialPort1) && not(useDebugTerminalUSBserial)
-#endif // useDebugTerminal
+#if defined(useDebugTerminal)
+#if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalUSBserial) ) != 1
+#error *** Terminal Output requires exactly one I/O port!!! ***
+#endif // ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalUSBserial) ) != 1
+#endif // defined(useDebugTerminal)
 
-#if useLoggingSerialPort0 && useLoggingSerialPort1 || useLoggingUSBserial && useLoggingSerialPort0 || useLoggingUSBserial && useLoggingSerialPort1
-#ifdef useJSONoutput
-#error *** CANNOT use more than one output port for JSON Output!!! ***
-#endif // useJSONoutput
-#ifdef useDataLoggingOutput
-#error *** CANNOT use more than one output port for Logging Output!!! ***
-#endif // useDataLoggingOutput
-#endif // useLoggingSerialPort0 && useLoggingSerialPort1 || useLoggingUSBserial && useLoggingSerialPort0 || useLoggingUSBserial && useLoggingSerialPort1
-#if not(useLoggingSerialPort0) && not(useLoggingSerialPort1) && not(useLoggingUSBserial)
-#ifdef useJSONoutput
-#error *** JSON Output needs an output port assigned to it!!! ***
-#endif // useJSONoutput
-#ifdef useDataLoggingOutput
-#error *** Logging Output needs an output port assigned to it!!! ***
-#endif // useDataLoggingOutput
-#endif // not(useLoggingSerialPort0) && not(useLoggingSerialPort1) && not(useLoggingUSBserial)
+#if ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingUSBserial) ) != 1
+#if defined(useJSONoutput)
+#error *** JSON Output requires exactly one I/O port!!! ***
+#endif // defined(useJSONoutput)
+#if defined(useDataLoggingOutput)
+#error *** Logging Output requires exactly one I/O port!!! ***
+#endif // defined(useDataLoggingOutput)
+#endif // ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingUSBserial) ) != 1
 
 #ifdef useUSBserial
 #if defined(__AVR_ATmega328P__)
@@ -510,28 +641,37 @@ const unsigned long myBaudRate1 = 19200ul;	// (Atmega2560 board)
 #endif // defined(__AVR_ATmega2560__)
 #endif // useUSBserial
 
-#ifdef useSerial1Port
+#if defined(useSerial1Port)
 #if defined(__AVR_ATmega328P__)
 #error *** Cannot use ATmega328/128 hardware and useSerial1Port!!! ***
 #endif // defined(__AVR_ATmega328P__)
-#ifdef useTinkerkitLCDmodule
-#error *** Serial Port 1 on Tinkerkit! LCD module conflicts with fuel injector sense ports!!! ***
-#endif // useTinkerkitLCDmodule
-#endif // useSerial1Port
+#if defined(useTinkerkitLCDmodule)
+#error *** Serial Port 1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#endif // defined(useSerial1Port)
 
-#if useSerial0Port && __AVR_ATmega32U4__
-#error *** Cannot use useTinkerkitLCDmodule/ATmega32U4 and useSerial0Port!!! ***
-#endif // useSerial0Port && __AVR_ATmega32U4__
+#if defined(__AVR_ATmega328P__)
+#if defined(useSerial1Port) || defined(useSerial2Port) || defined(useSerial3Port)
+#error *** Cannot use ATmega328/128 and configured serial port!!! ***
+#endif // defined(useSerial1Port) || defined(useSerial2Port) || defined(useSerial3Port)
+#endif // defined(__AVR_ATmega328P__)
+
+#if defined(__AVR_ATmega32U4__)
+#if defined(useSerial0Port) || defined(useSerial2Port) || defined(useSerial3Port)
+#error *** Cannot use ATmega32U4 and configured serial port!!! ***
+#endif // defined(useSerial0Port) || defined(useSerial2Port) || defined(useSerial3Port)
+#endif // defined(__AVR_ATmega32U4__)
 
 // Really, dcb? Really? You couldn't have used something else for LCD data bit 3?
-#if useLegacyLCD && __AVR_ATmega328P__ && useActivityLED
+#if defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && defined(useActivityLED)
 #error *** CANNOT use useLegacyLCD and useActivityLED!!! ***
-#endif // useLegacyLCD && __AVR_ATmega328P__ && useActivityLED
+#endif // defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && defined(useActivityLED)
 
-#if useSoftwareClock && useDeepSleep
+#if defined(useSoftwareClock) && defined(useDeepSleep)
 #error *** CANNOT use both useSoftwareClock and useDeepSleep!!! ***
-#endif // useSoftwareClock && useDeepSleep
+#endif // defined(useSoftwareClock) && defined(useDeepSleep)
 
-#if useCarVoltageOutput && useChryslerBaroSensor
+#if defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
 #error *** CANNOT use both useCarVoltageOutput and useChryslerBaroSensor!!! ***
-#endif // useCarVoltageOutput && useChryslerBaroSensor
+#endif // defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
+

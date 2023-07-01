@@ -51,8 +51,6 @@ static const uint8_t bgDataSize = 15;
 uint8_t bargraphData[(uint16_t)(bgDataSize)];
 
 #endif // useBarGraph
-typedef void (* pFunc)(void); // type for display function pointers
-
 typedef struct
 {
 
@@ -93,11 +91,13 @@ static const uint8_t loopsPerSecond = 2; // how many times will we try and loop 
 #ifdef useAnalogButtons
 static const uint8_t analogSamplesPerSecond = 32; // how many times will we try to sample ADC button presses in a second
 #endif // useAnalogButtons
-#ifdef useTWIbuttons
+#if defined(useTWIbuttons)
 static const uint8_t TWIsamplesPerSecond = 32; // how many times will we try to sample TWI button presses in a second
-#endif // useTWIbuttons
+#endif // defined(useTWIbuttons)
 
-static const unsigned long t0CyclesPerSecond = (unsigned long)(F_CPU / 64ul); // (systemProcessorSpeed * 1000000 / (timer 0 prescaler))
+static const uint8_t systemProcessorSpeed = (F_CPU / 1000000ul);
+
+static const unsigned long t0CyclesPerSecond = (unsigned long)(F_CPU / 64ul);
 static const unsigned long t0TicksPerSecond = t0CyclesPerSecond / 256ul;
 
 static const unsigned int loopTickLength = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(loopsPerSecond * 256ul)) - 1;
@@ -107,6 +107,7 @@ static const unsigned int swapFEwithFCRdelay = (unsigned int)(ceil)((double)(3ul
 static const unsigned int holdDelay = (unsigned int)(ceil)((double)(2ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 2 second delay
 static const unsigned int delay1500msTick = (unsigned int)(ceil)((double)(15ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.5 second delay
 static const unsigned int delay0005msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 200ul)) - 1; // 5 millisecond delay
+static const unsigned int delay0100msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
 
 #ifdef useLegacyButtons
 static const unsigned int buttonDebounceTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 20ul)) - 1; // 50 millisecond delay button debounce
@@ -114,9 +115,9 @@ static const unsigned int buttonDebounceTick = (unsigned int)(ceil)((double)(t0C
 #ifdef useAnalogButtons
 static const unsigned int analogSampleTickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(analogSamplesPerSecond * 256ul)) - 1;
 #endif // useAnalogButtons
-#ifdef useTWIbuttons
+#if defined(useTWIbuttons)
 static const unsigned int TWItickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(TWIsamplesPerSecond * 256ul)) - 1;
-#endif // useTWIbuttons
+#endif // defined(useTWIbuttons)
 #ifdef useJSONoutput
 static const unsigned int JSONtickLength = (unsigned int)(ceil)((double)(16ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.6 second delay
 #endif // useJSONoutput
@@ -375,12 +376,14 @@ volatile uint8_t lastPINxState;
 volatile uint8_t VSScount; // for VSS debouncing
 volatile uint8_t VSSpause; // for VSS debouncing
 
+#if defined(useButtonInput)
 volatile uint8_t thisButtonState;
 volatile uint8_t lastButtonState;
+volatile uint8_t buttonPress;
+#endif // defined(useButtonInput)
 #ifdef useTestAnalogButtonIdx
 volatile uint8_t thisButtonIdx;
 #endif // useTestAnalogButtonIdx
-volatile uint8_t buttonPress;
 
 volatile uint8_t mainLoopHeartBeat;
 
@@ -401,22 +404,26 @@ volatile uint8_t timer0Command;
 const uint8_t t0cResetTimer =			0b10000000;
 const uint8_t t0cDoDelay =				0b01000000;
 const uint8_t t0cDisplayDelay =			0b00100000;
+#if defined(useButtonInput)
 const uint8_t t0cProcessButton =		0b00010000;
-#ifdef useBarFuelEconVsTime
+#endif // defined(useButtonInput)
+#if defined(useBarFuelEconVsTime)
 const uint8_t t0cResetFEvTime =			0b00001000;
-#endif // useBarFuelEconVsTime
-#ifdef useTWIbuttons
-const uint8_t t0cEnableTWIsample =		0b00000001;
-#endif // useTWIbuttons
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useAnalogButtons)
+const uint8_t t0cEnableAnalogButtons =	0b00000100;
+#endif // defined(useAnalogButtons)
 
 // these flags specifically tell the main program to do something
 // system timer0 sets flag, main program acknowledges by clearing flag
 volatile uint8_t timer0Status;
 
-const uint8_t t0sUpdateDisplay =		0b10000000;
-const uint8_t t0sShowCursor =			0b01000000;
-const uint8_t t0sReadButton =			0b00100000;
-const uint8_t t0sTakeSample =			0b00010000;
+const uint8_t t0sTakeSample =			0b10000000;	// tells the main program to perform trip variable sampling
+const uint8_t t0sUpdateDisplay =		0b01000000;
+const uint8_t t0sShowCursor =			0b00100000;
+#if defined(useButtonInput)
+const uint8_t t0sReadButton =			0b00010000;
+#endif // defined(useButtonInput)
 #if useDataLoggingOutput || useJSONoutput
 const uint8_t t0sOutputLogging =		0b00001000;
 #endif // useDataLoggingOutput || useJSONoutput
@@ -435,11 +442,11 @@ volatile uint8_t awakeFlags;
 
 const uint8_t aAwakeOnInjector =		0b10000000;
 const uint8_t aAwakeOnVSS =				0b01000000;
-const uint8_t aAwakeOnButton =			0b00100000;
+const uint8_t aAwakeOnInput =			0b00100000;
 const uint8_t aAwakeEngineRunning =		0b00010000;
 const uint8_t aAwakeVehicleMoving =		0b00001000;
 
-const uint8_t aAwake =					(aAwakeOnInjector | aAwakeOnVSS | aAwakeOnButton);
+const uint8_t aAwake =					(aAwakeOnInjector | aAwakeOnVSS | aAwakeOnInput);
 const uint8_t aAwakeOnVehicle =			(aAwakeOnInjector | aAwakeOnVSS);
 
 // these status flags inform the main program about MPGuino sensor activity
@@ -448,14 +455,14 @@ volatile uint8_t activityChangeFlags;
 
 const uint8_t afEngineOffFlag =			0b10000000;
 const uint8_t afVehicleStoppedFlag =	0b01000000;
-const uint8_t afButtonFlag =			0b00100000;
+const uint8_t afUserInputFlag =			0b00100000;
 const uint8_t afParkFlag =				0b00010000;
 const uint8_t afActivityTimeoutFlag =	0b00001000;
 const uint8_t afSwapFEwithFCR =			0b00000100;
 
-const uint8_t afValidFlags =			(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag | afButtonFlag | afActivityTimeoutFlag);
-const uint8_t afInputCheckFlags =		(afEngineOffFlag | afVehicleStoppedFlag | afButtonFlag);
-const uint8_t afActivityCheckFlags =	(afEngineOffFlag | afVehicleStoppedFlag | afButtonFlag | afParkFlag);
+const uint8_t afValidFlags =			(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag);
+const uint8_t afInputCheckFlags =		(afEngineOffFlag | afVehicleStoppedFlag | afUserInputFlag);
+const uint8_t afActivityCheckFlags =	(afEngineOffFlag | afVehicleStoppedFlag | afUserInputFlag | afParkFlag);
 const uint8_t afParkCheckFlags =		(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag);
 const uint8_t afNotParkedFlags =		(afEngineOffFlag | afVehicleStoppedFlag);
 
@@ -478,37 +485,39 @@ const uint8_t dGoodEngineRun =			(dGoodEngineRotationOpen | dGoodEngineRotationC
 const uint8_t dGoodVehicleMotion =		(dGoodVSSsignal | dGoodVSSRead);
 const uint8_t dGoodVehicleDrive =		(dGoodEngineRun | dGoodVehicleMotion);
 
+#if defined(useButtonInput)
 const uint8_t internalOutputButton =		0b10000000;
 const uint8_t internalProcessButtonsUp =	0b01000000;
+#endif // defined(useButtonInput)
 #ifdef useCoastDownCalculator
 const uint8_t internalCancelCDT =			0b00000010;
 #endif // useCoastDownCalculator
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 // these flags specifically tell the system timer1 to do something
 // main program sets flag, system timer1 acknowledges by clearing flag
 volatile uint8_t timer1Command;
 
 const uint8_t t1cResetTimer =			0b10000000;
-#ifdef use4BitLCD
+#if defined(useLCDoutput)
 const uint8_t t1cDelayLCD =				0b01000000;
-#endif // use4BitLCD
-#ifdef useSimulatedFIandVSS
+#endif // defined(useLCDoutput)
+#if defined(useSimulatedFIandVSS)
 const uint8_t t1cEnableDebug =			0b00100000;
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 
 // these flags specifically tell the main program to do something
 // system timer1 sets flag, main program acknowledges by clearing flag
 // these flags also have some internal use
 volatile uint8_t timer1Status;
 
-#ifdef useTWILCD
+#if defined(useTWI4BitLCD)
 const uint8_t t1sLoopFlag =				0b10000000;
 const uint8_t t1sDoOutputTWI =			0b01000000;
-#endif // useTWILCD
-#ifdef useSimulatedFIandVSS
+#endif // defined(useTWI4BitLCD)
+#if defined(useSimulatedFIandVSS)
 const uint8_t t1sDebugUpdateFIP =		0b00100000;
 const uint8_t t1sDebugUpdateVSS =		0b00010000;
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)

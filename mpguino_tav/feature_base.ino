@@ -30,12 +30,12 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8
 			switch (retVal)
 			{
 
-				case (afVehicleStoppedFlag | afButtonFlag):
+				case (afVehicleStoppedFlag | afUserInputFlag):
 					pageFormatFunc = getMainIdlePageFormats;
 					retVal = 0;
 					break;
 
-				case (afEngineOffFlag | afButtonFlag):
+				case (afEngineOffFlag | afUserInputFlag):
 					pageFormatFunc = getMainEOCpageFormats;
 					retVal = 0;
 					break;

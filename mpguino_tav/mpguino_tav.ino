@@ -48,6 +48,7 @@ Vehicle interface pins
     injector sense open  PE4 (INT4), Digital 2
     injector sense close PE5 (INT5), Digital 3
     speed                PK0 (PCINT16), A8
+    Valt                 PK1 (ADC9), A9
 
 -------------------------------------
 configuration for alternator voltage input to MPGuino (via meelis11)
@@ -386,6 +387,14 @@ Logging Output / Debug Monitor I/O
 #include <avr/EEPROM.h>
 #include <avr/sleep.h>
 
+static const char titleMPGuino[] PROGMEM = {
+	tcOON "MPGuino v1.95tav" tcEOSCR
+};
+
+static const char dateMPGuino[] PROGMEM = {
+	"2023-JUN-29" tcEOSCR
+};
+
 #include "configs.h"
 
 static const uint8_t mainDisplayPageCount = 9			// count of base number of data screens
@@ -395,71 +404,12 @@ static const uint8_t mainDisplayPageCount = 9			// count of base number of data 
 ;
 static const uint8_t mainDisplayFormatSize = mainDisplayPageCount * 4;
 
-#include "heart.h"
-#include "parameters.h"
-#include "trip_measurement.h"
-#include "sweet64.h"
-#include "m_serial.h"
-#include "m_analog.h"
-#include "m_button.h"
-#include "m_twi.h"
-#include "m_usb.h"
-#include "m_lcd.h"
-#include "m_tft.h"
-#include "functions.h"
-#include "text.h"
-#include "feature_base.h"
-#include "feature_settings.h"
-#include "feature_datalogging.h"
-#include "feature_bignum.h"
-#include "feature_bargraph.h"
-#include "feature_outputpin.h"
-#include "feature_debug.h"
-#include "feature_dragrace.h"
-#include "feature_coastdown.h"
-
-static const char titleMPGuino[] PROGMEM = {
-	tcOON "MPGuino v1.95tav" tcEOSCR
-};
-
-static const char dateMPGuino[] PROGMEM = {
-	"2023-MAR-18" tcEOSCR
-};
-
-typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t, uint8_t); // type for various handler functions
-
-typedef struct
-{
-
-	uint8_t buttonCode;
-	void (* buttonCommand)(void);
-
-} buttonVariable;
-
-typedef struct
-{
-
-	uint8_t menuIndex;
-	uint8_t modeIndex;
-	uint8_t modeYcount;
-	uint8_t modeXcount;
-	displayHandlerFunc screenDisplayHandler;
-	const buttonVariable (* modeButtonList);
-
-} displayData;
-
-static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
-int main(void);
-
 namespace menu /* Top-down menu selector section prototype */
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
 	static void entry(void);
 	static void select(void);
-	static void doNextBright(void);
-	static void noSupport(void);
-	static void doNothing(void);
 
 };
 
@@ -471,10 +421,6 @@ namespace cursor /* LCD screen cursor manipulation section prototype */
 	static void moveAbsolute(uint8_t positionY, uint8_t positionX);
 	static void moveRelative(uint8_t moveY, uint8_t moveX);
 	static void updateAfterMove(uint8_t levelChangeFlag);
-	static void shortLeft(void);
-	static void shortRight(void);
-	static void longLeft(void);
-	static void longRight(void);
 
 };
 
@@ -488,400 +434,54 @@ const uint8_t menuEntryIdx =			menuExitIdx + 1;				// typically, this call will 
 const uint8_t menuCursorUpdateIdx =		menuEntryIdx + 1;				// ...to this call, then will fall through
 const uint8_t menuOutputDisplayIdx =	menuCursorUpdateIdx + 1;		// ...to this call
 
+#include "heart.h"
+#include "parameters.h"
+#include "trip_measurement.h"
+#include "sweet64.h"
+#include "m_serial.h"
+#include "m_analog.h"
+#include "m_twi.h"
+#include "m_usb.h"
+#include "m_lcd.h"
+#include "m_tft.h"
+#include "m_button.h"
+#include "functions.h"
+#include "text.h"
+#include "feature_base.h"
+#include "feature_settings.h"
+#include "feature_datalogging.h"
+#include "feature_bignum.h"
+#include "feature_bargraph.h"
+#include "feature_outputpin.h"
+#include "feature_debug.h"
+#include "feature_dragrace.h"
+#include "feature_coastdown.h"
+
+typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t, uint8_t); // type for various handler functions
+
+typedef struct
+{
+
+	uint8_t menuIndex;
+	uint8_t modeIndex;
+	uint8_t modeYcount;
+	uint8_t modeXcount;
+	displayHandlerFunc screenDisplayHandler;
+
+} displayData;
+
+static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
+int main(void);
+
 // Menu display / screen cursor support section
 
-static const buttonVariable bpListMenu[] PROGMEM = {
-	 {btnShortPressC,	menu::select}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::shortRight}
-		,{btnShortPressU,	cursor::shortLeft}
-		,{btnLongPressU,	menu::doNextBright}
-		,{btnShortPressL,	menu::doNothing}
-		,{btnShortPressR,	menu::select}
-#else // useButtonCrossConfig
-		,{btnShortPressR,	cursor::shortRight}
-		,{btnShortPressL,	cursor::shortLeft}
-		,{btnLongPressC,	menu::doNextBright}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-static const buttonVariable bpListMainDisplay[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressR,	cursor::longRight}
-	,{btnLongPressL,	cursor::longLeft}
-#if defined(useScreenEditor)
-	,{btnLongPressC,	displayEdit::entry}
-	,{btnShortPressLR,	displayEdit::entry}
-#endif // defined(useScreenEditor)
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useSavedTrips
-		,{btnShortPressDR,	tripSupport::goSaveCurrent}
-		,{btnShortPressDL,	tripSupport::goSaveTank}
-	#endif // useSavedTrips
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useCPUreading
-		,{btnLongPressLCR,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#if defined(useScreenEditor)
-static const buttonVariable bpListMainDisplayEdit[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	displayEdit::cancel}
-	,{btnLongPressLR,	displayEdit::cancel}
-	,{btnLongPressC,	displayEdit::set}
-	,{btnShortPressLR,	displayEdit::set}
-	,{btnLongPressR,	displayEdit::readInitial}
-#if defined(useButtonCrossConfig)
-		,{btnShortPressU,	displayEdit::changeItemUp}
-		,{btnShortPressD,	displayEdit::changeItemDown}
-		,{btnShortPressC,	displayEdit::set}
-#else // defined(useButtonCrossConfig)
-		,{btnShortPressC,	displayEdit::changeItemUp}
-#endif // defined(useButtonCrossConfig)
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // defined(useScreenEditor)
-static const buttonVariable bpListSetting[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	menu::entry}
-	,{btnShortPressLR,	parameterEdit::entry}
-#ifdef useButtonCrossConfig
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnShortPressD,	cursor::shortRight}
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-	#ifdef useCPUreading
-		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp, 		menu::noSupport}
-};
-
-static const buttonVariable bpListParameterEdit[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	parameterEdit::cancel}
-	,{btnLongPressLR,	parameterEdit::cancel}
-	,{btnLongPressC,	parameterEdit::save}
-	,{btnShortPressLR,	parameterEdit::save}
-	,{btnLongPressR,	parameterEdit::readInitial}
-#ifdef useButtonCrossConfig
-		,{btnShortPressUL,	parameterEdit::findLeft}
-		,{btnShortPressUR,	parameterEdit::findRight}
-		,{btnLongPressD,	parameterEdit::readMinValue}
-		,{btnLongPressU,	parameterEdit::readMaxValue}
-		,{btnShortPressU,	parameterEdit::changeDigitUp}
-		,{btnShortPressD,	parameterEdit::changeDigitDown}
-		,{btnShortPressC,	parameterEdit::save}
-#else // useButtonCrossConfig
-		,{btnShortPressLC,	parameterEdit::findLeft}
-		,{btnShortPressCR,	parameterEdit::findRight}
-		,{btnLongPressCR,	parameterEdit::readMinValue}
-		,{btnLongPressLC,	parameterEdit::readMaxValue}
-		,{btnShortPressC,	parameterEdit::changeDigitUp}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#if defined(useBigDigitDisplay) || defined(useStatusBar)
-static const buttonVariable bpListBigNum[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressR,	cursor::longRight}
-	,{btnLongPressL,	cursor::longLeft}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useCPUreading
-		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // defined(useBigDigitDisplay) || defined(useStatusBar)
-#ifdef useClockDisplay
-static const buttonVariable bpListClockDisplay[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressR,	cursor::longRight}
-	,{btnLongPressL,	cursor::longLeft}
-	,{btnLongPressC,	clockSet::entry}
-	,{btnShortPressLR,	clockSet::entry}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useCPUreading
-		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-static const buttonVariable bpListClockSet[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	clockSet::cancel}
-	,{btnLongPressLR,	clockSet::cancel}
-	,{btnLongPressC,	clockSet::set}
-	,{btnShortPressLR,	clockSet::set}
-#ifdef useButtonCrossConfig
-		,{btnShortPressU,	clockSet::changeDigitUp}
-		,{btnShortPressD,	clockSet::changeDigitDown}
-		,{btnShortPressC,	clockSet::set}
-#else // useButtonCrossConfig
-		,{btnShortPressC,	clockSet::changeDigitUp}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useClockDisplay
-#ifdef useCPUreading
-static const buttonVariable bpListCPUmonitor[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressR,	cursor::longRight}
-	,{btnLongPressL,	cursor::longLeft}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useCPUreading
-#ifdef usePartialRefuel
-static const buttonVariable bpListPartialRefuel[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	mainDisplay::returnToMain}
-	,{btnLongPressLR,	mainDisplay::returnToMain}
-	,{btnLongPressC,	partialRefuel::longSelect}
-	,{btnShortPressLR,	partialRefuel::select}
-#ifdef useButtonCrossConfig
-		,{btnShortPressU,	partialRefuel::select}
-		,{btnLongPressU,	partialRefuel::longSelect}
-		,{btnShortPressD,	cursor::shortRight}
-		,{btnShortPressC,	mainDisplay::returnToMain}
-#else // useButtonCrossConfig
-		,{btnShortPressC,	partialRefuel::select}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // usePartialRefuel
-#if defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
-static const buttonVariable bpListMiscViewer[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	menu::entry}
-#ifdef useButtonCrossConfig
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-	#ifdef useCPUreading
-		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
-#ifdef useTestButtonValues
-static const buttonVariable bpListButtonView[] PROGMEM = {
-	 {buttonsUp,		menu::doNothing}
-};
-
-#endif // useTestButtonValues
-#ifdef useSavedTrips
-static const buttonVariable bpListTripSave[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressL,	mainDisplay::returnToMain}
-	,{btnLongPressLR,	mainDisplay::returnToMain}
-	,{btnShortPressC,	mainDisplay::returnToMain}
-#ifdef useButtonCrossConfig
-		,{btnLongPressU,	tripSupport::select}
-		,{btnShortPressD,	cursor::shortRight}
-#else // useButtonCrossConfig
-		,{btnLongPressC,	tripSupport::select}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useSavedTrips
-#ifdef useBarGraph
-static const buttonVariable bpListBarGraph[] PROGMEM = {
-	 {btnShortPressR,	cursor::shortRight}
-	,{btnShortPressL,	cursor::shortLeft}
-	,{btnLongPressR,	cursor::longRight}
-	,{btnLongPressL,	cursor::longLeft}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	cursor::longRight}
-		,{btnShortPressU,	menu::doNextBright}
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useBarFuelEconVsSpeed
-		,{btnLongPressUC,	bgFEvsSsupport::reset}
-	#endif // useBarFuelEconVsSpeed
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-		,{btnShortPressC,	menu::doNextBright}
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useBarFuelEconVsSpeed
-		,{btnLongPressLCR,	bgFEvsSsupport::reset}
-	#endif // useBarFuelEconVsSpeed
-	#ifdef useCPUreading
-		,{btnLongPressLR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useBarGraph
-#ifdef useButtonCrossConfig
-#ifdef useDragRaceFunction
-static const buttonVariable bpListDragRace[] PROGMEM = {
-	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useDragRaceFunction
-#ifdef useCoastDownCalculator
-static const buttonVariable bpListCoastdown[] PROGMEM = {
-	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useCoastDownCalculator
-#else // useButtonCrossConfig
-#ifdef useDragRaceFunction
-static const buttonVariable bpListDragRace[] PROGMEM = {
-	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useDragRaceFunction
-#ifdef useCoastDownCalculator
-static const buttonVariable bpListCoastdown[] PROGMEM = {
-	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		menu::noSupport}
-};
-
-#endif // useCoastDownCalculator
-#endif //useButtonCrossConfig
 // the following display index defines are for the legacy MPGuino displays
 
 #define nextAllowedValue 0
 static const uint8_t mainDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue mainDisplayIdx + 1
 #if defined(useStatusBar)
-static const uint8_t statusBarIdx =				nextAllowedValue;
+static const uint8_t statusBarIdx =					nextAllowedValue;
 #define nextAllowedValue statusBarIdx + 1
 #endif // defined(useStatusBar)
 #ifdef useBigFE
@@ -1045,77 +645,77 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following screen entries are in the top-down menu list
 
-	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler,		bpListMainDisplay}
+	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler}
 #if defined(useStatusBar)
-	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	2,							statusBar::displayHandler,			bpListBigNum}
+	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	2,							statusBar::displayHandler}
 #endif // defined(useStatusBar)
 #ifdef useBigFE
-	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}
+	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigFE
 #ifdef useBarFuelEconVsTime
-	,{barFEvTdisplayIdx,			mainDisplayIdx,						displayCountUser,	4,							barGraphSupport::displayHandler,	bpListBarGraph}
+	,{barFEvTdisplayIdx,			mainDisplayIdx,						displayCountUser,	4,							barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsTime
 #ifdef useBarFuelEconVsSpeed
-	,{barFEvSdisplayIdx,			mainDisplayIdx,						displayCountUser,	3,							barGraphSupport::displayHandler,	bpListBarGraph}
+	,{barFEvSdisplayIdx,			mainDisplayIdx,						displayCountUser,	3,							barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsSpeed
 #ifdef useBigDTE
-	,{bigDTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}
+	,{bigDTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigDTE
 #ifdef useBigTTE
-	,{bigTTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler,			bpListBigNum}
+	,{bigTTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigTTE
 #ifdef useCPUreading
-	,{CPUmonDisplayIdx,				mainDisplayIdx | 0x80,				displayCountUser,	1,							systemInfo::displayHandler,			bpListCPUmonitor}
+	,{CPUmonDisplayIdx,				mainDisplayIdx | 0x80,				displayCountUser,	1,							systemInfo::displayHandler}
 #endif // useCPUreading
 #ifdef useClockDisplay
-	,{clockShowDisplayIdx,			mainDisplayIdx | 0x80,				displayCountUser,	1,							bigDigit::displayHandler,			bpListClockDisplay}
+	,{clockShowDisplayIdx,			mainDisplayIdx | 0x80,				displayCountUser,	1,							bigDigit::displayHandler}
 #endif // useClockDisplay
-	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx | 0x80,	1,					eePtrSettingsDispLen,		settings::displayHandler,			bpListSetting}
-	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx | 0x80,		1,					eePtrSettingsInjLen,		settings::displayHandler,			bpListSetting}
-	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx | 0x80,		1,					eePtrSettingsVSSlen,		settings::displayHandler,			bpListSetting}
-	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx | 0x80,		1,					eePtrSettingsTankLen,		settings::displayHandler,			bpListSetting}
+	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx | 0x80,	1,					eePtrSettingsDispLen,		settings::displayHandler}
+	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx | 0x80,		1,					eePtrSettingsInjLen,		settings::displayHandler}
+	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx | 0x80,		1,					eePtrSettingsVSSlen,		settings::displayHandler}
+	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx | 0x80,		1,					eePtrSettingsTankLen,		settings::displayHandler}
 #ifdef useChryslerMAPCorrection
-	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx | 0x80,		1,					eePtrSettingsCRFIClen,		settings::displayHandler,			bpListSetting}
+	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx | 0x80,		1,					eePtrSettingsCRFIClen,		settings::displayHandler}
 #endif // useChryslerMAPCorrection
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx | 0x80,		1,					eePtrSettingsACDlen,		settings::displayHandler,			bpListSetting}
+	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx | 0x80,		1,					eePtrSettingsACDlen,		settings::displayHandler}
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx | 0x80,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler,			bpListSetting}
-	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx | 0x80,		1,					eePtrSettingsMiscLen,		settings::displayHandler,			bpListSetting}
+	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx | 0x80,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler}
+	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx | 0x80,		1,					eePtrSettingsMiscLen,		settings::displayHandler}
 #ifdef useDragRaceFunction
-	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	menu::doNothing,	bpListDragRace}
+	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	button::doNothing}
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
-	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	menu::doNothing,	bpListCoastdown}
+	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	button::doNothing}
 #endif // useCoastDownCalculator
 #ifdef useSimulatedFIandVSS
-	,{signalSimDisplayIdx,			signalSimDisplayIdx | 0x80,			1,					4,							signalSim::displayHandler,			bpListMiscViewer}
+	,{signalSimDisplayIdx,			signalSimDisplayIdx | 0x80,			1,					4,							signalSim::displayHandler}
 #endif // useSimulatedFIandVSS
 #ifdef useChryslerMAPCorrection
-	,{pressureDisplayIdx,			pressureDisplayIdx | 0x80,			1,					1,							pressureCorrect::displayHandler,	bpListMiscViewer}
+	,{pressureDisplayIdx,			pressureDisplayIdx | 0x80,			1,					1,							pressureCorrect::displayHandler}
 #endif // useChryslerMAPCorrection
 #ifdef useDebugAnalog
-	,{analogDisplayIdx,				analogDisplayIdx | 0x80,			1,					1,							analogReadViewer::displayHandler,	bpListMiscViewer}
+	,{analogDisplayIdx,				analogDisplayIdx | 0x80,			1,					1,							analogReadViewer::displayHandler}
 #endif // useDebugAnalog
 #ifdef useTestButtonValues
-	,{buttonDisplayIdx,				buttonDisplayIdx | 0x80,			1,					1,							buttonView::displayHandler,			bpListButtonView}
+	,{buttonDisplayIdx,				buttonDisplayIdx | 0x80,			1,					1,							buttonView::displayHandler}
 #endif // useTestButtonValues
 
 // the following screen entries do not show up in the top-down menu list
 
-	,{0,							menuDisplayIdx | 0x80,				1,					displayCountVisible,		menu::displayHandler,				bpListMenu}
-	,{0,							parameterEditDisplayIdx | 0x80,		1,					12,							parameterEdit::displayHandler,		bpListParameterEdit}
+	,{0,							menuDisplayIdx | 0x80,				1,					displayCountVisible,		menu::displayHandler}
+	,{0,							parameterEditDisplayIdx | 0x80,		1,					12,							parameterEdit::displayHandler}
 #ifdef useClockDisplay
-	,{0,							clockSetDisplayIdx | 0x80,			1,					4,							clockSet::displayHandler,			bpListClockSet}
+	,{0,							clockSetDisplayIdx | 0x80,			1,					4,							clockSet::displayHandler}
 #endif // useClockDisplay
 #ifdef useSavedTrips
-	,{0,							tripSaveDisplayIdx,					1,					3,							tripSupport::displayHandler,		bpListTripSave}
+	,{0,							tripSaveDisplayIdx,					1,					3,							tripSupport::displayHandler}
 #endif // useSavedTrips
 #ifdef usePartialRefuel
-	,{0,							partialRefuelDisplayIdx | 0x80,		1,					3,							partialRefuel::displayHandler,		bpListPartialRefuel}
+	,{0,							partialRefuelDisplayIdx | 0x80,		1,					3,							partialRefuel::displayHandler}
 #endif // usePartialRefuel
 #if defined(useScreenEditor)
-	,{0,							displayEditDisplayIdx | 0x80,		1,					8,							displayEdit::displayHandler,		bpListMainDisplayEdit}
+	,{0,							displayEditDisplayIdx | 0x80,		1,					8,							displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
 };
 
@@ -1181,31 +781,6 @@ static void menu::select(void)
 	i = displayCursor[(unsigned int)(menuDisplayIdx)];
 
 	cursor::moveAbsolute(pgm_read_byte(&displayParameters[(unsigned int)(i)].menuIndex), 255);
-
-}
-
-static void menu::doNextBright(void)
-{
-
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, PSTR("Backlight = "));
-	text::stringOut(devLCD, brightString, brightnessIdx);
-	delayS(holdDelay);
-
-}
-
-static void menu::doNothing(void)
-{
-}
-
-static void menu::noSupport(void)
-{
-
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, PSTR("Btn 0x"));
-	text::hexByteOut(devLCD, buttonPress);
-	text::stringOut(devLCD, PSTR(" Pressed"));
-	delayS(holdDelay);
 
 }
 
@@ -1366,34 +941,6 @@ static void cursor::updateAfterMove(uint8_t levelChangeFlag)
 
 }
 
-static void cursor::shortLeft(void)
-{
-
-	cursor::moveRelative(0, 255); // go to previous option in current level
-
-}
-
-static void cursor::shortRight(void)
-{
-
-	cursor::moveRelative(0, 1); // go to next option in current level
-
-}
-
-static void cursor::longLeft(void)
-{
-
-	cursor::moveRelative(255, 0); // go to last option in previous level
-
-}
-
-static void cursor::longRight(void)
-{
-
-	cursor::moveRelative(1, 0); // go to next option in next level
-
-}
-
 // this function is called whenever the main program has to wait for some external condition to occur
 // when the main program performs some I/O activity, the target peripheral may take some time to acknowledge the activity
 //    and let the main program know that the peripheral is ready for more activity
@@ -1550,8 +1097,6 @@ int main(void)
 	uint32_t displayStart;
 #endif // useDebugCPUreading
 
-	const buttonVariable * bpPtr;
-
 	cli(); // disable interrupts while interrupts are being fiddled with
 
 	initCore(); // go initialize core MPGuino functionality
@@ -1574,10 +1119,10 @@ int main(void)
 	menuLevel = 255;
 	topScreenLevel = 0;
 
+	sei();
+
 	timer0DelayCount = delay1500msTick; // request a set number of timer tick delays equivalent to 1.5 seconds
 	timer0Command |= (t0cDoDelay); // signal request to timer
-
-	sei();
 
 	initHardware(); // initialize all human interface peripherals
 
@@ -1606,15 +1151,15 @@ int main(void)
 #ifdef useTestButtonValues
 	cursor::moveAbsolute(buttonDisplayIdx, 0);
 #else // useTestButtonValues
-#ifdef useLegacyLCD
+#if defined(useLCDcontrast)
 	if (j) cursor::moveAbsolute(displaySettingsDisplayIdx, (pContrastIdx - eePtrSettingsStart)); // go through the initialization screen
-#else // useLegacyLCD
-#ifdef useAdafruitRGBLCDshield
+#else // defined(useLCDcontrast)
+#if defined(useAdafruitRGBLCDshield)
 	if (j) cursor::moveAbsolute(displaySettingsDisplayIdx, (pLCDcolorIdx - eePtrSettingsStart)); // go through the initialization screen
-#else // useAdafruitRGBLCDshield
+#else // defined(useAdafruitRGBLCDshield)
 	if (j) cursor::moveAbsolute(displaySettingsDisplayIdx, (pMetricModeIdx - eePtrSettingsStart)); // go through the initialization screen
-#endif // useAdafruitRGBLCDshield
-#endif // useLegacyLCD
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDcontrast)
 	else cursor::moveAbsolute(mainDisplayIdx, 0);
 #endif // useTestButtonValues
 
@@ -1657,15 +1202,26 @@ int main(void)
 				text::charOut(devLCD, 0x12); // set backlight brightness to zero
 
 #else // useClockDisplay
+#if defined(useLCDoutput)
 				LCD::shutdown(); // shut down the LCD display
 
+#endif // defined(useLCDoutput)
+#if defined(useTFToutput)
+				TFT::shutdown(); // shut down the TFT display
+
+#endif // defined(useTFToutput)
 #endif // useClockDisplay
 #endif // useDeepSleep
 			}
 			else // if MPGuino is commanded to wake up
 			{
 
+#if defined(useLCDoutput)
 				LCD::init(); // re-initialize LCD device
+#endif // defined(useLCDoutput)
+#if defined(useTFToutput)
+				TFT::init(); // re-initialize TFT device
+#endif // defined(useTFToutput)
 				((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].screenDisplayHandler))(menuEntryIdx, displayCursor[(unsigned int)(menuLevel)], 1); // call indexed support section screen initialization function
 
 			}
@@ -1716,29 +1272,17 @@ int main(void)
 		terminal::mainProcess();
 
 #endif // useDebugTerminal
+#if defined(useButtonInput)
 		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
 		{
 
-			j = buttonPress; // capture button state
 			changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
 
-			bpPtr = (const buttonVariable *)(pgm_read_word(&(displayParameters[(unsigned int)(menuLevel)].modeButtonList)));
-
-			while (true)
-			{
-
-				i = pgm_read_byte(&(bpPtr->buttonCode));
-
-				if ((j == i) || (i == buttonsUp)) break;
-				else bpPtr++;
-
-			}
-
-			text::gotoXY(devLCD, 0, 0);
-			((pFunc)pgm_read_word(&(bpPtr->buttonCommand)))(); // go perform action
+			button::doCommand(); // go perform button action
 
 		}
 
+#endif // defined(useButtonInput)
 #if useDataLoggingOutput || useJSONoutput
 		// this part of the main loop handles logging data output
 		if (timer0Status & t0sOutputLogging)
@@ -1799,7 +1343,7 @@ int main(void)
 			if (pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeIndex) & 0x80) // if the currently displayed screen is marked to ignore button presses
 			{
 
-				if ((i == (afVehicleStoppedFlag | afButtonFlag)) || (i == (afEngineOffFlag | afButtonFlag))) i &= ~(afButtonFlag); // ignore button presses for this screen
+				if ((i == (afVehicleStoppedFlag | afUserInputFlag)) || (i == (afEngineOffFlag | afUserInputFlag))) i &= ~(afUserInputFlag); // ignore button presses for this screen
 
 			}
 
@@ -1807,21 +1351,21 @@ int main(void)
 			switch (i)
 			{
 
-				case (afVehicleStoppedFlag | afEngineOffFlag | afButtonFlag | afParkFlag): // engine stopped, vehicle stopped, no buttons pressed for a while
+				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afParkFlag): // engine stopped, vehicle stopped, no buttons pressed for a while
 				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag): // engine stopped, vehicle stopped for a while
-				case (afVehicleStoppedFlag | afButtonFlag): // vehicle stopped, button not pressed
-				case (afEngineOffFlag | afButtonFlag): // engine stopped, button not pressed
+				case (afVehicleStoppedFlag | afUserInputFlag): // vehicle stopped, button not pressed
+				case (afEngineOffFlag | afUserInputFlag): // engine stopped, button not pressed
 				case (afVehicleStoppedFlag): // vehicle stopped
 				case (afEngineOffFlag): // engine stopped
 				case (afVehicleStoppedFlag | afEngineOffFlag): // engine stopped, vehicle stopped
-				case (afVehicleStoppedFlag | afEngineOffFlag | afButtonFlag): // engine stopped, vehicle stopped, button not pressed
+				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
 				case 0: // engine running and vehicle in motion
-				case (afButtonFlag): // engine running, vehicle in motion, button not pressed
+				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
 					((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].screenDisplayHandler))(menuOutputDisplayIdx, displayCursor[(unsigned int)(menuLevel)], 0); // call indexed support section screen refresh function
 					break;
 
-				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afButtonFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
-				case (afVehicleStoppedFlag | afEngineOffFlag | afButtonFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
+				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
+				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
 #ifndef useDeepSleep
 #ifdef useClockDisplay
 					bigDigit::displayHandler(menuOutputDisplayIdx, 255, 0); // display the software clock

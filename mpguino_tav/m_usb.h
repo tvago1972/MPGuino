@@ -1,6 +1,4 @@
 #if defined(__AVR_ATmega32U4__)
-/* start of baseline ATmega native USB support */
-
 namespace usbSupport
 {
 
@@ -27,9 +25,6 @@ ringBufferVariable USBinputBuffer;
 
 volatile uint8_t USBoutputData[256];
 volatile uint8_t USBinputData[256];
-
-// zero when we are not configured, non-zero when enumerated
-static volatile uint8_t usbConfiguration;
 
 // the time remaining before we transmit any partially full
 // packet, or send a zero length packet.
@@ -289,4 +284,7 @@ static const struct endpointDescriptorList {
 #define NUM_DESC_LIST (sizeof(thisEndpointDescriptorList)/sizeof(struct endpointDescriptorList))
 
 #endif // useUSBserial
+// zero when we are not configured, non-zero when enumerated
+static volatile uint8_t usbConfiguration;
+
 #endif // defined(__AVR_ATmega32U4__)

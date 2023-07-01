@@ -453,6 +453,7 @@ static const uint8_t prgmWriteTripMeasurementValue[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
+#if defined(useDebugButtonInjection)
 #ifdef useLegacyButtons
 static const uint8_t terminalButtonCount = 6;
 
@@ -476,7 +477,7 @@ static const char terminalButtonChars[] PROGMEM = {
 	"lcrudLCRUD" tcEOS
 };
 
-static const char terminalButtonValues[] PROGMEM = {
+static const uint8_t terminalButtonValues[] PROGMEM = {
 	 btnShortPressL
 	,btnShortPressC
 	,btnShortPressR
@@ -490,22 +491,7 @@ static const char terminalButtonValues[] PROGMEM = {
 };
 
 #endif // useLegacyButtons
-const char terminalActivityFlagStr[] PROGMEM = {
-	"activityFlags: " tcEOS
-	"EngOff" tcOTOG "running" tcEOS
-	"VehStop" tcOTOG "moving" tcEOS
-	"NoButtons" tcOTOG "pressed" tcEOS
-	"Parked" tcOTOG "notparked" tcEOS
-	"Inactive" tcOTOG "active" tcEOS
-	"FuelRate" tcOTOG "fuelecon" tcEOS
-#ifdef useTWIbuttons
-	"TWIsample" tcOTOG "twi" tcEOS
-#else // useTWIbuttons
-	"1" tcOTOG "0" tcEOS
-#endif // useTWIbuttons
-	"1" tcOTOG "0" tcEOS
-};
-
+#endif // defined(useDebugButtonInjection)
 static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 {
 
@@ -847,6 +833,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			switch (terminalMode & tmInputMask) // process a possible digit, hexit, or button press character
 			{
 
+#if defined(useDebugButtonInjection)
 				case (tmButtonInput):					// parse a button press character
 				case (tmButtonInput | tmByteReadIn):	// parse a button press character
 					for (uint8_t x = 0; x < terminalButtonCount; x++)
@@ -860,6 +847,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						}
 					break;
 
+#endif // defined(useDebugButtonInjection)
 				case (tmHexInput):						// parse a generic hexadecimal digit or switch to decimal mode
 					if (chr == '\\')
 					{
@@ -1107,6 +1095,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						switch (terminalCmd)
 						{
 
+#if defined(useDebugButtonInjection)
 							case 'I':   // inject button press
 								if (terminalMode & tmByteReadIn)
 								{
@@ -1120,6 +1109,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 								break;
 
+#endif // defined(useDebugButtonInjection)
 							case 'P':   // enter a stored parameter value
 								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
 								{
@@ -1373,6 +1363,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			break;
 
 #endif // defined(useDebugTerminalHelp)
+#if defined(useDebugButtonInjection)
 		case 14:	// wait for injected buttonpress to be accepted into timer0
 			if (timer0Command & t0cProcessButton) break;
 			terminalState++;
@@ -1384,6 +1375,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			terminalState = nextTerminalState;
 			break;
 
+#endif // defined(useDebugButtonInjection)
 		case 32:	// output list of selected items
 			text::hexByteOut(devDebugTerminal, terminalLine);
 			text::stringOut(devDebugTerminal, PSTR(": "));

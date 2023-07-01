@@ -269,6 +269,7 @@ static const char terminalHelp[] PROGMEM = {
 	"    [y]<[x]R - read trip variable x into trip variable y" tcEOSCR
 	"                default for x and y is terminal trip variable" tcEOSCR
 	"                if no x or y specified, lists available trip variables" tcEOSCR
+#if defined(useDebugButtonInjection)
 	"           I - inject button press" tcEOSCR
 #if defined(useLegacyButtons)
 	"                short (l, c, r)" tcEOSCR
@@ -277,6 +278,7 @@ static const char terminalHelp[] PROGMEM = {
 	"                short (l, c, r, u, d)" tcEOSCR
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
+#endif // defined(useDebugButtonInjection)
 	"           ? - displays this help" tcEOSCR
 	tcEOS
 };
@@ -309,6 +311,22 @@ static const char * labelList;
 static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
+
+const char terminalActivityFlagStr[] PROGMEM = {
+	"activityFlags: " tcEOS
+	"EngOff" tcOTOG "running" tcEOS
+	"VehStop" tcOTOG "moving" tcEOS
+	"NoButtons" tcOTOG "pressed" tcEOS
+	"Parked" tcOTOG "notparked" tcEOS
+	"Inactive" tcOTOG "active" tcEOS
+	"FuelRate" tcOTOG "fuelecon" tcEOS
+#if defined(useInterruptBasedTWI)
+	"TWIsample" tcOTOG "twi" tcEOS
+#else // defined(useInterruptBasedTWI)
+	"1" tcOTOG "0" tcEOS
+#endif // defined(useInterruptBasedTWI)
+	"1" tcOTOG "0" tcEOS
+};
 
 #endif // defined(useDebugTerminal)
 #if defined(useTestButtonValues)

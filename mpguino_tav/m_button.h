@@ -1,19 +1,46 @@
+#if defined(useButtonInput)
+typedef void (* bdFunc)(void); // type for display function pointers
+
+typedef struct
+{
+
+	uint8_t buttonCode;
+	bdFunc buttonCommand;
+
+} buttonVariable;
+
+typedef struct
+{
+
+	const buttonVariable (* buttonVariableList);
+
+} buttonVariablePointer;
+
 namespace button /* button input support section prototype */
 {
 
 	static void init(void);
 	static void shutdown(void);
-#if useAnalogButtons || useDebugTerminal
+#if defined(useAnalogButtons) || defined(useDebugButtonInjection)
 	static void inject(uint8_t buttonValue);
-#endif // useAnalogButtons || useDebugTerminal
+#endif // defined(useAnalogButtons) || defined(useDebugButtonInjection)
+	static void doCommand(void);
+	static void noSupport(void);
+	static void doNothing(void);
+#if defined(useLCDoutput)
+	static void doNextBright(void);
+#endif // defined(useLCDoutput)
+	static void shortLeft(void);
+	static void shortRight(void);
+	static void longLeft(void);
+	static void longRight(void);
 
 };
 
-#ifdef useTWIbuttons
-#ifdef useAdafruitRGBLCDshield
+#if defined(useTWIbuttons)
+#if defined(useAdafruitRGBLCDshield)
 #define useButtonCrossConfig true
-
-const uint8_t buttonAddress =	0x20;
+const uint8_t buttonAddress =		0x20;
 
 const uint8_t buttonLbit = 			0b00010000; // GPIO A bit 4, left button
 const uint8_t buttonCbit = 			0b00000001; // GPIO A bit 0, select button
@@ -25,37 +52,37 @@ const uint8_t longButtonBit =		0b00100000; // GPIO A bit 5 isn't being used for 
 
 const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
 
-#else // useAdafruitRGBLCDshield
-	// place any TWI button definitions here
+#endif // defined(useAdafruitRGBLCDshield)
+	// place any other TWI button definitions here
 
-#endif // useAdafruitRGBLCDshield
-#endif // useTWIbuttons
-#ifdef useAnalogButtons
-#ifdef useParallax5PositionSwitch
+#endif // defined(useTWIbuttons)
+#if defined(useDebugButtons)
 #define useButtonCrossConfig true
-
 const uint8_t buttonLbit = 			0b00000001;
 const uint8_t buttonCbit = 			0b00000010;
 const uint8_t buttonRbit = 			0b00000100;
 const uint8_t buttonUbit = 			0b00001000;
 const uint8_t buttonDbit = 			0b00010000;
-#endif // useParallax5PositionSwitch
-#ifdef useAnalogMuxButtons
-#define useButtonCrossConfig true
-
-const uint8_t buttonLbit = 			0b00000001;
-const uint8_t buttonCbit = 			0b00000010;
-const uint8_t buttonRbit = 			0b00000100;
-const uint8_t buttonUbit = 			0b00001000;
-const uint8_t buttonDbit = 			0b00010000;
-#endif // useAnalogMuxButtons
 
 const uint8_t longButtonBit =		0b10000000;
 
 const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
 
-#endif // useAnalogButtons
-#ifdef useLegacyButtons
+#endif // defined(useDebugButtons)
+#if defined(useAnalogButtons)
+#define useButtonCrossConfig true
+const uint8_t buttonLbit = 			0b00000001;
+const uint8_t buttonCbit = 			0b00000010;
+const uint8_t buttonRbit = 			0b00000100;
+const uint8_t buttonUbit = 			0b00001000;
+const uint8_t buttonDbit = 			0b00010000;
+
+const uint8_t longButtonBit =		0b10000000;
+
+const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
+
+#endif // defined(useAnalogButtons)
+#if defined(useLegacyButtons)
 #if defined(__AVR_ATmega2560__)
 const uint8_t buttonLbit = 			(1 << PINK3);
 const uint8_t buttonCbit = 			(1 << PINK4);
@@ -74,7 +101,7 @@ const uint8_t longButtonBit =		(1 << PINC6); // PINC6 is used as the RESET pin, 
 #endif // defined(__AVR_ATmega328P__)
 const uint8_t buttonMask =			buttonLbit | buttonCbit | buttonRbit;
 
-#endif // useLegacyButtons
+#endif // defined(useLegacyButtons)
 const uint8_t buttonsUp =			0;
 const uint8_t btnShortPressL =		buttonLbit;
 const uint8_t btnShortPressC =		buttonCbit;
@@ -84,7 +111,15 @@ const uint8_t btnShortPressLR =		buttonRbit | buttonLbit;
 const uint8_t btnShortPressCR =		buttonRbit | buttonCbit;
 const uint8_t btnShortPressLCR =	buttonRbit | btnShortPressLC;
 
-#ifdef useButtonCrossConfig
+const uint8_t btnLongPressL =		longButtonBit | btnShortPressL;
+const uint8_t btnLongPressC =		longButtonBit | btnShortPressC;
+const uint8_t btnLongPressLC =		longButtonBit | btnShortPressLC;
+const uint8_t btnLongPressR =		longButtonBit | btnShortPressR;
+const uint8_t btnLongPressLR =		longButtonBit | btnShortPressLR;
+const uint8_t btnLongPressCR =		longButtonBit | btnShortPressCR;
+const uint8_t btnLongPressLCR =		longButtonBit | btnShortPressLCR;
+
+#if defined(useButtonCrossConfig)
 const uint8_t btnShortPressU =		buttonUbit;
 const uint8_t btnShortPressUL =		buttonUbit | btnShortPressL;
 const uint8_t btnShortPressUC =		buttonUbit | btnShortPressC;
@@ -111,16 +146,6 @@ const uint8_t btnShortPressUDR =	buttonDbit | btnShortPressUR;
 const uint8_t btnShortPressUDLR =	buttonDbit | btnShortPressULR;
 const uint8_t btnShortPressUDCR =	buttonDbit | btnShortPressUCR;
 const uint8_t btnShortPressUDCRL =	buttonDbit | btnShortPressULCR;
-#endif // useButtonCrossConfig
-
-const uint8_t btnLongPressL =		longButtonBit | btnShortPressL;
-const uint8_t btnLongPressC =		longButtonBit | btnShortPressC;
-const uint8_t btnLongPressLC =		longButtonBit | btnShortPressLC;
-const uint8_t btnLongPressR =		longButtonBit | btnShortPressR;
-const uint8_t btnLongPressLR =		longButtonBit | btnShortPressLR;
-const uint8_t btnLongPressCR =		longButtonBit | btnShortPressCR;
-const uint8_t btnLongPressLCR =		longButtonBit | btnShortPressLCR;
-#ifdef useButtonCrossConfig
 
 const uint8_t btnLongPressU =		longButtonBit | btnShortPressU;
 const uint8_t btnLongPressUL =		longButtonBit | btnShortPressUL;
@@ -149,8 +174,8 @@ const uint8_t btnLongPressUDLR =	longButtonBit | btnShortPressUDLR;
 const uint8_t btnLongPressUDCR =	longButtonBit | btnShortPressUDCR;
 const uint8_t btnLongPressUDCRL =	longButtonBit | btnShortPressUDCRL;
 
-#endif // useButtonCrossConfig
-#ifdef useParallax5PositionSwitch
+#endif // defined(useButtonCrossConfig)
+#if defined(useParallax5PositionSwitch)
 const unsigned int analogButtonThreshold[] PROGMEM = {
 	0,		// 00
 	559,	// 01
@@ -197,8 +222,8 @@ const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
 	buttonsUp			// 12
 };
 
-#endif // useParallax5PositionSwitch
-#ifdef useAnalogMuxButtons
+#endif // defined(useParallax5PositionSwitch)
+#if defined(useAnalogMuxButtons)
 const unsigned int analogButtonThreshold[] PROGMEM = {
 	0,		// 00
 	556,	// 01
@@ -273,4 +298,22 @@ const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
 	buttonsUp
 };
 
-#endif // useAnalogMuxButtons
+#endif // defined(useAnalogMuxButtons)
+#if defined(useLCDoutput)
+#if defined(useBinaryLCDbrightness)
+static const char brightString[] PROGMEM = {
+	"ON" tcLCDLO tcEOSCR
+	"OFF" tcLCDOFF tcEOSCR
+};
+
+#else // defined(useBinaryLCDbrightness)
+static const char brightString[] PROGMEM = {
+	"LOW" tcLCDLO tcEOSCR
+	"MED" tcLCDMED tcEOSCR
+	"HIGH" tcLCDHI tcEOSCR
+	"OFF" tcLCDOFF tcEOSCR
+};
+
+#endif // defined(useBinaryLCDbrightness)
+#endif // defined(useLCDoutput)
+#endif // defined(useButtonInput)
