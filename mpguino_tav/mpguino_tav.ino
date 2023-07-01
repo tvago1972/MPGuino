@@ -466,9 +466,7 @@ typedef struct
 } displayData;
 
 uint8_t menuLevel;
-
-volatile uint8_t cursorXdirection;
-volatile uint8_t menuTop;
+uint8_t menuTop;
 
 const uint8_t menuExitIdx =				0;								// this call may not even be necessary
 const uint8_t menuEntryIdx =			menuExitIdx + 1;				// typically, this call will fall through
@@ -585,6 +583,9 @@ static const char displayCountTotal =				nextAllowedValue;
 
 static const char menuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
 	"Main Display" tcEOSCR
+#if defined(useStatusBar)
+	"(trip)vsINST FE" tcEOSCR
+#endif // defined(useStatusBar)
 #ifdef useBigFE
 	"Big FuelEcon" tcEOSCR
 #endif // useBigFE
@@ -732,27 +733,38 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-			menuTop = cursorPos;
-			if ((cursorXdirection & 0x80) == 0)
+			if (menuTop >= displayCountVisible) menuTop = cursorPos;
+		case menuCursorUpdateIdx: // menu display window is (menuTop + LCDcharHeight - 1) with wraparound
+			if (cursorPos < menuTop)
 			{
 
-				menuTop--;
-				if (menuTop > displayCountVisible) menuTop += displayCountVisible;
+				i = menuTop - cursorPos;
+				if (i == 1) menuTop = cursorPos; // if cursor is just above menuTop, align menuTop to cursor
+				else cursorPos += displayCountVisible; // pretend that cursor wraparound did not occur
+
+			}
+
+			if (cursorPos > menuTop)
+			{
+
+				i = cursorPos - menuTop; // determine relative cursor position inside display window
+				if (i >= LCDcharHeight) menuTop = cursorPos - LCDcharHeight + 1; // if cursor position is outside the window, move the window top
+
+				if (cursorPos >= displayCountVisible) cursorPos -= displayCountVisible; // stop pretending that cursor wraparound did not occur
 
 			}
 
 		case menuOutputDisplayIdx:
-			i = menuTop;
-
-			for (uint8_t x = 0; x < 2; x++)
+			for (uint8_t x = 0; x < LCDcharHeight; x++)
 			{
+
+				i = menuTop + x;
+
+				if (i >= displayCountVisible) i -= displayCountVisible;
 
 				text::gotoXY(devLCD, 0, x);
 				text::charOut(devLCD, ((i == cursorPos) ? '>' : ' ' ));
 				text::stringOut(devLCD, menuTitles, i);
-				i++;
-				if (i >= displayCountVisible) i = 0;
 
 			}
 			break;
@@ -816,7 +828,6 @@ static void cursor::moveAbsolute(uint8_t positionY, uint8_t positionX)
 
 	}
 
-	cursorXdirection = 0;
 	positionY = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeXcount);
 
 	switch (positionX)
@@ -843,6 +854,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 {
 
 	uint8_t wrapAroundFlag;
+	uint8_t cursorXdirection;
 	uint8_t levelChangeFlag;
 	uint8_t v;
 	uint8_t maxVal;
@@ -884,7 +896,6 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		displayCursor[(unsigned int)(menuLevel)] = v;
 
 	}
-	else cursorXdirection = 0;
 
 	if (moveY)
 	{
@@ -917,7 +928,6 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 			displayCursor[(unsigned int)(menuLevel)] = v;
 
 		}
-		else cursorXdirection = 0;
 
 	}
 
@@ -1116,7 +1126,8 @@ int main(void)
 	accelTestStatus = accelerationFlags;
 
 #endif // useDragRaceFunction
-	menuLevel = 255;
+	menuLevel = mainDisplayIdx;
+	menuTop = 255;
 	topScreenLevel = 0;
 
 	sei();
