@@ -118,7 +118,7 @@ static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
 	instrMul2byByte, 2,									// set such that if inst FE == trip FE, output 2/3
 	instrMul2byByte, 0xFF,								// convert to range 0-255
 	instrDiv2by1,										// perform fuel economy division
-	instrBranchIfOverflow, 8,							// if division by zero attempted, skip ahead
+	instrBranchIfOverflow, 9,							// if division by zero attempted, skip ahead
 	instrLdRegByte, 0x01, 0xFF,							// see if result is greater than 0xFF
 	instrCmpXtoY, 0x21,
 	instrBranchIfLTorE, 2,								// if register 2 contents are less than or equal to register 1 contents, skip
