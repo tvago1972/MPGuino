@@ -172,7 +172,7 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 
 }
 
-static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t j;
@@ -386,7 +386,7 @@ static void parameterEdit::save(void)
 		default:
 			cp = 10;
 			displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
-			displayHandler(menuCursorUpdateIdx, cp, 1);
+			displayHandler(menuCursorUpdateIdx, cp);
 			break;
 
 	}
@@ -404,7 +404,7 @@ static void parameterEdit::cancel(void)
 
 		cp = 11;
 		displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
-		displayHandler(menuCursorUpdateIdx, cp, 1);
+		displayHandler(menuCursorUpdateIdx, cp);
 
 	}
 	else
@@ -418,7 +418,7 @@ static void parameterEdit::cancel(void)
 
 /* MPGuino parameter settings edit section */
 
-static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -496,7 +496,7 @@ static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t 
 #ifdef usePartialRefuel
 /* partial refuelling support section */
 
-static uint8_t partialRefuel::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t partialRefuel::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;

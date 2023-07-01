@@ -1,6 +1,6 @@
 /* Main screen section */
 
-static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -246,7 +246,7 @@ static void mainDisplay::returnToMain(void)
 #if defined(useScreenEditor)
 /* Programmable main display screen edit support section */
 
-static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t tripBlink;

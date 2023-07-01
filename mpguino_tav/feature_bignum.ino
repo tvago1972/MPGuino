@@ -1,7 +1,7 @@
 #ifdef useClockDisplay
  /* Big Clock Display support section */
 
-static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -127,7 +127,7 @@ static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -265,7 +265,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 #ifdef useBigDigitDisplay
 /* Big Digit Output support section */
 
-static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;

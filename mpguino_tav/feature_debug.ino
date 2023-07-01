@@ -75,7 +75,7 @@ static void systemInfo::idleProcess(void)
 
 }
 
-static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint16_t availableRAMptr;
@@ -287,7 +287,7 @@ static void activityLED::output(uint8_t val)
 #ifdef useTestButtonValues
 /* Button input value viewer section */
 
-static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -1411,7 +1411,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // useDebugTerminal
 #ifdef useSimulatedFIandVSS
-static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;

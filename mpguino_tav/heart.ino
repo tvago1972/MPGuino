@@ -1761,7 +1761,7 @@ static void initHardware(void)
 	serial3::init();
 #endif // defined(useSerial3Port)
 #if defined(__AVR_ATmega32U4__)
-	usbSupport::init();
+//	usbSupport::init();
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(useButtonInput)
 	button::init();
@@ -1802,7 +1802,7 @@ static void doGoDeepSleep(void)
 	button::shutdown();
 #endif // defined(useButtonInput)
 #if defined(__AVR_ATmega32U4__)
-	usbSupport::shutdown();
+//	usbSupport::shutdown();
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(useSerial3Port)
 	serial3::shutdown();

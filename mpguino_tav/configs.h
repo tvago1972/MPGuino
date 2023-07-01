@@ -18,7 +18,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //
 // if either useTinkerkitLCDmodule or useMPGuinoColourTouch is used, the below options will be ignored
 //
-//#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
+#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
 //#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
@@ -53,8 +53,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // selectable options - any conflicts will be reported at compile time
 //
-//#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
+#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 //#define useBigFE true						// Show big fuel economy displays
@@ -83,12 +83,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // performance enhancement options - all may be chosen independently of one another
 //
 #define useBufferedLCD true					// Speed up LCD output
-#define useBufferedSerial0Port true			// Speed up serial port 0 output
+//#define useBufferedSerial0Port true			// Speed up serial port 0 output
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
-#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
-#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
+//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+//#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
 //
@@ -118,13 +118,13 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // program measurement and debugging tools
 //
 //#define useDebugTerminal true				// terminal interface between PC and MPGuino
-#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
-#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
-#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
+//#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
+//#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
+//#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true			// Allows observation of button mapping
-#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
+//#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
 //#define useActivityLED true					// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
 //#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useSWEET64mult true					// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
