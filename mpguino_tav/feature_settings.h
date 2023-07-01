@@ -19,7 +19,7 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 {
 
 	static uint8_t sharedFunctionCall(uint8_t cmd);
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void findLeft(void);
 	static void findRight(void);
@@ -38,7 +38,7 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 namespace settings /* Parameter setting selector section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 
 };
 
@@ -46,7 +46,7 @@ namespace settings /* Parameter setting selector section prototype */
 namespace partialRefuel /* partial refuelling support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void select(void);
 	static void longSelect(void);

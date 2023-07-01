@@ -2,7 +2,7 @@
 namespace clockSet /* Big Clock Display support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void changeDigitUp(void);
 	static void changeDigitDown(void);
@@ -34,7 +34,7 @@ static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
 namespace statusBar /* Status Bar Output support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void outputStatusBar(uint16_t val);
 	static void writeStatusBarElement(uint8_t chr, uint8_t val);
 
@@ -238,7 +238,7 @@ static const uint8_t statusBarOverflowFont[] PROGMEM = {
 namespace bigDigit /* Big Digit output support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 #ifdef useBigTimeDisplay
 	static void outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos);
 #endif // useBigTimeDisplay

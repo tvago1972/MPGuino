@@ -363,7 +363,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 }
 
 #ifdef useSavedTrips
-static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
@@ -595,7 +595,7 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;

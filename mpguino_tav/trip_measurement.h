@@ -20,7 +20,7 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 	static void idleProcess(void);
 	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
 #ifdef useSavedTrips
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void goSaveCurrent(void);
 	static void goSaveTank(void);
 	static void select(void);
@@ -41,7 +41,7 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 namespace pressureCorrect /* Chrysler returnless fuel pressure correction display section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getPressureCorrectPageFormats(uint8_t formatIdx);
 
 }

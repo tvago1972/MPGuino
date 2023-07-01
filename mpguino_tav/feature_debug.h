@@ -3,7 +3,7 @@ namespace systemInfo /* CPU loading and RAM availability support section prototy
 {
 
 	static void idleProcess(void);
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
 	static void showCPUloading(void);
 	static uint16_t getAvailableRAMsize(void);
@@ -29,7 +29,7 @@ extern char *__brkval;
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
 	static void configurePorts(void);
 	static void idleProcessFuel(void);
@@ -333,7 +333,7 @@ const char terminalActivityFlagStr[] PROGMEM = {
 namespace buttonView /* Button input value viewer section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 
 }
 

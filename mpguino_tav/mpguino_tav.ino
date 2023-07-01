@@ -404,10 +404,33 @@ static const uint8_t mainDisplayPageCount = 9			// count of base number of data 
 ;
 static const uint8_t mainDisplayFormatSize = mainDisplayPageCount * 4;
 
+#include "heart.h"
+#include "parameters.h"
+#include "trip_measurement.h"
+#include "sweet64.h"
+#include "m_serial.h"
+#include "m_analog.h"
+#include "m_twi.h"
+//#include "m_usb.h"
+#include "m_lcd.h"
+#include "m_tft.h"
+#include "m_button.h"
+#include "functions.h"
+#include "text.h"
+#include "feature_base.h"
+#include "feature_settings.h"
+#include "feature_datalogging.h"
+#include "feature_bignum.h"
+#include "feature_bargraph.h"
+#include "feature_outputpin.h"
+#include "feature_debug.h"
+#include "feature_dragrace.h"
+#include "feature_coastdown.h"
+
 namespace menu /* Top-down menu selector section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void select(void);
 
@@ -424,6 +447,24 @@ namespace cursor /* LCD screen cursor manipulation section prototype */
 
 };
 
+static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
+int main(void);
+
+// Menu display / screen cursor support section
+
+typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
+
+typedef struct
+{
+
+	uint8_t menuIndex;
+	uint8_t baseDisplayIdx;
+	uint8_t displayGroupCount;
+	uint8_t modeXcount;
+	displayHandlerFunc displayHandler;
+
+} displayData;
+
 uint8_t menuLevel;
 
 volatile uint8_t cursorXdirection;
@@ -433,47 +474,6 @@ const uint8_t menuExitIdx =				0;								// this call may not even be necessary
 const uint8_t menuEntryIdx =			menuExitIdx + 1;				// typically, this call will fall through
 const uint8_t menuCursorUpdateIdx =		menuEntryIdx + 1;				// ...to this call, then will fall through
 const uint8_t menuOutputDisplayIdx =	menuCursorUpdateIdx + 1;		// ...to this call
-
-#include "heart.h"
-#include "parameters.h"
-#include "trip_measurement.h"
-#include "sweet64.h"
-#include "m_serial.h"
-#include "m_analog.h"
-#include "m_twi.h"
-#include "m_usb.h"
-#include "m_lcd.h"
-#include "m_tft.h"
-#include "m_button.h"
-#include "functions.h"
-#include "text.h"
-#include "feature_base.h"
-#include "feature_settings.h"
-#include "feature_datalogging.h"
-#include "feature_bignum.h"
-#include "feature_bargraph.h"
-#include "feature_outputpin.h"
-#include "feature_debug.h"
-#include "feature_dragrace.h"
-#include "feature_coastdown.h"
-
-typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t, uint8_t); // type for various handler functions
-
-typedef struct
-{
-
-	uint8_t menuIndex;
-	uint8_t modeIndex;
-	uint8_t modeYcount;
-	uint8_t modeXcount;
-	displayHandlerFunc screenDisplayHandler;
-
-} displayData;
-
-static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
-int main(void);
-
-// Menu display / screen cursor support section
 
 // the following display index defines are for the legacy MPGuino displays
 
@@ -645,81 +645,81 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following screen entries are in the top-down menu list
 
-	 {mainDisplayIdx,				mainDisplayIdx,						displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler}
+	 {mainDisplayIdx,				mainDisplayIdx,				displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler}
 #if defined(useStatusBar)
-	,{statusBarIdx,					mainDisplayIdx,						displayCountUser,	2,							statusBar::displayHandler}
+	,{statusBarIdx,					mainDisplayIdx,				displayCountUser,	2,							statusBar::displayHandler}
 #endif // defined(useStatusBar)
 #ifdef useBigFE
-	,{bigFEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigFEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigFE
 #ifdef useBarFuelEconVsTime
-	,{barFEvTdisplayIdx,			mainDisplayIdx,						displayCountUser,	4,							barGraphSupport::displayHandler}
+	,{barFEvTdisplayIdx,			mainDisplayIdx,				displayCountUser,	4,							barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsTime
 #ifdef useBarFuelEconVsSpeed
-	,{barFEvSdisplayIdx,			mainDisplayIdx,						displayCountUser,	3,							barGraphSupport::displayHandler}
+	,{barFEvSdisplayIdx,			mainDisplayIdx,				displayCountUser,	3,							barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsSpeed
 #ifdef useBigDTE
-	,{bigDTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigDTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigDTE
 #ifdef useBigTTE
-	,{bigTTEdisplayIdx,				mainDisplayIdx,						displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigTTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
 #endif // useBigTTE
 #ifdef useCPUreading
-	,{CPUmonDisplayIdx,				mainDisplayIdx | 0x80,				displayCountUser,	1,							systemInfo::displayHandler}
+	,{CPUmonDisplayIdx,				mainDisplayIdx,				displayCountUser,	1,							systemInfo::displayHandler}
 #endif // useCPUreading
 #ifdef useClockDisplay
-	,{clockShowDisplayIdx,			mainDisplayIdx | 0x80,				displayCountUser,	1,							bigDigit::displayHandler}
+	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							bigDigit::displayHandler}
 #endif // useClockDisplay
-	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx | 0x80,	1,					eePtrSettingsDispLen,		settings::displayHandler}
-	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx | 0x80,		1,					eePtrSettingsInjLen,		settings::displayHandler}
-	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx | 0x80,		1,					eePtrSettingsVSSlen,		settings::displayHandler}
-	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx | 0x80,		1,					eePtrSettingsTankLen,		settings::displayHandler}
+	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		settings::displayHandler}
+	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		settings::displayHandler}
+	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		settings::displayHandler}
+	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		settings::displayHandler}
 #ifdef useChryslerMAPCorrection
-	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx | 0x80,		1,					eePtrSettingsCRFIClen,		settings::displayHandler}
+	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		settings::displayHandler}
 #endif // useChryslerMAPCorrection
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx | 0x80,		1,					eePtrSettingsACDlen,		settings::displayHandler}
+	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		settings::displayHandler}
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx | 0x80,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler}
-	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx | 0x80,		1,					eePtrSettingsMiscLen,		settings::displayHandler}
+	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler}
+	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		settings::displayHandler}
 #ifdef useDragRaceFunction
 	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	button::doNothing}
 #endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
-	,{coastdownIdx | 0x80,	1,	3,	coastdown::goDisplay,	button::doNothing}
+	,{coastdownIdx,	1,	3,	coastdown::goDisplay,	button::doNothing}
 #endif // useCoastDownCalculator
 #ifdef useSimulatedFIandVSS
-	,{signalSimDisplayIdx,			signalSimDisplayIdx | 0x80,			1,					4,							signalSim::displayHandler}
+	,{signalSimDisplayIdx,			signalSimDisplayIdx,		1,					4,							signalSim::displayHandler}
 #endif // useSimulatedFIandVSS
 #ifdef useChryslerMAPCorrection
-	,{pressureDisplayIdx,			pressureDisplayIdx | 0x80,			1,					1,							pressureCorrect::displayHandler}
+	,{pressureDisplayIdx,			pressureDisplayIdx,			1,					1,							pressureCorrect::displayHandler}
 #endif // useChryslerMAPCorrection
 #ifdef useDebugAnalog
-	,{analogDisplayIdx,				analogDisplayIdx | 0x80,			1,					1,							analogReadViewer::displayHandler}
+	,{analogDisplayIdx,				analogDisplayIdx,			1,					1,							analogReadViewer::displayHandler}
 #endif // useDebugAnalog
 #ifdef useTestButtonValues
-	,{buttonDisplayIdx,				buttonDisplayIdx | 0x80,			1,					1,							buttonView::displayHandler}
+	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							buttonView::displayHandler}
 #endif // useTestButtonValues
 
 // the following screen entries do not show up in the top-down menu list
 
-	,{0,							menuDisplayIdx | 0x80,				1,					displayCountVisible,		menu::displayHandler}
-	,{0,							parameterEditDisplayIdx | 0x80,		1,					12,							parameterEdit::displayHandler}
+	,{0,							menuDisplayIdx,				1,					displayCountVisible,		menu::displayHandler}
+	,{0,							parameterEditDisplayIdx,	1,					12,							parameterEdit::displayHandler}
 #ifdef useClockDisplay
-	,{0,							clockSetDisplayIdx | 0x80,			1,					4,							clockSet::displayHandler}
+	,{0,							clockSetDisplayIdx,			1,					4,							clockSet::displayHandler}
 #endif // useClockDisplay
 #ifdef useSavedTrips
-	,{0,							tripSaveDisplayIdx,					1,					3,							tripSupport::displayHandler}
+	,{0,							tripSaveDisplayIdx,			1,					3,							tripSupport::displayHandler}
 #endif // useSavedTrips
 #ifdef usePartialRefuel
-	,{0,							partialRefuelDisplayIdx | 0x80,		1,					3,							partialRefuel::displayHandler}
+	,{0,							partialRefuelDisplayIdx,	1,					3,							partialRefuel::displayHandler}
 #endif // usePartialRefuel
 #if defined(useScreenEditor)
-	,{0,							displayEditDisplayIdx | 0x80,		1,					8,							displayEdit::displayHandler}
+	,{0,							displayEditDisplayIdx,		1,					8,							displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
 };
 
-static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos, uint8_t cursorChanged)
+static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t i;
@@ -848,7 +848,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 	uint8_t maxVal;
 	uint8_t x; // base menu level
 
-	x = (pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeIndex) & 0x7F); // base menu level
+	x = (pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].baseDisplayIdx)); // base menu level
 	levelChangeFlag = 0;
 
 	wrapAroundFlag = 0; // initially, signal that no wrap-around occurred
@@ -892,7 +892,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		if (moveY & 0x80) moveY = 0xFF;
 		else moveY = 0x01;
 
-		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeYcount); // "vertical" size
+		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].displayGroupCount); // "vertical" size
 
 		v = menuLevel - x + moveY;
 
@@ -937,7 +937,7 @@ static void cursor::updateAfterMove(uint8_t levelChangeFlag)
 	if (levelChangeFlag) cf = menuEntryIdx;
 	else cf = menuCursorUpdateIdx;
 
-	((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].screenDisplayHandler))(cf, cp, 0);
+	((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(cf, cp);
 
 }
 
@@ -1198,7 +1198,7 @@ int main(void)
 
 #else // useDeepSleep
 #ifdef useClockDisplay
-				bigDigit::displayHandler(menuEntryIdx, 255, 1); // initialize the software clock
+				bigDigit::displayHandler(menuEntryIdx, 255); // initialize the software clock
 				text::charOut(devLCD, 0x12); // set backlight brightness to zero
 
 #else // useClockDisplay
@@ -1222,7 +1222,7 @@ int main(void)
 #if defined(useTFToutput)
 				TFT::init(); // re-initialize TFT device
 #endif // defined(useTFToutput)
-				((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].screenDisplayHandler))(menuEntryIdx, displayCursor[(unsigned int)(menuLevel)], 1); // call indexed support section screen initialization function
+				((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(menuEntryIdx, displayCursor[(unsigned int)(menuLevel)]); // call indexed support section screen initialization function
 
 			}
 
@@ -1340,13 +1340,6 @@ int main(void)
 			// if the park timer setting in stored parameters is larger than the activity timer, MPGuino will skip parked mode
 			i = activityFlags & afValidFlags; // fetch a local copy of activity flags
 
-			if (pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeIndex) & 0x80) // if the currently displayed screen is marked to ignore button presses
-			{
-
-				if ((i == (afVehicleStoppedFlag | afUserInputFlag)) || (i == (afEngineOffFlag | afUserInputFlag))) i &= ~(afUserInputFlag); // ignore button presses for this screen
-
-			}
-
 			text::gotoXY(devLCD, 0, 0);
 			switch (i)
 			{
@@ -1361,14 +1354,14 @@ int main(void)
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
 				case 0: // engine running and vehicle in motion
 				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
-					((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].screenDisplayHandler))(menuOutputDisplayIdx, displayCursor[(unsigned int)(menuLevel)], 0); // call indexed support section screen refresh function
+					((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(menuOutputDisplayIdx, displayCursor[(unsigned int)(menuLevel)]); // call indexed support section screen refresh function
 					break;
 
 				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
 #ifndef useDeepSleep
 #ifdef useClockDisplay
-					bigDigit::displayHandler(menuOutputDisplayIdx, 255, 0); // display the software clock
+					bigDigit::displayHandler(menuOutputDisplayIdx, 255); // display the software clock
 
 #endif // useClockDisplay
 #endif // useDeepSleep
