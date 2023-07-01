@@ -1,0 +1,364 @@
+0xYX - register storage in program
+
+r00 - do not load register operand
+r01 - fetch rX and rY from program, rY as rA
+r02 - specify r1 as rY, r5 as rA 
+r03 - specify r2 as rS, r4 as rA
+r04 - fetch rX from program as rY, r5 as rS and rA
+r05 - specify r5 as rS and rY and rA
+r06 - fetch rX from program, r5 as rY and rA
+r07 - 
+
+e00 - do not load secondary operand
+e01 - load secondary operand from program
+e02 - load secondary operand from index
+e03 - add index to secondary operand from program
+e04 - load secondary operand with EEPROM indirect[index]
+e05 - load secondary operand with numerator index[index] xor not metric flag
+e06 - load secondary operand with numerator index[index] xor metric flag
+e07 - 
+
+s00 - do not load extra operand
+s01 - load extra operand from program
+s02 - load extra operand from index
+s03 - load branch operand from program
+
+----------------------
+
+(r0e0s0)
+h00 - return
+h01 - return and restore trace flag
+h02 - bcdadjust
+h03 - isqrt
+h04 - trace on
+h05 - trace save
+h06 - trace off
+h07 - trace restore
+
+(r0e0s3)
+b00 - branch always
+b01 - branch c=1 | z=1			(bgte)
+b02 - branch c=1			(bgt)
+b03 - branch c=0			(blte)
+b04 - branch z=0			(bne)
+b05 - branch z=1			(beq)
+b06 - branch n=0			(bpl)
+b07 - branch n=1			(bmi)
+b08 - branch v=0			(bvc)
+b09 - branch v=1			(bvs)
+b10 - branch c=0 & z=0			(blt)
+
+m00 - non-arithmetic
+m01 - 
+m02 - add			rS = rS + rA
+m03 - sub			rS = rS - rA
+m04 - compare			na = rS - rA
+m05 - test			rA
+m06 - multiply			r02 = r02 * rA
+m07 - divide			r02 = r02 / rA rmdr r01 and qadj r4
+
+i00 - load r05 with rY
+i01 - load r05 with byte
+i02 - load r05 with byte rY[]
+i03 - load r05 with eeprom
+i04 - load r05 with volatile
+i05 - load r05 with main program
+i06 - load r05 with trip variable
+i07 - load r05 with const
+i08 - load r05 with eeprom init
+i09 - load r05 with voltage
+i10 - load index
+i11 - load index rY[]
+i12 - load index eeprom
+i13 - compare index
+i14 - compare index rY[]
+i15 - swap rX rY
+i16 - store rX[0] rY[]
+i17 - store eeprom
+i18 - store volatile rX
+i19 - store main program rX
+i20 - store trip variable rX
+i21 - jump
+i22 - call
+i23 - 
+i24 - 
+i25 - 
+i26 - test metric flag
+i27 - shift left
+i28 - shift right
+i29 - 
+i30 - 
+i31 - no operation
+
+
+r00	e00	s03	b00		branch always		
+r00	e00	s03	b01		branch c=1 | z=1	(bgte)
+r00	e00	s03	b02		branch c=1		(bgt)
+r00	e00	s03	b03		branch c=0		(blte)
+r00	e00	s03	b04		branch z=0		(bne)
+r00	e00	s03	b05		branch z=1		(beq)
+r00	e00	s03	b06		branch n=0		(bpl)
+r00	e00	s03	b07		branch n=1		(bmi)
+r00	e00	s03	b08		branch v=0		(bvc)
+r00	e00	s03	b09		branch v=1		(bvs)
+r00	e00	s03	b10		branch c=0 & z=0	(blt)
+r01	e00	s00	m00	i00	load rX rY
+r01	e01	s00	m00	i01	load rX direct
+r01	e02	s00	m00	i01	load rX index
+r01	e03	s00	m00	i01	load rX direct + index
+r01	e01	s00	m00	i02	load rX rY[direct]
+r01	e02	s00	m00	i02	load rX rY[index]
+r01	e03	s00	m00	i02	load rX rY[direct + index]
+r01	e01	s00	m00	i03	load rX eeprom direct
+r01	e02	s00	m00	i03	load rX eeprom index
+r01	e03	s00	m00	i03	load rX eeprom direct + index
+r01	e04	s00	m00	i03	load rX eeprom indirect[index]
+r01	e01	s00	m00	i04	load rX volatile direct
+r01	e02	s00	m00	i04	load rX volatile index
+r01	e03	s00	m00	i04	load rX volatile direct + index
+r01	e01	s00	m00	i05	load rX main program direct
+r01	e02	s00	m00	i05	load rX main program index
+r01	e03	s00	m00	i05	load rX main program direct + index
+r01	e01	s01	m00	i06	load rX trip variable direct direct
+r01	e02	s01	m00	i06	load rX trip variable index direct
+r01	e01	s02	m00	i06	load rX trip variable direct index
+r01	e01	s00	m00	i08	load rX eeprom init direct
+r01	e02	s00	m00	i08	load rX eeprom init index
+r01	e03	s00	m00	i08	load rX eeprom init direct + index
+r01	e04	s00	m00	i08	load rX eeprom init indirect[index]
+r01	e01	s00	m00	i09	load rX voltage direct
+r01	e02	s00	m00	i09	load rX voltage index
+r01	e03	s00	m00	i09	load rX voltage direct + index
+r01	e01	s00	m00	i07	load rX const direct
+r01	e02	s00	m00	i07	load rX const index
+r01	e03	s00	m00	i07	load rX const direct + index
+r01	e05	s00	m00	i07	load rX const numer
+r01	e06	s00	m00	i07	load rX const denom
+r03	e00	s00	m02	i31	quotient adjust r2
+r01	e00	s00	m02	i00	add rX rY
+r01	e01	s00	m02	i01	add rX direct
+r01	e02	s00	m02	i01	add rX index
+r01	e03	s00	m02	i01	add rX direct + index
+r01	e01	s00	m02	i02	add rX rY[direct]
+r01	e02	s00	m02	i02	add rX rY[index]
+r01	e03	s00	m02	i02	add rX rY[direct + index]
+r01	e01	s00	m02	i03	add rX eeprom direct
+r01	e02	s00	m02	i03	add rX eeprom index
+r01	e03	s00	m02	i03	add rX eeprom direct + index
+r01	e04	s00	m02	i03	add rX eeprom indirect[index]
+r01	e01	s00	m02	i04	add rX volatile direct
+r01	e02	s00	m02	i04	add rX volatile index
+r01	e03	s00	m02	i04	add rX volatile direct + index
+r01	e01	s00	m02	i05	add rX main program direct
+r01	e02	s00	m02	i05	add rX main program index
+r01	e03	s00	m02	i05	add rX main program direct + index
+r01	e01	s01	m02	i06	add rX trip variable direct direct
+r01	e02	s01	m02	i06	add rX trip variable index direct
+r01	e01	s02	m02	i06	add rX trip variable direct index
+r01	e01	s00	m02	i07	add rX const direct
+r01	e02	s00	m02	i07	add rX const index
+r01	e03	s00	m02	i07	add rX const direct + index
+r01	e05	s00	m02	i07	add rX const numer
+r01	e06	s00	m02	i07	add rX const denom
+r01	e01	s00	m02	i08	add rX eeprom init direct
+r01	e02	s00	m02	i08	add rX eeprom init index
+r01	e03	s00	m02	i08	add rX eeprom init direct + index
+r01	e04	s00	m02	i08	add rX eeprom init indirect[index]
+r01	e01	s00	m02	i09	add rX voltage direct
+r01	e02	s00	m02	i09	add rX voltage index
+r01	e03	s00	m02	i09	add rX voltage direct + index
+r01	e00	s00	m03	i00	sub rX rY
+r01	e01	s00	m03	i01	sub rX direct
+r01	e02	s00	m03	i01	sub rX index
+r01	e03	s00	m03	i01	sub rX direct + index
+r01	e01	s00	m03	i02	sub rX rY[direct]
+r01	e02	s00	m03	i02	sub rX rY[index]
+r01	e03	s00	m03	i02	sub rX rY[direct + index]
+r01	e01	s00	m03	i03	sub rX eeprom direct
+r01	e02	s00	m03	i03	sub rX eeprom index
+r01	e03	s00	m03	i03	sub rX eeprom direct + index
+r01	e04	s00	m03	i03	sub rX eeprom indirect[index]
+r01	e01	s00	m03	i04	sub rX volatile direct
+r01	e02	s00	m03	i04	sub rX volatile index
+r01	e03	s00	m03	i04	sub rX volatile direct + index
+r01	e01	s00	m03	i05	sub rX main program direct
+r01	e02	s00	m03	i05	sub rX main program index
+r01	e03	s00	m03	i05	sub rX main program direct + index
+r01	e01	s01	m03	i06	sub rX trip variable direct direct
+r01	e02	s01	m03	i06	sub rX trip variable index direct
+r01	e01	s02	m03	i06	sub rX trip variable direct index
+r01	e01	s00	m03	i07	sub rX const direct
+r01	e02	s00	m03	i07	sub rX const index
+r01	e03	s00	m03	i07	sub rX const direct + index
+r01	e05	s00	m03	i07	sub rX const numer
+r01	e06	s00	m03	i07	sub rX const denom
+r01	e01	s00	m03	i08	sub rX eeprom init direct
+r01	e02	s00	m03	i08	sub rX eeprom init index
+r01	e03	s00	m03	i08	sub rX eeprom init direct + index
+r01	e04	s00	m03	i08	sub rX eeprom init indirect[index]
+r01	e01	s00	m03	i09	sub rX voltage direct
+r01	e02	s00	m03	i09	sub rX voltage index
+r01	e03	s00	m03	i09	sub rX voltage direct + index
+r01	e00	s00	m04	i00	compare rX rY
+r01	e01	s00	m04	i01	compare rX direct
+r01	e02	s00	m04	i01	compare rX index
+r01	e03	s00	m04	i01	compare rX direct + index
+r01	e01	s00	m04	i02	compare rX rY[direct]
+r01	e02	s00	m04	i02	compare rX rY[index]
+r01	e03	s00	m04	i02	compare rX rY[direct + index]
+r01	e01	s00	m04	i03	compare rX eeprom direct
+r01	e02	s00	m04	i03	compare rX eeprom index
+r01	e03	s00	m04	i03	compare rX eeprom direct + index
+r01	e04	s00	m04	i03	compare rX eeprom indirect[index]
+r01	e01	s00	m04	i04	compare rX volatile direct
+r01	e02	s00	m04	i04	compare rX volatile index
+r01	e03	s00	m04	i04	compare rX volatile direct + index
+r01	e01	s00	m04	i05	compare rX main program direct
+r01	e02	s00	m04	i05	compare rX main program index
+r01	e03	s00	m04	i05	compare rX main program direct + index
+r01	e01	s01	m04	i06	compare rX trip variable direct direct
+r01	e02	s01	m04	i06	compare rX trip variable index direct
+r01	e01	s02	m04	i06	compare rX trip variable direct index
+r01	e01	s00	m04	i07	compare rX const direct
+r01	e02	s00	m04	i07	compare rX const index
+r01	e03	s00	m04	i07	compare rX const direct + index
+r01	e05	s00	m04	i07	compare rX const numer
+r01	e06	s00	m04	i07	compare rX const denom
+r01	e01	s00	m04	i08	compare rX eeprom init direct
+r01	e02	s00	m04	i08	compare rX eeprom init index
+r01	e03	s00	m04	i08	compare rX eeprom init direct + index
+r01	e04	s00	m04	i08	compare rX eeprom init indirect[index]
+r01	e01	s00	m04	i09	compare rX voltage direct
+r01	e02	s00	m04	i09	compare rX voltage index
+r01	e03	s00	m04	i09	compare rX voltage direct + index
+r04	e00	s00	m05	i31	test rX
+r05	e02	s00	m05	i01	test index
+r05	e03	s00	m05	i01	test direct + index
+r04	e01	s00	m05	i02	test rX[direct]
+r04	e02	s00	m05	i02	test rX[index]
+r04	e03	s00	m05	i02	test rX[direct + index]
+r05	e01	s00	m05	i03	test eeprom direct
+r05	e02	s00	m05	i03	test eeprom index
+r05	e03	s00	m05	i03	test eeprom direct + index
+r05	e04	s00	m05	i03	test eeprom indirect[index]
+r05	e01	s00	m05	i04	test volatile direct
+r05	e02	s00	m05	i04	test volatile index
+r05	e03	s00	m05	i04	test volatile direct + index
+r05	e01	s00	m05	i05	test main program direct
+r05	e02	s00	m05	i05	test main program index
+r05	e03	s00	m05	i05	test main program direct + index
+r05	e01	s01	m05	i06	test trip variable direct direct
+r05	e02	s01	m05	i06	test trip variable index direct
+r05	e01	s02	m05	i06	test trip variable direct index
+r05	e01	s00	m05	i09	test voltage direct
+r05	e02	s00	m05	i09	test voltage index
+r05	e03	s00	m05	i09	test voltage direct + index
+r02	e00	s00	m06	i00	multiply r02 r1
+r05	e01	s00	m06	i01	multiply r02 direct
+r05	e02	s00	m06	i01	multiply r02 index
+r05	e03	s00	m06	i01	multiply r02 direct + index
+r05	e01	s00	m06	i02	multiply r02 rY[direct]
+r05	e02	s00	m06	i02	multiply r02 rY[index]
+r05	e03	s00	m06	i02	multiply r02 rY[direct + index]
+r05	e01	s00	m06	i03	multiply r02 eeprom direct
+r05	e02	s00	m06	i03	multiply r02 eeprom index
+r05	e03	s00	m06	i03	multiply r02 eeprom direct + index
+r05	e04	s00	m06	i03	multiply r02 eeprom indirect[index]
+r05	e01	s00	m06	i04	multiply r02 volatile direct
+r05	e02	s00	m06	i04	multiply r02 volatile index
+r05	e03	s00	m06	i04	multiply r02 volatile direct + index
+r05	e01	s00	m06	i05	multiply r02 main program direct
+r05	e02	s00	m06	i05	multiply r02 main program index
+r05	e03	s00	m06	i05	multiply r02 main program direct + index
+r05	e01	s01	m06	i06	multiply r02 trip variable direct direct
+r05	e02	s01	m06	i06	multiply r02 trip variable index direct
+r05	e01	s02	m06	i06	multiply r02 trip variable direct index
+r05	e01	s00	m06	i07	multiply r02 const direct
+r05	e02	s00	m06	i07	multiply r02 const index
+r05	e03	s00	m06	i07	multiply r02 const direct + index
+r05	e05	s00	m06	i07	multiply r02 const numer
+r05	e06	s00	m06	i07	multiply r02 const denom
+r05	e01	s00	m06	i08	multiply r02 eeprom init direct
+r05	e02	s00	m06	i08	multiply r02 eeprom init index
+r05	e03	s00	m06	i08	multiply r02 eeprom init direct + index
+r05	e04	s00	m06	i08	multiply r02 eeprom init indirect[index]
+r05	e01	s00	m06	i09	multiply r02 voltage direct
+r05	e02	s00	m06	i09	multiply r02 voltage index
+r05	e03	s00	m06	i09	multiply r02 voltage direct + index
+r02	e00	s00	m07	i00	divide r02 r1
+r05	e01	s00	m07	i01	divide r02 direct
+r05	e02	s00	m07	i01	divide r02 index
+r05	e03	s00	m07	i01	divide r02 direct + index
+r05	e01	s00	m07	i02	divide r02 rY[direct]
+r05	e02	s00	m07	i02	divide r02 rY[index]
+r05	e03	s00	m07	i02	divide r02 rY[direct + index]
+r05	e01	s00	m07	i03	divide r02 eeprom direct
+r05	e02	s00	m07	i03	divide r02 eeprom index
+r05	e03	s00	m07	i03	divide r02 eeprom direct + index
+r05	e04	s00	m07	i03	divide r02 eeprom indirect[index]
+r05	e01	s00	m07	i04	divide r02 volatile direct
+r05	e02	s00	m07	i04	divide r02 volatile index
+r05	e03	s00	m07	i04	divide r02 volatile direct + index
+r05	e01	s00	m07	i05	divide r02 main program direct
+r05	e02	s00	m07	i05	divide r02 main program index
+r05	e03	s00	m07	i05	divide r02 main program direct + index
+r05	e01	s01	m07	i06	divide r02 trip variable direct direct
+r05	e02	s01	m07	i06	divide r02 trip variable index direct
+r05	e01	s02	m07	i06	divide r02 trip variable direct index
+r05	e01	s00	m07	i07	divide r02 const direct
+r05	e02	s00	m07	i07	divide r02 const index
+r05	e03	s00	m07	i07	divide r02 const direct + index
+r05	e05	s00	m07	i07	divide r02 const numer
+r05	e06	s00	m07	i07	divide r02 const denom
+r05	e01	s00	m07	i08	divide r02 eeprom init direct
+r05	e02	s00	m07	i08	divide r02 eeprom init index
+r05	e03	s00	m07	i08	divide r02 eeprom init direct + index
+r05	e04	s00	m07	i08	divide r02 eeprom init indirect[index]
+r05	e01	s00	m07	i09	divide r02 voltage direct
+r05	e02	s00	m07	i09	divide r02 voltage index
+r05	e03	s00	m07	i09	divide r02 voltage direct + index
+r00	e01	s00	m00	i10	load index direct
+r00	e03	s00	m00	i10	load index direct + index	(add index)
+r00	e01	s00	m00	i11	load index rY[direct]
+r00	e02	s00	m00	i11	load index rY[index]
+r00	e03	s00	m00	i11	load index rY[direct + index]
+r00	e01	s00	m00	i12	load index eeprom direct
+r00	e02	s00	m00	i12	load index eeprom index
+r00	e03	s00	m00	i12	load index eeprom direct + index
+r00	e04	s00	m00	i12	load index eeprom indirect[index]
+r00	e01	s00	m00	i13	compare index direct
+r00	e01	s00	m00	i14	compare index rY[direct]
+r01	e00	s00	m00	i15	swap rX rY
+r01	e01	s00	m00	i16	store rX[0] rY[direct]
+r01	e02	s00	m00	i16	store rX[0] rY[index]
+r01	e03	s00	m00	i16	store rX[0] rY[direct + index]
+r01	e01	s00	m00	i17	store eeprom rX direct
+r01	e02	s00	m00	i17	store eeprom rX index
+r01	e03	s00	m00	i17	store eeprom rX direct + index
+r01	e04	s00	m00	i17	store eeprom rX indirect[index]
+r01	e01	s00	m00	i18	store volatile rX direct
+r01	e02	s00	m00	i18	store volatile rX index
+r01	e03	s00	m00	i18	store volatile rX direct + index
+r01	e01	s00	m00	i19	store main program rX direct
+r01	e02	s00	m00	i19	store main program rX index
+r01	e03	s00	m00	i19	store main program rX direct + index
+r01	e01	s01	m00	i20	store trip variable rX direct direct
+r01	e02	s01	m00	i20	store trip variable rX index direct
+r01	e01	s02	m00	i20	store trip variable rX direct index
+r00	e01	s00	m00	i21	jump direct
+r00	e02	s00	m00	i21	jump index
+r00	e03	s00	m00	i21	jump direct + index
+r00	e01	s00	m00	i22	call direct
+r00	e02	s00	m00	i22	call index
+r00	e03	s00	m00	i22	call direct + index
+r00	e01	s00	m00	i26	test metric flag
+r01	e00	s00	m00	i27	shift left rX
+r01	e00	s00	m00	i28	shift right rX
+r00	e00	s00	h00		return
+r00	e00	s00	h01		return and restore trace flag
+r00	e00	s00	h02		perform bcd adj
+r00	e00	s00	h03		isqrt
+r00	e00	s00	h04		trace on
+r00	e00	s00	h05		trace save
+r00	e00	s00	h06		trace off
+r00	e00	s00	h07		trace restore
