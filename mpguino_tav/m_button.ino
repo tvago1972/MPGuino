@@ -3,21 +3,19 @@
 
 static const buttonVariable bpListMenu[] PROGMEM = {
 	 {btnShortPressC,	menu::select}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	button::shortRight}
+	,{btnLongPressL,	menu::exit}
+#if defined(useLCDoutput)
+	,{btnLongPressC,	button::doNextBright}
+#endif // defined(useLCDoutput)
+#if defined(useButtonCrossConfig)
 		,{btnShortPressU,	button::shortLeft}
-#if defined(useLCDoutput)
-		,{btnLongPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressL,	button::doNothing}
+		,{btnShortPressD,	button::shortRight}
+		,{btnShortPressL,	menu::exit}
 		,{btnShortPressR,	menu::select}
-#else // useButtonCrossConfig
-		,{btnShortPressR,	button::shortRight}
+#else // defined(useButtonCrossConfig)
 		,{btnShortPressL,	button::shortLeft}
-#if defined(useLCDoutput)
-		,{btnLongPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
-#endif // useButtonCrossConfig
+		,{btnShortPressR,	button::shortRight}
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
@@ -32,34 +30,42 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 #endif // defined(useScreenEditor)
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	button::longRight}
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useSavedTrips
-		,{btnShortPressDR,	tripSupport::goSaveCurrent}
-		,{btnShortPressDL,	tripSupport::goSaveTank}
-	#endif // useSavedTrips
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressLCR,	systemInfo::showCPUloading}
 	#endif // useCPUreading
@@ -87,32 +93,6 @@ static const buttonVariable bpListMainDisplayEdit[] PROGMEM = {
 };
 
 #endif // defined(useScreenEditor)
-static const buttonVariable bpListSetting[] PROGMEM = {
-	 {btnShortPressR,	button::shortRight}
-	,{btnShortPressL,	button::shortLeft}
-	,{btnLongPressL,	menu::entry}
-	,{btnShortPressLR,	parameterEdit::entry}
-#ifdef useButtonCrossConfig
-#if defined(useLCDoutput)
-		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressC,	menu::entry}
-		,{btnShortPressD,	button::shortRight}
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-#if defined(useLCDoutput)
-		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressLCR,	menu::entry}
-	#ifdef useCPUreading
-		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp, 		button::noSupport}
-};
-
 static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
@@ -139,38 +119,50 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#if defined(useBigDigitDisplay) || defined(useStatusBar)
-static const buttonVariable bpListBigNum[] PROGMEM = {
+#if defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph)
+static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
 	,{btnLongPressR,	button::longRight}
 	,{btnLongPressL,	button::longLeft}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	button::longRight}
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
@@ -178,7 +170,7 @@ static const buttonVariable bpListBigNum[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#endif // defined(useBigDigitDisplay) || defined(useStatusBar)
+#endif // defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph)
 #ifdef useClockDisplay
 static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
@@ -189,30 +181,42 @@ static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	,{btnShortPressLR,	clockSet::entry}
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	button::longRight}
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressU,	systemInfo::showCPUloading}
 	#endif // useCPUreading
 #else // useButtonCrossConfig
-#if defined(useLCDoutput)
+	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
 		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
 	#ifdef useCPUreading
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
 	#endif // useCPUreading
@@ -238,60 +242,6 @@ static const buttonVariable bpListClockSet[] PROGMEM = {
 };
 
 #endif // useClockDisplay
-#ifdef useCPUreading
-static const buttonVariable bpListCPUmonitor[] PROGMEM = {
-	 {btnShortPressR,	button::shortRight}
-	,{btnShortPressL,	button::shortLeft}
-	,{btnLongPressR,	button::longRight}
-	,{btnLongPressL,	button::longLeft}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	button::longRight}
-#if defined(useLCDoutput)
-		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-#else // useButtonCrossConfig
-#if defined(useLCDoutput)
-		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-#endif // useButtonCrossConfig
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useCPUreading
-#ifdef usePartialRefuel
-static const buttonVariable bpListPartialRefuel[] PROGMEM = {
-	 {btnShortPressR,	button::shortRight}
-	,{btnShortPressL,	button::shortLeft}
-	,{btnLongPressL,	mainDisplay::returnToMain}
-	,{btnLongPressLR,	mainDisplay::returnToMain}
-	,{btnLongPressC,	partialRefuel::longSelect}
-	,{btnShortPressLR,	partialRefuel::select}
-#ifdef useButtonCrossConfig
-		,{btnShortPressU,	partialRefuel::select}
-		,{btnLongPressU,	partialRefuel::longSelect}
-		,{btnShortPressD,	button::shortRight}
-		,{btnShortPressC,	mainDisplay::returnToMain}
-#else // useButtonCrossConfig
-		,{btnShortPressC,	partialRefuel::select}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // usePartialRefuel
 #if defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
 static const buttonVariable bpListMiscViewer[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
@@ -324,69 +274,6 @@ static const buttonVariable bpListButtonView[] PROGMEM = {
 };
 
 #endif // useTestButtonValues
-#ifdef useSavedTrips
-static const buttonVariable bpListTripSave[] PROGMEM = {
-	 {btnShortPressR,	button::shortRight}
-	,{btnShortPressL,	button::shortLeft}
-	,{btnLongPressL,	mainDisplay::returnToMain}
-	,{btnLongPressLR,	mainDisplay::returnToMain}
-	,{btnShortPressC,	mainDisplay::returnToMain}
-#ifdef useButtonCrossConfig
-		,{btnLongPressU,	tripSupport::select}
-		,{btnShortPressD,	button::shortRight}
-#else // useButtonCrossConfig
-		,{btnLongPressC,	tripSupport::select}
-#endif // useButtonCrossConfig
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useSavedTrips
-#ifdef useBarGraph
-static const buttonVariable bpListBarGraph[] PROGMEM = {
-	 {btnShortPressR,	button::shortRight}
-	,{btnShortPressL,	button::shortLeft}
-	,{btnLongPressR,	button::longRight}
-	,{btnLongPressL,	button::longLeft}
-#ifdef useButtonCrossConfig
-		,{btnShortPressD,	button::longRight}
-#if defined(useLCDoutput)
-		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressC,	menu::entry}
-		,{btnLongPressUR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressUL,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressUL,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useBarFuelEconVsSpeed
-		,{btnLongPressUC,	bgFEvsSsupport::reset}
-	#endif // useBarFuelEconVsSpeed
-	#ifdef useCPUreading
-		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-#if defined(useLCDoutput)
-		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
-		,{btnShortPressLCR,	menu::entry}
-		,{btnLongPressCR,	tripSupport::resetCurrent}
-	#ifdef usePartialRefuel
-		,{btnLongPressLC,	partialRefuel::entry}
-	#else // usePartialRefuel
-		,{btnLongPressLC,	tripSupport::resetTank}
-	#endif // usePartialRefuel
-	#ifdef useBarFuelEconVsSpeed
-		,{btnLongPressLCR,	bgFEvsSsupport::reset}
-	#endif // useBarFuelEconVsSpeed
-	#ifdef useCPUreading
-		,{btnLongPressLR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useBarGraph
 #ifdef useButtonCrossConfig
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
@@ -424,41 +311,41 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 
 	 bpListMainDisplay
 #if defined(useStatusBar)
-	,bpListBigNum
+	,blListSecondaryDisplay
 #endif // defined(useStatusBar)
 #ifdef useBigFE
-	,bpListBigNum
+	,blListSecondaryDisplay
 #endif // useBigFE
-#ifdef useBarFuelEconVsTime
-	,bpListBarGraph
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-	,bpListBarGraph
-#endif // useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsTime)
+	,blListSecondaryDisplay
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	,blListSecondaryDisplay
+#endif // defined(useBarFuelEconVsSpeed)
 #ifdef useBigDTE
-	,bpListBigNum
+	,blListSecondaryDisplay
 #endif // useBigDTE
 #ifdef useBigTTE
-	,bpListBigNum
+	,blListSecondaryDisplay
 #endif // useBigTTE
-#ifdef useCPUreading
-	,bpListCPUmonitor
-#endif // useCPUreading
+#if defined(useCPUreading)
+	,blListSecondaryDisplay
+#endif // defined(useCPUreading)
 #ifdef useClockDisplay
 	,bpListClockDisplay
 #endif // useClockDisplay
-	,bpListSetting
-	,bpListSetting
-	,bpListSetting
-	,bpListSetting
+	,bpListMenu
+	,bpListMenu
+	,bpListMenu
+	,bpListMenu
 #ifdef useChryslerMAPCorrection
-	,bpListSetting
+	,bpListMenu
 #endif // useChryslerMAPCorrection
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,bpListSetting
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,bpListSetting
-	,bpListSetting
+#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+	,bpListMenu
+#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+	,bpListMenu
+	,bpListMenu
 #ifdef useDragRaceFunction
 	,bpListDragRace
 #endif // useDragRaceFunction
@@ -485,12 +372,12 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #ifdef useClockDisplay
 	,bpListClockSet
 #endif // useClockDisplay
-#ifdef useSavedTrips
-	,bpListTripSave
-#endif // useSavedTrips
-#ifdef usePartialRefuel
-	,bpListPartialRefuel
-#endif // usePartialRefuel
+#if defined(useSavedTrips)
+	,bpListMenu
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	,bpListMenu
+#endif // defined(useEnhancedTripReset)
 #if defined(useScreenEditor)
 	,bpListMainDisplayEdit
 #endif // defined(useScreenEditor)
@@ -602,7 +489,7 @@ static void button::doCommand(void)
 	uint8_t i;
 
 	bp = buttonPress; // capture button state
-	bpPtr = (const buttonVariable *)(pgm_read_word(&(menuButtonList[(unsigned int)(menuLevel)].buttonVariableList)));
+	bpPtr = (const buttonVariable *)(pgm_read_word(&(menuButtonList[(unsigned int)(thisMenuData.displayIdx)].buttonVariableList)));
 
 	while (true)
 	{
