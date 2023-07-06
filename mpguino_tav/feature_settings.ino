@@ -81,13 +81,13 @@ static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
 };
 
 #endif // useCalculatedFuelFactor
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 static const uint8_t prgmAddToPartialRefuel[] PROGMEM = {
 	instrAddEEPROMtoX, 0x02, pRefuelSizeIdx,			// add existing partial refuel size parameter to what's in the result register
 	instrDone											// return to caller
 };
 
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
 static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 {
@@ -117,11 +117,6 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 
 		case nesSaveParameter:
 			retVal = onEEPROMchange(prgmWriteParameterValue, parameterPtr);
-			break;
-
-		case nesOutputUpperScreen:
-			text::stringOut(devLCD, parmLabels, cp + 1); // print parameter name at top left
-			text::gotoXY(devLCD, 0, 1); // go to next line
 			break;
 
 		default:
@@ -172,25 +167,63 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 
 }
 
-static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t j;
-	uint8_t k;
-	uint8_t c;
-	uint8_t blinkFlag;
 	uint8_t retVal = 0;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
+		case menuInitialEntryIdx:
+			numberEditObj.neStatusMessage = pseStatusMessages;
 			break;
 
-		case menuEntryIdx:
+		case menuCursorUpdateIdx:
+			numberEditObj.parameterIdx = cursorPos + thisMenuData.menuTitlesOffset;
+			parameterEdit::sharedFunctionCall(nesLoadInitial);
+		case menuDisplayStatusIdx:
+			retVal = 1;
+			break;
+
+		case menuDisplayOutputIdx:
+			text::stringOut(devLCD, pBuff); // output supplementary information
+			text::newLine(devLCD); // clear to the end of the line
+			break;
+
+		case menuDoSelectionIdx:
+			numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+			retVal = parameterEditDisplayIdx;
+			break;
+
+		case menuExitIdx:
+			retVal = menuDisplayIdx;
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
+static void parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t j;
+	uint8_t k;
+	uint8_t c;
+	const char * str;
+
+	switch (cmd)
+	{
+
+		case displayInitialEntryIdx:
 			findLeft();
 
-		case menuCursorUpdateIdx:
+		case displayCursorUpdateIdx:
 			k = ' '; // initially a leading space
 			for (uint8_t x = 0; x < 10; x++) // scan all of numeric buffer from left to right
 			{
@@ -215,20 +248,42 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			if (pBuff[9] == ' ') pBuff[9] = '0'; // ensure at least one digit
 
-		case menuOutputDisplayIdx:
-			blinkFlag = (timer0Status & t0sShowCursor);
-			sharedFunctionCall(nesOutputUpperScreen); // print initial screen information and position cursor
+		case displayOutputIdx:
+			j = 10;
+			str = numberEditSaveCanx;
+			do // append save/canx string to end
+			{
 
-			uint8_t c = pBuff[(unsigned int)(cursorPos)]; // save existing character
-			if ((cursorPos < 10) && (blinkFlag)) pBuff[(unsigned int)(cursorPos)] = '_'; // replace character with an underscore
-			text::stringOut(devLCD, pBuff); // print number
-			pBuff[(unsigned int)(cursorPos)] = c; // restore existing character
+				c = pgm_read_byte(str++);
+				pBuff[(uint16_t)(j++)] = c;
 
-			text::setModeOnCondition(devLCD, ((cursorPos == 10) && (blinkFlag)), odvFlagShootBlanks);
-			text::stringOut(devLCD, numberEditSave);
-			text::setModeOnCondition(devLCD, ((cursorPos == 11) && (blinkFlag)), odvFlagShootBlanks);
-			text::stringOut(devLCD, numberEditCancel);
-			text::setModeOnCondition(devLCD, 0, odvFlagShootBlanks);
+			}
+			while (c);
+
+			c = pBuff[(uint16_t)(cursorPos)]; // save existing character
+
+			if (timer0Status & t0sShowCursor)
+			{
+
+				if (cursorPos < 10) pBuff[(uint16_t)(cursorPos)] = '_'; // replace character with an underscore
+				else
+				{
+
+					if (cursorPos == 10) j = 11; // either select string position for OK
+					else j = 14; // ...or string position for XX (cancel)
+
+					pBuff[(uint16_t)(j++)] = ' '; // blank out selected string position
+					pBuff[(uint16_t)(j++)] = ' ';
+
+				}
+
+			}
+
+			callDisplayHandler(numberEditObj.callingDisplayIdx, displayOutputIdx);
+
+			pBuff[(uint16_t)(cursorPos)] = c; // restore existing character
+			pBuff[10] = 0; // restore end of string
+
 			break;
 
 		default:
@@ -236,14 +291,12 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	}
 
-	return retVal;
-
 }
 
 static void parameterEdit::entry(void)
 {
 
-	numberEditObj.callingScreenLevel = menuLevel;
+	numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
 
 	cursor::moveAbsolute(parameterEditDisplayIdx, 255);
 
@@ -371,12 +424,12 @@ static void parameterEdit::save(void)
 
 		case 10:
 			str2ull(pBuff); // convert parameter buffer string into uint64_t
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 			retVal = sharedFunctionCall(nesSaveParameter); // go save parameter and do any required housekeeping
 
-			cursor::screenLevelEntry(numberEditObj.neStatusMessage, retVal, numberEditObj.callingScreenLevel);
+			cursor::screenLevelEntry(numberEditObj.neStatusMessage, retVal, numberEditObj.callingDisplayIdx);
 			break;
 
 		case 11:
@@ -386,7 +439,7 @@ static void parameterEdit::save(void)
 		default:
 			cp = 10;
 			displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
-			displayHandler(menuCursorUpdateIdx, cp);
+			displayHandler(displayCursorUpdateIdx, cp);
 			break;
 
 	}
@@ -404,179 +457,15 @@ static void parameterEdit::cancel(void)
 
 		cp = 11;
 		displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
-		displayHandler(menuCursorUpdateIdx, cp);
+		displayHandler(displayCursorUpdateIdx, cp);
 
 	}
 	else
 	{
 
-		cursor::screenLevelEntry(numberEditObj.neStatusMessage, 2, numberEditObj.callingScreenLevel);
+		cursor::screenLevelEntry(numberEditObj.neStatusMessage, 2, numberEditObj.callingDisplayIdx);
 
 	}
 
 }
 
-/* MPGuino parameter settings edit section */
-
-static uint8_t settings::displayHandler(uint8_t cmd, uint8_t cursorPos)
-{
-
-	uint8_t retVal = 0;
-
-	switch (cmd)
-	{
-
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			numberEditObj.neStatusMessage = pseStatusMessages;
-
-		case menuCursorUpdateIdx:
-			switch (menuLevel)
-			{
-
-				case displaySettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsDispStart;
-					break;
-
-				case fuelSettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsInjStart;
-					break;
-
-				case VSSsettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsVSSstart;
-					break;
-
-				case tankSettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsTankStart;
-					break;
-
-#ifdef useChryslerMAPCorrection
-				case CRFICsettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsCRFICstart;
-					break;
-
-#endif // useChryslerMAPCorrection
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-				case acdSettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsACDstart;
-					break;
-
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-				case timeoutSettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsTimeoutStart;
-					break;
-
-				case miscSettingsDisplayIdx:
-					numberEditObj.parameterIdx = cursorPos + eePtrSettingsMiscStart;
-					break;
-
-				default:
-					break;
-
-			}
-			parameterEdit::sharedFunctionCall(nesLoadInitial);
-
-		case menuOutputDisplayIdx:
-			parameterEdit::sharedFunctionCall(nesOutputUpperScreen); // print initial screen information and position cursor
-			text::stringOut(devLCD, pBuff);
-			text::newLine(devLCD);
-			break;
-
-		default:
-			break;
-
-	}
-
-	return retVal;
-
-}
-
-#ifdef usePartialRefuel
-/* partial refuelling support section */
-
-static uint8_t partialRefuel::displayHandler(uint8_t cmd, uint8_t cursorPos)
-{
-
-	uint8_t retVal = 0;
-
-	switch (cmd)
-	{
-
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			numberEditObj.neStatusMessage = prStatusMessages;
-			numberEditObj.parameterIdx = pRefuelSizeIdx;
-			parameterEdit::sharedFunctionCall(nesLoadInitial);
-
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx:
-			text::stringOut(devLCD, partialRefuelFuncNames, displayCursor[(unsigned int)(menuLevel)]); // print trip function name at top left
-			text::stringOut(devLCD, pBuff); // print value
-			text::stringOut(devLCD, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON "*1K" tcEOSCR));
-			break;
-
-		default:
-			break;
-
-	}
-
-	return retVal;
-
-}
-
-static void partialRefuel::entry(void)
-{
-
-	cursor::moveAbsolute(partialRefuelDisplayIdx, 0);
-
-}
-
-static void partialRefuel::select(void)
-{
-
-	switch (displayCursor[(unsigned int)(menuLevel)])
-	{
-
-		case 0: // go edit partial refuel value
-			parameterEdit::entry();
-			break;
-
-		default:
-			button::noSupport();
-			break;
-
-	}
-
-}
-
-static void partialRefuel::longSelect(void)
-{
-
-	switch (displayCursor[(unsigned int)(menuLevel)])
-	{
-
-		case 1: // reset partial refuel quantity
-			SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-			parameterEdit::sharedFunctionCall(nesSaveParameter);
-			text::statusOut(devLCD, PSTR("PartialFuel RST"));
-			mainDisplay::returnToMain();
-			break;
-
-		case 2: // tank trip reset
-			tripSupport::resetTank();
-			mainDisplay::returnToMain();
-			break;
-
-		default:
-			select();
-			break;
-
-	}
-
-}
-
-#endif // usePartialRefuel

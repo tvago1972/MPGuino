@@ -2,12 +2,11 @@ const uint8_t nesLoadInitial =			0;
 const uint8_t nesLoadValue =			nesLoadInitial + 1;
 const uint8_t nesOnChange =				nesLoadValue + 1;
 const uint8_t nesSaveParameter =		nesOnChange + 1;
-const uint8_t nesOutputUpperScreen =	nesSaveParameter + 1;
 
 typedef struct
 {
 
-	uint8_t callingScreenLevel; // remember what module called number editor
+	uint8_t callingDisplayIdx; // remember what module called number editor
 	uint8_t parameterIdx;
 	const char * neStatusMessage;
 
@@ -19,7 +18,8 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 {
 
 	static uint8_t sharedFunctionCall(uint8_t cmd);
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void findLeft(void);
 	static void findRight(void);
@@ -35,43 +35,8 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 
 };
 
-namespace settings /* Parameter setting selector section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-
-};
-
-#ifdef usePartialRefuel
-namespace partialRefuel /* partial refuelling support section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-	static void entry(void);
-	static void select(void);
-	static void longSelect(void);
-
-}
-
-const char partialRefuelFuncNames[] PROGMEM = {
-	"Add Partial" tcEOSCR
-	"Zero Partial" tcEOSCR
-	"Reset Tank Trip" tcEOSCR
-};
-
-static const char prStatusMessages[] PROGMEM = {
-	"No change" tcEOSCR
-	"Added Partial" tcEOSCR
-	"Canx Partial Add" tcEOSCR
-};
-
-#endif // usePartialRefuel
-static const char numberEditSave[] PROGMEM = {
-	" OK"
-};
-
-static const char numberEditCancel[] PROGMEM = {
-	" XX"
+static const char numberEditSaveCanx[] PROGMEM = {
+	" OK XX"
 };
 
 static const char pseStatusMessages[] PROGMEM = {
