@@ -1,56 +1,51 @@
 /* Main screen section */
 
-static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
 #if defined(trackIdleEOCdata)
+	uint8_t i;
 
 	pageFunc pageFormatFunc;
-#endif // defined(trackIdleEOCdata)
 
+#endif // defined(trackIdleEOCdata)
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			topScreenLevel = menuLevel; // save current menu level for sub-function (param edit, trip load/save, etc) support
-
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, mainDisplayFuncNames, cursorPos); // briefly display screen name
 #if defined(useScreenEditor)
 			basePageIdx = cursorPos * 4;
 #endif // defined(useScreenEditor)
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 #if defined(trackIdleEOCdata)
-			retVal = (activityFlags & afActivityCheckFlags);
-			switch (retVal)
+			i = (activityFlags & afActivityCheckFlags);
+			switch (i)
 			{
 
 				case (afVehicleStoppedFlag | afUserInputFlag):
 					pageFormatFunc = getMainIdlePageFormats;
-					retVal = 0;
+					i = 0;
 					break;
 
 				case (afEngineOffFlag | afUserInputFlag):
 					pageFormatFunc = getMainEOCpageFormats;
-					retVal = 0;
+					i = 0;
 					break;
 
 				default:
 					pageFormatFunc = getMainDisplayPageFormat;
-					retVal = cursorPos;
+					i = cursorPos;
 					break;
 
 			}
 
 #if defined(useSpiffyTripLabels)
-			outputPage(pageFormatFunc, retVal, 136, 0, msTripBitPattern);
+			outputPage(pageFormatFunc, i, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
-			outputPage(pageFormatFunc, retVal, 136, 0);
+			outputPage(pageFormatFunc, i, 136, 0);
 #endif // defined(useSpiffyTripLabels)
 #else // defined(trackIdleEOCdata)
 #if defined(useSpiffyTripLabels)
@@ -60,15 +55,12 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useSpiffyTripLabels)
 #endif // defined(trackIdleEOCdata)
 
-			retVal = 0;
 			break;
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -182,11 +174,11 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? 0 : 0x1F); // determine if trip label component should blink or not
 	calcBitmask = ((mainLoopHeartBeat & calcBlink) ? 0 : 0x1F); // determine if function component should blink or not
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, 6, 0);
-
 	readingIdx &= 3;
-	x = (readingIdx & 1) << 3; // figure out horizontal component (0 or 8)
+	x = (readingIdx & 1) * (LCDcharWidth / 2); // figure out horizontal component (0 or 8)
 	y = (readingIdx & 2) >> 1; // figure out vertical component (0 or 1)
+
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, (LCDcharWidth / 2) - 2, 0);
 
 	text::gotoXY(devLCD, x, y);
 	if (calcBitmask) text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
@@ -236,39 +228,27 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 #endif // defined(useSpiffyTripLabels)
 }
 
-static void mainDisplay::returnToMain(void)
-{
-
-	cursor::moveAbsolute(topScreenLevel, 255);
-
-}
-
 #if defined(useScreenEditor)
 /* Programmable main display screen edit support section */
 
-static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t tripBlink;
 	uint8_t calcBlink;
 
-	uint8_t retVal = 0;
-
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
+		case displayInitialEntryIdx:
 			basePageIdx = displayCursor[(uint16_t)(mainDisplayIdx)] * 4;
 			for (uint8_t x = 0; x < 4; x++) displayEditPageFormats[(uint16_t)(x)] = mainDisplay::getMainDisplayPageFormat(basePageIdx + x);
 
-		case menuCursorUpdateIdx:
+		case displayCursorUpdateIdx:
 			formatEditIdx = cursorPos / 2;
 			formatFunctionFlag = (cursorPos & 1);
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 			for (uint8_t x = 0; x < 4; x++)
 			{
 
@@ -301,8 +281,6 @@ static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 

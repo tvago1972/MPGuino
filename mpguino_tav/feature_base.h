@@ -3,7 +3,7 @@ typedef uint16_t (* pageFunc)(uint8_t); // type for display page format function
 namespace mainDisplay /* main display section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getMainDisplayPageFormat(uint8_t formatIdx);
 #if defined(trackIdleEOCdata)
 	static uint16_t getMainEOCpageFormats(uint8_t formatIdx);
@@ -186,13 +186,11 @@ static const uint16_t mainIdlePageFormats[4] PROGMEM = {
 };
 
 #endif // defined(trackIdleEOCdata)
-static uint8_t topScreenLevel;
-
 #if defined(useScreenEditor)
 namespace displayEdit /* Programmable main display page edit support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void cancel(void);
 	static void set(void);
