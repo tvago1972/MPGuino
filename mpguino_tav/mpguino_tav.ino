@@ -430,9 +430,10 @@ static const uint8_t mainDisplayFormatSize = mainDisplayPageCount * 4;
 namespace menu /* Top-down menu selector section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void select(void);
+	static void exit(void);
 
 };
 
@@ -443,16 +444,17 @@ namespace cursor /* LCD screen cursor manipulation section prototype */
 	static void screenLevelEntry(const char * str, uint8_t strIdx, uint8_t newScreenLevel);
 	static void moveAbsolute(uint8_t positionY, uint8_t positionX);
 	static void moveRelative(uint8_t moveY, uint8_t moveX);
-	static void updateAfterMove(uint8_t levelChangeFlag);
+	static void updateAfterMove(uint8_t displayIdxChange);
 
 };
 
+static void callDisplayHandler(uint8_t thisDisplayIdx, uint8_t cmd);
 static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
 int main(void);
 
 // Menu display / screen cursor support section
 
-typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
+typedef void (* displayHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
 
 typedef struct
 {
@@ -460,18 +462,21 @@ typedef struct
 	uint8_t menuIndex;
 	uint8_t baseDisplayIdx;
 	uint8_t displayGroupCount;
-	uint8_t modeXcount;
+	uint8_t displayPageCount;
 	displayHandlerFunc displayHandler;
 
 } displayData;
 
-uint8_t menuLevel;
-uint8_t menuTop;
+static const uint8_t displayInitialEntryIdx =	0;								// typically, this call will fall through
+static const uint8_t displayCursorUpdateIdx =	displayInitialEntryIdx + 1;		// ...to this call, which will then will fall through
+static const uint8_t displayOutputIdx =			displayCursorUpdateIdx + 1;		// ...to this call
 
-const uint8_t menuExitIdx =				0;								// this call may not even be necessary
-const uint8_t menuEntryIdx =			menuExitIdx + 1;				// typically, this call will fall through
-const uint8_t menuCursorUpdateIdx =		menuEntryIdx + 1;				// ...to this call, then will fall through
-const uint8_t menuOutputDisplayIdx =	menuCursorUpdateIdx + 1;		// ...to this call
+static const uint8_t menuInitialEntryIdx =		0;
+static const uint8_t menuCursorUpdateIdx =		menuInitialEntryIdx + 1;
+static const uint8_t menuDisplayStatusIdx =		menuCursorUpdateIdx + 1;
+static const uint8_t menuDisplayOutputIdx =		menuDisplayStatusIdx + 1;
+static const uint8_t menuDoSelectionIdx =		menuDisplayOutputIdx + 1;
+static const uint8_t menuExitIdx =				menuDoSelectionIdx + 1;
 
 // the following display index defines are for the legacy MPGuino displays
 
@@ -566,14 +571,14 @@ const uint8_t parameterEditDisplayIdx =				menuDisplayIdx + 1;
 const uint8_t clockSetDisplayIdx =					nextAllowedValue;
 #define nextAllowedValue clockSetDisplayIdx + 1
 #endif // useClockDisplay
-#ifdef useSavedTrips
-static const uint8_t tripSaveDisplayIdx =			nextAllowedValue;
-#define nextAllowedValue tripSaveDisplayIdx + 1
-#endif // useSavedTrips
-#ifdef usePartialRefuel
-static const uint8_t partialRefuelDisplayIdx =		nextAllowedValue;
-#define nextAllowedValue partialRefuelDisplayIdx + 1
-#endif // usePartialRefuel
+#if defined(useSavedTrips)
+static const uint8_t tripSaveCurrentDisplayIdx =	nextAllowedValue;
+#define nextAllowedValue tripSaveCurrentDisplayIdx + 1
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+static const uint8_t tripSaveTankDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue tripSaveTankDisplayIdx + 1
+#endif // defined(useEnhancedTripReset)
 #if defined(useScreenEditor)
 const uint8_t displayEditDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue displayEditDisplayIdx + 1
@@ -671,18 +676,18 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #ifdef useClockDisplay
 	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							bigDigit::displayHandler}
 #endif // useClockDisplay
-	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		settings::displayHandler}
-	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		settings::displayHandler}
-	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		settings::displayHandler}
-	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		settings::displayHandler}
+	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		menu::displayHandler}
+	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		menu::displayHandler}
+	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		menu::displayHandler}
+	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		menu::displayHandler}
 #ifdef useChryslerMAPCorrection
-	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		settings::displayHandler}
+	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		menu::displayHandler}
 #endif // useChryslerMAPCorrection
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		settings::displayHandler}
+	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		menu::displayHandler}
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	settings::displayHandler}
-	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		settings::displayHandler}
+	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	menu::displayHandler}
+	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		menu::displayHandler}
 #ifdef useDragRaceFunction
 	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	button::doNothing}
 #endif // useDragRaceFunction
@@ -709,72 +714,194 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #ifdef useClockDisplay
 	,{0,							clockSetDisplayIdx,			1,					4,							clockSet::displayHandler}
 #endif // useClockDisplay
-#ifdef useSavedTrips
-	,{0,							tripSaveDisplayIdx,			1,					3,							tripSupport::displayHandler}
-#endif // useSavedTrips
-#ifdef usePartialRefuel
-	,{0,							partialRefuelDisplayIdx,	1,					3,							partialRefuel::displayHandler}
-#endif // usePartialRefuel
+#if defined(useSavedTrips)
+	,{0,							tripSaveCurrentDisplayIdx,	1,					tsfCurrentLen,				menu::displayHandler}
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	,{0,							tripSaveTankDisplayIdx,		1,					tsfTankLen,					menu::displayHandler}
+#endif // defined(useEnhancedTripReset)
 #if defined(useScreenEditor)
 	,{0,							displayEditDisplayIdx,		1,					8,							displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
 };
 
-static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
+#define nextAllowedValue 0
+static const uint8_t topMenuIdx =				nextAllowedValue;
+static const uint8_t displaySettingMenuIdx =	topMenuIdx + 1;
+static const uint8_t fuelSettingMenuIdx =		displaySettingMenuIdx + 1;
+static const uint8_t VSSsettingMenuIdx =		fuelSettingMenuIdx + 1;
+static const uint8_t tankSettingMenuIdx =		VSSsettingMenuIdx + 1;
+#define nextAllowedValue tankSettingMenuIdx + 1
+#if defined(useChryslerMAPCorrection)
+static const uint8_t CRFICsettingMenuIdx =		nextAllowedValue;
+#define nextAllowedValue CRFICsettingMenuIdx + 1
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+static const uint8_t acdSettingMenuIdx =		nextAllowedValue;
+#define nextAllowedValue acdSettingMenuIdx + 1
+#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+static const uint8_t timeoutSettingMenuIdx =	nextAllowedValue;
+static const uint8_t miscSettingMenuIdx =		timeoutSettingMenuIdx + 1;
+#define nextAllowedValue miscSettingMenuIdx + 1
+#if defined(useSavedTrips)
+static const uint8_t tripSaveCurrentMenuIdx =	nextAllowedValue;
+#define nextAllowedValue tripSaveCurrentMenuIdx + 1
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+static const uint8_t tripSaveTankMenuIdx =		nextAllowedValue;
+#define nextAllowedValue tripSaveTankMenuIdx + 1
+#endif // defined(useEnhancedTripReset)
+
+static const uint8_t menuCount =				nextAllowedValue;
+
+static uint8_t menuHeight[(uint16_t)(menuCount)];
+
+typedef uint8_t (* menuHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
+
+typedef struct
 {
 
+	uint8_t displayIdx;
+	const char * menuTitlesPtr;
+	uint8_t menuTitlesOffset;
+	menuHandlerFunc menuHandler;
+
+} menuData;
+
+menuData thisMenuData;
+
+static uint8_t menuIdx;
+static uint8_t thisMenuHeight;
+static uint8_t menuTop;
+static uint8_t menuLength;
+static uint8_t displayHeight;
+
+static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
+	 {menuDisplayIdx,				menuTitles,				0,							0}
+	,{displaySettingsDisplayIdx,	parmLabels,				eePtrSettingsDispStart,		parameterEdit::menuHandler}
+	,{fuelSettingsDisplayIdx,		parmLabels,				eePtrSettingsInjStart,		parameterEdit::menuHandler}
+	,{VSSsettingsDisplayIdx,		parmLabels,				eePtrSettingsVSSstart,		parameterEdit::menuHandler}
+	,{tankSettingsDisplayIdx,		parmLabels,				eePtrSettingsTankStart,		parameterEdit::menuHandler}
+#if defined(useChryslerMAPCorrection)
+	,{CRFICsettingsDisplayIdx,		parmLabels,				eePtrSettingsCRFICstart,	parameterEdit::menuHandler}
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+	,{acdSettingsDisplayIdx,		parmLabels,				eePtrSettingsACDstart,		parameterEdit::menuHandler}
+#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+	,{timeoutSettingsDisplayIdx,	parmLabels,				eePtrSettingsTimeoutStart,	parameterEdit::menuHandler}
+	,{miscSettingsDisplayIdx,		parmLabels,				eePtrSettingsMiscStart,		parameterEdit::menuHandler}
+#if defined(useSavedTrips)
+	,{tripSaveCurrentDisplayIdx,	tripSaveFuncNames,		tsfCurrentStart,			tripSave::menuHandler}
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	,{tripSaveTankDisplayIdx,		tripSaveFuncNames,		tsfTankStart,				tripSave::menuHandler}
+#endif // defined(useEnhancedTripReset)
+};
+
+static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t thisMenuTop;
+	uint8_t displayLine;
+	uint8_t menuLine;
+	uint8_t allowOutput;
 	uint8_t i;
-	uint8_t retVal = 0;
+	uint8_t flg;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			if (menuTop >= displayCountVisible) menuTop = cursorPos;
-		case menuCursorUpdateIdx: // menu display window is (menuTop + LCDcharHeight - 1) with wraparound
-			if (cursorPos < menuTop)
+		case displayInitialEntryIdx:
+			for (i = menuCount - 1; i < menuCount; i--) // search through pre-defined menu parameter list
 			{
 
-				i = menuTop - cursorPos;
-				if (i == 1) menuTop = cursorPos; // if cursor is just above menuTop, align menuTop to cursor
-				else cursorPos += displayCountVisible; // pretend that cursor wraparound did not occur
+				if (thisMenuData.displayIdx == pgm_read_byte(&menuParameters[(uint16_t)(i)].displayIdx)) break; // if display index is found, break
 
 			}
 
-			if (cursorPos > menuTop)
+			if (i < menuCount) menuIdx = i; // if a valid menu index was found for the current display index, use it
+			else menuIdx = topMenuIdx; // instead, use top menu index
+
+			// load pre-defined parameters for the given menu index
+			i = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].displayIdx);
+			menuLength = pgm_read_byte(&displayParameters[(uint16_t)(i)].displayPageCount);
+			thisMenuData.menuTitlesPtr = (const char *)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuTitlesPtr));
+			thisMenuData.menuTitlesOffset = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].menuTitlesOffset);
+			thisMenuData.menuHandler = (displayHandlerFunc)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuHandler));
+
+			thisMenuHeight = menuHeight[(uint16_t)(menuIdx)];
+
+			if (thisMenuData.menuHandler)
+				if(thisMenuData.menuHandler(menuInitialEntryIdx, cursorPos)) thisMenuHeight = 0;
+
+		case displayCursorUpdateIdx: // menu display window is (menuTop + LCDcharHeight - 1) with wraparound
+			displayHeight = LCDcharHeight;
+
+			if (thisMenuData.menuHandler) displayHeight -= thisMenuData.menuHandler(menuCursorUpdateIdx, cursorPos);
+
+			if (displayHeight > menuLength) displayHeight = menuLength;
+
+			if (thisMenuHeight == 255) thisMenuHeight = 0;
+			else if (thisMenuHeight >= displayHeight) thisMenuHeight = displayHeight - 1;
+
+			menuHeight[(uint16_t)(menuIdx)] = thisMenuHeight;
+
+			menuTop = cursorPos - thisMenuHeight;
+
+			if (menuTop >= menuLength) menuTop += menuLength;
+
+		case displayOutputIdx:
+			displayLine = 0;
+			allowOutput = 0;
+			i = 0;
+
+			while (displayLine < LCDcharHeight)
 			{
 
-				i = cursorPos - menuTop; // determine relative cursor position inside display window
-				if (i >= LCDcharHeight) menuTop = cursorPos - LCDcharHeight + 1; // if cursor position is outside the window, move the window top
+				text::gotoXY(devLCD, 0, displayLine);
+				menuLine = i + menuTop;
 
-				if (cursorPos >= displayCountVisible) cursorPos -= displayCountVisible; // stop pretending that cursor wraparound did not occur
+				if (menuLine >= menuLength) menuLine -= menuLength;
+
+				if (menuLine == menuTop) allowOutput++;
+
+				if (allowOutput < 2)
+				{
+
+					if (displayHeight > 1) text::charOut(devLCD, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
+
+					text::stringOut(devLCD, thisMenuData.menuTitlesPtr, menuLine + thisMenuData.menuTitlesOffset); // output menu element
+
+					// if supplementary information is to be shown at the cursor position
+					if ((thisMenuData.menuHandler) and (menuLine == cursorPos))
+					{
+
+						flg = thisMenuData.menuHandler(menuDisplayStatusIdx, menuLine);
+
+						if (flg)
+						{
+
+							text::gotoXY(devLCD, 0, ++displayLine);
+							thisMenuData.menuHandler(menuDisplayOutputIdx, menuLine);
+
+						}
+
+					}
+
+				}
+				else text::newLine(devLCD); // clear the line
+
+				displayLine++;
+				i++;
 
 			}
 
-		case menuOutputDisplayIdx:
-			for (uint8_t x = 0; x < LCDcharHeight; x++)
-			{
-
-				i = menuTop + x;
-
-				if (i >= displayCountVisible) i -= displayCountVisible;
-
-				text::gotoXY(devLCD, 0, x);
-				text::charOut(devLCD, ((i == cursorPos) ? '>' : ' ' ));
-				text::stringOut(devLCD, menuTitles, i);
-
-			}
 			break;
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -790,9 +917,29 @@ static void menu::select(void)
 
 	uint8_t i;
 
-	i = displayCursor[(unsigned int)(menuDisplayIdx)];
+	i = displayCursor[(uint16_t)(thisMenuData.displayIdx)];
 
-	cursor::moveAbsolute(pgm_read_byte(&displayParameters[(unsigned int)(i)].menuIndex), 255);
+	if (thisMenuData.menuHandler) i = thisMenuData.menuHandler(menuDoSelectionIdx, i); // go perform any supplemental defined command
+	else
+	{
+
+		i = pgm_read_byte(&displayParameters[(uint16_t)(i)].menuIndex);
+
+	}
+
+	cursor::moveAbsolute(i, 255); // go to the menu screen level
+
+}
+
+static void menu::exit(void)
+{
+
+	uint8_t i;
+
+	if (thisMenuData.menuHandler) i = thisMenuData.menuHandler(menuExitIdx, 0);
+	else i = mainDisplayIdx;
+
+	cursor::moveAbsolute(i, 255); // go to the menu screen level
 
 }
 
@@ -817,18 +964,18 @@ static void cursor::screenLevelEntry(const char * str, uint8_t strIdx, uint8_t n
 static void cursor::moveAbsolute(uint8_t positionY, uint8_t positionX)
 {
 
-	uint8_t levelChangeFlag;
+	uint8_t displayIdxChange;
 
-	if (menuLevel == positionY) levelChangeFlag = 0; // same level
+	if ((thisMenuData.displayIdx == positionY) || (positionY == 255)) displayIdxChange = 0; // same level
 	else
 	{
 
-		levelChangeFlag = 1;
-		menuLevel = positionY;
+		displayIdxChange = 1;
+		thisMenuData.displayIdx = positionY;
 
 	}
 
-	positionY = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeXcount);
+	positionY = pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].displayPageCount);
 
 	switch (positionX)
 	{
@@ -837,16 +984,16 @@ static void cursor::moveAbsolute(uint8_t positionY, uint8_t positionX)
 			break;
 
 		case 254:
-			displayCursor[(unsigned int)(menuLevel)] = positionX - 1;
+			displayCursor[(uint16_t)(thisMenuData.displayIdx)] = positionX - 1;
 			break;
 
 		default:
-			if (positionX < positionY) displayCursor[(unsigned int)(menuLevel)] = positionX;
+			if (positionX < positionY) displayCursor[(uint16_t)(thisMenuData.displayIdx)] = positionX;
 			break;
 
 	}
 
-	updateAfterMove(levelChangeFlag);
+	updateAfterMove(displayIdxChange);
 
 }
 
@@ -855,13 +1002,13 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 
 	uint8_t wrapAroundFlag;
 	uint8_t cursorXdirection;
-	uint8_t levelChangeFlag;
+	uint8_t displayIdxChange;
 	uint8_t v;
 	uint8_t maxVal;
 	uint8_t x; // base menu level
 
-	x = (pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].baseDisplayIdx)); // base menu level
-	levelChangeFlag = 0;
+	x = (pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].baseDisplayIdx)); // base menu level
+	displayIdxChange = 0;
 
 	wrapAroundFlag = 0; // initially, signal that no wrap-around occurred
 
@@ -871,9 +1018,10 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		if (moveX & 0x80) cursorXdirection = 0xFF;
 		else cursorXdirection = 0x01;
 
-		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeXcount); // "horizontal" size
+		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayPageCount); // "horizontal" size
 
-		v = displayCursor[(unsigned int)(menuLevel)] + cursorXdirection; // perform move
+		v = displayCursor[(unsigned int)(thisMenuData.displayIdx)] + cursorXdirection; // perform move
+		thisMenuHeight += cursorXdirection;
 
 		if (v == maxVal) // if screen cursor bumped up to screen level size
 		{
@@ -893,7 +1041,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 
 		if (wrapAroundFlag) moveY = cursorXdirection; // if wrap-around occurred, signal direction to next screen level
 
-		displayCursor[(unsigned int)(menuLevel)] = v;
+		displayCursor[(unsigned int)(thisMenuData.displayIdx)] = v;
 
 	}
 
@@ -903,19 +1051,19 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		if (moveY & 0x80) moveY = 0xFF;
 		else moveY = 0x01;
 
-		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].displayGroupCount); // "vertical" size
+		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayGroupCount); // "vertical" size
 
-		v = menuLevel - x + moveY;
+		v = thisMenuData.displayIdx - x + moveY;
 
 		if (v == maxVal) v = 0;
 		if (v > maxVal) v = maxVal - 1;
 
 		v += x;
-		if (menuLevel != v)
+		if (thisMenuData.displayIdx != v)
 		{
 
-			menuLevel = v;
-			levelChangeFlag = 1;
+			thisMenuData.displayIdx = v;
+			displayIdxChange = 1;
 
 		}
 
@@ -923,31 +1071,43 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		{
 
 			if (moveY == 1) v = 0; // if direction was forward, set current cursor to zero
-			else v = pgm_read_byte(&displayParameters[(unsigned int)(menuLevel)].modeXcount) - 1; // else, set current cursor to end of new menu level
+			else v = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayPageCount) - 1; // else, set current cursor to end of new menu level
 
-			displayCursor[(unsigned int)(menuLevel)] = v;
+			displayCursor[(unsigned int)(thisMenuData.displayIdx)] = v;
 
 		}
 
 	}
 
-	updateAfterMove(levelChangeFlag);
+	updateAfterMove(displayIdxChange);
 
 }
 
-static void cursor::updateAfterMove(uint8_t levelChangeFlag)
+static void cursor::updateAfterMove(uint8_t displayIdxChange)
 {
 
 	uint8_t cp;
 	uint8_t cf;
 
-	cp = displayCursor[(unsigned int)(menuLevel)];
+	cp = displayCursor[(unsigned int)(thisMenuData.displayIdx)];
 
 	// call indexed support section cursor update function to update any section-specific data
-	if (levelChangeFlag) cf = menuEntryIdx;
-	else cf = menuCursorUpdateIdx;
+	if (displayIdxChange) cf = displayInitialEntryIdx;
+	else cf = displayCursorUpdateIdx;
 
-	((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(cf, cp);
+	((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayHandler))(cf, cp);
+
+}
+
+static void callDisplayHandler(uint8_t thisDisplayIdx, uint8_t cmd)
+{
+
+	uint8_t cursorPos;
+
+	cursorPos = displayCursor[(uint16_t)(thisDisplayIdx)];
+
+	// call indexed support section screen refresh function
+	((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(thisDisplayIdx)].displayHandler))(cmd, cursorPos);
 
 }
 
@@ -1126,9 +1286,7 @@ int main(void)
 	accelTestStatus = accelerationFlags;
 
 #endif // useDragRaceFunction
-	menuLevel = mainDisplayIdx;
-	menuTop = 255;
-	topScreenLevel = 0;
+	thisMenuData.displayIdx = mainDisplayIdx;
 
 	sei();
 
@@ -1137,10 +1295,10 @@ int main(void)
 
 	initHardware(); // initialize all human interface peripherals
 
-#ifdef useSavedTrips
-	i = tripSupport::doAutoAction(1);
+#if defined(useSavedTrips)
+	i = tripSave::doAutoAction(1);
 
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 	text::gotoXY(devLCD, 0, 0);
 	text::stringOut(devLCD, titleMPGuino);
 	text::stringOut(devLCD, dateMPGuino);
@@ -1174,10 +1332,10 @@ int main(void)
 	else cursor::moveAbsolute(mainDisplayIdx, 0);
 #endif // useTestButtonValues
 
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 	if (i) text::statusOut(devLCD, PSTR("AutoRestore Done"));
 
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 #ifdef useCPUreading
 	mainStart = systemInfo::cycles0();
 	idleTimerLength = 0;
@@ -1209,7 +1367,7 @@ int main(void)
 
 #else // useDeepSleep
 #ifdef useClockDisplay
-				bigDigit::displayHandler(menuEntryIdx, 255); // initialize the software clock
+				bigDigit::displayHandler(displayInitialEntryIdx, 255); // initialize the software clock
 				text::charOut(devLCD, 0x12); // set backlight brightness to zero
 
 #else // useClockDisplay
@@ -1233,7 +1391,7 @@ int main(void)
 #if defined(useTFToutput)
 				TFT::init(); // re-initialize TFT device
 #endif // defined(useTFToutput)
-				((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(menuEntryIdx, displayCursor[(unsigned int)(menuLevel)]); // call indexed support section screen initialization function
+				callDisplayHandler(thisMenuData.displayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 
 			}
 
@@ -1271,7 +1429,7 @@ int main(void)
 
 #endif // defined(useWindowTripFilter)
 #if defined(useSavedTrips)
-				if (tripSupport::doAutoAction(0)) text::statusOut(devLCD, PSTR("AutoSave Done"));
+				if (tripSave::doAutoAction(0)) text::statusOut(devLCD, PSTR("AutoSave Done"));
 
 #endif // defined(useSavedTrips)
 			}
@@ -1365,14 +1523,14 @@ int main(void)
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
 				case 0: // engine running and vehicle in motion
 				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
-					((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(menuLevel)].displayHandler))(menuOutputDisplayIdx, displayCursor[(unsigned int)(menuLevel)]); // call indexed support section screen refresh function
+					callDisplayHandler(thisMenuData.displayIdx, displayOutputIdx); // call indexed support section screen refresh function
 					break;
 
 				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
 #ifndef useDeepSleep
 #ifdef useClockDisplay
-					bigDigit::displayHandler(menuOutputDisplayIdx, 255); // display the software clock
+					bigDigit::displayHandler(displayOutputIdx, 255); // display the software clock
 
 #endif // useClockDisplay
 #endif // useDeepSleep

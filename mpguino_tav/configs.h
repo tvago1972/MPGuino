@@ -4,7 +4,7 @@
 //#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
-#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module 
+//#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module 
 //#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
 // the below line sets the serial output speed
@@ -18,12 +18,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //
 // if either useTinkerkitLCDmodule or useMPGuinoColourTouch is used, the below options will be ignored
 //
-#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
+//#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
 //#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
 //#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
-//#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
+#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
 
 // the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
 // LCD device options, if specified.
@@ -49,12 +49,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //
 //#define useLegacyButtons true
 //#define useAnalogMuxButtons true
-#define useParallax5PositionSwitch true
+//#define useParallax5PositionSwitch true
 
 // selectable options - any conflicts will be reported at compile time
 //
-#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+//#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
+//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 //#define useBigFE true						// Show big fuel economy displays
@@ -63,10 +63,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
 //#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
-//#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
-//#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
+#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
+#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 //#define useFuelCost true					// Show fuel cost
-#define useCPUreading true					// Show CPU loading and available RAM usage
+//#define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
@@ -83,12 +83,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // performance enhancement options - all may be chosen independently of one another
 //
 #define useBufferedLCD true					// Speed up LCD output
-//#define useBufferedSerial0Port true			// Speed up serial port 0 output
+#define useBufferedSerial0Port true			// Speed up serial port 0 output
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
 //#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
-//#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
+#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
 //
@@ -100,7 +100,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // debug terminal I/O port options - choose one or the other with useDebugTerminal, or an error will result
 //
-//#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
+#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
 //#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
@@ -117,15 +117,15 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // program measurement and debugging tools
 //
-//#define useDebugTerminal true				// terminal interface between PC and MPGuino
-//#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
-//#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
-//#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
+#define useDebugTerminal true				// terminal interface between PC and MPGuino
+#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help - requires useDebugTerminal
+#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
+#define useDebugButtonInjection true		// ability to inject button presses into MPGuino - requires useDebugTerminal
 //#define useDebugCPUreading true				// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
 //#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true			// Allows observation of button mapping
-//#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
-//#define useActivityLED true					// allows usage of LEDs to show status of certain bits - currently used to indicate when MPGuino is awake
+#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
+//#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
 //#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useSWEET64mult true					// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
 //#define useSWEET64div true					// shift div64 from native C++ to SWEET64 bytecode (saves 220 bytes)
@@ -266,6 +266,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useClockDisplay true
 #define useBigTimeDisplay true
 #endif // useSoftwareClock
+
+#if defined(usePartialRefuel) || defined(useSavedTrips)
+#define useEnhancedTripReset true
+#endif // defined(usePartialRefuel) || defined(useSavedTrips)
 
 #ifdef useBigTTE
 #define useBigTimeDisplay true
@@ -561,9 +565,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useVehicleMass true
 #endif // useDragRaceFunction
 
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 #define useEEPROMtripStorage true
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 #if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
 #define useButtonInput true
