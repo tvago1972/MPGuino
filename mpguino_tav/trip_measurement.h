@@ -13,51 +13,6 @@ namespace tripVar /* trip data collection basic function prototype */
 
 };
 
-namespace tripSupport /* Trip save/restore/reset support section prototype */
-{
-
-	static void init(void);
-	static void idleProcess(void);
-	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
-#ifdef useSavedTrips
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-	static void goSaveCurrent(void);
-	static void goSaveTank(void);
-	static void select(void);
-	static uint8_t doReadTrip(uint8_t tripSlot);
-	static uint8_t doWriteTrip(uint8_t tripSlot);
-	static uint8_t doAutoAction(uint8_t taaMode);
-#endif // useSavedTrips
-	static void doResetTrip(uint8_t tripSlot);
-	static void resetCurrent(void);
-	static void resetTank(void);
-#if defined(useWindowTripFilter)
-	static void resetWindowFilter(void);
-#endif // defined(useWindowTripFilter)
-
-};
-
-#if defined(useChryslerMAPCorrection)
-namespace pressureCorrect /* Chrysler returnless fuel pressure correction display section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-	static uint16_t getPressureCorrectPageFormats(uint8_t formatIdx);
-
-}
-
-static const char pressureCorrectScreenFuncNames[] PROGMEM = {
-	"Pressures" tcEOSCR
-};
-
-static const uint16_t pressureCorrectPageFormats[4] PROGMEM = {
-	 ((mpMAPpressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)		// Pressures
-	,((mpBaroPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
-	,((mpFuelPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
-	,((mpInjPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
-};
-
-#endif // defined(useChryslerMAPCorrection)
 const uint8_t rvVSSpulseIdx = 0; 			// distance pulse count
 const uint8_t rvVSScycleIdx = 1; 			// time that the vehicle has spent moving
 const uint8_t rvInjPulseIdx = 2; 			// engine revolution count
@@ -307,6 +262,21 @@ static const char terminalTripVarNames[] PROGMEM = {
 };
 
 #endif // useDebugTerminal
+namespace tripSupport /* Trip save/restore/reset support section prototype */
+{
+
+	static void init(void);
+	static void idleProcess(void);
+	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
+	static void resetCurrent(void);
+	static void resetTank(void);
+	static void doResetTrip(uint8_t tripSlot);
+#if defined(useWindowTripFilter)
+	static void resetWindowFilter(void);
+#endif // defined(useWindowTripFilter)
+
+};
+
 static const uint8_t tripUpdateListSize = 3				// base trip update count
 #if defined(trackIdleEOCdata)
 	+ 4													// count of idle/EOC trips to be updated
@@ -372,18 +342,106 @@ const uint8_t tripSelectList[] PROGMEM = {
 #endif // defined(trackIdleEOCdata)
 };
 
-#ifdef useSavedTrips
-uint8_t tripSlot;
+#if defined(useChryslerMAPCorrection)
+namespace pressureCorrect /* Chrysler returnless fuel pressure correction display section prototype */
+{
+
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint16_t getPressureCorrectPageFormats(uint8_t formatIdx);
+
+}
+
+static const char pressureCorrectScreenFuncNames[] PROGMEM = {
+	"Pressures" tcEOSCR
+};
+
+static const uint16_t pressureCorrectPageFormats[4] PROGMEM = {
+	 ((mpMAPpressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)		// Pressures
+	,((mpBaroPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
+	,((mpFuelPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
+	,((mpInjPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
+};
+
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useEnhancedTripReset)
+namespace tripSave /* Trip save/restore/reset display support section prototype */
+{
+
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+	static void goSaveCurrent(void);
+	static void goSaveTank(void);
+#if defined(useSavedTrips)
+	static uint8_t doReadTrip(uint8_t tripSlot);
+	static uint8_t doWriteTrip(uint8_t tripSlot);
+	static uint8_t doAutoAction(uint8_t taaMode);
+#endif // defined(useSavedTrips)
+
+};
+
+#define nextAllowedValue 0
+#if defined(useSavedTrips)
+static const uint8_t tsfCurrentStart =					nextAllowedValue;
+
+static const uint8_t tsfCurrentSaveIdx =				nextAllowedValue;
+static const uint8_t tsfCurrentLoadIdx =				tsfCurrentSaveIdx + 1;
+static const uint8_t tsfCurrentResetIdx =				tsfCurrentLoadIdx + 1;
+#define nextAllowedValue tsfCurrentResetIdx + 1
+
+static const uint8_t tsfCurrentEnd =					nextAllowedValue;
+static const uint8_t tsfCurrentLen =					tsfCurrentEnd - tsfCurrentStart;
+
+#endif // defined(useSavedTrips)
+static const uint8_t tsfTankStart =						nextAllowedValue;
+
+#if defined(usePartialRefuel)
+static const uint8_t tsfAddPartialIdx =					nextAllowedValue;
+static const uint8_t tsfZeroPartialIdx =				tsfAddPartialIdx + 1;
+#define nextAllowedValue tsfZeroPartialIdx + 1
+#endif // defined(usePartialRefuel)
+#if defined(useSavedTrips)
+static const uint8_t tsfTankSaveIdx =					nextAllowedValue;
+static const uint8_t tsfTankLoadIdx =					tsfTankSaveIdx + 1;
+#define nextAllowedValue tsfTankLoadIdx + 1
+#endif // defined(useSavedTrips)
+static const uint8_t tsfTankResetIdx =					nextAllowedValue;
+#define nextAllowedValue tsfTankResetIdx + 1
+
+static const uint8_t tsfTankEnd =						nextAllowedValue;
+static const uint8_t tsfTankLen =						tsfTankEnd - tsfTankStart;
+
+const char tripSaveFuncNames[] PROGMEM = {
+#if defined(useSavedTrips)
+	"Save CURR Trip" tcEOSCR
+	"Load CURR Trip" tcEOSCR
+	"Reset CURR Trip" tcEOSCR
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+	"Add Prtl " tcOMOFF "gal" tcOTOG "L" tcOON "*1K" tcEOSCR
+	"Zero Partial" tcEOSCR
+#endif // defined(usePartialRefuel)
+#if defined(useSavedTrips)
+	"Save TANK Trip" tcEOSCR
+	"Load TANK Trip" tcEOSCR
+#endif // defined(useSavedTrips)
+	"Reset TANK Trip" tcEOSCR
+};
+
+#if defined(useSavedTrips)
+static uint8_t thisTripSlot;
+static uint8_t topScreenLevel;
 
 const uint8_t tripSignatureList[] PROGMEM = {
 	 pCurrTripSignatureIdx
 	,pTankTripSignatureIdx
 };
 
-const char tripSaveFuncNames[] PROGMEM = {
-	"Save " tcEOS
-	"Load " tcEOS
-	"Reset " tcEOS
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+static const char prStatusMessages[] PROGMEM = {
+	"No change" tcEOSCR
+	"Added Partial" tcEOSCR
+	"Canx Partial Add" tcEOSCR
 };
 
-#endif // useSavedTrips
+#endif // defined(usePartialRefuel)
+#endif // defined(useEnhancedTripReset)

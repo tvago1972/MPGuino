@@ -362,33 +362,119 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 
 }
 
-#ifdef useSavedTrips
-static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
+#if defined(useEnhancedTripReset)
+static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t retVal = 0;
-	uint8_t tripIdx;
+	uint8_t thisCursorPos;
+	uint8_t i;
+
+	thisCursorPos = cursorPos + thisMenuData.menuTitlesOffset;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
+		case menuInitialEntryIdx:
+#if defined(usePartialRefuel)
+			numberEditObj.neStatusMessage = prStatusMessages;
+#endif //  defined(usePartialRefuel)
+			retVal = 1;
 			break;
 
-		case menuEntryIdx:
 		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx:
-			tripIdx = pgm_read_byte(&msTripList[(uint16_t)(tripSlot + 1)]);
-			text::stringOut(devLCD, tripSaveFuncNames, cursorPos); // print trip function name at top left
-			text::stringOut(devLCD, msTripNameString, tripSlot + 1);
-			text::newLine(devLCD);
+#if defined(usePartialRefuel)
+			if (thisCursorPos == tsfAddPartialIdx)
+			{
 
-			text::gotoXY(devLCD, 0, 1); // go to next line
+				numberEditObj.parameterIdx = pRefuelSizeIdx;
+				parameterEdit::sharedFunctionCall(nesLoadInitial);
 
-			if (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(tripSlot)])) == guinosig) text::stringOut(devLCD, PSTR("Present"));
-			else text::stringOut(devLCD, PSTR("Empty"));
+			}
 
-			text::newLine(devLCD);
+#endif //  defined(usePartialRefuel)
+		case menuDisplayStatusIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
+#if defined(usePartialRefuel)
+			if (thisCursorPos == tsfAddPartialIdx) retVal = 1;
+
+#endif //  defined(usePartialRefuel)
+#if defined(useSavedTrips)
+			if ((thisCursorPos == tsfCurrentLoadIdx) || (thisCursorPos == tsfTankLoadIdx)) retVal = 1;
+
+#endif //  defined(useSavedTrips)
+			break;
+
+		case menuDisplayOutputIdx:
+#if defined(usePartialRefuel)
+			if (thisCursorPos == tsfAddPartialIdx)
+			{
+
+				text::stringOut(devLCD, pBuff); // output supplementary information
+				text::newLine(devLCD); // clear to the end of the line
+
+			}
+
+#endif //  defined(usePartialRefuel)
+#if defined(useSavedTrips)
+			if ((thisCursorPos == tsfCurrentLoadIdx) || (thisCursorPos == tsfTankLoadIdx))
+			{
+
+				if (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig) text::stringOut(devLCD, PSTR("  Present" tcEOSCR));
+				else text::stringOut(devLCD, PSTR("  Empty" tcEOSCR));
+
+			}
+
+#endif //  defined(useSavedTrips)
+			break;
+
+		case menuDoSelectionIdx:
+			retVal = 255; // default case - don't change display index
+
+			switch (thisCursorPos)
+			{
+
+#if defined(usePartialRefuel)
+				case tsfAddPartialIdx:
+					numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+					retVal = parameterEditDisplayIdx; // go to parameter edit display index
+					break;
+
+				case tsfZeroPartialIdx:
+					SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
+					parameterEdit::sharedFunctionCall(nesSaveParameter);
+					text::statusOut(devLCD, PSTR("PartialFuel RST" tcEOSCR));
+					break;
+
+#endif //  defined(usePartialRefuel)
+#if defined(useSavedTrips)
+				case tsfCurrentSaveIdx:
+				case tsfTankSaveIdx:
+					doWriteTrip(thisTripSlot);
+					text::statusOut(devLCD, msTripNameString, thisTripSlot + 1, PSTR(" Trip Saved" tcEOSCR));
+					break;
+
+				case tsfCurrentLoadIdx:
+				case tsfTankLoadIdx:
+					i = doReadTrip(thisTripSlot);
+					if (i) text::statusOut(devLCD, msTripNameString, thisTripSlot + 1, PSTR(" Trip Loaded" tcEOSCR));
+					else text::statusOut(devLCD, PSTR("Nothing to load" tcEOSCR));
+					break;
+
+				case tsfCurrentResetIdx: // current trip reset
+#endif // defined(useSavedTrips)
+				case tsfTankResetIdx: // tank trip reset
+					tripSupport::doResetTrip(thisTripSlot);
+					break;
+
+				default:
+					break;
+
+			}
+
+			break;
+
+		case menuExitIdx:
+			retVal = topScreenLevel;
 			break;
 
 		default:
@@ -400,54 +486,26 @@ static uint8_t tripSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
-static void tripSupport::goSaveTank(void)
+static void tripSave::goSaveTank(void)
 {
 
-	tripSlot = 1;
-	cursor::moveAbsolute(tripSaveDisplayIdx, 0);
+	thisTripSlot = 1;
+	topScreenLevel = thisMenuData.displayIdx; // save calling display index
+	cursor::moveAbsolute(tripSaveTankDisplayIdx, 0);
 
 }
 
-static void tripSupport::goSaveCurrent(void)
+static void tripSave::goSaveCurrent(void)
 {
 
-	tripSlot = 0;
-	cursor::moveAbsolute(tripSaveDisplayIdx, 0);
+	thisTripSlot = 0;
+	topScreenLevel = thisMenuData.displayIdx; // save calling display index
+	cursor::moveAbsolute(tripSaveCurrentDisplayIdx, 0);
 
 }
 
-static void tripSupport::select(void)
-{
-
-	switch (displayCursor[(unsigned int)(menuLevel)])
-	{
-
-		case 0: // save
-			doWriteTrip(tripSlot);
-			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Save"));
-			mainDisplay::returnToMain();
-			break;
-
-		case 1: // load
-			doReadTrip(tripSlot);
-			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Load"));
-			mainDisplay::returnToMain();
-			break;
-
-		case 2: // reset
-			doResetTrip(tripSlot);
-			text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Reset"));
-			mainDisplay::returnToMain();
-			break;
-
-		default:
-			break;
-
-	}
-
-}
-
-static uint8_t tripSupport::doAutoAction(uint8_t taaMode)
+#if defined(useSavedTrips)
+static uint8_t tripSave::doAutoAction(uint8_t taaMode)
 {
 
 	uint8_t retVal = 0;
@@ -465,7 +523,7 @@ static uint8_t tripSupport::doAutoAction(uint8_t taaMode)
 
 }
 
-static uint8_t tripSupport::doReadTrip(uint8_t tripSlot)
+static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 {
 	uint8_t retVal;
 
@@ -478,7 +536,7 @@ static uint8_t tripSupport::doReadTrip(uint8_t tripSlot)
 
 }
 
-static uint8_t tripSupport::doWriteTrip(uint8_t tripSlot)
+static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 {
 
 	metricFlag &= ~(EEPROMbulkChangeFlag);
@@ -490,49 +548,46 @@ static uint8_t tripSupport::doWriteTrip(uint8_t tripSlot)
 
 }
 
-#endif // useSavedTrips
-static void tripSupport::doResetTrip(uint8_t tripSlot)
+#endif // defined(useSavedTrips)
+#endif // defined(useEnhancedTripReset)
+static void tripSupport::resetCurrent(void)
 {
 
-#ifdef useSavedTrips
-	doWriteTrip(tripSlot);
+	doResetTrip(0);
 
-#endif // useSavedTrips
-	tripVar::reset(pgm_read_byte(&tripSelectList[(unsigned int)(tripSlot)]));
-#if defined(trackIdleEOCdata)
-	tripVar::reset(pgm_read_byte(&tripSelectList[(unsigned int)(tripSlot + 2)]));
-#endif // defined(trackIdleEOCdata)
-
-#if useBarFuelEconVsSpeed || usePartialRefuel
-	if (tripSlot)
-	{
-
-#ifdef useBarFuelEconVsSpeed
-		bgFEvsSsupport::reset();
-
-#endif // useBarFuelEconVsSpeed
-#ifdef usePartialRefuel
-		EEPROM::writeVal(pRefuelSizeIdx, 0);
-
-#endif // usePartialRefuel
-	}
-
-#endif // useBarFuelEconVsSpeed || usePartialRefuel
 }
 
 static void tripSupport::resetTank(void)
 {
 
 	doResetTrip(1);
-	text::statusOut(devLCD, msTripNameString, 2, PSTR(" Trip Reset"));
 
 }
 
-static void tripSupport::resetCurrent(void)
+static void tripSupport::doResetTrip(uint8_t tripSlot)
 {
 
-	doResetTrip(0);
-	text::statusOut(devLCD, msTripNameString, 1, PSTR(" Trip Reset"));
+	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot)]));
+#if defined(trackIdleEOCdata)
+	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot + 2)]));
+#endif // defined(trackIdleEOCdata)
+
+#if defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
+	if (tripSlot)
+	{
+
+#if defined(useBarFuelEconVsSpeed)
+		bgFEvsSsupport::reset();
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(usePartialRefuel)
+		EEPROM::writeVal(pRefuelSizeIdx, 0);
+
+#endif // defined(usePartialRefuel)
+	}
+
+#endif // defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
+	text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Reset" tcEOSCR));
 
 }
 
@@ -595,22 +650,17 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, pressureCorrectScreenFuncNames, cursorPos); // briefly display screen name
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 #if defined(useSpiffyTripLabels)
 			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
@@ -622,8 +672,6 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 
