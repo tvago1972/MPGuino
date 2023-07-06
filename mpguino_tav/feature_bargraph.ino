@@ -1,10 +1,8 @@
 #ifdef useBarGraph
 /* Bar Graph support section */
 
-static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	const char * labelList;
 
@@ -19,7 +17,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	uint8_t i;
 
-	switch (menuLevel)
+	switch (thisMenuData.displayIdx)
 	{
 
 #ifdef useBarFuelEconVsTime
@@ -88,14 +86,11 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, labelList, cursorPos); // briefly display screen name
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);
 			displayBarGraphLine(0, line0TripIdx, line0CalcIdx);
 			displayBarGraphLine(1, line1TripIdx, line1CalcIdx);
@@ -108,8 +103,6 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 

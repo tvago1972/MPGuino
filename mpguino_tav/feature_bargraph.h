@@ -2,7 +2,7 @@
 namespace barGraphSupport /* Bar Graph support section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx);
 	static void clearPlot(void);
 	static uint8_t rescaleData(uint8_t byt, uint8_t uBound);

@@ -1,28 +1,21 @@
 #ifdef useClockDisplay
  /* Big Clock Display support section */
 
-static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx:
 			bigDigit::outputTime(pBuff, (timer0Status & t0sShowCursor), cursorPos);
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -127,22 +120,18 @@ static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
 	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos + 1)]);
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, msTripNameString, cursorPos + 1, PSTR(" vs INST" tcEOSCR));
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
 			text::charOut(devLCD, ' ', 8);
 #if defined(useSpiffyTripLabels)
@@ -156,8 +145,6 @@ static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -265,11 +252,10 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 #ifdef useBigDigitDisplay
 /* Big Digit Output support section */
 
-static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
-	uint8_t thisMenuLevel = menuLevel;
+	uint8_t thisDisplayIdx = thisMenuData.displayIdx;
 #if defined(useBigDTE) || defined(useBigFE) || defined(useBigTTE)
 	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos)]);
 	char * str;
@@ -278,7 +264,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	uint8_t i;
 #endif // useBigFE
 
-	switch (thisMenuLevel)
+	switch (thisDisplayIdx)
 	{
 
 #ifdef useBigFE
@@ -301,7 +287,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // useBigTTE
 		default:
 #ifdef useClockDisplay
-			if (cursorPos == 255) thisMenuLevel = clockShowDisplayIdx;
+			if (cursorPos == 255) thisDisplayIdx = clockShowDisplayIdx;
 #endif // useClockDisplay
 			break;
 
@@ -310,11 +296,8 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-			switch (thisMenuLevel)
+		case displayInitialEntryIdx:
+			switch (thisDisplayIdx)
 			{
 
 #ifdef useBigFE
@@ -340,8 +323,8 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-		case menuCursorUpdateIdx:
-			switch (thisMenuLevel)
+		case displayCursorUpdateIdx:
+			switch (thisDisplayIdx)
 			{
 
 #ifdef useBigFE
@@ -369,8 +352,8 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-		case menuOutputDisplayIdx:
-			switch (thisMenuLevel)
+		case displayOutputIdx:
+			switch (thisDisplayIdx)
 			{
 
 #ifdef useBigFE
@@ -412,8 +395,6 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 

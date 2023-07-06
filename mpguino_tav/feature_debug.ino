@@ -75,11 +75,10 @@ static void systemInfo::idleProcess(void)
 
 }
 
-static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
+static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint16_t availableRAMptr;
-	uint8_t retVal = 0;
 
 	if((unsigned int)__brkval == 0) availableRAMptr = ((unsigned int)&availableRAMptr) - ((unsigned int)&__bss_end);
 	else availableRAMptr = ((unsigned int)&availableRAMptr) - ((unsigned int)__brkval);
@@ -87,12 +86,9 @@ static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx: // display max cpu utilization and RAM
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx: // display max cpu utilization and RAM
 			showCPUload();
 			text::stringOut(devLCD, PSTR(" T"));
 			text::stringOut(devLCD, ull2str(mBuff1, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
@@ -108,8 +104,6 @@ static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -287,20 +281,15 @@ static void activityLED::output(uint8_t val)
 #ifdef useTestButtonValues
 /* Button input value viewer section */
 
-static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx:
 #ifdef useAnalogButtons
 			text::hexWordOut(devLCD, (uint16_t)(analogValue[(unsigned int)(analogButtonChannelIdx)]));
 #endif // useAnalogButtons
@@ -321,8 +310,6 @@ static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -1411,21 +1398,18 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // useDebugTerminal
 #ifdef useSimulatedFIandVSS
-static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
+	uint8_t i;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, debugScreenFuncNames, cursorPos); // briefly display screen name
-			retVal = (debugFlags & debugEnableFlags);
+			i = (debugFlags & debugEnableFlags);
 			switch (cursorPos)
 			{
 
@@ -1449,9 +1433,9 @@ static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 					break;
 
 			}
-			if ((debugFlags & debugEnableFlags) ^ retVal) configurePorts();
+			if ((debugFlags & debugEnableFlags) ^ i) configurePorts();
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 #if defined(useSpiffyTripLabels)
 			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
@@ -1463,8 +1447,6 @@ static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 
