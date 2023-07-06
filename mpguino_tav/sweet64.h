@@ -765,9 +765,9 @@ const uint8_t convIdx[] PROGMEM = {
 	,pMinGoodSpeedidx
 	,pTankSizeIdx
 	,pTankBingoSizeIdx
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	,pRefuelSizeIdx
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 #ifdef useDragRaceFunction
 	,pDragSpeedIdx
 	,pDragDistanceIdx
@@ -1073,9 +1073,9 @@ const uint8_t convNumerIdx[] PROGMEM = {
 	,idxNumerDistance						// pMinGoodSpeedidx
 	,idxNumerVolume							// pTankSizeIdx
 	,idxNumerVolume							// pTankBingoSizeIdx
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	,idxNumerVolume							// pRefuelSizeIdx
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 #ifdef useDragRaceFunction
 	,idxNumerDistance						// pDragSpeedIdx
 	,idxNumerDistance						// pDragDistanceIdx

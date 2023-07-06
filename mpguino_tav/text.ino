@@ -60,13 +60,7 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 			case 0xF0 ... 0xF7: // print CGRAM character
 				chr &= 0x07;
 			case 0x20 ... 0x7F: // print normal character
-				if (dev.controlFlags & odvFlagEnableOutput)
-				{
-
-					if (dev.controlFlags & odvFlagShootBlanks) chr = ' ';
-					dev.chrOut(chr);
-
-				}
+				if (dev.controlFlags & odvFlagEnableOutput) dev.chrOut(chr);
 				break;
 
 			default:

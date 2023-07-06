@@ -127,22 +127,17 @@ static const uint16_t analogReadPageFormats[4] PROGMEM = {
 	,(analog3Idx << 8 ) |	(0x80 | tAnalogChannel)
 };
 
-static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static void analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, analogReadScreenFuncNames, cursorPos); // briefly display screen name
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 #if defined(useSpiffyTripLabels)
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0, msTripBitPattern);
 #else // defined(useSpiffyTripLabels)
@@ -154,8 +149,6 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-	return retVal;
 
 }
 

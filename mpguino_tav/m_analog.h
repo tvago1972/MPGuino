@@ -253,7 +253,7 @@ const uint8_t analogChannelValue[(unsigned int)(dfMaxAnalogCount)] PROGMEM = { /
 namespace analogReadViewer /* ADC voltage display section prototype */
 {
 
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getAnalogReadPageFormats(uint8_t formatIdx);
 
 }
