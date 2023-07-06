@@ -195,10 +195,10 @@ static const uint8_t mpTankSizeIdx =				mpCyclesPerVolumeIdx + 1;			// tank quan
 static const uint8_t mpBingoTankSizeIdx =			mpTankSizeIdx + 1;					// bingo fuel quantity in timer0 cycles
 #define nextAllowedValue mpBingoTankSizeIdx + 1
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 static const uint8_t mpPartialRefuelTankSize =		nextAllowedValue;					// partial refuel tank quantity in timer0 cycles
 #define nextAllowedValue mpPartialRefuelTankSize + 1
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
 #ifdef useChryslerMAPCorrection
 static const uint8_t mpMAPpressureIdx =				nextAllowedValue;
@@ -306,9 +306,9 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpCyclesPerVolumeIdx" tcEOSCR				// main program only
 	"mpTankSizeIdx" tcEOSCR						// main program only
 	"mpBingoTankSizeIdx" tcEOSCR				// main program only
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	"mpPartialRefuelTankSize" tcEOSCR			// main program only
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 #ifdef useChryslerMAPCorrection
 	"mpMAPpressureIdx" tcEOSCR					// main program only
 	"mpBaroPressureIdx" tcEOSCR					// main program only
@@ -369,7 +369,7 @@ static const uint8_t detectEEPROMchangeFlag =	0b11111100;
 static const uint8_t fuelEconOutputFlags =		0b00000011;
 
 static char mBuff1[17]; // used by ull2str(), translateCalcIdx(), bigDigit::, bar graph routines
-static char pBuff[14]; // used by parameterEdit::, clockSet::, function result output routines
+static char pBuff[17]; // used by parameterEdit::, clockSet::, function result output routines
 
 volatile uint8_t lastPINxState;
 

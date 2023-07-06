@@ -505,10 +505,10 @@ static const uint8_t prgmFuelEcon[] PROGMEM = {
 static const uint8_t prgmCalculateRemainingTank[] PROGMEM = {
 	instrLdRegTripVar, 0x01, tankIdx, rvInjCycleIdx,	// fetch tank quantity in injector open cycles
 	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	instrSubMainFromX, 0x01, mpPartialRefuelTankSize,	// subtract calculated partial refuel size in injector open cycles
 	instrBranchIfGT, 7,									// if calculated partial refuel size > tank quantity, exit with calculated tank size in result
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 	instrSubYfromX, 0x12,								// subtract tank injector time in cycles from calculated tank size in cycles to get remaining fuel in cycles
 	instrBranchIfLTorE,	3,								// if tank quantity <= calculated tank size, exit
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
@@ -711,10 +711,10 @@ static const uint8_t prgmLoadTankFromEEPROM[] PROGMEM = {
 	instrDone,
 
 //cont:
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	instrLdRegEEPROM, 0x02, pRefuelSaveSizeIdx,
 	instrStRegEEPROM, 0x02, pRefuelSizeIdx,
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 	instrLxdI, EEPROMtankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, tankIdx,
@@ -732,10 +732,10 @@ static const uint8_t prgmLoadTankFromEEPROM[] PROGMEM = {
 static const uint8_t prgmSaveTankToEEPROM[] PROGMEM = {
 	instrLdRegByte, 0x02, guinosig,
 	instrStRegEEPROM, 0x02, pTankTripSignatureIdx,
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	instrLdRegEEPROM, 0x02, pRefuelSizeIdx,
 	instrStRegEEPROM, 0x02, pRefuelSaveSizeIdx,
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 	instrLxdI, tankIdx,
 	instrCall, tLoadTrip,
 	instrLxdI, EEPROMtankIdx,

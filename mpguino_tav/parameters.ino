@@ -120,14 +120,14 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpBingoTankSizeIdx,			// save bingo tank size in cycles
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	instrLdRegEEPROM, 0x02, pRefuelSizeIdx,				// fetch partial refuel tank size in unit volume
 	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume value to get tank size in cycles * formatting factor
 	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get partial refuel tank size in cycles
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpPartialRefuelTankSize,		// save partial refuel tank size in cycles
 
-#endif	// usePartialRefuel
+#endif // defined(usePartialRefuel)
 #ifdef useDragRaceFunction
 	instrLdRegByte, 0x02, 0,							// zero out accel test top speed and estimated engine power
 	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,

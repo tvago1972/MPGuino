@@ -650,7 +650,7 @@ static void LCD::writeData(uint8_t value)
 	{
 
 		LCDaddressY++;
-		if (LCDaddressY > (LCDcharHeight + 1)) charFlags |= (lcdCharZeroY);
+		if (LCDaddressY >= LCDcharHeight) charFlags |= (lcdCharZeroY);
 
 	}
 

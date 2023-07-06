@@ -137,12 +137,12 @@ const uint8_t pSizeScratchpad =				32;
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 const uint8_t pSizeRefuelSize =				pSizeTankSize;
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 const uint8_t pSizeRefuelSaveSizeIdx =		pSizeTankSize;
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(useEEPROMtripStorage)
+#endif // defined(usePartialRefuel)
 
 #ifdef useEEPROMtripStorage
 const uint8_t pSizeCurrTripSignatureIdx =	8;
@@ -318,14 +318,14 @@ const unsigned int pAddressScratchpad =					nextAllowedValue;
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 const unsigned int pAddressRefuelSize =					nextAllowedValue;
 #define nextAllowedValue pAddressRefuelSize + byteSize(pSizeRefuelSize)
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 const uint8_t pAddressRefuelSaveSizeIdx =				nextAllowedValue;
 #define nextAllowedValue pAddressRefuelSaveSizeIdx + byteSize(pSizeRefuelSaveSizeIdx)
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(useEEPROMtripStorage)
+#endif // defined(usePartialRefuel)
 
 #ifdef useEEPROMtripStorage
 const uint8_t pAddressCurrTripSignatureIdx =			nextAllowedValue;
@@ -555,20 +555,20 @@ const uint8_t eePtrSettingsVisibleEnd =	nextAllowedValue;
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 const uint8_t pRefuelSizeIdx =				nextAllowedValue;
 #define nextAllowedValue pRefuelSizeIdx + 1
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
 const uint8_t eePtrSettingsEnd =			nextAllowedValue;
 
 #ifdef useEEPROMtripStorage
 const uint8_t eePtrSavedTripsStart = 		nextAllowedValue;
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 const uint8_t pRefuelSaveSizeIdx =			nextAllowedValue;
 #define nextAllowedValue pRefuelSaveSizeIdx + 1
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 const uint8_t pCurrTripSignatureIdx =		nextAllowedValue;
 const uint8_t pTankTripSignatureIdx =		pCurrTripSignatureIdx + 1;
 const uint8_t pCurrTripVSSpulseIdx =		pTankTripSignatureIdx + 1;
@@ -738,19 +738,19 @@ const char parmLabels[] PROGMEM = {
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
-#ifdef useImperialGallon
+#if defined(usePartialRefuel)
+#if defined(useImperialGallon)
 	"Refill*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	"RefillSave*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-#endif // useEEPROMtripStorage
-#else // useImperialGallon
+#endif // defined(useEEPROMtripStorage)
+#else // defined(useImperialGallon)
 	"Refill*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	"RefillSave*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-#endif // useEEPROMtripStorage
-#endif // useImperialGallon
-#endif // usePartialRefuel
+#endif // defined(useEEPROMtripStorage)
+#endif // defined(useImperialGallon)
+#endif // defined(usePartialRefuel)
 #ifdef useDebugTerminalLabels
 #ifdef useEEPROMtripStorage
 	"CurrTripSig" tcEOSCR
@@ -974,12 +974,12 @@ const uint8_t paramsLength[] PROGMEM = {
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	,(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino							// Partial Refuel amount * 1000 (gal or L)
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	,(pSizeRefuelSaveSizeIdx & 0x07)											// Partial Refuel save amount * 1000 (gal or L)
 #endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
 #ifdef useEEPROMtripStorage
 	,(pSizeCurrTripSignatureIdx & 0x07)											// Current Trip signature byte
@@ -1129,12 +1129,12 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	,(uint8_t)(pAddressRefuelSize)					// Partial Refuel amount * 1000 (gal or L)
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	,(uint8_t)(pAddressRefuelSaveSizeIdx)			// Partial Refuel save amount * 1000 (gal or L)
 #endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 #ifdef useEEPROMtripStorage
 	,(uint8_t)(pAddressCurrTripSignatureIdx)		// Current Trip signature byte
 	,(uint8_t)(pAddressTankTripSignatureIdx)		// Tank Trip signature byte
@@ -1285,9 +1285,9 @@ const uint32_t params[] PROGMEM = {
 
 // settings inaccessible from the menu
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	,0					// Partial Refuel amount * 1000 (gal or L)
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 };
 
 // end of remarkably long EEPROM stored settings section
