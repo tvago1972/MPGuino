@@ -449,24 +449,40 @@ namespace cursor /* LCD screen cursor manipulation section prototype */
 };
 
 static void callDisplayHandler(uint8_t thisDisplayIdx, uint8_t cmd);
+#if LCDcharHeight == 4
+static void transferDisplay(void);
+#endif // LCDcharHeight == 4
 static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
 int main(void);
 
 // Menu display / screen cursor support section
 
-typedef void (* displayHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
+typedef void (* displayHandlerFunc)(uint8_t, uint8_t); // type for display handler functions
 
 typedef struct
 {
 
-	uint8_t menuIndex;
+	uint8_t displayIdx;
 	uint8_t baseDisplayIdx;
 	uint8_t displayGroupCount;
 	uint8_t displayPageCount;
+	uint8_t displayFlags;
 	displayHandlerFunc displayHandler;
 
 } displayData;
 
+static const uint8_t dfFullScreen =			0b10000000;		// tells whether display uses entire screen or not
+static const uint8_t dfSplitScreen =		0b01000000;		// allows display to go to either top or bottom screen
+static const uint8_t dfUsesCGRAM =			0b00100000;		// tells whether display uses LCD CGRAM or not
+static const uint8_t dfDynamicCGRAM =		0b00010000;		// tells whether display CGRAM usage is dynamically generated or a stored font
+static const uint8_t dfCGRAMfontMask =		0b00001111;		// if stored CGRAM font, tells font number
+
+static uint8_t callingDisplayIdx;
+#if LCDcharHeight == 4
+static uint8_t bottomDisplayIdx;
+static uint8_t bottomCursorPos;
+
+#endif // LCDcharHeight == 4
 static const uint8_t displayInitialEntryIdx =	0;								// typically, this call will fall through
 static const uint8_t displayCursorUpdateIdx =	displayInitialEntryIdx + 1;		// ...to this call, which will then will fall through
 static const uint8_t displayOutputIdx =			displayCursorUpdateIdx + 1;		// ...to this call
@@ -651,43 +667,43 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following screen entries are in the top-down menu list
 
-	 {mainDisplayIdx,				mainDisplayIdx,				displayCountUser,	mainDisplayPageCount,		mainDisplay::displayHandler}
+	 {mainDisplayIdx,				mainDisplayIdx,				displayCountUser,	mainDisplayPageCount,		dfSplitScreen,	mainDisplay::displayHandler}
 #if defined(useStatusBar)
-	,{statusBarIdx,					mainDisplayIdx,				displayCountUser,	2,							statusBar::displayHandler}
+	,{statusBarIdx,					mainDisplayIdx,				displayCountUser,	2,							dfSplitScreen,	statusBar::displayHandler}
 #endif // defined(useStatusBar)
 #ifdef useBigFE
-	,{bigFEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigFEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // useBigFE
 #ifdef useBarFuelEconVsTime
-	,{barFEvTdisplayIdx,			mainDisplayIdx,				displayCountUser,	4,							barGraphSupport::displayHandler}
+	,{barFEvTdisplayIdx,			mainDisplayIdx,				displayCountUser,	4,							dfSplitScreen,	barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsTime
 #ifdef useBarFuelEconVsSpeed
-	,{barFEvSdisplayIdx,			mainDisplayIdx,				displayCountUser,	3,							barGraphSupport::displayHandler}
+	,{barFEvSdisplayIdx,			mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsSpeed
 #ifdef useBigDTE
-	,{bigDTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigDTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // useBigDTE
 #ifdef useBigTTE
-	,{bigTTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							bigDigit::displayHandler}
+	,{bigTTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // useBigTTE
 #ifdef useCPUreading
-	,{CPUmonDisplayIdx,				mainDisplayIdx,				displayCountUser,	1,							systemInfo::displayHandler}
+	,{CPUmonDisplayIdx,				mainDisplayIdx,				displayCountUser,	1,							dfSplitScreen,	systemInfo::displayHandler}
 #endif // useCPUreading
 #ifdef useClockDisplay
-	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							bigDigit::displayHandler}
+	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							dfFullScreen,	clockDisplay::displayHandler}
 #endif // useClockDisplay
-	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		menu::displayHandler}
-	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		menu::displayHandler}
-	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		menu::displayHandler}
-	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		menu::displayHandler}
+	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		dfFullScreen,	menu::displayHandler}
+	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		dfFullScreen,	menu::displayHandler}
+	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		dfFullScreen,	menu::displayHandler}
+	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		dfFullScreen,	menu::displayHandler}
 #ifdef useChryslerMAPCorrection
-	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		menu::displayHandler}
+	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		dfFullScreen,	menu::displayHandler}
 #endif // useChryslerMAPCorrection
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		menu::displayHandler}
+	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		dfFullScreen,	menu::displayHandler}
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
-	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	menu::displayHandler}
-	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		menu::displayHandler}
+	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	dfFullScreen,	menu::displayHandler}
+	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		dfFullScreen,	menu::displayHandler}
 #ifdef useDragRaceFunction
 	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	button::doNothing}
 #endif // useDragRaceFunction
@@ -695,33 +711,33 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{coastdownIdx,	1,	3,	coastdown::goDisplay,	button::doNothing}
 #endif // useCoastDownCalculator
 #ifdef useSimulatedFIandVSS
-	,{signalSimDisplayIdx,			signalSimDisplayIdx,		1,					4,							signalSim::displayHandler}
+	,{signalSimDisplayIdx,			signalSimDisplayIdx,		1,					4,							0,				signalSim::displayHandler}
 #endif // useSimulatedFIandVSS
 #ifdef useChryslerMAPCorrection
-	,{pressureDisplayIdx,			pressureDisplayIdx,			1,					1,							pressureCorrect::displayHandler}
+	,{pressureDisplayIdx,			pressureDisplayIdx,			1,					1,							0,				pressureCorrect::displayHandler}
 #endif // useChryslerMAPCorrection
 #ifdef useDebugAnalog
-	,{analogDisplayIdx,				analogDisplayIdx,			1,					1,							analogReadViewer::displayHandler}
+	,{analogDisplayIdx,				analogDisplayIdx,			1,					1,							0,				analogReadViewer::displayHandler}
 #endif // useDebugAnalog
 #ifdef useTestButtonValues
-	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							buttonView::displayHandler}
+	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							0,				buttonView::displayHandler}
 #endif // useTestButtonValues
 
 // the following screen entries do not show up in the top-down menu list
 
-	,{0,							menuDisplayIdx,				1,					displayCountVisible,		menu::displayHandler}
-	,{0,							parameterEditDisplayIdx,	1,					12,							parameterEdit::displayHandler}
+	,{0,							menuDisplayIdx,				1,					displayCountVisible,		dfFullScreen,	menu::displayHandler}
+	,{0,							parameterEditDisplayIdx,	1,					12,							dfFullScreen,	parameterEdit::displayHandler}
 #ifdef useClockDisplay
-	,{0,							clockSetDisplayIdx,			1,					4,							clockSet::displayHandler}
+	,{0,							clockSetDisplayIdx,			1,					4,							dfFullScreen,	clockSet::displayHandler}
 #endif // useClockDisplay
 #if defined(useSavedTrips)
-	,{0,							tripSaveCurrentDisplayIdx,	1,					tsfCurrentLen,				menu::displayHandler}
+	,{0,							tripSaveCurrentDisplayIdx,	1,					tsfCurrentLen,				dfFullScreen,	menu::displayHandler}
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
-	,{0,							tripSaveTankDisplayIdx,		1,					tsfTankLen,					menu::displayHandler}
+	,{0,							tripSaveTankDisplayIdx,		1,					tsfTankLen,					dfFullScreen,	menu::displayHandler}
 #endif // defined(useEnhancedTripReset)
 #if defined(useScreenEditor)
-	,{0,							displayEditDisplayIdx,		1,					8,							displayEdit::displayHandler}
+	,{0,							displayEditDisplayIdx,		1,					8,							dfSplitScreen,	displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
 };
 
@@ -756,7 +772,7 @@ static const uint8_t menuCount =				nextAllowedValue;
 
 static uint8_t menuHeight[(uint16_t)(menuCount)];
 
-typedef uint8_t (* menuHandlerFunc)(uint8_t, uint8_t); // type for various handler functions
+typedef uint8_t (* menuHandlerFunc)(uint8_t, uint8_t); // type for menu handler functions
 
 typedef struct
 {
@@ -827,7 +843,7 @@ static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			menuLength = pgm_read_byte(&displayParameters[(uint16_t)(i)].displayPageCount);
 			thisMenuData.menuTitlesPtr = (const char *)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuTitlesPtr));
 			thisMenuData.menuTitlesOffset = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].menuTitlesOffset);
-			thisMenuData.menuHandler = (displayHandlerFunc)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuHandler));
+			thisMenuData.menuHandler = (menuHandlerFunc)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuHandler));
 
 			thisMenuHeight = menuHeight[(uint16_t)(menuIdx)];
 
@@ -923,7 +939,7 @@ static void menu::select(void)
 	else
 	{
 
-		i = pgm_read_byte(&displayParameters[(uint16_t)(i)].menuIndex);
+		i = pgm_read_byte(&displayParameters[(uint16_t)(i)].displayIdx);
 
 	}
 
@@ -1007,7 +1023,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 	uint8_t maxVal;
 	uint8_t x; // base menu level
 
-	x = (pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].baseDisplayIdx)); // base menu level
+	x = (pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].baseDisplayIdx)) & 0x7F; // base menu level
 	displayIdxChange = 0;
 
 	wrapAroundFlag = 0; // initially, signal that no wrap-around occurred
@@ -1086,16 +1102,13 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 static void cursor::updateAfterMove(uint8_t displayIdxChange)
 {
 
-	uint8_t cp;
 	uint8_t cf;
-
-	cp = displayCursor[(unsigned int)(thisMenuData.displayIdx)];
 
 	// call indexed support section cursor update function to update any section-specific data
 	if (displayIdxChange) cf = displayInitialEntryIdx;
 	else cf = displayCursorUpdateIdx;
 
-	((displayHandlerFunc)pgm_read_word(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayHandler))(cf, cp);
+	callDisplayHandler(thisMenuData.displayIdx, cf);
 
 }
 
@@ -1103,14 +1116,76 @@ static void callDisplayHandler(uint8_t thisDisplayIdx, uint8_t cmd)
 {
 
 	uint8_t cursorPos;
+#if LCDcharHeight == 4
+	uint8_t flg;
+	uint8_t lineCount;
+#endif // LCDcharHeight == 4
 
 	cursorPos = displayCursor[(uint16_t)(thisDisplayIdx)];
 
 	// call indexed support section screen refresh function
+	callingDisplayIdx = thisDisplayIdx;
 	((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(thisDisplayIdx)].displayHandler))(cmd, cursorPos);
+
+#if LCDcharHeight == 4
+	flg = pgm_read_byte(&displayParameters[(uint16_t)(thisDisplayIdx)].displayFlags); // fetch double height bit
+
+	if (flg & dfFullScreen) lineCount = 4;
+	else
+	{
+
+		lineCount = 2;
+
+		if (flg & dfSplitScreen)
+		{
+
+			devLCD.controlFlags |= (odvFlagDoubleHeight);
+
+			// call indexed support section screen refresh function
+			callingDisplayIdx = bottomDisplayIdx;
+			((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(bottomDisplayIdx)].displayHandler))(cmd, bottomCursorPos);
+
+			devLCD.controlFlags &= ~(odvFlagDoubleHeight);
+			lineCount += 2;
+
+		}
+
+	}
+
+	while (lineCount < LCDcharHeight)
+	{
+
+		text::gotoXY(devLCD, 0, lineCount++);
+		text::newLine(devLCD);
+
+	}
+
+#endif // LCDcharHeight == 4
+}
+
+#if LCDcharHeight == 4
+static void transferDisplay(void)
+{
+
+	if (pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].displayFlags) & dfSplitScreen) // if the current display supports double displays
+	{
+
+		bottomDisplayIdx = thisMenuData.displayIdx;
+		bottomCursorPos = displayCursor[(uint16_t)(bottomDisplayIdx)];
+
+		devLCD.controlFlags |= (odvFlagDoubleHeight);
+
+		// call indexed support section screen refresh function
+		callingDisplayIdx = bottomDisplayIdx;
+		((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(bottomDisplayIdx)].displayHandler))(displayInitialEntryIdx, bottomCursorPos);
+
+		devLCD.controlFlags &= ~(odvFlagDoubleHeight);
+
+	}
 
 }
 
+#endif // LCDcharHeight == 4
 // this function is called whenever the main program has to wait for some external condition to occur
 // when the main program performs some I/O activity, the target peripheral may take some time to acknowledge the activity
 //    and let the main program know that the peripheral is ready for more activity
@@ -1367,7 +1442,7 @@ int main(void)
 
 #else // useDeepSleep
 #ifdef useClockDisplay
-				bigDigit::displayHandler(displayInitialEntryIdx, 255); // initialize the software clock
+				clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
 				text::charOut(devLCD, 0x12); // set backlight brightness to zero
 
 #else // useClockDisplay
@@ -1530,7 +1605,7 @@ int main(void)
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
 #ifndef useDeepSleep
 #ifdef useClockDisplay
-					bigDigit::displayHandler(displayOutputIdx, 255); // display the software clock
+					clockDisplay::displayHandler(displayOutputIdx, 0); // display the software clock
 
 #endif // useClockDisplay
 #endif // useDeepSleep

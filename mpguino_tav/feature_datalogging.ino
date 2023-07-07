@@ -17,7 +17,7 @@ static void doOutputDataLog(void)
 		tripIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][0]);
 		calcIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][1]);
 
-		thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, 0, dfOverflow9s); // perform the required decimal formatting
+		thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 0, dfOverflow9s); // perform the required decimal formatting
 
 		text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // output the number
 		text::charOut(devLogOutput, c);
@@ -85,7 +85,7 @@ void doOutputJSONnumber(union union_64 * an, uint8_t decimalPlaces, const char *
 void doOutputJSONnumber(uint8_t decimalPlaces, const char * labelStr)
 {
 
-	text::stringOut(devLogOutput, ull2str(mBuff1, decimalPlaces, 0, dfOverflow9s)); // output the number part
+	text::stringOut(devLogOutput, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 	text::stringOut(devLogOutput, labelStr); // output the label part
 
 }

@@ -178,7 +178,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	x = (readingIdx & 1) * (LCDcharWidth / 2); // figure out horizontal component (0 or 8)
 	y = (readingIdx & 2) >> 1; // figure out vertical component (0 or 1)
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, (LCDcharWidth / 2) - 2, 0);
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, (LCDcharWidth / 2) - 2, 0);
 
 	text::gotoXY(devLCD, x, y);
 	if (calcBitmask) text::stringOut(devLCD, thisCalcFuncObj.strBuffer);

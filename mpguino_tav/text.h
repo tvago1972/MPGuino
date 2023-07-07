@@ -29,6 +29,7 @@ namespace text /* text string output section prototype */
 };
 
 static const uint8_t odvFlagCRLF =				0b00000100;
+static const uint8_t odvFlagDoubleHeight =		0b00000010;
 static const uint8_t odvFlagEnableOutput =		0b00000001;
 
 static const char overFlowStr[] PROGMEM = "----------";

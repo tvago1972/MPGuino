@@ -24,8 +24,10 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 	,{btnShortPressL,	button::shortLeft}
 	,{btnLongPressR,	button::longRight}
 	,{btnLongPressL,	button::longLeft}
+#if LCDcharHeight == 4
+	,{btnLongPressC,	transferDisplay}
+#endif // LCDcharHeight == 4
 #if defined(useScreenEditor)
-	,{btnLongPressC,	displayEdit::entry}
 	,{btnShortPressLR,	displayEdit::entry}
 #endif // defined(useScreenEditor)
 #ifdef useButtonCrossConfig
@@ -125,6 +127,9 @@ static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 	,{btnShortPressL,	button::shortLeft}
 	,{btnLongPressR,	button::longRight}
 	,{btnLongPressL,	button::longLeft}
+#if LCDcharHeight == 4
+	,{btnLongPressC,	transferDisplay}
+#endif // LCDcharHeight == 4
 #ifdef useButtonCrossConfig
 		,{btnShortPressD,	button::longRight}
 	#if defined(useLCDoutput)

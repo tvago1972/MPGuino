@@ -17,7 +17,7 @@ static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	uint8_t i;
 
-	switch (thisMenuData.displayIdx)
+	switch (callingDisplayIdx)
 	{
 
 #ifdef useBarFuelEconVsTime
@@ -113,7 +113,7 @@ static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tri
 
 	text::stringOut(devLCD, bgSpaces, lineNumber);
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, 6, 0);
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 6, 0);
 
 	if (thisCalcFuncObj.isValid & isValidFlag)
 	{

@@ -1,5 +1,12 @@
 #ifdef useClockDisplay
-namespace clockSet /* Big Clock Display support section prototype */
+namespace clockDisplay /* Big Clock Display support section prototype */
+{
+
+	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+
+};
+
+namespace clockSet
 {
 
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
@@ -9,24 +16,6 @@ namespace clockSet /* Big Clock Display support section prototype */
 	static void set(void);
 	static void cancel(void);
 
-};
-
-static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
-	instrLdRegVolatile, 0x02, vClockCycleIdx,			// read software clock
-	instrDiv2byConst, idxTicksPerSecond,				// convert datetime value from cycles to seconds
-	instrDiv2byConst, idxSecondsPerDay,					// divide by number of seconds in a day, to remove the existing time portion from the datetime value
-	instrMul2byByte, 24,								// multiply datetime value by 24 (hours per day)
-	instrLdRegByteFromY, 0x31, 0,						// add user-defined hours value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multply datetime value by 60 (minutes per hour)
-	instrLdRegByteFromY, 0x31, 2,						// add user-defined minutes value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multiply datetime value by 60 (seconds per minute)
-	instrLdRegByteFromY, 0x31, 4,						// add user-defined seconds value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byConst, idxTicksPerSecond,				// convert datetime value from seconds to cycles
-	instrStRegVolatile, 0x02, vClockCycleIdx,			// write software clock
-	instrDone
 };
 
 #endif // useClockDisplay

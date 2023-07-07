@@ -22,13 +22,13 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
 //#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
-//#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
-#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
+#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
+//#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
 
 // the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
 // LCD device options, if specified.
 //
-#define LCDcharWidth 16
+#define LCDcharWidth 20
 #define LCDcharHeight 2
 
 // the below options only work if useParallaxSerialLCDmodule is selected. If useParallaxSerialLCDmodule is not selected, the below options will not be inserted at all
@@ -53,14 +53,14 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // selectable options - any conflicts will be reported at compile time
 //
-//#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
+#define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 //#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-//#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-//#define useBigFE true						// Show big fuel economy displays
-//#define useBigDTE true						// Show big distance-to-empty displays
-//#define useBigTTE true						// Show big time-to-empty displays
-//#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
+#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+#define useBigFE true						// Show big fuel economy displays
+#define useBigDTE true						// Show big distance-to-empty displays
+#define useBigTTE true						// Show big time-to-empty displays
+#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
 //#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
@@ -261,6 +261,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useTWIbuttons true
 #endif // !defined(useAnalogButtons)
 #endif // defined(useAdafruitRGBLCDshield)
+
+#if defined(useSpiffyTripLabels) && LCDcharHeight == 4
+#error *** CANNOT use useSpiffyTripLabels with an LCD display height of 4 lines!!! ***
+#endif // defined(useSpiffyTripLabels) && LCDcharHeight == 4
 
 #ifdef useSoftwareClock
 #define useClockDisplay true

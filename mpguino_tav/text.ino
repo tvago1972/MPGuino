@@ -3,6 +3,8 @@
 static void text::gotoXY(interfaceDevice &dev, uint8_t xPos, uint8_t yPos)
 {
 
+	if (dev.controlFlags & odvFlagDoubleHeight) yPos += 2;
+
 	charOut(dev, 0x80 + yPos * 20 + xPos);
 
 }

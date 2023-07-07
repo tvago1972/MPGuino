@@ -368,8 +368,7 @@ static const uint8_t metricMode =				0b00000001;
 static const uint8_t detectEEPROMchangeFlag =	0b11111100;
 static const uint8_t fuelEconOutputFlags =		0b00000011;
 
-static char mBuff1[17]; // used by ull2str(), translateCalcIdx(), bigDigit::, bar graph routines
-static char pBuff[17]; // used by parameterEdit::, clockSet::, function result output routines
+static char pBuff[17]; // used by parameterEdit::, clockSet::, bigDigit::, barGraphSupport::, systemInfo::, data logging, function result output routines
 
 volatile uint8_t lastPINxState;
 

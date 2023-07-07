@@ -91,13 +91,13 @@ static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 		case displayOutputIdx: // display max cpu utilization and RAM
 			showCPUload();
 			text::stringOut(devLCD, PSTR(" T"));
-			text::stringOut(devLCD, ull2str(mBuff1, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
+			text::stringOut(devLCD, ull2str(pBuff, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(devLCD, 0, 1);
 			text::stringOut(devLCD, PSTR("FREE RAM: "));
 			mainProgramVariables[(uint16_t)(mpAvailableRAMidx)] = availableRAMptr;
 			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
-			text::stringOut(devLCD, ull2str(mBuff1, 0, 6, 0));
+			text::stringOut(devLCD, ull2str(pBuff, 0, 6, 0));
 			break;
 
 		default:
@@ -112,7 +112,7 @@ static void systemInfo::showCPUload(void)
 
 	text::stringOut(devLCD, PSTR("C%"));
 	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
-	text::stringOut(devLCD, ull2str(mBuff1, 2, 6, 0));
+	text::stringOut(devLCD, ull2str(pBuff, 2, 6, 0));
 #ifdef useDebugCPUreading
 	monitorState = 1;
 #endif // useDebugCPUreading
