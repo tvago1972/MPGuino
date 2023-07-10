@@ -16,6 +16,13 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr, uint8_t chrCount
 
 }
 
+static void text::newLine(interfaceDevice &dev)
+{
+
+	charOut(dev, 0x0D);
+
+}
+
 static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 {
 
@@ -30,8 +37,9 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 		{
 
 			case 0x00:	// tcEOS, end-of-string
-				dev.controlFlags |= (odvFlagEnableOutput);
 				retVal = 0;
+			case 0xED:	// tcOON, enable device output
+				dev.controlFlags |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEB:	// tcOMOFF, disable device output for metric mode
@@ -43,18 +51,14 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 				dev.controlFlags ^= (odvFlagEnableOutput);
 				break;
 
-			case 0xED:	// tcOON, enable device output
-				dev.controlFlags |= (odvFlagEnableOutput);
-				break;
-
 			case 0xEE:	// tcOOFF, disable device output
 				dev.controlFlags &= ~(odvFlagEnableOutput);
 				break;
 
 			case 0x0D:	// tcEOSCR, output carriage return, defined as end of string
 				retVal = 0;
-				dev.controlFlags |= (odvFlagEnableOutput);
 			case 0xEF:	// tcCR, output carriage return not at end of string
+				dev.controlFlags |= (odvFlagEnableOutput);
 				dev.chrOut(0x0D);
 				if (dev.controlFlags & odvFlagCRLF) dev.chrOut(0x0A);
 				break;
@@ -70,25 +74,11 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 				break;
 
 		}
+
 	}
 	else retVal = 0;
 
 	return retVal;
-
-}
-
-static void text::setModeOnCondition(interfaceDevice &dev, uint8_t condition, uint8_t odvFlag)
-{
-
-	if (condition) dev.controlFlags |= (odvFlag);
-	else dev.controlFlags &= ~(odvFlag);
-
-}
-
-static void text::stringOut(interfaceDevice &dev, char * str)
-{
-
-	while (charOut(dev, * str++));
 
 }
 
@@ -98,7 +88,7 @@ static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t st
 	initStatus(dev);
 	stringOut(dev, findStr(sList, strIdx));
 	stringOut(dev, str);
-	gotoXY(dev, 0, 0); // go to the first line
+	newLine(dev);
 	delayS(holdDelay);
 
 }
@@ -115,8 +105,21 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 
 	initStatus(dev);
 	stringOut(dev, str);
-	gotoXY(dev, 0, 0); // go to the first line
+	newLine(dev);
 	delayS(holdDelay);
+
+}
+
+static void text::initStatus(interfaceDevice &dev)
+{
+
+	delayS(0);
+
+#ifdef blankScreenOnMessage
+	charOut(dev, 0x0C); // clear the entire screen
+#else // blankScreenOnMessage
+	gotoXY(dev, 0, 0); // go to the first line
+#endif // blankScreenOnMessage
 
 }
 
@@ -134,23 +137,30 @@ static void text::stringOut(interfaceDevice &dev, const char * str)
 
 }
 
-static void text::initStatus(interfaceDevice &dev)
+static void text::stringOut(interfaceDevice &dev, char * str)
 {
 
-	delayS(0);
-
-#ifdef blankScreenOnMessage
-	charOut(dev, 0x0C); // clear the entire screen
-#else // blankScreenOnMessage
-	gotoXY(dev, 0, 0); // go to the first line
-#endif // blankScreenOnMessage
+	while (charOut(dev, * str++));
 
 }
 
-static void text::newLine(interfaceDevice &dev)
+static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
-	charOut(dev, 0x0D);
+	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
+	else dev.controlFlags &= ~(odvFlagEnableOutput);
+
+	stringOut(dev, str, strIdx);
+
+}
+
+static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str)
+{
+
+	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
+	else dev.controlFlags &= ~(odvFlagEnableOutput);
+
+	stringOut(dev, str);
 
 }
 

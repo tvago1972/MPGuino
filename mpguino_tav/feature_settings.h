@@ -1,3 +1,25 @@
+namespace settings /* EEPROM parameter settings menu support section prototype */
+{
+
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+
+};
+
+static const char settingsMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
+	"Display" tcEOSCR
+	"Fuel Injector" tcEOSCR
+	"VSS" tcEOSCR
+	"Tank Quantity" tcEOSCR
+#ifdef useChryslerMAPCorrection
+	"Chrysler MAP" tcEOSCR
+#endif // useChryslerMAPCorrection
+#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+	"VehicleParam" tcEOSCR
+#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+	"Timeout" tcEOSCR
+	"Miscellaneous" tcEOSCR
+};
+
 const uint8_t nesLoadInitial =			0;
 const uint8_t nesLoadValue =			nesLoadInitial + 1;
 const uint8_t nesOnChange =				nesLoadValue + 1;
@@ -40,8 +62,8 @@ static const char numberEditSaveCanx[] PROGMEM = {
 };
 
 static const char pseStatusMessages[] PROGMEM = {
-	"Param Unchanged" tcEOSCR
-	"Param Changed" tcEOSCR
-	"Param Reverted" tcEOSCR
+	"Param Unchanged" tcEOS
+	"Param Changed" tcEOS
+	"Param Reverted" tcEOS
 };
 

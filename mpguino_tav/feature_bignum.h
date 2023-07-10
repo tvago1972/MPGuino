@@ -223,23 +223,23 @@ static const uint8_t statusBarOverflowFont[] PROGMEM = {
 };
 
 #endif // defined(useStatusBar)
-#ifdef useBigDigitDisplay
+#if defined(useBigDigitDisplay)
 namespace bigDigit /* Big Digit output support section prototype */
 {
 
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
 #ifdef useBigTimeDisplay
-	static void outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos);
+	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos);
 #endif // useBigTimeDisplay
 #ifdef useBigNumberDisplay
-	static uint8_t outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
+	static uint8_t outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
 #endif // useBigNumberDisplay
 	static void outputNumberString(char * str);
 	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
 
 };
 
-#ifdef useBigFE
+#if defined(useBigFE)
 static const char bigFElabels[] PROGMEM = {
 	"MPG" tcEOSCR
 	"L100" tcEOSCR
@@ -247,7 +247,7 @@ static const char bigFElabels[] PROGMEM = {
 	"KPL" tcEOSCR
 };
 
-#endif // useBigFE
+#endif // defined(useBigFE)
 #ifdef useSpiffyBigChars
 static const char bigDigitChars1[] PROGMEM = {
 	0xF6, 0xF0, 0xF7, 0,
@@ -427,4 +427,4 @@ static const char bigDigitFont[] PROGMEM = {
 };
 
 #endif // useSpiffyBigChars
-#endif // useBigDigitDisplay
+#endif // defined(useBigDigitDisplay)

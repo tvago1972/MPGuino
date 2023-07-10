@@ -8,18 +8,19 @@ namespace text /* text string output section prototype */
 {
 
 	static void gotoXY(interfaceDevice &dev, uint8_t x, uint8_t y);
+	static void newLine(interfaceDevice &dev);
 	static uint8_t charOut(interfaceDevice &dev, uint8_t chr, uint8_t chrCount);
 	static uint8_t charOut(interfaceDevice &dev, uint8_t chr);
 
-	static void setModeOnCondition(interfaceDevice &dev, uint8_t condition, uint8_t odvFlag);
-	static void stringOut(interfaceDevice &dev, char * str);
 	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str);
 	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx);
 	static void statusOut(interfaceDevice &dev, const char * str);
+	static void initStatus(interfaceDevice &dev);
 	static void stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
 	static void stringOut(interfaceDevice &dev, const char * str);
-	static void initStatus(interfaceDevice &dev);
-	static void newLine(interfaceDevice &dev);
+	static void stringOut(interfaceDevice &dev, char * str);
+	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx);
+	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str);
 	static void hexNybbleOut(interfaceDevice &dev, uint8_t val);
 	static void hexByteOut(interfaceDevice &dev, uint8_t val);
 	static void hexWordOut(interfaceDevice &dev, uint16_t val);

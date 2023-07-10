@@ -318,21 +318,21 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #if defined(useStatusBar)
 	,blListSecondaryDisplay
 #endif // defined(useStatusBar)
-#ifdef useBigFE
+#if defined(useBigFE)
 	,blListSecondaryDisplay
-#endif // useBigFE
+#endif // defined(useBigFE)
 #if defined(useBarFuelEconVsTime)
 	,blListSecondaryDisplay
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 	,blListSecondaryDisplay
 #endif // defined(useBarFuelEconVsSpeed)
-#ifdef useBigDTE
+#if defined(useBigDTE)
 	,blListSecondaryDisplay
-#endif // useBigDTE
-#ifdef useBigTTE
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
 	,blListSecondaryDisplay
-#endif // useBigTTE
+#endif // defined(useBigTTE)
 #if defined(useCPUreading)
 	,blListSecondaryDisplay
 #endif // defined(useCPUreading)
@@ -372,6 +372,10 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 
 // the following screen entries do not show up in the top-down menu list
 
+	,bpListMenu
+#if defined(useExpandedMainDisplay)
+	,bpListMenu
+#endif // defined(useExpandedMainDisplay)
 	,bpListMenu
 	,bpListParameterEdit
 #ifdef useClockDisplay

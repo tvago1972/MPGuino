@@ -1,3 +1,30 @@
+/* EEPROM parameter settings menu support section */
+
+static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t retVal = 0;
+
+	switch (cmd)
+	{
+
+		case menuDoSelectionIdx:
+			retVal = displaySettingsDisplayIdx + cursorPos;
+			break;
+
+		case menuExitIdx:
+			retVal = baseMenuDisplayIdx;
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
 /* EEPROM parameter number editor section */
 
 static const uint8_t prgmFetchMaximumParamValue[] PROGMEM = {
@@ -197,7 +224,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuExitIdx:
-			retVal = menuDisplayIdx;
+			retVal = settingsMenuDisplayIdx;
 			break;
 
 		default:

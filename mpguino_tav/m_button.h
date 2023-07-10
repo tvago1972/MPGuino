@@ -302,16 +302,16 @@ const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
 #if defined(useLCDoutput)
 #if defined(useBinaryLCDbrightness)
 static const char brightString[] PROGMEM = {
-	"ON" tcLCDLO tcEOSCR
-	"OFF" tcLCDOFF tcEOSCR
+	"ON" tcLCDLO tcEOS
+	"OFF" tcLCDOFF tcEOS
 };
 
 #else // defined(useBinaryLCDbrightness)
 static const char brightString[] PROGMEM = {
-	"LOW" tcLCDLO tcEOSCR
-	"MED" tcLCDMED tcEOSCR
-	"HIGH" tcLCDHI tcEOSCR
-	"OFF" tcLCDOFF tcEOSCR
+	"LOW" tcLCDLO tcEOS
+	"MED" tcLCDMED tcEOS
+	"HIGH" tcLCDHI tcEOS
+	"OFF" tcLCDOFF tcEOS
 };
 
 #endif // defined(useBinaryLCDbrightness)

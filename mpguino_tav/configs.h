@@ -22,8 +22,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
 //#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
-#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
-//#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
+//#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
+#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
 
 // the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
 // LCD device options, if specified.
@@ -54,13 +54,13 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // selectable options - any conflicts will be reported at compile time
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-#define useBigFE true						// Show big fuel economy displays
-#define useBigDTE true						// Show big distance-to-empty displays
+//#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+//#define useBigFE true						// Show big fuel economy displays
+//#define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
+//#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
 //#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 //#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
@@ -108,7 +108,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
-#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
+//#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
 //#define useBluetooth true					// (inw) Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
@@ -266,42 +266,57 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #error *** CANNOT use useSpiffyTripLabels with an LCD display height of 4 lines!!! ***
 #endif // defined(useSpiffyTripLabels) && LCDcharHeight == 4
 
-#ifdef useSoftwareClock
-#define useClockDisplay true
-#define useBigTimeDisplay true
-#endif // useSoftwareClock
-
 #if defined(usePartialRefuel) || defined(useSavedTrips)
 #define useEnhancedTripReset true
 #endif // defined(usePartialRefuel) || defined(useSavedTrips)
 
-#ifdef useBigTTE
+#if defined(useSoftwareClock)
+#define useClockDisplay true
 #define useBigTimeDisplay true
-#endif // useBigTTE
+#endif // defined(useSoftwareClock)
 
-#ifdef useBigFE
+#if defined(useStatusBar)
+#define useExpandedMainDisplay true
+#endif // defined(useStatusBar)
+
+#if defined(useBigFE)
+#define useExpandedMainDisplay true
 #define useBigNumberDisplay true
-#endif // useBigFE
+#endif // defined(useBigFE)
 
-#ifdef useBigDTE
+#if defined(useBarFuelEconVsTime)
+#define useExpandedMainDisplay true
+#define useBarGraph true
+#endif // defined(useBarFuelEconVsTime)
+
+#if defined(useBarFuelEconVsSpeed)
+#define useExpandedMainDisplay true
+#define useBarGraph true
+#endif // defined(useBarFuelEconVsSpeed)
+
+#if defined(useBigTTE)
+#define useExpandedMainDisplay true
+#define useBigTimeDisplay true
+#endif // defined(useBigTTE)
+
+#if defined(useBigDTE)
+#define useExpandedMainDisplay true
 #define useBigNumberDisplay true
-#endif // useBigDTE
+#endif // defined(useBigDTE)
 
-#ifdef useBigTimeDisplay
+#if defined(useCPUreading)
+#define useExpandedMainDisplay true
+#else // defined(useCPUreading)
+#undef useDebugCPUreading
+#endif // defined(useCPUreading)
+
+#if defined(useClockDisplay)
+#define useExpandedMainDisplay true
+#endif // defined(useClockDisplay)
+
+#if defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
 #define useBigDigitDisplay true
-#endif // useBigTimeDisplay
-
-#ifdef useBigNumberDisplay
-#define useBigDigitDisplay true
-#endif // useBigDTE
-
-#ifdef useBarFuelEconVsTime
-#define useBarGraph true
-#endif // useBarFuelEconVsTime
-
-#ifdef useBarFuelEconVsSpeed
-#define useBarGraph true
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
 
 #if defined(useBigDigitDisplay) || defined(useStatusBar)
 #define useLCDfonts true
@@ -325,10 +340,6 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #ifdef useDebugAnalog
 #define useAnalogRead true
 #endif // useDebugAnalog
-
-#ifndef useCPUreading
-#undef useDebugCPUreading
-#endif // useCPUreading
 
 #ifdef useChryslerMAPCorrection
 #define useIsqrt true
