@@ -9,14 +9,9 @@ namespace mainDisplay /* main display section prototype */
 	static uint16_t getMainEOCpageFormats(uint8_t formatIdx);
 	static uint16_t getMainIdlePageFormats(uint8_t formatIdx);
 #endif // defined(trackIdleEOCdata)
-#if defined(useSpiffyTripLabels)
-	static void outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4]);
-	static void outputFunction(uint8_t readingIdx, uint16_t pageFormat, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4]);
-#else // defined(useSpiffyTripLabels)
 	static void outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, uint8_t tripBlink, uint8_t calcBlink);
 	static void outputFunction(uint8_t readingIdx, uint16_t pageFormat, uint8_t tripBlink, uint8_t calcBlink);
-#endif // defined(useSpiffyTripLabels)
-	static void returnToMain(void);
+	static uint8_t findTripIdx(uint8_t tripIdx);
 
 };
 
@@ -24,165 +19,104 @@ static const uint8_t dfBitShift = 3;
 static const uint8_t dfTripMask =			0b11111000;
 static const uint8_t dfFunctionMask =		0b00000111;
 
-// local trip indexes for main screen trip function display variables
-#define nextAllowedValue 0
-static const uint8_t msInstantIdx =			nextAllowedValue;
-static const uint8_t msCurrentIdx =			msInstantIdx + 1;
-static const uint8_t msTankIdx =			msCurrentIdx + 1;
-#define nextAllowedValue msTankIdx + 1
+static const char mainDisplayPageTitles[] PROGMEM = {
+	"Instrument" tcEOS
+	"Custom" tcEOS
+	"Instant/Current" tcEOS
+	"Instant/Tank" tcEOS
+	"Current" tcEOS
+	"Tank" tcEOS
 #if defined(trackIdleEOCdata)
-static const uint8_t msEOCidleCurrentIdx =	nextAllowedValue;
-static const uint8_t msEOCidleTankIdx =		msEOCidleCurrentIdx + 1;
-static const uint8_t msEOCidleInstantIdx =	msEOCidleTankIdx + 1;
-#define nextAllowedValue msEOCidleInstantIdx + 1
+	"EOC/Idle" tcEOS
 #endif // defined(trackIdleEOCdata)
-
-static const uint8_t msMaxTripCount =		nextAllowedValue;
-
-static const uint8_t lblInstantIdx =		(instantIdx << dfBitShift)				| msInstantIdx;
-static const uint8_t lblCurrentIdx =		(currentIdx << dfBitShift)				| msCurrentIdx;
-static const uint8_t lblTankIdx =			(tankIdx << dfBitShift)					| msTankIdx;
+	"Current Data" tcEOS
+	"Tank Data" tcEOS
 #if defined(trackIdleEOCdata)
-static const uint8_t lblEOCidleCurrentIdx =	(eocIdleCurrentIdx << dfBitShift)		| msEOCidleCurrentIdx;
-static const uint8_t lblEOCidleTankIdx =	(eocIdleTankIdx << dfBitShift)			| msEOCidleTankIdx;
-static const uint8_t lblEOCidleInstantIdx =	(eocIdleInstantIdx << dfBitShift)		| msEOCidleInstantIdx;
+	"Current EOC/Idle" tcEOS
+	"Tank EOC/Idle" tcEOS
 #endif // defined(trackIdleEOCdata)
-
-// trip index translation list
-static const uint8_t msTripList[] PROGMEM = {
-	 instantIdx
-	,currentIdx
-	,tankIdx
-#if defined(trackIdleEOCdata)
-	,eocIdleCurrentIdx
-	,eocIdleTankIdx
-	,eocIdleInstantIdx
-#endif // defined(trackIdleEOCdata)
-};
-
-#if defined(useSpiffyTripLabels)
-// display variable trip labels
-static const uint8_t msTripBitPattern[][4] PROGMEM = {
-	 {0b00000000, 0b00000111, 0b00000010, 0b00000111} // I
- 	,{0b00000000, 0b00000011, 0b00000100, 0b00000011} // C
-	,{0b00000000, 0b00000111, 0b00000010, 0b00000010} // T
-#if defined(trackIdleEOCdata)
-	,{0b00000000, 0b00000011, 0b00000100, 0b00000110} // italic C
-	,{0b00000000, 0b00000111, 0b00000010, 0b00000100} // italic T
-	,{0b00000000, 0b00000011, 0b00000010, 0b00000110} // italic I
-#endif // defined(trackIdleEOCdata)
-};
-
-#endif // defined(useSpiffyTripLabels)
-static const char msTripNameString[] PROGMEM = {
-	"INST" tcEOS
-	"CURR" tcEOS
-	"TANK" tcEOS
-#if defined(trackIdleEOCdata)
-	"cC/I" tcEOS
-	"tC/I" tcEOS
-	"iC/I" tcEOS
-#endif // defined(trackIdleEOCdata)
-};
-
-static const char mainDisplayFuncNames[] PROGMEM = {
-	"Instrument" tcEOSCR
-	"Custom" tcEOSCR
-	"Instant/Current" tcEOSCR
-	"Instant/Tank" tcEOSCR
-	"Current" tcEOSCR
-	"Tank" tcEOSCR
-#if defined(trackIdleEOCdata)
-	"EOC/Idle" tcEOSCR
-#endif // defined(trackIdleEOCdata)
-	"Current Data" tcEOSCR
-	"Tank Data" tcEOSCR
-#if defined(trackIdleEOCdata)
-	"Current EOC/Idle" tcEOSCR
-	"Tank EOC/Idle" tcEOSCR
-#endif // defined(trackIdleEOCdata)
-	"Remaining" tcEOSCR
+	"Remaining" tcEOS
 };
 
 static const uint16_t mainDisplayPageFormats[(uint16_t)(mainDisplayFormatSize)] PROGMEM = {
-	 (lblInstantIdx << 8 ) |		(tSpeed)				// Instrument
-	,(lblInstantIdx << 8 ) |		(tEngineSpeed)
-	,(lblInstantIdx << 8 ) |		(tFuelRate)
-	,(lblInstantIdx << 8 ) |		(tFuelEcon)
+	 (instantIdx << 8 ) |			(tSpeed)				// Instrument
+	,(instantIdx << 8 ) |			(tEngineSpeed)
+	,(instantIdx << 8 ) |			(tFuelRate)
+	,(instantIdx << 8 ) |			(tFuelEcon)
 
-	,(lblInstantIdx << 8 ) |		(tFuelEcon)				// Custom
-	,(lblInstantIdx << 8 ) |		(tSpeed)
-	,(lblInstantIdx << 8 ) |		(tFuelRate)
-	,(lblCurrentIdx << 8 ) |		(tFuelEcon)
+	,(instantIdx << 8 ) |			(tFuelEcon)				// Custom
+	,(instantIdx << 8 ) |			(tSpeed)
+	,(instantIdx << 8 ) |			(tFuelRate)
+	,(currentIdx << 8 ) |			(tFuelEcon)
 
-	,(lblInstantIdx << 8 ) |		(tFuelEcon)				// Instant / Current
-	,(lblInstantIdx << 8 ) |		(tSpeed)
-	,(lblCurrentIdx << 8 ) |		(tFuelEcon)
-	,(lblCurrentIdx << 8 ) |		(tDistance)
+	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Current
+	,(instantIdx << 8 ) |			(tSpeed)
+	,(currentIdx << 8 ) |			(tFuelEcon)
+	,(currentIdx << 8 ) |			(tDistance)
 
-	,(lblInstantIdx << 8 ) |		(tFuelEcon)				// Instant / Tank
-	,(lblInstantIdx << 8 ) |		(tSpeed)
-	,(lblTankIdx << 8 ) |			(tFuelEcon)
-	,(lblTankIdx << 8 ) |			(tDistance)
+	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Tank
+	,(instantIdx << 8 ) |			(tSpeed)
+	,(tankIdx << 8 ) |				(tFuelEcon)
+	,(tankIdx << 8 ) |				(tDistance)
 
-	,(lblCurrentIdx << 8 ) |		(tSpeed)				// Current
-	,(lblCurrentIdx << 8 ) |		(tFuelEcon)
-	,(lblCurrentIdx << 8 ) |		(tDistance)
-	,(lblCurrentIdx << 8 ) |		(tFuelUsed)
+	,(currentIdx << 8 ) |			(tSpeed)				// Current
+	,(currentIdx << 8 ) |			(tFuelEcon)
+	,(currentIdx << 8 ) |			(tDistance)
+	,(currentIdx << 8 ) |			(tFuelUsed)
 
-	,(lblTankIdx << 8 ) |			(tSpeed)				// Tank
-	,(lblTankIdx << 8 ) |			(tFuelEcon)
-	,(lblTankIdx << 8 ) |			(tDistance)
-	,(lblTankIdx << 8 ) |			(tFuelUsed)
-
-#if defined(trackIdleEOCdata)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tDistance)				// EOC / Idle
-	,(lblEOCidleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(lblEOCidleTankIdx << 8 ) |	(tDistance)
-	,(lblEOCidleTankIdx << 8 ) |	(tFuelUsed)
-
-#endif // defined(trackIdleEOCdata)
-	,(lblCurrentIdx << 8 ) |		(tEngineRunTime)		// Current data
-	,(lblCurrentIdx << 8 ) |		(tFuelUsed)
-	,(lblCurrentIdx << 8 ) |		(tMotionTime)
-	,(lblCurrentIdx << 8 ) |		(tDistance)
-
-	,(lblTankIdx << 8 ) |			(tEngineRunTime)		// Tank data
-	,(lblTankIdx << 8 ) |			(tFuelUsed)
-	,(lblTankIdx << 8 ) |			(tMotionTime)
-	,(lblTankIdx << 8 ) |			(tDistance)
+	,(tankIdx << 8 ) |				(tSpeed)				// Tank
+	,(tankIdx << 8 ) |				(tFuelEcon)
+	,(tankIdx << 8 ) |				(tDistance)
+	,(tankIdx << 8 ) |				(tFuelUsed)
 
 #if defined(trackIdleEOCdata)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tEngineRunTime)		// Current EOC / Idle
-	,(lblEOCidleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tMotionTime)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tDistance)
-
-	,(lblEOCidleTankIdx << 8 ) |	(tEngineRunTime)		// Tank EOC / Idle
-	,(lblEOCidleTankIdx << 8 ) |	(tFuelUsed)
-	,(lblEOCidleTankIdx << 8 ) |	(tMotionTime)
-	,(lblEOCidleTankIdx << 8 ) |	(tDistance)
+	,(eocIdleCurrentIdx << 8 ) |	(tDistance)				// EOC / Idle
+	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
+	,(eocIdleTankIdx << 8 ) |		(tDistance)
+	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
 
 #endif // defined(trackIdleEOCdata)
-	,(lblTankIdx << 8 ) |			(tFuelUsed)				// Remaining
-	,(lblTankIdx << 8 ) |			(tRemainingFuel)
-	,(lblTankIdx << 8 ) |			(tTimeToEmpty)
-	,(lblTankIdx << 8 ) |			(tDistanceToEmpty)
+	,(currentIdx << 8 ) |			(tEngineRunTime)		// Current data
+	,(currentIdx << 8 ) |			(tFuelUsed)
+	,(currentIdx << 8 ) |			(tMotionTime)
+	,(currentIdx << 8 ) |			(tDistance)
+
+	,(tankIdx << 8 ) |				(tEngineRunTime)		// Tank data
+	,(tankIdx << 8 ) |				(tFuelUsed)
+	,(tankIdx << 8 ) |				(tMotionTime)
+	,(tankIdx << 8 ) |				(tDistance)
+
+#if defined(trackIdleEOCdata)
+	,(eocIdleCurrentIdx << 8 ) |	(tEngineRunTime)		// Current EOC / Idle
+	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
+	,(eocIdleCurrentIdx << 8 ) |	(tMotionTime)
+	,(eocIdleCurrentIdx << 8 ) |	(tDistance)
+
+	,(eocIdleTankIdx << 8 ) |		(tEngineRunTime)		// Tank EOC / Idle
+	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
+	,(eocIdleTankIdx << 8 ) |		(tMotionTime)
+	,(eocIdleTankIdx << 8 ) |		(tDistance)
+
+#endif // defined(trackIdleEOCdata)
+	,(tankIdx << 8 ) |				(tFuelUsed)				// Remaining
+	,(tankIdx << 8 ) |				(tRemainingFuel)
+	,(tankIdx << 8 ) |				(tTimeToEmpty)
+	,(tankIdx << 8 ) |				(tDistanceToEmpty)
 };
 
 #if defined(trackIdleEOCdata)
 static const uint16_t mainEOCpageFormats[4] PROGMEM = {
-	 (lblInstantIdx << 8 ) |		(tSpeed)
-	,(lblCurrentIdx << 8 ) |		(tFuelEcon)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tDistance)
-	,(lblEOCidleTankIdx << 8 ) |	(tDistance)
+	 (instantIdx << 8 ) |			(tSpeed)
+	,(currentIdx << 8 ) |			(tFuelEcon)
+	,(eocIdleCurrentIdx << 8 ) |	(tDistance)
+	,(eocIdleTankIdx << 8 ) |		(tDistance)
 };
 
 static const uint16_t mainIdlePageFormats[4] PROGMEM = {
-	 (lblInstantIdx << 8 ) |		(tFuelRate)
-	,(lblCurrentIdx << 8 ) |		(tFuelEcon)
-	,(lblEOCidleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(lblEOCidleTankIdx << 8 ) |	(tFuelUsed)
+	 (instantIdx << 8 ) |			(tFuelRate)
+	,(currentIdx << 8 ) |			(tFuelEcon)
+	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
+	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
 };
 
 #endif // defined(trackIdleEOCdata)

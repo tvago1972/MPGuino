@@ -1,12 +1,9 @@
-#ifdef useDataLoggingOutput
-
+#if defined(useDataLoggingOutput)
 static void doOutputDataLog(void)
 {
 
 	calcFuncObj thisCalcFuncObj;
 
-	uint8_t tripIdx;
-	uint8_t calcIdx;
 	uint8_t c = ',';
 
 	for (uint8_t x = 0; x < dLIcount; x++)
@@ -14,10 +11,8 @@ static void doOutputDataLog(void)
 
 		if ((x + 1) == dLIcount) c = '\n';
 
-		tripIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][0]);
-		calcIdx = pgm_read_byte(&dataLogInstr[(unsigned int)(x)][1]);
-
-		thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 0, dfOverflow9s); // perform the required decimal formatting
+		// perform the required decimal formatting
+		thisCalcFuncObj = translateCalcIdx(pgm_read_word(&dataLogTripCalcFormats[(uint16_t)(x)]), pBuff, 0, dfOverflow9s);
 
 		text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // output the number
 		text::charOut(devLogOutput, c);
@@ -25,7 +20,8 @@ static void doOutputDataLog(void)
 	}
 
 }
-#endif // useDataLoggingOutput
+
+#endif // defined(useDataLoggingOutput)
 #ifdef useJSONoutput
 static const uint8_t prgmJSON23tankFE[] PROGMEM = {
 	instrMul2byByte, 2,									// multiply results by a 2

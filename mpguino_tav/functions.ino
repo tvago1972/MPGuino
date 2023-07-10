@@ -1,9 +1,24 @@
+static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+{
+
+	union union_16 * tC = (union union_16 *)(&tripCalc);
+	uint8_t tripIdx;
+	uint8_t calcIdx;
+
+	calcIdx = tC->u8[0];
+	tripIdx = tC->u8[1];
+
+	return translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag);
+
+}
+
 static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	calcFuncObj thisCalcFuncObj;
 
 	uint8_t calcFmtIdx;
+	uint8_t i;
 
 	thisCalcFuncObj.isValid = 0;
 
@@ -35,7 +50,9 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		if ((calcIdx >= dfMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
 
 		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
-		thisCalcFuncObj.decimalPlaces = pgm_read_byte(&calcFormatDecimalPlaces[(unsigned int)(calcFmtIdx)]);
+		i = pgm_read_byte(&calcFormatDecimalPlaces[(unsigned int)(calcFmtIdx)]);
+		thisCalcFuncObj.decimalPlaces = i & 0x7F;
+		thisCalcFuncObj.suppressTripLabel = i & 0x80;
 		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(unsigned int)(calcFmtIdx)]);
 
 	}

@@ -28,7 +28,7 @@ meaning of value contained in accel test state variable accelTestState is as fol
 */
 uint8_t accelTestState;
 
-const char accelTestStateMsgs[] PROGMEM = {
+static const char accelTestStateMsgs[] PROGMEM = {
 	"\r"
 	"Drag Ready\r"
 	"Drag Test Start\r"
@@ -44,46 +44,26 @@ const char accelTestStateMsgs[] PROGMEM = {
 	"Drag Test Fail\r"
 };
 
-// local trip indexes for drag calculation trip function display variables
-#define nextAllowedValue 0
-const uint8_t drDragHalfSpeedIdx =	nextAllowedValue;
-const uint8_t drDragFullSpeedIdx =	drDragHalfSpeedIdx + 1;
-const uint8_t drDragDistanceIdx =	drDragFullSpeedIdx + 1;
-#define nextAllowedValue drDragDistanceIdx + 1
+static const uint16_t accelTestPageFormats[] PROGMEM = {
+	 (dragDistanceIdx << 8 ) |			(tFuelEcon)
+	,(dragDistanceIdx << 8 ) |			(tDragSpeed)				// for calculations, it really doesn't matter what trip index is used here
+	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
+	,(dragDistanceIdx << 8 ) |			(tEstimatedEnginePower)		// for calculations, it really doesn't matter what trip index is used here
 
-const uint8_t lblDragHalfSpeedIdx =	(dragHalfSpeedIdx << dfBitShift)	| drDragHalfSpeedIdx;
-const uint8_t lblDragFullSpeedIdx =	(dragFullSpeedIdx << dfBitShift)	| drDragFullSpeedIdx;
-const uint8_t lblDragDistanceIdx =	(dragDistanceIdx << dfBitShift)		| drDragDistanceIdx;
+	,(dragHalfSpeedIdx << 8 ) |			(tAccelTestTime)
+	,(dragHalfSpeedIdx << 8 ) |			(tFuelUsed)
+	,(dragHalfSpeedIdx << 8 ) |			(tDistance)
+	,(dragHalfSpeedIdx << 8 ) |			(tFuelEcon)
 
-#if defined(useSpiffyTripLabels)
-// display variable trip labels
-const uint8_t drTripBitPattern[][4] PROGMEM = {
-	 {0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
-	,{0b00000000, 0b00000010, 0b00000101, 0b00000010} // full circle
-	,{0b00000000, 0b00000110, 0b00000101, 0b00000110} // D
-};
+	,(dragFullSpeedIdx << 8 ) |			(tAccelTestTime)
+	,(dragFullSpeedIdx << 8 ) |			(tFuelUsed)
+	,(dragFullSpeedIdx << 8 ) |			(tDistance)
+	,(dragFullSpeedIdx << 8 ) |			(tFuelEcon)
 
-#endif // defined(useSpiffyTripLabels)
-const uint8_t dragRaceScreenFormats[] PROGMEM = {
-	 {lblDragDistanceIdx,	tFuelEcon}
-	,{lblDragDistanceIdx,	tDragSpeed}						// for calculations, it really doesn't matter what trip index is used here
-	,{lblDragDistanceIdx,	tAccelTestTime}
-	,{lblDragDistanceIdx,	0x80 | tEstimatedEnginePower}	// for calculations, it really doesn't matter what trip index is used here
-
-	,{lblDragHalfSpeedIdx,	tAccelTestTime}
-	,{lblDragHalfSpeedIdx,	tFuelUsed}
-	,{lblDragHalfSpeedIdx,	tDistance}
-	,{lblDragHalfSpeedIdx,	tFuelEcon}
-
-	,{lblDragFullSpeedIdx,	tAccelTestTime}
-	,{lblDragFullSpeedIdx,	tFuelUsed}
-	,{lblDragFullSpeedIdx,	tDistance}
-	,{lblDragFullSpeedIdx,	tFuelEcon}
-
-	,{lblDragDistanceIdx,	tAccelTestTime}
-	,{lblDragDistanceIdx,	tFuelUsed}
-	,{lblDragDistanceIdx,	tDistance}
-	,{lblDragDistanceIdx,	tFuelEcon}
+	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
+	,(dragDistanceIdx << 8 ) |			(tFuelUsed)
+	,(dragDistanceIdx << 8 ) |			(tDistance)
+	,(dragDistanceIdx << 8 ) |			(tFuelEcon)
 };
 
 static const uint8_t prgmInitializeAccelTest[] PROGMEM = {
@@ -138,11 +118,7 @@ void accelerationTest::goDisplay(void)
 
 	}
 
-#if defined(useSpiffyTripLabels)
-	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0, drTripBitPattern);
-#else // defined(useSpiffyTripLabels)
-	displayMainScreenFunctions(dragRaceScreenFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0);
-#endif // defined(useSpiffyTripLabels)
+	mainDisplay::outputPage(accelTestPageFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0);
 
 }
 

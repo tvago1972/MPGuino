@@ -181,6 +181,78 @@ static const char tripVarChars[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 #endif // useEEPROMtripStorage
 };
 
+// local trip indexes for spiffy trip label trip function display variables
+#define nextAllowedValue 0
+static const uint8_t stlInstantIdx =		nextAllowedValue;
+static const uint8_t stlCurrentIdx =		stlInstantIdx + 1;
+static const uint8_t stlTankIdx =			stlCurrentIdx + 1;
+#define nextAllowedValue stlTankIdx + 1
+#if defined(trackIdleEOCdata)
+static const uint8_t stlEOCidleCurrentIdx =	nextAllowedValue;
+static const uint8_t stlEOCidleTankIdx =	stlEOCidleCurrentIdx + 1;
+static const uint8_t stlEOCidleInstantIdx =	stlEOCidleTankIdx + 1;
+#define nextAllowedValue stlEOCidleInstantIdx + 1
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+static const uint8_t stlDragHalfSpeedIdx =	nextAllowedValue;
+static const uint8_t stlDragFullSpeedIdx =	stlDragHalfSpeedIdx + 1;
+static const uint8_t stlDragDistanceIdx =	stlDragFullSpeedIdx + 1;
+#define nextAllowedValue stlDragDistanceIdx + 1
+#endif // defined(useDragRaceFunction)
+
+static const uint8_t msMaxTripCount =		nextAllowedValue;
+
+static const uint8_t msTripList[] PROGMEM = {
+	 instantIdx
+	,currentIdx
+	,tankIdx
+#if defined(trackIdleEOCdata)
+	,eocIdleCurrentIdx
+	,eocIdleTankIdx
+	,eocIdleInstantIdx
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+	,dragHalfSpeedIdx
+	,dragFullSpeedIdx
+	,dragDistanceIdx
+#endif // defined(useDragRaceFunction)
+};
+
+static const char msTripNameString[] PROGMEM = {
+	"INST" tcEOS
+	"CURR" tcEOS
+	"TANK" tcEOS
+#if defined(trackIdleEOCdata)
+	"cC/I" tcEOS
+	"tC/I" tcEOS
+	"iC/I" tcEOS
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+	"D1/2" tcEOS
+	"DF/S" tcEOS
+	"DDST" tcEOS
+#endif // defined(useDragRaceFunction)
+};
+
+#if defined(useSpiffyTripLabels)
+// display variable trip labels
+static const uint8_t tripFormatLabelCGRAM[][4] PROGMEM = {
+	 {0b00000000, 0b00000111, 0b00000010, 0b00000111} // I
+ 	,{0b00000000, 0b00000011, 0b00000100, 0b00000011} // C
+	,{0b00000000, 0b00000111, 0b00000010, 0b00000010} // T
+#if defined(trackIdleEOCdata)
+	,{0b00000000, 0b00000011, 0b00000100, 0b00000110} // italic C
+	,{0b00000000, 0b00000111, 0b00000010, 0b00000100} // italic T
+	,{0b00000000, 0b00000011, 0b00000010, 0b00000110} // italic I
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+	 {0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
+	,{0b00000000, 0b00000010, 0b00000101, 0b00000010} // full circle
+	,{0b00000000, 0b00000110, 0b00000101, 0b00000110} // D
+#endif // defined(useDragRaceFunction)
+};
+
+#endif // defined(useSpiffyTripLabels)
 volatile uint32_t collectedVSSpulseCount[(uint16_t)(tripSlotCount)];
 volatile uint64_t collectedInjCycleCount[(uint16_t)(tripSlotCount)];
 
@@ -351,15 +423,15 @@ namespace pressureCorrect /* Chrysler returnless fuel pressure correction displa
 
 }
 
-static const char pressureCorrectScreenFuncNames[] PROGMEM = {
-	"Pressures" tcEOSCR
+static const char pressureCorrectDisplayTitles[] PROGMEM = {
+	"Pressures" tcEOS
 };
 
 static const uint16_t pressureCorrectPageFormats[4] PROGMEM = {
-	 ((mpMAPpressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)		// Pressures
-	,((mpBaroPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
-	,((mpFuelPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
-	,((mpInjPressureIdx - mpMAPpressureIdx) << 8 ) |	(0x80 | tPressureChannel)
+	 ((mpMAPpressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel)		// Pressures
+	,((mpBaroPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel)
+	,((mpFuelPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel)
+	,((mpInjPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel)
 };
 
 #endif // defined(useChryslerMAPCorrection)
@@ -433,6 +505,10 @@ static uint8_t topScreenLevel;
 const uint8_t tripSignatureList[] PROGMEM = {
 	 pCurrTripSignatureIdx
 	,pTankTripSignatureIdx
+};
+
+const uint8_t tripSlotStatus[] PROGMEM = {
+	"  Present" tcOTOG "  Empty" tcEOSCR
 };
 
 #endif // defined(useSavedTrips)

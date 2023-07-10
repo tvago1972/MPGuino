@@ -6,19 +6,19 @@ void doOutputJSONnumber(union union_64 * an, uint8_t decimalPlaces, const char *
 void doOutputJSONnumber(uint8_t decimalPlaces, const char * labelStr); // base
 void doOutputJSON(void);
 #endif // useJSONoutput
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 static void doOutputDataLog(void);
 
-static const uint8_t dataLogInstr[][2] PROGMEM = {
-	 {lblInstantIdx,	 	tFuelEcon}				// average fuel economy  for the past loop
-	,{lblInstantIdx,	 	tSpeed}					// average vehicle speed for the past loop
-	,{lblInstantIdx,	 	tInjectorOpenTime}		// fuel injector raw open time for the past loop
-	,{lblInstantIdx,	 	tInjectorPulseCount}	// fuel injector pulse count for the past loop
-	,{lblInstantIdx,	 	tVSSpulseCount}			// vss pulse count for the past loop
+static const uint16_t dataLogTripCalcFormats[] PROGMEM = {
+	 (instantIdx << 8) |	 	tFuelEcon)				// average fuel economy  for the past loop
+	,(instantIdx << 8) |	 	tSpeed)					// average vehicle speed for the past loop
+	,(instantIdx << 8) |	 	tInjectorOpenTime)		// fuel injector raw open time for the past loop
+	,(instantIdx << 8) |	 	tInjectorPulseCount)	// fuel injector pulse count for the past loop
+	,(instantIdx << 8) |	 	tVSSpulseCount)			// vss pulse count for the past loop
 };
 
-static const uint8_t dLIcount = (sizeof(dataLogInstr) / sizeof(uint8_t));
-#endif // useDataLoggingOutput
+static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_t));
+#endif // defined(useDataLoggingOutput)
 #ifdef useJSONoutput
 const char JSONaccelTestStateMsgs[] PROGMEM = {
 	tcEOS

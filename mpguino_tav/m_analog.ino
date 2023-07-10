@@ -121,10 +121,10 @@ ISR( ADC_vect )
  /* ADC voltage display section */
 
 static const uint16_t analogReadPageFormats[4] PROGMEM = {
-	 (analog0Idx << 8 ) |	(0x80 | tAnalogChannel)	// Voltages
-	,(analog1Idx << 8 ) |	(0x80 | tAnalogChannel)
-	,(analog2Idx << 8 ) |	(0x80 | tAnalogChannel)
-	,(analog3Idx << 8 ) |	(0x80 | tAnalogChannel)
+	 (analog0Idx << 8 ) |			(tAnalogChannel)	// Voltages
+	,(analog1Idx << 8 ) |			(tAnalogChannel)
+	,(analog2Idx << 8 ) |			(tAnalogChannel)
+	,(analog3Idx << 8 ) |			(tAnalogChannel)
 };
 
 static void analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -135,14 +135,10 @@ static void analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, analogReadScreenFuncNames, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
-#if defined(useSpiffyTripLabels)
-			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:

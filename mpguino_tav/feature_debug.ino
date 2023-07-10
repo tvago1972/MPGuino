@@ -492,9 +492,7 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 	for (uint8_t x = 1; x < 9; x++)
 	{
 
-		text::setModeOnCondition(devDebugTerminal, (flagRegister & bitMask), odvFlagEnableOutput);
-		text::stringOut(devDebugTerminal, flagStr, x);
-		text::setModeOnCondition(devDebugTerminal, 1, odvFlagEnableOutput);
+		text::stringOutIf(devDebugTerminal, (flagRegister & bitMask), flagStr, x);
 
 		if (x == 8) c = 0x0D;
 		else c = 0x20;
@@ -1128,7 +1126,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								break;
 
 							case 0:
-								terminal::outputFlags(activityFlags, terminalActivityFlagStr);
+								outputFlags(activityFlags, terminalActivityFlagStr);
 							case '+':	// add
 							case '-':	// subtract
 							case '*':	// multiply
@@ -1436,11 +1434,7 @@ static void signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			if ((debugFlags & debugEnableFlags) ^ i) configurePorts();
 
 		case displayOutputIdx:
-#if defined(useSpiffyTripLabels)
-			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
 			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:

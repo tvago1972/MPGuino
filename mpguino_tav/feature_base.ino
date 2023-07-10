@@ -14,7 +14,7 @@ static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, mainDisplayFuncNames, cursorPos); // briefly display screen name
+			text::statusOut(devLCD, mainDisplayPageTitles, cursorPos); // briefly display screen name
 #if defined(useScreenEditor)
 			basePageIdx = cursorPos * 4;
 #endif // defined(useScreenEditor)
@@ -42,17 +42,9 @@ static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-#if defined(useSpiffyTripLabels)
-			outputPage(pageFormatFunc, i, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
 			outputPage(pageFormatFunc, i, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 #else // defined(trackIdleEOCdata)
-#if defined(useSpiffyTripLabels)
-			outputPage(getMainDisplayPageFormat, cursorPos, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
 			outputPage(getMainDisplayPageFormat, cursorPos, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 #endif // defined(trackIdleEOCdata)
 
 			break;
@@ -91,11 +83,7 @@ static uint16_t mainDisplay::getMainIdlePageFormats(uint8_t formatIdx)
 }
 
 #endif // defined(trackIdleEOCdata)
-#if defined(useSpiffyTripLabels)
-static void mainDisplay::outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4])
-#else // defined(useSpiffyTripLabels)
 static void mainDisplay::outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, uint8_t tripBlink, uint8_t calcBlink)
-#endif // defined(useSpiffyTripLabels)
 {
 
 	uint8_t sfIdx;
@@ -108,11 +96,7 @@ static void mainDisplay::outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, 
 
 		displayPageFormat = pageFormatFunc(sfIdx + x);
 
-#if defined(useSpiffyTripLabels)
-		outputFunction(x, displayPageFormat, tripBlink, calcBlink, localTripBitmask);
-#else // defined(useSpiffyTripLabels)
 		outputFunction(x, displayPageFormat, tripBlink, calcBlink);
-#endif // defined(useSpiffyTripLabels)
 
 	}
 
@@ -122,55 +106,21 @@ static void mainDisplay::outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, 
 #endif // defined(useSpiffyTripLabels)
 }
 
-#if defined(useSpiffyTripLabels)
-static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat, uint8_t tripBlink, uint8_t calcBlink, const uint8_t localTripBitmask[][4])
-#else // defined(useSpiffyTripLabels)
-static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat, uint8_t tripBlink, uint8_t calcBlink)
-#endif // defined(useSpiffyTripLabels)
+static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunction, uint8_t tripBlink, uint8_t calcBlink)
 {
 
 	calcFuncObj thisCalcFuncObj;
 
-	union union_16 * pF = (union union_16 *)(&pageFormat);
 	uint8_t x;
 	uint8_t y;
-	uint8_t tripIdx;
-	uint8_t calcIdx;
 	uint8_t tripBitmask;
 	uint8_t calcBitmask;
 #if defined(useSpiffyTripLabels)
 	uint8_t tripPart;
 	uint8_t calcPart;
-	uint8_t translateFlag;
 	uint8_t localTripIdx;
 #endif // defined(useSpiffyTripLabels)
 
-	calcIdx = pF->u8[0];
-	tripIdx = pF->u8[1];
-
-#if defined(useSpiffyTripLabels)
-	translateFlag = calcIdx & 0x80; // save trip index translation bit
-
-	if (calcIdx & 0x80)
-	{
-
-		localTripIdx = tripIdx;
-		calcIdx &= 0x7F; // strip off trip index translation bit
-
-	}
-	else
-	{
-
-		localTripIdx = (tripIdx & dfFunctionMask); // extract local trip index
-		tripIdx = (tripIdx & dfTripMask) >> dfBitShift; // extract calculation trip index
-
-	}
-
-#else // defined(useSpiffyTripLabels)
-	if (calcIdx & 0x80) calcIdx &= 0x7F; // if trip index translation bit is set, trip index is immediately usable
-	else tripIdx = (tripIdx & dfTripMask) >> dfBitShift; // otherwise, extract calculation trip index
-
-#endif // defined(useSpiffyTripLabels)
 	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? 0 : 0x1F); // determine if trip label component should blink or not
 	calcBitmask = ((mainLoopHeartBeat & calcBlink) ? 0 : 0x1F); // determine if function component should blink or not
 
@@ -178,7 +128,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	x = (readingIdx & 1) * (LCDcharWidth / 2); // figure out horizontal component (0 or 8)
 	y = (readingIdx & 2) >> 1; // figure out vertical component (0 or 1)
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, (LCDcharWidth / 2) - 2, 0);
+	thisCalcFuncObj = translateCalcIdx(tripFunction, pBuff, (LCDcharWidth / 2) - 2, 0);
 
 	text::gotoXY(devLCD, x, y);
 	if (calcBitmask) text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
@@ -186,7 +136,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	{
 
 		thisCalcFuncObj.calcChar = ' ';
-		text::charOut(devLCD, ' ', 6);
+		text::charOut(devLCD, ' ', (LCDcharWidth / 2));
 
 	}
 
@@ -198,17 +148,19 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 
 	readingIdx <<= 3;
 
+	if (thisCalcFuncObj.suppressTripLabel == 0) localTripIdx = findTripIdx(thisCalcFuncObj.tripIdx);
+
 	for (uint8_t x = 0; x < 16; x++)
 	{
 
 		calcPart = pgm_read_byte(&calcFormatLabelCGRAM[(uint16_t)(thisCalcFuncObj.calcFmtIdx)][(uint16_t)(x)]); // read a byte of function label bit pattern
 
-		if (translateFlag) tripPart = 0;
+		if (thisCalcFuncObj.suppressTripLabel) tripPart = 0;
 		else
 		{
 
 			tripPart = (calcPart >> 5) & 0x03; // fetch partial address of trip label component
-			tripPart = pgm_read_byte(&localTripBitmask[(uint16_t)(localTripIdx)][(uint16_t)(tripPart)]); // read a byte of trip label bit pattern
+			tripPart = pgm_read_byte(&tripFormatLabelCGRAM[(uint16_t)(localTripIdx)][(uint16_t)(tripPart)]); // read a byte of trip label bit pattern
 			tripPart &= tripBitmask; // provide for blinking trip label component
 
 		}
@@ -220,12 +172,23 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t pageFormat,
 	}
 
 #else // defined(useSpiffyTripLabels)
-	if (tripBitmask == 0) thisCalcFuncObj.tripChar = ' ';
+	if ((tripBitmask == 0) || (thisCalcFuncObj.suppressTripLabel)) thisCalcFuncObj.tripChar = ' ';
 
 	text::charOut(devLCD, thisCalcFuncObj.tripChar);
 	text::charOut(devLCD, thisCalcFuncObj.calcChar);
 
 #endif // defined(useSpiffyTripLabels)
+}
+
+static uint8_t mainDisplay::findTripIdx(uint8_t tripIdx)
+{
+
+	uint8_t i;
+
+	for (uint8_t x = 0; x < msMaxTripCount; x++) if (tripIdx == pgm_read_byte(&msTripList[(uint16_t)(x)])) i = x;
+
+	return i;
+
 }
 
 #if defined(useScreenEditor)
@@ -263,11 +226,7 @@ static void displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 				}
 
-#if defined(useSpiffyTripLabels)
-				mainDisplay::outputFunction(x, displayEditPageFormats[(uint16_t)(x)], tripBlink, calcBlink, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
 				mainDisplay::outputFunction(x, displayEditPageFormats[(uint16_t)(x)], tripBlink, calcBlink);
-#endif // defined(useSpiffyTripLabels)
 
 			}
 
@@ -340,6 +299,7 @@ static void displayEdit::changeItemDown(void)
 static void displayEdit::changeItem(uint8_t changeDir)
 {
 
+	uint8_t i;
 	union union_16 * dEPF = (union union_16 *)(&displayEditPageFormats[(uint16_t)(formatEditIdx)]);
 
 	if (formatFunctionFlag) // modify the function portion of the format value
@@ -353,12 +313,12 @@ static void displayEdit::changeItem(uint8_t changeDir)
 	else // modify the trip portion of the format value
 	{
 
-		dEPF->u8[1] &= dfFunctionMask; // strip off trip variable index
-		dEPF->u8[1] += changeDir; // adjust trip label index
+		i = mainDisplay::findTripIdx(dEPF->u8[1]);
+		i += changeDir; // adjust trip label index
 
-		if (dEPF->u8[1] >= msMaxTripCount) dEPF->u8[1] = ( changeDir == 1 ? 0 : msMaxTripCount - 1); // boundary check
+		if (i >= msMaxTripCount) i = ( changeDir == 1 ? 0 : msMaxTripCount - 1); // boundary check
 
-		dEPF->u8[1] |= (pgm_read_byte(&msTripList[(uint16_t)(dEPF->u8[1])]) << dfBitShift); // combine with new corresponding trip variable index
+		dEPF->u8[1] |= pgm_read_byte(&msTripList[(uint16_t)(i)]); // combine with new corresponding trip variable index
 
 	}
 

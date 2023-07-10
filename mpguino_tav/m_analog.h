@@ -258,8 +258,8 @@ namespace analogReadViewer /* ADC voltage display section prototype */
 
 }
 
-static const char analogReadScreenFuncNames[] PROGMEM = {
-	"Voltages" tcEOSCR
+static const char analogReadDisplayTitles[] PROGMEM = {
+	"Voltages" tcEOS
 };
 
 #endif // defined(useDebugAnalog)

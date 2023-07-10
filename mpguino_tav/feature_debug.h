@@ -50,17 +50,17 @@ static const unsigned long debugVSSresetLength = (unsigned long)(ceil)((2ul * F_
 static const unsigned long debugFIPresetLength = (unsigned long)(ceil)((4ul * F_CPU) / (3ul * 2ul * 255ul)) - 1; // 4/3 sec
 
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
-	 (lblInstantIdx << 8 ) |	(tInjectorTotalTime) 		// Debug
-	,(lblInstantIdx << 8 ) |	(tVSStotalTime)
-	,(lblInstantIdx << 8 ) |	(tInjectorPulseCount)
-	,(lblInstantIdx << 8 ) |	(tVSSpulseCount)
+	 (instantIdx << 8 ) |		(tInjectorTotalTime) 		// Debug
+	,(instantIdx << 8 ) |		(tVSStotalTime)
+	,(instantIdx << 8 ) |		(tInjectorPulseCount)
+	,(instantIdx << 8 ) |		(tVSSpulseCount)
 };
 
 static const char debugScreenFuncNames[] PROGMEM = {
-	"FI ON   VSS ON" tcEOSCR
-	"FI OFF  VSS ON" tcEOSCR
-	"FI OFF  VSS OFF" tcEOSCR
-	"FI ON   VSS OFF" tcEOSCR
+	"FI ON   VSS ON" tcEOS
+	"FI OFF  VSS ON" tcEOS
+	"FI OFF  VSS OFF" tcEOS
+	"FI ON   VSS OFF" tcEOS
 };
 
 static const uint16_t debugVSSvalues[] PROGMEM = {

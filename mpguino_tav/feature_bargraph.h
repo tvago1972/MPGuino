@@ -72,10 +72,10 @@ static const char bgSpaces[] PROGMEM = {
 volatile uint8_t FEvTperiodIdx;
 
 static const char barFEvTfuncNames[] PROGMEM = {
-	"FuelUsed / Time" tcEOSCR
-	"Distance / Time" tcEOSCR
-	"FE / Time" tcEOSCR
-	"DiffFE / Time" tcEOSCR
+	"FuelUsed / Time" tcEOS
+	"Distance / Time" tcEOS
+	"FE / Time" tcEOS
+	"DiffFE / Time" tcEOS
 };
 
 static const uint8_t barFEvTdisplayFuncs[] PROGMEM = {
@@ -111,9 +111,9 @@ namespace bgFEvsSsupport /* fuel economy over speed histograph support section p
 };
 
 static const char barFEvSfuncNames[] PROGMEM = {
-	"FE / Speed" tcEOSCR
-	"Fuel Used/Speed" tcEOSCR
-	"Distance / Speed" tcEOSCR
+	"FE / Speed" tcEOS
+	"Fuel Used/Speed" tcEOS
+	"Distance / Speed" tcEOS
 };
 
 static const uint8_t barFEvSdisplayFuncs[] PROGMEM = {

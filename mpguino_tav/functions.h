@@ -2,16 +2,18 @@ typedef struct
 {
 
   uint8_t isValid;
+  uint8_t suppressTripLabel;
   uint8_t tripIdx;
-  uint8_t tripChar;
   uint8_t calcIdx;
+  uint8_t tripChar;
+  uint8_t calcChar;
   uint8_t calcFmtIdx;
   uint8_t decimalPlaces;
-  uint8_t calcChar;
   char * strBuffer;
 
 } calcFuncObj;
 
+static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 
 // calculation indexes into SWEET64 S64programList[] for display functions to either screen or logging output
@@ -1197,47 +1199,48 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 	,calcFormatFuelEconomyIdx					// tFuelEcon - fuel economy (SI/SAE)
 };
 
-const uint8_t calcFormatDecimalPlaces[(unsigned int)(calcFormatIdxCount)] PROGMEM = { // S64programList
-	 0	// time in HHmmSS format
-	,3	// time in milliseconds
-	,0	// engine speed
-	,0	// pulse count
-#ifdef useFuelCost
-	,2	// fuel cost
-	,2	// fuel rate cost
-#endif // useFuelCost
+// high bit set means "output no corresponding trip label"
+const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatIdxCount)] PROGMEM = { // S64programList
+	 0			// time in HHmmSS format
+	,3			// time in milliseconds
+	,0			// engine speed
+	,0			// pulse count
+#if defined(useFuelCost)
+	,2			// fuel cost
+	,2			// fuel rate cost
+#endif // defined(useFuelCost)
 #if defined(useAnalogRead)
-	,3	// voltage
-#endif // useAnalogRead
-#ifdef useDragRaceFunction
-	,1	// time in tenths of seconds
-#endif // useDragRaceFunction
-	,2	// SAE fuel quantity
-	,2	// SI fuel quantity
-	,2	// SAE fuel rate
-	,2	// SI fuel rate
-	,1	// SAE distance travelled
-	,1	// SI distance travelled
-	,1	// SAE speed
-	,1	// SI speed
-#ifdef useFuelCost
-	,2	// SAE fuel cost per unit distance
-	,2	// SI fuel cost per unit distance
-	,1	// SAE distance per unit fuel cost
-	,1	// SI distance per unit fuel cost
-#endif // useFuelCost
-#ifdef useChryslerMAPCorrection
-	,2	// SAE pressure
-	,2	// SI pressure
-#endif // useChryslerMAPCorrection
-#ifdef useDragRaceFunction
-	,1	// SAE horsepower
-	,1	// SI horsepower
-#endif // useDragRaceFunction
-	,1	// SAE fuel economy
-	,1	// SI fuel economy
-	,1	// alternate SAE fuel economy
-	,1	// alternate SI fuel economy
+	,3 | 0x80	// voltage
+#endif // defined(useAnalogRead)
+#if defined(useDragRaceFunction)
+	,1			// time in tenths of seconds
+#endif // defined(useDragRaceFunction)
+	,2			// SAE fuel quantity
+	,2			// SI fuel quantity
+	,2			// SAE fuel rate
+	,2			// SI fuel rate
+	,1			// SAE distance travelled
+	,1			// SI distance travelled
+	,1			// SAE speed
+	,1			// SI speed
+#if defined(useFuelCost)
+	,2			// SAE fuel cost per unit distance
+	,2			// SI fuel cost per unit distance
+	,1			// SAE distance per unit fuel cost
+	,1			// SI distance per unit fuel cost
+#endif // defined(useFuelCost)
+#if defined(useChryslerMAPCorrection)
+	,2 | 0x80	// SAE pressure
+	,2 | 0x80	// SI pressure
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useDragRaceFunction)
+	,1			// SAE horsepower
+	,1			// SI horsepower
+#endif // defined(useDragRaceFunction)
+	,1			// SAE fuel economy
+	,1			// SI fuel economy
+	,1			// alternate SAE fuel economy
+	,1			// alternate SI fuel economy
 };
 
 const uint8_t calcFormatLabelText[(unsigned int)(calcFormatIdxCount)] PROGMEM = { // S64programList
