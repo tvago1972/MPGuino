@@ -36,16 +36,16 @@ const uint8_t pSizeLCDcolor =				3;
 #endif // useAdafruitRGBLCDshield
 const uint8_t pSizeMetricMode =				1;
 const uint8_t pSizeAlternateFE =			1;
-#ifdef useFuelCost
+#if defined(useFuelCost)
 const uint8_t pSizeFuelUnitCost =			24;
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 const uint8_t pSizeOutputPin1Mode =			3;
 const uint8_t pSizeOutputPin2Mode =			3;
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 const uint8_t pSizeVoltageOffset =			12;
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 const uint8_t pSizeSerialDataLogging =		1;
 #endif // useDataLoggingOutput
@@ -194,19 +194,19 @@ const unsigned int pAddressLCDcolor =					nextAllowedValue;
 const unsigned int pAddressMetricMode =					nextAllowedValue;
 const unsigned int pAddressAlternateFE =				pAddressMetricMode + byteSize(pSizeMetricMode);
 #define nextAllowedValue pAddressAlternateFE + byteSize(pSizeAlternateFE)
-#ifdef useFuelCost
+#if defined(useFuelCost)
 const unsigned int pAddressFuelUnitCost =				nextAllowedValue;
 #define nextAllowedValue pAddressFuelUnitCost + byteSize(pSizeFuelUnitCost)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 const uint8_t pAddressOutputPin1Mode =					nextAllowedValue;
 const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
 #define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
@@ -391,19 +391,19 @@ const uint8_t pLCDcolorIdx =				nextAllowedValue;
 const uint8_t pMetricModeIdx =				nextAllowedValue;
 const uint8_t pAlternateFEidx =				pMetricModeIdx + 1;
 #define nextAllowedValue pAlternateFEidx + 1
-#ifdef useFuelCost
+#if defined(useFuelCost)
 const uint8_t pCostPerQuantity =			nextAllowedValue;
 #define nextAllowedValue pCostPerQuantity + 1
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 const uint8_t pOutputPin1Mode =				nextAllowedValue;
 const uint8_t pOutputPin2Mode =				pOutputPin1Mode + 1;
 #define nextAllowedValue pOutputPin2Mode + 1
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 const uint8_t pVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 const uint8_t pSerialDataLoggingIdx =		nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
@@ -625,20 +625,20 @@ const char parmLabels[] PROGMEM = {
 #endif // useAdafruitRGBLCDshield
 	"Metric 1-Yes" tcEOSCR
 	"AltFEformat 1-Y" tcEOSCR
-#ifdef useFuelCost
+#if defined(useFuelCost)
 #ifdef useImperialGallon
 	"Price*1000/" tcOMOFF "ImpGa" tcOTOG "L" tcOON tcEOSCR
 #else  // useImperialGallon
 	"Price*1000/" tcOMOFF "USgal" tcOTOG tcOON tcEOSCR
 #endif // useImperialGallon
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	"OutPtPin 1 Mode" tcEOSCR
 	"OutPtPin 2 Mode" tcEOSCR
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	"V(diode)*1000" tcEOSCR
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 	"DLogSerial 1-Yes" tcEOSCR
 #endif // useDataLoggingOutput
@@ -870,16 +870,16 @@ const uint8_t paramsLength[] PROGMEM = {
 #endif // useAdafruitRGBLCDshield
 	,(pSizeMetricMode & 0x07) | pfDoMetricModeConversion						// Display Mode (0 - US Display, 1 - Metric Display)
 	,(pSizeAlternateFE & 0x07) | pfSoftwareInitMPGuino							// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,(pSizeFuelUnitCost & 0x07)													// Price per unit volume of fuel
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	,(pSizeOutputPin1Mode & 0x07)												// Output Pin 1 mode
 	,(pSizeOutputPin2Mode & 0x07)												// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,(pSizeVoltageOffset & 0x07)												// diode offset from V(alternator)
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
 #endif // useDataLoggingOutput
@@ -1025,16 +1025,16 @@ const uint8_t paramAddrs[] PROGMEM = {
 #endif // useAdafruitRGBLCDshield
 	,(uint8_t)(pAddressMetricMode)					// Display Mode (0 - US Display, 1 - Metric Display)
 	,(uint8_t)(pAddressAlternateFE)					// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,(uint8_t)(pAddressFuelUnitCost)				// Price per unit volume of fuel
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	,(uint8_t)(pAddressOutputPin1Mode)				// Output Pin 1 mode
 	,(uint8_t)(pAddressOutputPin2Mode)				// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,(uint8_t)(pAddressVoltageOffset)				// diode offset from V(alternator)
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 	,(uint8_t)(pAddressSerialDataLogging)			// Serial Data Logging Enable
 #endif // useDataLoggingOutput
@@ -1181,16 +1181,16 @@ const uint32_t params[] PROGMEM = {
 #endif // useAdafruitRGBLCDshield
 	,0					// Display Mode (0 - US Display, 1 - Metric Display)
 	,0					// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,2710259			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	,0					// Output pin 1 mode
 	,0					// Output pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,700				// diode offset from V(alternator) (via meelis11)
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDataLoggingOutput
 	,1					// Serial Data Logging Enable
 #endif // useDataLoggingOutput

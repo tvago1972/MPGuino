@@ -121,13 +121,13 @@ const uint8_t analogButtonChannelIdx =		analog1Idx;
 const uint8_t analogButtonChannelIdx =		analog0Idx;
 #endif // useAnalogButtons
 #endif // useChryslerMAPCorrection
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 #if useAnalogButtons || useChryslerMAPCorrection
 const uint8_t analogAlternatorChannelIdx =	analog2Idx;
 #else // useAnalogButtons || useChryslerMAPCorrection
 const uint8_t analogAlternatorChannelIdx =	analog1Idx;
 #endif // useAnalogButtons || useChryslerMAPCorrection
-#endif useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 
 volatile unsigned int analogValue[(unsigned int)(dfMaxValAnalogCount)];
 

@@ -363,9 +363,9 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #ifdef useChryslerMAPCorrection
 	,bpListMiscViewer
 #endif // useChryslerMAPCorrection
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 	,bpListMiscViewer
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 #ifdef useTestButtonValues
 	,bpListButtonView
 #endif // useTestButtonValues

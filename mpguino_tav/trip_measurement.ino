@@ -445,13 +445,13 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 				case tsfCurrentSaveIdx:
 				case tsfTankSaveIdx:
 					doWriteTrip(thisTripSlot);
-					text::statusOut(devLCD, msTripNameString, thisTripSlot + 1, PSTR(" Trip Saved"));
+					text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
 					break;
 
 				case tsfCurrentLoadIdx:
 				case tsfTankLoadIdx:
 					i = doReadTrip(thisTripSlot);
-					if (i) text::statusOut(devLCD, msTripNameString, thisTripSlot + 1, PSTR(" Trip Loaded"));
+					if (i) text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
 					else text::statusOut(devLCD, PSTR("Nothing to load"));
 					break;
 
@@ -582,7 +582,7 @@ static void tripSupport::doResetTrip(uint8_t tripSlot)
 	}
 
 #endif // defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
-	text::statusOut(devLCD, msTripNameString, tripSlot + 1, PSTR(" Trip Reset"));
+	text::statusOut(devLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
 
 }
 

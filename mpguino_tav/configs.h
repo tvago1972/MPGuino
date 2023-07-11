@@ -55,24 +55,24 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 #define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
-//#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-//#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-//#define useBigFE true						// Show big fuel economy displays
-//#define useBigDTE true						// Show big distance-to-empty displays
+#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
+#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+#define useBigFE true						// Show big fuel economy displays
+#define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-//#define useSpiffyBigChars true			// Provides better number font with use with big number displays above
-//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
-//#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
+#define useSpiffyBigChars true				// Provides better number font with use with big number displays above
+#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 #define useSavedTrips true					// Ability to save current or tank trips to EEPROM
-//#define useFuelCost true					// Show fuel cost
-//#define useCPUreading true					// Show CPU loading and available RAM usage
+#define useFuelCost true					// Show fuel cost
+#define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
-//#define blankScreenOnMessage true			// Completely blank display screen upon display of message
+//#define blankScreenOnMessage true			// Completely blank display screen upon display of status message
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
-//#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
+#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 //#define useDataLoggingOutput true			// Ability to output 5 basic parameters to a data logger or SD card, once every refresh period (0.5 second)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
@@ -87,7 +87,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
-//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
@@ -108,7 +108,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
-//#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
+#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
 //#define useBluetooth true					// (inw) Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
@@ -121,12 +121,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help - requires useDebugTerminal
 #define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
 #define useDebugButtonInjection true		// ability to inject button presses into MPGuino - requires useDebugTerminal
-//#define useDebugCPUreading true				// Show enhanced CPU loading and available RAM usage - requires useDebugTerminal
+//#define useDebugCPUreading true				// Show enhanced CPU loading - requires useDebugTerminal
 //#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true			// Allows observation of button mapping
 #define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
-//#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
-//#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
+#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
+#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useSWEET64mult true					// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
 //#define useSWEET64div true					// shift div64 from native C++ to SWEET64 bytecode (saves 220 bytes)
 
@@ -337,9 +337,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useFuelPressure true
 #endif // useCalculatedFuelFactor
 
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 #define useAnalogRead true
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 
 #ifdef useChryslerMAPCorrection
 #define useIsqrt true
@@ -350,9 +350,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #undef useChryslerBaroSensor
 #endif // useChryslerMAPCorrection
 
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 #define useAnalogRead true
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 
 #ifdef useCoastDownCalculator
 #define useVehicleMass true

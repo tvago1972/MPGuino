@@ -107,7 +107,7 @@ const uint8_t EEPROMeocIdleTankIdx =	EEPROMeocIdleCurrentIdx + 1;
 
 const uint8_t tripSlotTotalCount =		nextAllowedValue;
 
-static const char tripVarChars[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
+static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 	 '0'
 	,'1'
 	,'I'
@@ -181,28 +181,28 @@ static const char tripVarChars[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 #endif // useEEPROMtripStorage
 };
 
-// local trip indexes for spiffy trip label trip function display variables
+// trip format indexes for displayed trip function display variables
 #define nextAllowedValue 0
-static const uint8_t stlInstantIdx =		nextAllowedValue;
-static const uint8_t stlCurrentIdx =		stlInstantIdx + 1;
-static const uint8_t stlTankIdx =			stlCurrentIdx + 1;
-#define nextAllowedValue stlTankIdx + 1
+static const uint8_t tripFormatInstantIdx =			nextAllowedValue;
+static const uint8_t tripFormatCurrentIdx =			tripFormatInstantIdx + 1;
+static const uint8_t tripFormatTankIdx =			tripFormatCurrentIdx + 1;
+#define nextAllowedValue tripFormatTankIdx + 1
 #if defined(trackIdleEOCdata)
-static const uint8_t stlEOCidleCurrentIdx =	nextAllowedValue;
-static const uint8_t stlEOCidleTankIdx =	stlEOCidleCurrentIdx + 1;
-static const uint8_t stlEOCidleInstantIdx =	stlEOCidleTankIdx + 1;
-#define nextAllowedValue stlEOCidleInstantIdx + 1
+static const uint8_t tripFormatEOCidleCurrentIdx =	nextAllowedValue;
+static const uint8_t tripFormatEOCidleTankIdx =		tripFormatEOCidleCurrentIdx + 1;
+static const uint8_t tripFormatEOCidleInstantIdx =	tripFormatEOCidleTankIdx + 1;
+#define nextAllowedValue tripFormatEOCidleInstantIdx + 1
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-static const uint8_t stlDragHalfSpeedIdx =	nextAllowedValue;
-static const uint8_t stlDragFullSpeedIdx =	stlDragHalfSpeedIdx + 1;
-static const uint8_t stlDragDistanceIdx =	stlDragFullSpeedIdx + 1;
-#define nextAllowedValue stlDragDistanceIdx + 1
+static const uint8_t tripFormatDragHalfSpeedIdx =	nextAllowedValue;
+static const uint8_t tripFormatDragFullSpeedIdx =	tripFormatDragHalfSpeedIdx + 1;
+static const uint8_t tripFormatDragDistanceIdx =	tripFormatDragFullSpeedIdx + 1;
+#define nextAllowedValue tripFormatDragDistanceIdx + 1
 #endif // defined(useDragRaceFunction)
 
-static const uint8_t msMaxTripCount =		nextAllowedValue;
+static const uint8_t tripFormatIdxCount =			nextAllowedValue;
 
-static const uint8_t msTripList[] PROGMEM = {
+static const uint8_t tripFormatReverseList[] PROGMEM = {
 	 instantIdx
 	,currentIdx
 	,tankIdx
@@ -218,7 +218,7 @@ static const uint8_t msTripList[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 };
 
-static const char msTripNameString[] PROGMEM = {
+static const char tripFormatReverseNames[] PROGMEM = {
 	"INST" tcEOS
 	"CURR" tcEOS
 	"TANK" tcEOS

@@ -797,9 +797,9 @@ const uint8_t convIdx[] PROGMEM = {
 	,pBarLowSpeedCutoffIdx
 	,pBarSpeedQuantumIdx
 #endif // useBarFuelEconVsSpeed
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,pCostPerQuantity
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 };
 
 const uint8_t convSize = (sizeof(convIdx) / sizeof(uint8_t));
@@ -867,11 +867,11 @@ const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert 
 const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
 #define nextAllowedValue idxDenomVoltage + 1
 #endif // useAnalogRead
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
 const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useVehicleMass
 const uint8_t idxDenomMass =				nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
@@ -961,10 +961,10 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerVoltage" tcEOSCR
 	"idxDenomVoltage" tcEOSCR
 #endif // useAnalogRead
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	"idxResistanceR5" tcEOSCR
 	"idxResistanceR6" tcEOSCR
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useVehicleMass
 	"idxDenomMass" tcEOSCR
 #endif // useVehicleMass
@@ -1046,10 +1046,10 @@ static const uint32_t convNumbers[] PROGMEM = {
 	,1024ul									// idxNumerVoltage - numerator to convert volts DC to ADC steps
 	,5000ul									// idxDenomVoltage - denominator to convert volts DC to ADC steps
 #endif // useAnalogRead
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,9600ul									// idxResistanceR5 - resistor next to ground (via meelis11)
 	,27000ul								// idxResistanceR6 - resistor next to diode  (via meelis11)
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useVehicleMass
 	,2204622621ul							// idxDenomMass - denominator to convert pounds to kilograms
 #endif // useVehicleMass
@@ -1105,9 +1105,9 @@ const uint8_t convNumerIdx[] PROGMEM = {
 	,idxNumerDistance						// pBarLowSpeedCutoffIdx
 	,idxNumerDistance						// pBarSpeedQuantumIdx
 #endif // useBarFuelEconVsSpeed
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,idxDenomVolume							// pCostPerQuantity
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 };
 
 const uint8_t s64BCDformatList[] PROGMEM = {
