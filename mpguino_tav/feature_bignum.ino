@@ -165,17 +165,17 @@ static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
 static void statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos + 1)]);
+	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos + 1)]);
 
 	switch (cmd)
 	{
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, msTripNameString, cursorPos + 1, PSTR(" vs INST"));
+			text::statusOut(devLCD, tripFormatReverseNames, cursorPos + 1, PSTR(" vs INST"));
 		case displayOutputIdx:
 			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
-			text::charOut(devLCD, ' ', 8);
+			text::charOut(devLCD, ' ', (LCDcharWidth / 2));
 			mainDisplay::outputFunction(3, (instantIdx << 8 ) | (tFuelEcon), 136, 0);
 			break;
 
@@ -293,7 +293,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t tripIdx = pgm_read_byte(&msTripList[(uint16_t)(cursorPos)]);
+	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos)]);
 	char * str;
 #if defined(useBigFE)
 	uint8_t i;
@@ -333,7 +333,7 @@ static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, msTripNameString, cursorPos, str);
+			text::statusOut(devLCD, tripFormatReverseNames, cursorPos, str);
 
 		case displayOutputIdx:
 			switch (callingDisplayIdx)
@@ -344,7 +344,7 @@ static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 					i = outputNumber(0, tripIdx, tFuelEcon, (LCDcharWidth / 4) - 1) - calcFormatFuelEconomyIdx;
 
 					text::gotoXY(devLCD, LCDcharWidth - 4, 0);
-					text::stringOut(devLCD, msTripNameString, cursorPos);
+					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
 					text::gotoXY(devLCD, LCDcharWidth - 4, 1);
 					text::stringOut(devLCD, bigFElabels, i);
 					break;
@@ -354,7 +354,7 @@ static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 				case bigDTEdisplayIdx:
 					outputNumber(0, tripIdx, tDistanceToEmpty, (LCDcharWidth / 4) - 1);
 					text::gotoXY(devLCD, 16, 0);
-					text::stringOut(devLCD, msTripNameString, cursorPos);
+					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
 					text::gotoXY(devLCD, 16, 1);
 					text::stringOut(devLCD, PSTR("DTE "));
 					break;
@@ -365,7 +365,7 @@ static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 					outputTime(0, ull2str(pBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
 #if LCDcharWidth == 20
 					text::gotoXY(devLCD, 16, 0);
-					text::stringOut(devLCD, msTripNameString, cursorPos);
+					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
 					text::gotoXY(devLCD, 16, 1);
 					text::stringOut(devLCD, PSTR("TTE "));
 #endif // LCDcharWidth == 20

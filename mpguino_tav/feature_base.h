@@ -1,9 +1,46 @@
 typedef uint16_t (* pageFunc)(uint8_t); // type for display page format function pointers
 
+namespace baseMenu /* basic top-down menu section prototype */
+{
+
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+
+};
+
+static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
+#if defined(useExpandedMainDisplay)
+	"Displays" tcEOSCR
+#else // defined(useExpandedMainDisplay)
+	"Main Display" tcEOSCR
+#endif // defined(useExpandedMainDisplay)
+	"Settings" tcEOSCR
+#ifdef useDragRaceFunction
+	"Accel Test" tcEOSCR
+#endif // useDragRaceFunction
+#ifdef useCoastDownCalculator
+	"Coastdown" tcEOSCR
+#endif // useCoastDownCalculator
+#ifdef useSimulatedFIandVSS
+	"Sensor Sim" tcEOSCR
+#endif // useSimulatedFIandVSS
+#ifdef useChryslerMAPCorrection
+	"Pressures" tcEOSCR
+#endif // useChryslerMAPCorrection
+#if defined(useDebugAnalog)
+	"ADC readings" tcEOSCR
+#endif // defined(useDebugAnalog)
+#ifdef useTestButtonValues
+	"Button Values" tcEOSCR
+#endif // useTestButtonValues
+};
+
 namespace mainDisplay /* main display section prototype */
 {
 
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+#if defined(useExpandedMainDisplay)
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+#endif // defined(useExpandedMainDisplay)
 	static uint16_t getMainDisplayPageFormat(uint8_t formatIdx);
 #if defined(trackIdleEOCdata)
 	static uint16_t getMainEOCpageFormats(uint8_t formatIdx);
@@ -15,9 +52,33 @@ namespace mainDisplay /* main display section prototype */
 
 };
 
-static const uint8_t dfBitShift = 3;
-static const uint8_t dfTripMask =			0b11111000;
-static const uint8_t dfFunctionMask =		0b00000111;
+static const char mainMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
+	"Main Display" tcEOSCR
+#if defined(useStatusBar)
+	"(trip)vsINST FE" tcEOSCR
+#endif // defined(useStatusBar)
+#if defined(useBigFE)
+	"Big FuelEcon" tcEOSCR
+#endif // defined(useBigFE)
+#if defined(useBarFuelEconVsTime)
+	"FE/Time" tcEOSCR
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	"FE/Speed" tcEOSCR
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBigDTE)
+	"Big DistToE" tcEOSCR
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+	"Big TimeToE" tcEOSCR
+#endif // defined(useBigTTE)
+#if defined(useCPUreading)
+	"CPU Info" tcEOSCR
+#endif // defined(useCPUreading)
+#ifdef useClockDisplay
+	"Clock" tcEOSCR
+#endif // useClockDisplay
+};
 
 static const char mainDisplayPageTitles[] PROGMEM = {
 	"Instrument" tcEOS

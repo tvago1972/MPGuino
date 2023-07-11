@@ -1,4 +1,51 @@
-/* Main screen section */
+/* basic top-down menu section */
+
+static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t retVal = 0;
+
+	switch (cmd)
+	{
+
+		case menuDoSelectionIdx:
+			switch (cursorPos)
+			{
+
+				case 0:
+#if defined(useExpandedMainDisplay)
+					retVal = mainMenuDisplayIdx;
+#else // defined(useExpandedMainDisplay)
+					retVal = mainDisplayIdx;
+#endif // defined(useExpandedMainDisplay)
+
+					break;
+
+				case 1:
+					retVal = settingsMenuDisplayIdx;
+					break;
+
+				default:
+					retVal = optionalDisplayIdxStart + cursorPos - 2;
+					break;
+
+			}
+			break;
+
+		case menuExitIdx:
+			retVal = mainDisplayIdx;
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
+/* main display section */
 
 static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
@@ -56,6 +103,33 @@ static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
+#if defined(useExpandedMainDisplay)
+static uint8_t mainDisplay::menuHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t retVal = 0;
+
+	switch (cmd)
+	{
+
+		case menuDoSelectionIdx:
+			retVal = mainDisplayIdx + cursorPos;
+			break;
+
+		case menuExitIdx:
+			retVal = baseMenuDisplayIdx;
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
+#endif // defined(useExpandedMainDisplay)
 static uint16_t mainDisplay::getMainDisplayPageFormat(uint8_t formatIdx)
 {
 
@@ -136,7 +210,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	{
 
 		thisCalcFuncObj.calcChar = ' ';
-		text::charOut(devLCD, ' ', (LCDcharWidth / 2));
+		text::charOut(devLCD, ' ', (LCDcharWidth / 2) - 2);
 
 	}
 
@@ -172,7 +246,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	}
 
 #else // defined(useSpiffyTripLabels)
-	if ((tripBitmask == 0) || (thisCalcFuncObj.suppressTripLabel)) thisCalcFuncObj.tripChar = ' ';
+	if (tripBitmask == 0) thisCalcFuncObj.tripChar = ' ';
 
 	text::charOut(devLCD, thisCalcFuncObj.tripChar);
 	text::charOut(devLCD, thisCalcFuncObj.calcChar);
@@ -185,7 +259,7 @@ static uint8_t mainDisplay::findTripIdx(uint8_t tripIdx)
 
 	uint8_t i;
 
-	for (uint8_t x = 0; x < msMaxTripCount; x++) if (tripIdx == pgm_read_byte(&msTripList[(uint16_t)(x)])) i = x;
+	for (uint8_t x = 0; x < tripFormatIdxCount; x++) if (tripIdx == pgm_read_byte(&tripFormatReverseList[(uint16_t)(x)])) i = x;
 
 	return i;
 
@@ -313,12 +387,11 @@ static void displayEdit::changeItem(uint8_t changeDir)
 	else // modify the trip portion of the format value
 	{
 
-		i = mainDisplay::findTripIdx(dEPF->u8[1]);
-		i += changeDir; // adjust trip label index
+		i = mainDisplay::findTripIdx(dEPF->u8[1]) + changeDir; // adjust trip label index
 
-		if (i >= msMaxTripCount) i = ( changeDir == 1 ? 0 : msMaxTripCount - 1); // boundary check
+		if (i >= tripFormatIdxCount) i = ( changeDir == 1 ? 0 : tripFormatIdxCount - 1); // boundary check
 
-		dEPF->u8[1] |= pgm_read_byte(&msTripList[(uint16_t)(i)]); // combine with new corresponding trip variable index
+		dEPF->u8[1] = pgm_read_byte(&tripFormatReverseList[(uint16_t)(i)]);
 
 	}
 

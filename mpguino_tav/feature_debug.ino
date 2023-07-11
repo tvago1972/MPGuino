@@ -90,14 +90,22 @@ static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx: // display max cpu utilization and RAM
 			showCPUload();
+#if LCDcharWidth == 20
+			text::stringOut(devLCD, PSTR("     T"));
+#else // LCDcharWidth == 20
 			text::stringOut(devLCD, PSTR(" T"));
+#endif // LCDcharWidth == 20
 			text::stringOut(devLCD, ull2str(pBuff, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(devLCD, 0, 1);
+#if LCDcharWidth == 20
+			text::stringOut(devLCD, PSTR("  FREE RAM: "));
+#else // LCDcharWidth == 20
 			text::stringOut(devLCD, PSTR("FREE RAM: "));
+#endif // LCDcharWidth == 20
 			mainProgramVariables[(uint16_t)(mpAvailableRAMidx)] = availableRAMptr;
 			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
-			text::stringOut(devLCD, ull2str(pBuff, 0, 6, 0));
+			text::stringOut(devLCD, ull2str(pBuff, 0, (LCDcharWidth / 2) - 2, 0));
 			break;
 
 		default:

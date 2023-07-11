@@ -575,10 +575,10 @@ static const uint8_t signalSimDisplayIdx =			nextAllowedValue;
 static const uint8_t pressureDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue pressureDisplayIdx + 1
 #endif // useChryslerMAPCorrection
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 static const uint8_t analogDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue analogDisplayIdx + 1
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 #ifdef useTestButtonValues
 static const uint8_t buttonDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue buttonDisplayIdx + 1
@@ -627,9 +627,9 @@ static const uint8_t baseMenuLength = 2		// main display category and settings c
 #ifdef useChryslerMAPCorrection
 	+ 1										// Chrysler MAP correction pressure display category
 #endif // useChryslerMAPCorrection
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 	+ 1										// Analog value display category
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 #ifdef useTestButtonValues
 	+ 1										// Button hardware value display category
 #endif // useTestButtonValues;
@@ -639,7 +639,7 @@ static uint8_t displayCursor[(uint16_t)(displayCountTotal)];
 
 static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGMEM = {
 
-// the following display entries are in the top-down menu list
+// the following display entries are referenced from the menu section
 
 	 {mainDisplayIdx,				mainDisplayIdx,				displayCountUser,	mainDisplayPageCount,		dfSplitScreen,	mainDisplay::displayHandler}
 #if defined(useStatusBar)
@@ -690,9 +690,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #ifdef useChryslerMAPCorrection
 	,{pressureDisplayIdx,			pressureDisplayIdx,			1,					1,							0,				pressureCorrect::displayHandler}
 #endif // useChryslerMAPCorrection
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 	,{analogDisplayIdx,				analogDisplayIdx,			1,					1,							0,				analogReadViewer::displayHandler}
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 #ifdef useTestButtonValues
 	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							0,				buttonView::displayHandler}
 #endif // useTestButtonValues
@@ -776,70 +776,10 @@ static uint8_t menuTop;
 static uint8_t menuLength;
 static uint8_t displayHeight;
 
-static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
-#if defined(useExpandedMainDisplay)
-	"Displays" tcEOSCR
-#else // defined(useExpandedMainDisplay)
-	"Main Display" tcEOSCR
-#endif // defined(useExpandedMainDisplay)
-	"Settings" tcEOSCR
-#ifdef useDragRaceFunction
-	"Accel Test" tcEOSCR
-#endif // useDragRaceFunction
-#ifdef useCoastDownCalculator
-	"Coastdown" tcEOSCR
-#endif // useCoastDownCalculator
-#ifdef useSimulatedFIandVSS
-	"Sensor Sim" tcEOSCR
-#endif // useSimulatedFIandVSS
-#ifdef useChryslerMAPCorrection
-	"Pressures" tcEOSCR
-#endif // useChryslerMAPCorrection
-#ifdef useDebugAnalog
-	"ADC readings" tcEOSCR
-#endif // useDebugAnalog
-#ifdef useTestButtonValues
-	"Button Values" tcEOSCR
-#endif // useTestButtonValues
-};
-
-static const char mainMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
-	"Main Display" tcEOSCR
-#if defined(useStatusBar)
-	"(trip)vsINST FE" tcEOSCR
-#endif // defined(useStatusBar)
-#if defined(useBigFE)
-	"Big FuelEcon" tcEOSCR
-#endif // defined(useBigFE)
-#if defined(useBarFuelEconVsTime)
-	"FE/Time" tcEOSCR
-#endif // defined(useBarFuelEconVsTime)
-#if defined(useBarFuelEconVsSpeed)
-	"FE/Speed" tcEOSCR
-#endif // defined(useBarFuelEconVsSpeed)
-#if defined(useBigDTE)
-	"Big DistToE" tcEOSCR
-#endif // defined(useBigDTE)
-#if defined(useBigTTE)
-	"Big TimeToE" tcEOSCR
-#endif // defined(useBigTTE)
-#if defined(useCPUreading)
-	"CPU Info" tcEOSCR
-#endif // defined(useCPUreading)
-#ifdef useClockDisplay
-	"Clock" tcEOSCR
-#endif // useClockDisplay
-};
-
-static uint8_t baseMenuHandler(uint8_t cmd, uint8_t cursorPos);
-#if defined(useExpandedMainDisplay)
-static uint8_t mainMenuHandler(uint8_t cmd, uint8_t cursorPos);
-#endif // defined(useExpandedMainDisplay)
-
 static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
-	 {baseMenuDisplayIdx,			baseMenuTitles,			0,							baseMenuHandler}
+	 {baseMenuDisplayIdx,			baseMenuTitles,			0,							baseMenu::menuHandler}
 #if defined(useExpandedMainDisplay)
-	,{mainMenuDisplayIdx,			mainMenuTitles,			0,							mainMenuHandler}
+	,{mainMenuDisplayIdx,			mainMenuTitles,			0,							mainDisplay::menuHandler}
 #endif // defined(useExpandedMainDisplay)
 	,{settingsMenuDisplayIdx,		settingsMenuTitles,		0,							settings::menuHandler}
 	,{displaySettingsDisplayIdx,	parmLabels,				eePtrSettingsDispStart,		parameterEdit::menuHandler}
@@ -862,78 +802,6 @@ static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
 #endif // defined(useEnhancedTripReset)
 };
 
-static uint8_t baseMenuHandler(uint8_t cmd, uint8_t cursorPos)
-{
-
-	uint8_t retVal = 0;
-
-	switch (cmd)
-	{
-
-		case menuDoSelectionIdx:
-			switch (cursorPos)
-			{
-
-				case 0:
-#if defined(useExpandedMainDisplay)
-					retVal = mainMenuDisplayIdx;
-#else // defined(useExpandedMainDisplay)
-					retVal = mainDisplayIdx;
-#endif // defined(useExpandedMainDisplay)
-
-					break;
-
-				case 1:
-					retVal = settingsMenuDisplayIdx;
-					break;
-
-				default:
-					retVal = optionalDisplayIdxStart + cursorPos - 2;
-					break;
-
-			}
-			break;
-
-		case menuExitIdx:
-			retVal = mainDisplayIdx;
-			break;
-
-		default:
-			break;
-
-	}
-
-	return retVal;
-
-}
-
-#if defined(useExpandedMainDisplay)
-static uint8_t mainMenuHandler(uint8_t cmd, uint8_t cursorPos)
-{
-
-	uint8_t retVal = 0;
-
-	switch (cmd)
-	{
-
-		case menuDoSelectionIdx:
-			retVal = mainDisplayIdx + cursorPos;
-			break;
-
-		case menuExitIdx:
-			retVal = baseMenuDisplayIdx;
-			break;
-
-		default:
-			break;
-
-	}
-
-	return retVal;
-
-}
-
-#endif // defined(useExpandedMainDisplay)
 static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 

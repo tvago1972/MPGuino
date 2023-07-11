@@ -22,13 +22,7 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 	thisCalcFuncObj.isValid = 0;
 
-	if (tripIdx < tripSlotTotalCount)
-	{
-
-		thisCalcFuncObj.isValid ^= (isValidTripIdx);
-		thisCalcFuncObj.tripChar = pgm_read_byte(&tripVarChars[(uint16_t)(tripIdx)]);
-
-	}
+	if (tripIdx < tripSlotTotalCount) thisCalcFuncObj.isValid ^= (isValidTripIdx);
 
 	if (calcIdx < dfMaxValDisplayCount)
 	{
@@ -45,7 +39,7 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		thisCalcFuncObj.tripIdx = tripIdx;
 		thisCalcFuncObj.calcIdx = calcIdx;
 
-		calcFmtIdx = pgm_read_byte(&calcFormatIdx[(unsigned int)(calcIdx)]);
+		calcFmtIdx = pgm_read_byte(&calcFormatList[(unsigned int)(calcIdx)]);
 		if ((calcIdx >= dfMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
 		if ((calcIdx >= dfMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
 
@@ -53,6 +47,8 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		i = pgm_read_byte(&calcFormatDecimalPlaces[(unsigned int)(calcFmtIdx)]);
 		thisCalcFuncObj.decimalPlaces = i & 0x7F;
 		thisCalcFuncObj.suppressTripLabel = i & 0x80;
+		if (thisCalcFuncObj.suppressTripLabel) thisCalcFuncObj.tripChar = ' ';
+		else thisCalcFuncObj.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
 		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(unsigned int)(calcFmtIdx)]);
 
 	}
@@ -65,12 +61,26 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	{
 
 
-		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx) ull2str(strBuff, thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
+		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx)
+		{
+
+			ull2str(strBuff, thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
+
+			if (windowLength > 6)
+			{
+
+				i = 6;
+
+				for (uint8_t x = windowLength; x <= windowLength; x--) strBuff[(uint16_t)(x)] = ((i < 7) ? strBuff[(uint16_t)(i--)] : ' ');
+
+			}
+
+		}
 		else
 		{
 
-			SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
-			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag);
+			SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx); // perform calculation
+			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
 
 		}
 

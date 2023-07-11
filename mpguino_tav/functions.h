@@ -45,7 +45,7 @@ static const uint8_t tInjectorPulseCount =			tEngineSpeed + 1;				// fuel inject
 static const uint8_t tVSSpulseCount =				tInjectorPulseCount + 1;		// VSS pulse count
 #define nextAllowedValue tVSSpulseCount + 1
 
-#ifdef useFuelCost
+#if defined(useFuelCost)
 static const uint8_t tFuelCostUsed =				nextAllowedValue;				// cost of fuel quantity used
 static const uint8_t tFuelCostTank =				tFuelCostUsed + 1;				// full tank fuel cost in currency units
 static const uint8_t tFuelCostReserve =				tFuelCostTank + 1;				// reserve fuel quantity fuel cost in currency units
@@ -55,17 +55,17 @@ static const uint8_t tFuelCostReserveRemaining =	tFuelCostRemaining + 1;			// va
 static const uint8_t tFuelCostBingoRemaining =		tFuelCostReserveRemaining + 1;	// value of estimated remaining bingo fuel quantity in currency units
 static const uint8_t tFuelRateCost =				tFuelCostBingoRemaining + 1;	// fuel rate cost in currency units
 #define nextAllowedValue tFuelRateCost + 1
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 static const uint8_t tAnalogChannel =				nextAllowedValue;				// DC voltage
 #define nextAllowedValue tAnalogChannel + 1
-#endif // useDebugAnalog
+#endif // defined(useDebugAnalog)
 
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 static const uint8_t tAlternatorChannel =			nextAllowedValue;				// DC voltage
 #define nextAllowedValue tAlternatorChannel + 1
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 
 #ifdef useDragRaceFunction
 static const uint8_t tAccelTestTime =				nextAllowedValue;				// acceleration test time (s.s)
@@ -88,11 +88,11 @@ static const uint8_t tDistanceToEmpty =				tBingoDistance + 1;				// estimated r
 static const uint8_t tReserveDistanceToEmpty =		tDistanceToEmpty + 1;			// estimated reserve remaining distance (SI/SAE)
 static const uint8_t tBingoDistanceToEmpty =		tReserveDistanceToEmpty + 1;	// estimated bingo remaining distance (SI/SAE)
 #define nextAllowedValue tBingoDistanceToEmpty + 1
-#ifdef useFuelCost
+#if defined(useFuelCost)
 static const uint8_t tFuelCostPerDistance =			nextAllowedValue;				// fuel cost per unit distance (SI/SAE)
 static const uint8_t tDistancePerFuelCost =			tFuelCostPerDistance + 1;		// distance per unit fuel cost (SI/SAE)
 #define nextAllowedValue tDistancePerFuelCost + 1
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 static const uint8_t tPressureChannel =				nextAllowedValue;				// absolute pressure (SI/SAE)
 #define nextAllowedValue tPressureChannel + 1
@@ -157,7 +157,7 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tEngineSpeed" tcEOSCR					// engine speed (1/m)
 	"tInjectorPulseCount" tcEOSCR			// fuel injector pulse count
 	"tVSSpulseCount" tcEOSCR				// VSS pulse count
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	"tFuelCostUsed" tcEOSCR					// cost of fuel quantity used
 	"tFuelCostTank" tcEOSCR					// full tank fuel cost in currency units
 	"tFuelCostReserve" tcEOSCR				// reserve fuel quantity fuel cost in currency units
@@ -166,13 +166,13 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tFuelCostReserveRemaining" tcEOSCR		// value of estimated remaining reserve fuel quantity in currency units
 	"tFuelCostBingoRemaining" tcEOSCR		// value of estimated remaining bingo fuel quantity in currency units
 	"tFuelRateCost" tcEOSCR					// fuel rate cost in currency units
-#endif // useFuelCost
-#ifdef useDebugAnalog
+#endif // defined(useFuelCost)
+#if defined(useDebugAnalog)
 	"tAnalogChannel" tcEOSCR				// DC voltage
-#endif // useDebugAnalog
-#ifdef useCarVoltageOutput
+#endif // defined(useDebugAnalog)
+#if defined(useCarVoltageOutput)
 	"tAlternatorChannel" tcEOSCR			// DC voltage
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDragRaceFunction
 	"tAccelTestTime" tcEOSCR				// acceleration test time (s.s)
 #endif // useDragRaceFunction
@@ -189,10 +189,10 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tDistanceToEmpty" tcEOSCR				// estimated remaining distance (SI/SAE)
 	"tReserveDistanceToEmpty" tcEOSCR		// estimated reserve remaining distance (SI/SAE)
 	"tBingoDistanceToEmpty" tcEOSCR			// estimated bingo remaining distance (SI/SAE)
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	"tFuelCostPerDistance" tcEOSCR			// fuel cost per unit distance (SI/SAE)
 	"tDistancePerFuelCost" tcEOSCR			// distance per unit fuel cost (SI/SAE)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 	"tPressureChannel" tcEOSCR				// absolute pressure (SI/SAE)
 #endif // useChryslerMAPCorrection
@@ -385,7 +385,7 @@ static const uint8_t prgmCalculateFuelDistance[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#ifdef useFuelCost
+#if defined(useFuelCost)
 static const uint8_t prgmFuelCostUsed[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// get amount of consumed fuel in cycles
 	instrLdRegEEPROM, 0x01, pCostPerQuantity,			// fetch fuel monetary value per unit volume term
@@ -453,22 +453,6 @@ static const uint8_t prgmDistancePerFuelCost[] PROGMEM = {
 	instrDone
 };
 
-#endif // useFuelCost
-static const uint8_t prgmFuelRate[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
-	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
-	instrMul2byConst, idxSecondsPerHour,
-	instrMul2byConst, idxDecimalPoint,
-	instrDiv2byTripVarIndexed, rvEngCycleIdx,
-	instrMul2byConst, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
-	instrDiv2byMain, mpCyclesPerVolumeIdx,				// multiply by quantity/cycle (divide by cycles/quantity)
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-
-//cont:
-	instrDone
-};
-
-#ifdef useFuelCost
 static const uint8_t prgmFuelRateCost[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
 	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
@@ -483,7 +467,21 @@ static const uint8_t prgmFuelRateCost[] PROGMEM = {
 	instrDone
 };
 
-#endif // useFuelCost
+#endif // defined(useFuelCost)
+static const uint8_t prgmFuelRate[] PROGMEM = {
+	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
+	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
+	instrMul2byConst, idxSecondsPerHour,
+	instrMul2byConst, idxDecimalPoint,
+	instrDiv2byTripVarIndexed, rvEngCycleIdx,
+	instrMul2byConst, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
+	instrDiv2byMain, mpCyclesPerVolumeIdx,				// multiply by quantity/cycle (divide by cycles/quantity)
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+
+//cont:
+	instrDone
+};
+
 static const uint8_t prgmFuelEcon[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
 	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume to get the denominator for fuel economy
@@ -577,7 +575,7 @@ static const uint8_t prgmInjectorPulseCount[] PROGMEM = {
 	instrDone
 };
 
-#ifdef useDebugAnalog
+#if defined(useDebugAnalog)
 static const uint8_t prgmAnalogChannel[] PROGMEM = {
 	instrCmpIndex, dfMaxValAnalogCount,					// is trip index pointing to a valid analog channel?
 	instrBranchIfLT, 4,									// if so, skip ahead
@@ -591,8 +589,8 @@ static const uint8_t prgmAnalogChannel[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#endif // useDebugAnalog
-#ifdef useCarVoltageOutput
+#endif // defined(useDebugAnalog)
+#if defined(useCarVoltageOutput)
 static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 	instrLdRegVoltage, 0x02, analogAlternatorChannelIdx,	// load analog channel ADC step value
 	instrMul2byConst, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
@@ -605,7 +603,7 @@ static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrTestReg, 0x02,									// test register 2
 	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
@@ -976,7 +974,7 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmEngineSpeed									// tEngineSpeed - engine speed (1/m)
 	,prgmInjectorPulseCount								// tInjectorPulseCount - fuel injector pulse count
 	,prgmVSSpulseCount									// tVSSpulseCount - VSS pulse count
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,prgmFuelCostUsed									// tFuelCostUsed - cost of fuel quantity used
 	,prgmFuelCostTank									// tFuelCostTank - full tank fuel cost in currency units
 	,prgmFuelCostReserve								// tFuelCostReserve - reserve fuel quantity fuel cost in currency units
@@ -985,13 +983,13 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmFuelCostReserveRemaining						// tFuelCostReserveRemaining - value of estimated remaining reserve fuel quantity in currency units
 	,prgmFuelCostBingoRemaining							// tFuelCostBingoRemaining - value of estimated remaining bingo fuel quantity in currency units
 	,prgmFuelRateCost									// tFuelRateCost - fuel rate cost in currency units
-#endif // useFuelCost
-#ifdef useDebugAnalog
+#endif // defined(useFuelCost)
+#if defined(useDebugAnalog)
 	,prgmAnalogChannel									// tAnalogChannel - DC voltage
-#endif // useDebugAnalog
-#ifdef useCarVoltageOutput
+#endif // defined(useDebugAnalog)
+#if defined(useCarVoltageOutput)
 	,prgmAlternatorChannel								// tAlternatorChannel - DC voltage
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDragRaceFunction
 	,prgmAccelTestTime									// tAccelTestTime - acceleration test time (s.s)
 #endif // useDragRaceFunction
@@ -1008,10 +1006,10 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmDistanceToEmpty								// tDistanceToEmpty - estimated remaining distance (SI/SAE)
 	,prgmReserveDistanceToEmpty							// tReserveDistanceToEmpty - estimated reserve remaining distance (SI/SAE)
 	,prgmBingoDistanceToEmpty							// tBingoDistanceToEmpty - estimated bingo remaining distance (SI/SAE)
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,prgmFuelCostPerDistance							// tFuelCostPerDistance - fuel cost per unit distance (SI/SAE)
 	,prgmDistancePerFuelCost							// tDistancePerFuelCost - distance per unit fuel cost (SI/SAE)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 	,prgmPressureChannel								// tPressureChannel - absolute pressure (SI/SAE)
 #endif // useChryslerMAPCorrection
@@ -1056,11 +1054,11 @@ const uint8_t calcFormatTimeInMillisecondsIdx =		calcFormatTimeHHmmSSIdx + 1;			
 const uint8_t calcFormatEngineSpeedIdx =			calcFormatTimeInMillisecondsIdx + 1;	// engine speed
 const uint8_t calcFormatPulseCountIdx =				calcFormatEngineSpeedIdx + 1;			// pulse count
 #define nextAllowedValue calcFormatPulseCountIdx + 1
-#ifdef useFuelCost
+#if defined(useFuelCost)
 const uint8_t calcFormatFuelCostIdx =				nextAllowedValue;						// fuel cost
 const uint8_t calcFormatFuelRateCostIdx =			calcFormatFuelCostIdx + 1;				// fuel rate cost
 #define nextAllowedValue calcFormatFuelRateCostIdx + 1
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useAnalogRead)
 const uint8_t calcFormatanalogDisplayIdx =				nextAllowedValue;						// voltage
 #define nextAllowedValue calcFormatanalogDisplayIdx + 1
@@ -1074,11 +1072,11 @@ const uint8_t calcFormatFuelRateIdx =				calcFormatFuelQuantityIdx + 2;			// fue
 const uint8_t calcFormatDistanceIdx =				calcFormatFuelRateIdx + 2;				// distance travelled (SAE/SI)
 const uint8_t calcFormatSpeedIdx =					calcFormatDistanceIdx + 2;				// speed (SAE/SI)
 #define nextAllowedValue calcFormatSpeedIdx + 2
-#ifdef useFuelCost
+#if defined(useFuelCost)
 const uint8_t calcFormatFuelCostPerDistanceIdx =	nextAllowedValue;						// fuel cost per unit distance (SI/SAE)
 const uint8_t calcFormatDistancePerFuelCostIdx =	calcFormatFuelCostPerDistanceIdx + 2;	// distance per unit fuel cost (SI/SAE)
 #define nextAllowedValue calcFormatDistancePerFuelCostIdx + 2
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 const uint8_t calcFormatPressureIdx =				nextAllowedValue;						// absolute pressure (SI/SAE)
 #define nextAllowedValue calcFormatPressureIdx + 2
@@ -1090,7 +1088,7 @@ const uint8_t calcFormatEstimatedPowerIdx =			nextAllowedValue;						// estimate
 const uint8_t calcFormatFuelEconomyIdx =			nextAllowedValue;						// fuel economy (SAE/SI)
 #define nextAllowedValue calcFormatFuelEconomyIdx + 4
 
-const uint8_t calcFormatIdxCount =					nextAllowedValue;
+const uint8_t calcFormatListCount =					nextAllowedValue;
 
 #ifdef useDebugTerminal
 static const char terminalFormats[] PROGMEM = {
@@ -1098,10 +1096,10 @@ static const char terminalFormats[] PROGMEM = {
 	"ms" tcEOS
 	"rev/min" tcEOS
 	"pulses" tcEOS
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	"cost" tcEOS
 	"cost/hour" tcEOS
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useAnalogRead)
 	"V(dc)" tcEOS
 #endif // useAnalogRead
@@ -1116,12 +1114,12 @@ static const char terminalFormats[] PROGMEM = {
 	"km" tcEOS
 	"MPH" tcEOS
 	"kPH" tcEOS
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	"cost/mile" tcEOS
 	"cost/km" tcEOS
 	"mile/cost" tcEOS
 	"km/cost" tcEOS
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 	"psia" tcEOS
 	"kPa" tcEOS
@@ -1137,7 +1135,7 @@ static const char terminalFormats[] PROGMEM = {
 };
 
 #endif // useDebugTerminal
-const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
+const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
 	 calcFormatTimeHHmmSSIdx					// tEngineRunTime - engine runtime (hhmmss)
 	,calcFormatTimeHHmmSSIdx					// tRangeTime - estimated total runtime from full tank (hhmmss)
 	,calcFormatTimeHHmmSSIdx					// tReserveTime - estimated reserve runtime from full tank (hhmmss)
@@ -1153,7 +1151,7 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 	,calcFormatEngineSpeedIdx					// tEngineSpeed - engine speed (1/m)
 	,calcFormatPulseCountIdx					// tInjectorPulseCount - fuel injector pulse count
 	,calcFormatPulseCountIdx					// tVSSpulseCount - VSS pulse count
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,calcFormatFuelCostIdx						// tFuelCostUsed - cost of fuel quantity used
 	,calcFormatFuelCostIdx						// tFuelCostTank - full tank fuel cost in currency units
 	,calcFormatFuelCostIdx						// tFuelCostReserve - reserve fuel quantity fuel cost in currency units
@@ -1162,13 +1160,13 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 	,calcFormatFuelCostIdx						// tFuelCostReserveRemaining - value of estimated remaining reserve fuel quantity in currency units
 	,calcFormatFuelCostIdx						// tFuelCostBingoRemaining - value of estimated remaining bingo fuel quantity in currency units
 	,calcFormatFuelRateCostIdx					// tFuelRateCost - fuel rate cost in currency units
-#endif // useFuelCost
-#ifdef useDebugAnalog
+#endif // defined(useFuelCost)
+#if defined(useDebugAnalog)
 	,calcFormatanalogDisplayIdx					// tAnalogChannel - DC voltage
-#endif // useDebugAnalog
-#ifdef useCarVoltageOutput
+#endif // defined(useDebugAnalog)
+#if defined(useCarVoltageOutput)
 	,calcFormatanalogDisplayIdx					// tAlternatorChannel - DC voltage
-#endif // useCarVoltageOutput
+#endif // defined(useCarVoltageOutput)
 #ifdef useDragRaceFunction
 	,calcFormatTimeInTenthsSecIdx				// tAccelTestTime - acceleration test time (s.s)
 #endif // useDragRaceFunction
@@ -1185,10 +1183,10 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 	,calcFormatDistanceIdx						// tDistanceToEmpty - estimated remaining distance (SI/SAE)
 	,calcFormatDistanceIdx						// tReserveDistanceToEmpty - estimated reserve remaining distance (SI/SAE)
 	,calcFormatDistanceIdx						// tBingoDistanceToEmpty - estimated bingo remaining distance (SI/SAE)
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,calcFormatFuelCostPerDistanceIdx			// tFuelCostPerDistance - fuel cost per unit distance (SI/SAE)
 	,calcFormatDistancePerFuelCostIdx			// tDistancePerFuelCost - distance per unit fuel cost (SI/SAE)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 	,calcFormatPressureIdx						// tPressureChannel - absolute pressure (SI/SAE)
 #endif // useChryslerMAPCorrection
@@ -1200,7 +1198,7 @@ const uint8_t calcFormatIdx[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { //
 };
 
 // high bit set means "output no corresponding trip label"
-const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatIdxCount)] PROGMEM = { // S64programList
+const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
 	 0			// time in HHmmSS format
 	,3			// time in milliseconds
 	,0			// engine speed
@@ -1243,15 +1241,15 @@ const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatIdxCount)] PROGMEM = 
 	,1			// alternate SI fuel economy
 };
 
-const uint8_t calcFormatLabelText[(unsigned int)(calcFormatIdxCount)] PROGMEM = { // S64programList
+const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM = { // S64programList
 	 's'	// time in HHmmSS format
 	,'m'	// time in milliseconds
 	,'t'	// engine speed
 	,'p'	// pulse count
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,'$'	// fuel cost
 	,'#'	// fuel rate cost
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useAnalogRead)
 	,'V'	// voltage
 #endif // useAnalogRead
@@ -1266,12 +1264,12 @@ const uint8_t calcFormatLabelText[(unsigned int)(calcFormatIdxCount)] PROGMEM = 
 	,'k'	// SI distance travelled
 	,'S'	// SAE speed
 	,'S'	// SI speed
-#ifdef useFuelCost
+#if defined(useFuelCost)
 	,'C'	// SAE fuel cost per distance
 	,'C'	// SI fuel cost per distance
 	,'D'	// SAE distance per fuel cost
 	,'D'	// SI distance per fuel cost
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 	,'P'	// SAE pressure
 	,'P'	// SI pressure
@@ -1293,7 +1291,7 @@ static const uint8_t isValidFlag =		0b00100000;
 static const uint8_t isValidCalcObj =	0b11000000;
 
 #if defined(useSpiffyTripLabels)
-const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGMEM = { // S64programList
+const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROGMEM = { // S64programList
 	// time in HHmmSS format
 	 {0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101}
@@ -1309,7 +1307,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGM
 	// pulse count
 	,{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001000, 0b00011100, 0b00001000, 0b00001000}
-#ifdef useFuelCost
+#if defined(useFuelCost)
 
 	// fuel cost
 	,{0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100
@@ -1318,7 +1316,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGM
 	// fuel rate cost
 	,{0b00001100, 0b00010000, 0b00010000, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100}
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useAnalogRead)
 
 	// voltage
@@ -1363,7 +1361,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGM
 	// kilometers per hour
 	,{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100}
-#ifdef useFuelCost
+#if defined(useFuelCost)
 
 	// fuel cost per mile
 	,{0b00001100, 0b00010000, 0b00010000, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
@@ -1380,7 +1378,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatIdxCount)][16] PROGM
 	// kilometer per unit fuel cost
 	,{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100}
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #ifdef useChryslerMAPCorrection
 
 	// psi
