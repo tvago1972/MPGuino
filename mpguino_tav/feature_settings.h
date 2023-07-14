@@ -10,9 +10,9 @@ static const char settingsMenuTitles[] PROGMEM = {	// each title must be no long
 	"Fuel Injector" tcEOSCR
 	"VSS" tcEOSCR
 	"Tank Quantity" tcEOSCR
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	"Chrysler MAP" tcEOSCR
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
 	"VehicleParam" tcEOSCR
 #endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)

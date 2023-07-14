@@ -3,13 +3,13 @@ ISR( TWI_vect )
 {
 
 	uint8_t twiStatus;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint8_t a;
 	uint8_t b;
 	uint16_t c;
 
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	twiStatus = TW_STATUS;
 
@@ -94,7 +94,7 @@ ISR( TWI_vect )
 
 	}
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 	if (b < a) c = 256 - a + b; // an overflow occurred
@@ -102,7 +102,7 @@ ISR( TWI_vect )
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 static void TWI::init(void) // this can be in either main program or interrupt context

@@ -62,7 +62,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useBigTTE true						// Show big time-to-empty displays
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 #define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
-#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
+//#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 #define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define useFuelCost true					// Show fuel cost
@@ -87,7 +87,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
-#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
@@ -163,13 +163,13 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #undef useGenericTWILCD
 #endif // defined(useMPGuinoColourTouch)
 
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 #if !defined(__AVR_ATmega2560__)
 #error *** useArduinoMega2560 requires compilation for ATmega2560 board!!! ***
 #endif // !defined(__AVR_ATmega2560__)
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 
-#ifdef useTinkerkitLCDmodule
+#if defined(useTinkerkitLCDmodule)
 #if !defined(__AVR_ATmega32U4__)
 #error *** useTinkerkitLCDmodule requires compilation for ATmega32U4 board!!! ***
 #endif // !defined(__AVR_ATmega32U4__)
@@ -183,7 +183,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #undef useSainSmart2004LCD
 #undef useGenericTWILCD
 #undef useLegacyLCD
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule)
 
 #if defined(useJellyBeanDriverBoard) || defined(useLegacyBoard)
 #if !defined(__AVR_ATmega328P__)
@@ -191,9 +191,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // !defined(__AVR_ATmega328P__)
 #define useLegacyLCD true
 #define useLegacyButtons true
-#ifdef useJellyBeanDriverBoard
+#if defined(useJellyBeanDriverBoard)
 #define F_CPU = 20000000UL; // redefine F_CPU
-#endif // useJellyBeanDriverBoard
+#endif // defined(useJellyBeanDriverBoard)
 #undef useDFR0009LCD
 #undef useAdafruitRGBLCDshield
 #undef useParallaxSerialLCDmodule
@@ -341,14 +341,14 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useAnalogRead true
 #endif // defined(useDebugAnalog)
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 #define useIsqrt true
 #define usePressure true
 #define useFuelPressure true
 #define useAnalogRead true
-#else // useChryslerMAPCorrection
+#else // defined(useChryslerMAPCorrection)
 #undef useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 
 #if defined(useCarVoltageOutput)
 #define useAnalogRead true
@@ -475,33 +475,33 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define outputLoggingSplash true
 #endif // useLoggingUSBserial
 
-#ifdef useDebugTerminalSerialPort0
+#if defined(useDebugTerminalSerialPort0)
 #define useSerial0Port true
 #define useSerial0PortInput true
 #define devDebugTerminal devSerial0
 #define outputDebugTerminalSplash true
-#endif // useDebugTerminalSerialPort0
+#endif // defined(useDebugTerminalSerialPort0)
 
-#ifdef useDebugTerminalSerialPort1
+#if defined(useDebugTerminalSerialPort1)
 #define useSerial1Port true
 #define useSerial1PortInput true
 #define devDebugTerminal devSerial1
 #define outputDebugTerminalSplash true
-#endif // useDebugTerminalSerialPort1
+#endif // defined(useDebugTerminalSerialPort1)
 
-#ifdef useDebugTerminalSerialPort2
+#if defined(useDebugTerminalSerialPort2)
 #define useSerial2Port true
 #define useSerial2PortInput true
 #define devDebugTerminal devSerial2
 #define outputDebugTerminalSplash true
-#endif // useDebugTerminalSerialPort2
+#endif // defined(useDebugTerminalSerialPort2)
 
-#ifdef useDebugTerminalSerialPort3
+#if defined(useDebugTerminalSerialPort3)
 #define useSerial3Port true
 #define useSerial3PortInput true
 #define devDebugTerminal devSerial3
 #define outputDebugTerminalSplash true
-#endif // useDebugTerminalSerialPort3
+#endif // defined(useDebugTerminalSerialPort3)
 
 #ifdef useDebugTerminalUSBserial
 #define useUSBserial true
@@ -543,25 +543,25 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useTimer1Interrupt true
 #endif // defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 
-#ifdef useAnalogButtons
+#if defined(useAnalogButtons)
 #define useAnalogRead true
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 #define useTestAnalogButtonIdx true
-#endif // useTestButtonValues
-#endif // useAnalogButtons
+#endif // defined(useTestButtonValues)
+#endif // defined(useAnalogButtons)
 
 #if defined(useTWIbuttons)
 #define useTWIsupport true
 #define useInterruptBasedTWI true
 #endif // defined(useTWIbuttons)
 
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 #define useTimer1Interrupt true
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 #define useTimer1 true
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 
 #if defined(useOutputPins)
 #if defined(__AVR_ATmega32U4__)

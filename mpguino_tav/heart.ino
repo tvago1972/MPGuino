@@ -19,9 +19,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #ifdef useCoastDownCalculator
 	static unsigned long coastdownCount;
 #endif // useCoastDownCalculator
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	static unsigned long FEvTimeCount;
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #if defined(useButtonInput)
 	static unsigned int buttonLongPressCount;
 #endif // defined(useButtonInput)
@@ -66,12 +66,12 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		analogSampleCount = analogSampleTickLength;
 #endif // defined(useAnalogButtons)
 #endif // defined(useAnalogRead)
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 		buttonDebounceCount = 0;
-#endif // useLegacyButtons
-#ifdef useBarFuelEconVsTime
+#endif // defined(useLegacyButtons)
+#if defined(useBarFuelEconVsTime)
 		timer0Command |= (t0cResetFEvTime);
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #if defined(useButtonInput)
 		buttonLongPressCount = 0;
 #endif // defined(useButtonInput)
@@ -86,14 +86,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		timer0_overflow_count += 256; // update TOV count
 		thisTime = timer0_overflow_count | TCNT0; // calculate current cycle count
 
-#ifdef useCPUreading
+#if defined(useCPUreading)
 		volatileVariables[(uint16_t)(vSystemCycleIdx)]++; // systemcycles
 
-#endif // useCPUreading
-#ifdef useSoftwareClock
+#endif // defined(useCPUreading)
+#if defined(useSoftwareClock)
 		volatileVariables[(uint16_t)(vClockCycleIdx)]++; // clockcycles
 
-#endif // useSoftwareClock
+#endif // defined(useSoftwareClock)
 	}
 
 	lastTime = thisTime; // save cycle count
@@ -106,7 +106,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 			watchdogInjectorCount--; // cycle fuel injector watchdog timer down
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 			if (dirty & dSampleADC) // if injector monitor commanded an analog engine sensor read
 			{
 
@@ -115,7 +115,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 			}
 
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 		}
 		else // fuel injector watchdog timer has timed out
 		{
@@ -216,7 +216,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // useCoastDownCalculator
 	}
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	if (timer0Command & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx; // initialize fuel econ vs time trip index variable
 	else
 	{
@@ -242,7 +242,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useCoastDownCalculator
 	if (internalFlags & internalCancelCDT)
 	{
@@ -381,7 +381,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useAnalogButtons)
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 	if (buttonDebounceCount) // if there is a button press debounce countdown in progress
 	{
 
@@ -397,7 +397,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // useLegacyButtons
+#endif // defined(useLegacyButtons)
 #if defined(useButtonInput)
 	if (buttonLongPressCount)
 	{
@@ -474,11 +474,11 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-#if useDataLoggingOutput || useJSONoutput
+#if defined(useDataLoggingOutput) || defined(useJSONoutput)
 		timer0Status |= (t0sUpdateDisplay | t0sTakeSample | t0sOutputLogging); // signal to main program that a sampling should occur, and to update display
-#else // useDataLoggingOutput || useJSONoutput
+#else // defined(useDataLoggingOutput) || defined(useJSONoutput)
 		timer0Status |= (t0sUpdateDisplay | t0sTakeSample); // signal to main program that a sampling should occur, and to update display
-#endif // useDataLoggingOutput || useJSONoutput
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
 		loopCount = loopTickLength; // restart loop count
 		mainLoopHeartBeat <<= 1; // cycle the heartbeat bit
 		if (mainLoopHeartBeat == 0) mainLoopHeartBeat = 1; // wrap around the heartbeat bit, if necessary
@@ -579,13 +579,13 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // useAnalogRead
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += TCNT0;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 // this ISR gets called every time timer 1 overflows.
 //
 // f(phase correct PWM) = f(system clock) / (N * 510)
@@ -603,30 +603,30 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	static unsigned long debugVSSresetCount;
 	static unsigned long debugFIPresetCount;
 #endif // defined(useSimulatedFIandVSS)
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint8_t a;
 	uint8_t b;
 	uint16_t c;
 
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	if (timer1Command & t1cResetTimer)
 	{
 
 		timer1Command &= ~(t1cResetTimer);
 		timer1Status = 0;
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 		debugVSScount = 0;
 		debugFIPcount = 0;
 		debugFIPWcount = 0;
 		debugVSSresetCount = 0;
 		debugFIPresetCount = 0;
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 
 	}
 
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	if (timer1Command & t1cEnableDebug)
 	{
 
@@ -731,7 +731,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 	}
 
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useLCDoutput)
 	if (timer1Command & t1cDelayLCD)
 	{
@@ -816,7 +816,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	}
 
 #endif // defined(useLCDoutput)
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 	if (b < a) c = 256 - a + b; // an overflow occurred
@@ -824,10 +824,10 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 volatile unsigned long thisInjectorOpenStart;
 volatile unsigned long thisEnginePeriodOpen; // engine speed measurement based on fuel injector open event
 volatile unsigned long thisEnginePeriodClose; // engine speed measurement based on fuel injector close event
@@ -865,9 +865,9 @@ ISR( INT0_vect )
 
 	static unsigned long lastInjectorOpenStart;
 	unsigned int a;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	unsigned int b;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) a = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
@@ -877,23 +877,23 @@ ISR( INT0_vect )
 	if (dirty & dGoodEngineRotationOpen) thisEnginePeriodOpen = findCycleLength(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
 	else thisEnginePeriodOpen = 0;
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	dirty |= (dGoodEngineRotationOpen | dInjectorReadInProgress | dSampleADC);
-#else // useChryslerMAPCorrection
+#else // defined(useChryslerMAPCorrection)
 	dirty |= (dGoodEngineRotationOpen | dInjectorReadInProgress);
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 
 	lastInjectorOpenStart = thisInjectorOpenStart;
 
 	watchdogInjectorCount = volatileVariables[(uint16_t)(vDetectEngineOffIdx)]; // reset minimum engine speed watchdog timer
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) b = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += b - a;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 // injector opening event handler
@@ -919,9 +919,9 @@ ISR( INT1_vect )
 
 	uint8_t b;
 	unsigned int a;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	unsigned int c;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 	unsigned long thisInjectorCloseStart;
 	unsigned long engineRotationPeriod;
 	unsigned long thisInjectorPulseLength;
@@ -1016,11 +1016,11 @@ ISR( INT1_vect )
 
 			awakeFlags |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 			thisInjectorPulseLength *= volatileVariables[(uint16_t)(vInjectorCorrectionIdx)]; // multiply by differential fuel pressure correction factor numerator
 			thisInjectorPulseLength >>= 12; // divide by differential fuel pressure correction factor denominator
 
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(trackIdleEOCdata)
 			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving, save injector measurements in active raw trip variable
 			{
@@ -1061,13 +1061,13 @@ ISR( INT1_vect )
 
 	watchdogInjectorCount = volatileVariables[(uint16_t)(vDetectEngineOffIdx)]; // reset minimum engine speed watchdog timer
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c - a;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 #if defined(__AVR_ATmega32U4__)
@@ -1085,9 +1085,9 @@ ISR( PCINT1_vect )
 	uint8_t q;
 
 	unsigned int a;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	unsigned int c;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 	unsigned long thisTime;
 
 	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
@@ -1122,22 +1122,22 @@ ISR( PCINT1_vect )
 
 	}
 
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 	if (q & buttonMask) buttonDebounceCount = buttonDebounceTick; // if a button change was detected, set button press debounce count, and let system timer handle the debouncing
 
-#endif // useLegacyButtons
+#endif // defined(useLegacyButtons)
 	lastPINxState = p; // remember the current input pin state for the next time this ISR gets called
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c - a;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
-#ifdef useBuffering
+#if defined(useBuffering)
 static void ringBuffer::init(ringBufferVariable &bfr, volatile uint8_t * storage)
 {
 
@@ -1218,7 +1218,7 @@ static void ringBuffer::flush(ringBufferVariable &bfr)
 
 }
 
-#endif // useBuffering
+#endif // defined(useBuffering)
 static void updateVSS(unsigned long thisVSStime)
 {
 
@@ -1500,7 +1500,7 @@ static void initHardware(void)
 	cli(); // disable interrupts
 
 	// timer initialization section - multiple peripherals may use the same timer
-#ifdef useTimer1
+#if defined(useTimer1)
 #if defined(__AVR_ATmega32U4__)
 	// turn on timer1 module
 	PRR0 &= ~(1 << PRTIM1);
@@ -1529,16 +1529,16 @@ static void initHardware(void)
 	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
 
 	// enable timer1 overflow interrupt
 	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
+#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
@@ -1569,16 +1569,16 @@ static void initHardware(void)
 	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
 
 	// enable timer1 overflow interrupt
 	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
+#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
@@ -1609,23 +1609,23 @@ static void initHardware(void)
 	// clear timer 1 output compare force bits for OC1A and OC1B
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B));
 
-#ifdef useTimer1Interrupt
+#if defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A));
 
 	// enable timer1 overflow interrupt
 	TIMSK1 |= (1 << TOIE1);
-#else // useTimer1Interrupt
+#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // useTimer1Interrupt
+#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
 
 #endif // defined(__AVR_ATmega328P__)
-#endif // useTimer1
-#ifdef useTimer2
+#endif // defined(useTimer1)
+#if defined(useTimer2)
 #if defined(__AVR_ATmega2560__)
 	// turn on timer2 module
 	PRR0 &= ~(1 << PRTIM2);
@@ -1684,8 +1684,8 @@ static void initHardware(void)
 	TIFR2 |= ((1 << OCF2B) | (1 << OCF2A) | (1 << TOV2));
 
 #endif // defined(__AVR_ATmega328P__)
-#endif // useTimer2
-#ifdef useTimer4
+#endif // defined(useTimer2)
+#if defined(useTimer4)
 #if defined(__AVR_ATmega32U4__)
 	// turn on timer4 module
 	PRR1 &= ~(1 << PRTIM4);
@@ -1739,15 +1739,15 @@ static void initHardware(void)
 	OCR4C = 255;
 
 #endif // defined(__AVR_ATmega32U4__)
-#endif // useTimer4
+#endif // defined(useTimer4)
 	SREG = oldSREG; // restore interrupt flag status
 
-#ifdef useTWIsupport
+#if defined(useTWIsupport)
 	TWI::init();
 #if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::init(); // go init MCP23017 port expander
 #endif // defined(useMCP23017portExpander)
-#endif // useTWIsupport
+#endif // defined(useTWIsupport)
 #if defined(useSerial0Port)
 	serial0::init();
 #endif // defined(useSerial0Port)
@@ -1816,17 +1816,17 @@ static void doGoDeepSleep(void)
 #if defined(useSerial0Port)
 	serial0::shutdown();
 #endif // defined(useSerial0Port)
-#ifdef useTWIsupport
+#if defined(useTWIsupport)
 	TWI::shutdown();
-#endif // useTWIsupport
+#endif // defined(useTWIsupport)
 
-#ifdef useTimer4
+#if defined(useTimer4)
 #if defined(__AVR_ATmega32U4__)
 	PRR0 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
 #endif // defined(__AVR_ATmega32U4__)
 
-#endif // useTimer4
-#ifdef useTimer2
+#endif // defined(useTimer4)
+#if defined(useTimer2)
 #if defined(__AVR_ATmega2560__)
 	PRR0 |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
 #endif // defined(__AVR_ATmega2560__)
@@ -1834,8 +1834,8 @@ static void doGoDeepSleep(void)
 	PRR |= (1 << PRTIM2); // shut off timer2 module to reduce power consumption
 #endif // defined(__AVR_ATmega328P__)
 
-#endif // useTimer2
-#ifdef useTimer1Interrupt
+#endif // defined(useTimer2)
+#if defined(useTimer1Interrupt)
 #if defined(__AVR_ATmega32U4__)
 	// disable timer1 overflow interrupt
 	TIMSK1 &= ~(1 << TOIE1);
@@ -1849,8 +1849,8 @@ static void doGoDeepSleep(void)
 	TIMSK1 &= ~(1 << TOIE1);
 #endif // defined(__AVR_ATmega328P__)
 
-#endif // useTimer1Interrupt
-#ifdef useTimer1
+#endif // defined(useTimer1Interrupt)
+#if defined(useTimer1)
 #if defined(__AVR_ATmega32U4__)
 	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
 #endif // defined(__AVR_ATmega32U4__)
@@ -1861,7 +1861,7 @@ static void doGoDeepSleep(void)
 	PRR |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
 #endif // defined(__AVR_ATmega328P__)
 
-#endif // useTimer1
+#endif // defined(useTimer1)
 	performSleepMode(SLEEP_MODE_PWR_DOWN); // go perform power-down sleep mode
 
 	initHardware(); // restart all peripherals

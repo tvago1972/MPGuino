@@ -31,9 +31,9 @@ const uint8_t pSizeSignature =				24;
 #if defined(useLCDcontrast)
 const uint8_t pSizeContrast =				1;
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 const uint8_t pSizeLCDcolor =				3;
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 const uint8_t pSizeMetricMode =				1;
 const uint8_t pSizeAlternateFE =			1;
 #if defined(useFuelCost)
@@ -46,12 +46,12 @@ const uint8_t pSizeOutputPin2Mode =			3;
 #if defined(useCarVoltageOutput)
 const uint8_t pSizeVoltageOffset =			12;
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 const uint8_t pSizeSerialDataLogging =		1;
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 const uint8_t pSizeFEvsTime =				16;
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 const uint8_t pSizeBarLowSpeedCutoff =		24;
 const uint8_t pSizeBarSpeedQuantumIdx =		24;
@@ -81,7 +81,7 @@ const uint8_t pSizeVSSpause =				8;
 const uint8_t pSizeMinGoodSpeed =			16;
 const uint8_t pSizeTankSize =				24;
 const uint8_t pSizeTankBingoSize =			pSizeTankSize;
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -89,15 +89,15 @@ const uint8_t pSizeMAPsensorFloor =			16;
 const uint8_t pSizeMAPsensorCeiling =		16;
 const uint8_t pSizeMAPsensorRange =			32;
 const uint8_t pSizeMAPsensorOffset =		32;
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 const uint8_t pSizeBaroSensorFloor =		16;
 const uint8_t pSizeBaroSensorCeiling =		16;
 const uint8_t pSizeBaroSensorRange =		32;
 const uint8_t pSizeBaroSensorOffset =		32;
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 const uint8_t pSizeBarometricPressure =		32;
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -127,9 +127,9 @@ const uint8_t pSizeParkTimeout =			8;
 const uint8_t pSizeActivityTimeout =		8;
 const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
 const uint8_t pSizeWakeupResetCurrentOnMove =	1;
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 const uint8_t pSizeAutoSaveActive =			1;
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
@@ -144,7 +144,7 @@ const uint8_t pSizeRefuelSaveSizeIdx =		pSizeTankSize;
 #endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 const uint8_t pSizeCurrTripSignatureIdx =	8;
 const uint8_t pSizeTankTripSignatureIdx =	8;
 const uint8_t pSizeCurrTripVSSpulseIdx =	32;
@@ -169,7 +169,7 @@ const uint8_t pSizeTankIEOCinjPulseIdx =	32;
 const uint8_t pSizeTankIEOCinjCycleIdx =	64;
 const uint8_t pSizeTankIEOCengCycleIdx =	64;
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 
 #define byteSize(bitLength) ((((bitLength & 0x07) != 0)? 1 : 0) + (bitLength / 8))
 
@@ -187,10 +187,10 @@ const unsigned int pAddressSignature =					nextAllowedValue;
 const unsigned int pAddressContrast =					nextAllowedValue;
 #define nextAllowedValue pAddressContrast + byteSize(pSizeContrast)
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 const unsigned int pAddressLCDcolor =					nextAllowedValue;
 #define nextAllowedValue pAddressLCDcolor + byteSize(pSizeLCDcolor)
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 const unsigned int pAddressMetricMode =					nextAllowedValue;
 const unsigned int pAddressAlternateFE =				pAddressMetricMode + byteSize(pSizeMetricMode);
 #define nextAllowedValue pAddressAlternateFE + byteSize(pSizeAlternateFE)
@@ -207,14 +207,14 @@ const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSi
 const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 const unsigned int pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 const unsigned int pAddressBarLowSpeedCutoff =			nextAllowedValue;
 const unsigned int pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
@@ -253,7 +253,7 @@ const unsigned int pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVS
 const unsigned int pAddressTankSize =					nextAllowedValue;
 const unsigned int pAddressTankBingoSize =				pAddressTankSize + byteSize(pSizeTankSize);
 #define nextAllowedValue pAddressTankBingoSize + byteSize(pSizeTankBingoSize)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -262,17 +262,17 @@ const unsigned int pAddressMAPsensorCeiling =			pAddressMAPsensorFloor + byteSiz
 const unsigned int pAddressMAPsensorRange =				pAddressMAPsensorCeiling + byteSize(pSizeMAPsensorCeiling);
 const unsigned int pAddressMAPsensorOffset =			pAddressMAPsensorRange + byteSize(pSizeMAPsensorRange);
 #define nextAllowedValue pAddressMAPsensorOffset + byteSize(pSizeMAPsensorOffset)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 const unsigned int pAddressBaroSensorFloor =			nextAllowedValue;
 const unsigned int pAddressBaroSensorCeiling =			pAddressBaroSensorFloor + byteSize(pSizeBaroSensorFloor);
 const unsigned int pAddressBaroSensorRange =			pAddressBaroSensorCeiling + byteSize(pSizeBaroSensorCeiling);
 const unsigned int pAddressBaroSensorOffset =			pAddressBaroSensorRange + byteSize(pSizeBaroSensorRange);
 #define nextAllowedValue pAddressBaroSensorOffset + byteSize(pSizeBaroSensorOffset)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 const unsigned int pAddressBarometricPressure =			nextAllowedValue;
 #define nextAllowedValue pAddressBarometricPressure + byteSize(pSizeBarometricPressure)
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -306,10 +306,10 @@ const unsigned int pAddressActivityTimeout =			pAddressParkTimeout + byteSize(pS
 const unsigned int pAddressWakeupResetCurrentOnEngine =	pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
 const unsigned int pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
 #define nextAllowedValue pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove)
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 const unsigned int pAddressAutoSaveActive =				nextAllowedValue;
 #define nextAllowedValue pAddressAutoSaveActive + byteSize(pSizeAutoSaveActive)
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
@@ -327,7 +327,7 @@ const uint8_t pAddressRefuelSaveSizeIdx =				nextAllowedValue;
 #endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 const uint8_t pAddressCurrTripSignatureIdx =			nextAllowedValue;
 const uint8_t pAddressTankTripSignatureIdx =			pAddressCurrTripSignatureIdx + byteSize(pSizeCurrTripSignatureIdx);
 const uint8_t pAddressCurrTripVSSpulseIdx =				pAddressTankTripSignatureIdx + byteSize(pSizeTankTripSignatureIdx);
@@ -354,7 +354,7 @@ const uint8_t pAddressTankIEOCinjCycleIdx =				pAddressTankIEOCinjPulseIdx + byt
 const uint8_t pAddressTankIEOCengCycleIdx =				pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
 #define nextAllowedValue pAddressTankIEOCengCycleIdx + byteSize(pSizeTankIEOCengCycleIdx)
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 
 const unsigned int eeAdrSettingsEnd =					nextAllowedValue;
 
@@ -384,10 +384,10 @@ const uint8_t eePtrSettingsDispStart =		nextAllowedValue;
 const uint8_t pContrastIdx =				nextAllowedValue;
 #define nextAllowedValue pContrastIdx + 1
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 const uint8_t pLCDcolorIdx =				nextAllowedValue;
 #define nextAllowedValue pLCDcolorIdx + 1
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 const uint8_t pMetricModeIdx =				nextAllowedValue;
 const uint8_t pAlternateFEidx =				pMetricModeIdx + 1;
 #define nextAllowedValue pAlternateFEidx + 1
@@ -404,14 +404,14 @@ const uint8_t pOutputPin2Mode =				pOutputPin1Mode + 1;
 const uint8_t pVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 const uint8_t pSerialDataLoggingIdx =		nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 const uint8_t pFEvsTimeIdx =				nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 const uint8_t pBarLowSpeedCutoffIdx =		nextAllowedValue;
 const uint8_t pBarSpeedQuantumIdx =			pBarLowSpeedCutoffIdx + 1;
@@ -468,7 +468,7 @@ const uint8_t pTankBingoSizeIdx =			pTankSizeIdx + 1;
 
 const uint8_t eePtrSettingsTankEnd =		nextAllowedValue;
 const uint8_t eePtrSettingsTankLen =		eePtrSettingsTankEnd - eePtrSettingsTankStart;
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // chrysler settings
 
@@ -479,20 +479,20 @@ const uint8_t pMAPsensorCeilingIdx =		pMAPsensorFloorIdx + 1;
 const uint8_t pMAPsensorRangeIdx =			pMAPsensorCeilingIdx + 1;
 const uint8_t pMAPsensorOffsetIdx =			pMAPsensorRangeIdx + 1;
 #define nextAllowedValue pMAPsensorOffsetIdx + 1
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 const uint8_t pBaroSensorFloorIdx =			nextAllowedValue;
 const uint8_t pBaroSensorCeilingIdx =		pBaroSensorFloorIdx + 1;
 const uint8_t pBaroSensorRangeIdx =			pBaroSensorCeilingIdx + 1;
 const uint8_t pBaroSensorOffsetIdx =		pBaroSensorRangeIdx + 1;
 #define nextAllowedValue pBaroSensorOffsetIdx + 1
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 const uint8_t pBarometricPressureIdx =		nextAllowedValue;
 #define nextAllowedValue pBarometricPressureIdx + 1
-#endif // useChryslerBaroSensor
+#endif // defined(useChryslerBaroSensor)
 
 const uint8_t eePtrSettingsCRFICend =		nextAllowedValue;
 const uint8_t eePtrSettingsCRFIClen =		eePtrSettingsCRFICend - eePtrSettingsCRFICstart;
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -533,10 +533,10 @@ const uint8_t pActivityTimeoutIdx =			pParkTimeoutIdx + 1;
 const uint8_t pWakeupResetCurrentOnEngineIdx =	pActivityTimeoutIdx + 1;
 const uint8_t pWakeupResetCurrentOnMoveIdx =	pWakeupResetCurrentOnEngineIdx + 1;
 #define nextAllowedValue pWakeupResetCurrentOnMoveIdx + 1
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 const uint8_t pAutoSaveActiveIdx =			nextAllowedValue;
 #define nextAllowedValue pAutoSaveActiveIdx + 1
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 const uint8_t eePtrSettingsTimeoutEnd =		nextAllowedValue;
 const uint8_t eePtrSettingsTimeoutLen =		eePtrSettingsTimeoutEnd - eePtrSettingsTimeoutStart;
@@ -562,7 +562,7 @@ const uint8_t pRefuelSizeIdx =				nextAllowedValue;
 
 const uint8_t eePtrSettingsEnd =			nextAllowedValue;
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 const uint8_t eePtrSavedTripsStart = 		nextAllowedValue;
 
 #if defined(usePartialRefuel)
@@ -599,7 +599,7 @@ const uint8_t pTankIEOCengCycleIdx =		pTankIEOCinjCycleIdx + 1;
 const uint8_t eePtrSavedTripsEnd = 			nextAllowedValue;
 const uint8_t eePtrSavedTripsLen = 			eePtrSavedTripsEnd - eePtrSavedTripsStart;
 
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 const uint8_t eePtrStorageEnd =				nextAllowedValue;
 
 #if defined(useScreenEditor)
@@ -620,9 +620,9 @@ const char parmLabels[] PROGMEM = {
 #if defined(useLCDcontrast)
 	"Contrast" tcEOSCR
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	"LCD BG Color" tcEOSCR
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 	"Metric 1-Yes" tcEOSCR
 	"AltFEformat 1-Y" tcEOSCR
 #if defined(useFuelCost)
@@ -639,12 +639,12 @@ const char parmLabels[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	"V(diode)*1000" tcEOSCR
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 	"DLogSerial 1-Yes" tcEOSCR
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 	"FE/Time Period s" tcEOSCR
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	"bgLower*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
 	"bgSize*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
@@ -682,7 +682,7 @@ const char parmLabels[] PROGMEM = {
 	"Tank*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
 	"Bingo*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
 #endif // useImperialGallon
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -690,15 +690,15 @@ const char parmLabels[] PROGMEM = {
 	"MAPceiling (mV)" tcEOSCR
 	"MAPrng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
 	"MAPofst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	"BaroFloor (mV)" tcEOSCR
 	"BaroCeiling (mV)" tcEOSCR
 	"BaroRng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
 	"BaroOfst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	"BaroPrs " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -728,9 +728,9 @@ const char parmLabels[] PROGMEM = {
 	"OFF Timeout (s)" tcEOSCR
 	"WakeEngRst CURR" tcEOSCR
 	"WakeVSSRst CURR" tcEOSCR
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 	"AutoSaveTrip 1-Y" tcEOSCR
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
@@ -751,8 +751,8 @@ const char parmLabels[] PROGMEM = {
 #endif // defined(useEEPROMtripStorage)
 #endif // defined(useImperialGallon)
 #endif // defined(usePartialRefuel)
-#ifdef useDebugTerminalLabels
-#ifdef useEEPROMtripStorage
+#if defined(useDebugTerminalLabels)
+#if defined(useEEPROMtripStorage)
 	"CurrTripSig" tcEOSCR
 	"TankTripSig" tcEOSCR
 	"CurrVSSpulse" tcEOSCR
@@ -777,7 +777,7 @@ const char parmLabels[] PROGMEM = {
 	"TankIEOCinjCycle" tcEOSCR
 	"TankIEOCengCycle" tcEOSCR
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 #if defined(useScreenEditor)
 	"P00F00" tcEOSCR
 	"P00F01" tcEOSCR
@@ -844,7 +844,7 @@ const char parmLabels[] PROGMEM = {
 	"P11F03" tcEOSCR
 
 #endif // defined(useScreenEditor)
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 };
 
 // 0byyy0 0000 - MPGuino parameter action needed that is critical to measurements of fuel injection, VSS, timeouts, and the like
@@ -865,9 +865,9 @@ const uint8_t paramsLength[] PROGMEM = {
 #if defined(useLCDcontrast)
 	,(pSizeContrast & 0x07) | pfChangeDisplay									// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	,(pSizeLCDcolor & 0x07) | pfChangeDisplay									// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 	,(pSizeMetricMode & 0x07) | pfDoMetricModeConversion						// Display Mode (0 - US Display, 1 - Metric Display)
 	,(pSizeAlternateFE & 0x07) | pfSoftwareInitMPGuino							// 0 - MPG or L/100km, 1 - G/100mile or km/L
 #if defined(useFuelCost)
@@ -880,12 +880,12 @@ const uint8_t paramsLength[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	,(pSizeVoltageOffset & 0x07)												// diode offset from V(alternator)
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	,(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph lower speed
 	,(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph speed bar size
@@ -918,7 +918,7 @@ const uint8_t paramsLength[] PROGMEM = {
 
 	,(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino								// Tank Capacity * 1000 (gal or L)
 	,(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -926,15 +926,15 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeMAPsensorCeiling & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Ceiling * 1000 (V)
 	,(pSizeMAPsensorRange & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Range (Pa or * 1000 psig)
 	,(pSizeMAPsensorOffset & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	,(pSizeBaroSensorFloor & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Floor * 1000 (V)
 	,(pSizeBaroSensorCeiling & 0x07) | pfSoftwareInitMPGuino					// Barometric Sensor Ceiling * 1000 (V)
 	,(pSizeBaroSensorRange & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Range (Pa or * 1000 psig)
 	,(pSizeBaroSensorOffset & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	,(pSizeBarometricPressure & 0x07) | pfSoftwareInitMPGuino					// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -964,9 +964,9 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino						// Activity (engine off, no movement, no button press) Timeout (s)
 	,(pSizeWakeupResetCurrentOnEngine & 0x07)									// Enable current trip reset upon wakeup due to engine running
 	,(pSizeWakeupResetCurrentOnMove & 0x07)										// Enable current trip reset upon wakeup due to vehicle movement
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 	,(pSizeAutoSaveActive & 0x07)												// Autosave Active Trip Data Enable
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
@@ -978,10 +978,10 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino							// Partial Refuel amount * 1000 (gal or L)
 #if defined(useEEPROMtripStorage)
 	,(pSizeRefuelSaveSizeIdx & 0x07)											// Partial Refuel save amount * 1000 (gal or L)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	,(pSizeCurrTripSignatureIdx & 0x07)											// Current Trip signature byte
 	,(pSizeTankTripSignatureIdx & 0x07)											// Tank Trip signature byte
 
@@ -1007,7 +1007,7 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeTankIEOCinjCycleIdx & 0x07)											// Tank Idle/EOC Trip injector open cycle accumulator storage
 	,(pSizeTankIEOCengCycleIdx & 0x07)											// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 };
 
 /* parameter EEPROM addresses for parameter definitions above */
@@ -1020,9 +1020,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 #if defined(useLCDcontrast)
 	,(uint8_t)(pAddressContrast)					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	,(uint8_t)(pAddressLCDcolor)					// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 	,(uint8_t)(pAddressMetricMode)					// Display Mode (0 - US Display, 1 - Metric Display)
 	,(uint8_t)(pAddressAlternateFE)					// 0 - MPG or L/100km, 1 - G/100mile or km/L
 #if defined(useFuelCost)
@@ -1035,12 +1035,12 @@ const uint8_t paramAddrs[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	,(uint8_t)(pAddressVoltageOffset)				// diode offset from V(alternator)
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 	,(uint8_t)(pAddressSerialDataLogging)			// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
 	,(uint8_t)(pAddressFEvsTime)					// Period Of FE over Time Bar Graph Bar (s)
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	,(uint8_t)(pAddressBarLowSpeedCutoff)			// FE vs Speed Bargraph lower speed
 	,(uint8_t)(pAddressBarSpeedQuantumIdx)			// FE vs Speed Bargraph speed bar size
@@ -1073,7 +1073,7 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 	,(uint8_t)(pAddressTankSize)					// Tank Capacity * 1000 (gal or L)
 	,(uint8_t)(pAddressTankBingoSize)				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -1081,15 +1081,15 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressMAPsensorCeiling)			// MAP Sensor Ceiling * 1000 (V)
 	,(uint8_t)(pAddressMAPsensorRange)				// MAP Sensor Range (Pa or * 1000 psig)
 	,(uint8_t)(pAddressMAPsensorOffset)				// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	,(uint8_t)(pAddressBaroSensorFloor)				// Barometric Sensor Floor * 1000 (V)
 	,(uint8_t)(pAddressBaroSensorCeiling)			// Barometric Sensor Ceiling * 1000 (V)
 	,(uint8_t)(pAddressBaroSensorRange)				// Barometric Sensor Range (Pa or * 1000 psig)
 	,(uint8_t)(pAddressBaroSensorOffset)			// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	,(uint8_t)(pAddressBarometricPressure)			// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -1119,9 +1119,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressActivityTimeout)				// Activity (engine off, no movement, no button press) Timeout (s)
 	,(uint8_t)(pAddressWakeupResetCurrentOnEngine)	// Enable current trip reset upon wakeup due to engine running
 	,(uint8_t)(pAddressWakeupResetCurrentOnMove)	// Enable current trip reset upon wakeup due to vehicle movement
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 	,(uint8_t)(pAddressAutoSaveActive)				// Autosave Active Trip Data Enable
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
@@ -1133,9 +1133,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressRefuelSize)					// Partial Refuel amount * 1000 (gal or L)
 #if defined(useEEPROMtripStorage)
 	,(uint8_t)(pAddressRefuelSaveSizeIdx)			// Partial Refuel save amount * 1000 (gal or L)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	,(uint8_t)(pAddressCurrTripSignatureIdx)		// Current Trip signature byte
 	,(uint8_t)(pAddressTankTripSignatureIdx)		// Tank Trip signature byte
 
@@ -1161,7 +1161,7 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressTankIEOCinjCycleIdx)			// Tank Idle/EOC Trip injector open cycle accumulator storage
 	,(uint8_t)(pAddressTankIEOCengCycleIdx)			// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 };
 
 /* parameter values for parameter definitions above */
@@ -1176,9 +1176,9 @@ const uint32_t params[] PROGMEM = {
 #if defined(useLCDcontrast)
 	,55					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	,3					// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 	,0					// Display Mode (0 - US Display, 1 - Metric Display)
 	,0					// 0 - MPG or L/100km, 1 - G/100mile or km/L
 #if defined(useFuelCost)
@@ -1191,12 +1191,12 @@ const uint32_t params[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	,700				// diode offset from V(alternator) (via meelis11)
 #endif // defined(useCarVoltageOutput)
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 	,1					// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-	,5					// Length Of BarGraph Bar (s)
-#endif // useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useBarFuelEconVsTime)
+	,60					// Length Of BarGraph Bar (s)
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	,25000				// FE vs Speed Bargraph lower speed
 	,5000				// FE vs Speed Bargraph speed bar size
@@ -1229,7 +1229,7 @@ const uint32_t params[] PROGMEM = {
 
 	,18000				// Tank Capacity * 1000 (gal or L)
 	,2200				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
@@ -1237,15 +1237,15 @@ const uint32_t params[] PROGMEM = {
 	,4000				// MAP Sensor Ceiling * 1000 (V)
 	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
 	,551				// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	,500				// Barometric Sensor Floor * 1000 (V)
 	,4000				// Barometric Sensor Ceiling * 1000 (V)
 	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
 	,551				// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	,14696				// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
@@ -1275,9 +1275,9 @@ const uint32_t params[] PROGMEM = {
 	,120				// Activity (engine off, no movement, no button press) Timeout (s)
 	,1					// Enable current trip reset upon wakeup due to engine running
 	,0					// Enable current trip reset upon wakeup due to button press
-#ifdef useSavedTrips
+#if defined(useSavedTrips)
 	,1					// Autosave Active Trip Data Enable
-#endif // useSavedTrips
+#endif // defined(useSavedTrips)
 
 // miscellaneous settings
 

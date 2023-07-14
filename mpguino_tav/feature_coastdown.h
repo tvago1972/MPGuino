@@ -21,4 +21,17 @@ const uint8_t cdSampleTaken =			0b00000010;
 const uint8_t cdtTestInProgress =		cdtActive | cdtTriggered;
 const uint8_t cdtTestClearFlags =		cdtTestInProgress | cdtCancelled | cdtFinished | cdSignalStateChange | cdTakeSample | cdSampleTaken;
 
+uint8_t coastdownCharIdx;
+
+const char coastdownMsgs[] PROGMEM = {
+	"Coastdown Active\r"
+	"CD Sample 1 read\r"
+	"CD Sample 2 read\r"
+	"CD Sample 3 read\r"
+	"Coastdown Done\r"
+	"Coastdown Canx\r"
+};
+
+const char coastdownSymbol[] PROGMEM = "|}>}|{<{";
+
 #endif // useCoastDownCalculator

@@ -93,10 +93,10 @@ static const uint8_t tFuelCostPerDistance =			nextAllowedValue;				// fuel cost 
 static const uint8_t tDistancePerFuelCost =			tFuelCostPerDistance + 1;		// distance per unit fuel cost (SI/SAE)
 #define nextAllowedValue tDistancePerFuelCost + 1
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 static const uint8_t tPressureChannel =				nextAllowedValue;				// absolute pressure (SI/SAE)
 #define nextAllowedValue tPressureChannel + 1
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 static const uint8_t tEstimatedEnginePower =		nextAllowedValue;				// estimated engine power (SI/SAE)
 static const uint8_t tDragSpeed =					tEstimatedEnginePower + 1;		// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
@@ -124,24 +124,24 @@ static const uint8_t tLoadTrip =					tRoundOffNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
 static const uint8_t tReadTicksToSeconds =			tSaveTrip + 1;
 #define nextAllowedValue tReadTicksToSeconds + 1
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 static const uint8_t tFEvTgetDistance =				nextAllowedValue;
 static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
 static const uint8_t tFEvTgetFuelEconomy =			tFEvTgetConsumedFuel + 1;
 #define nextAllowedValue tFEvTgetFuelEconomy + 1
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 static const uint8_t tFEvSgetDistance =				nextAllowedValue;
 static const uint8_t tFEvSgetConsumedFuel =			tFEvSgetDistance + 1;
 static const uint8_t tFEvSgetFuelEconomy =			tFEvSgetConsumedFuel + 1;
 #define nextAllowedValue tFEvSgetFuelEconomy + 1
 #endif // useBarFuelEconVsSpeed
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 static const uint8_t tParseCharacterToReg =			nextAllowedValue;
 #define nextAllowedValue tParseCharacterToReg + 1
-#endif //useDebugTerminal
+#endif //defined(useDebugTerminal)
 
-#if (useDebugTerminalLabels) || (useSWEET64trace)
+#if defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 static const char terminalTripFuncNames[] PROGMEM = {
 	"tEngineRunTime" tcEOSCR				// engine runtime (hhmmss)
 	"tRangeTime" tcEOSCR					// estimated total runtime from full tank (hhmmss)
@@ -193,9 +193,9 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tFuelCostPerDistance" tcEOSCR			// fuel cost per unit distance (SI/SAE)
 	"tDistancePerFuelCost" tcEOSCR			// distance per unit fuel cost (SI/SAE)
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	"tPressureChannel" tcEOSCR				// absolute pressure (SI/SAE)
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 	"tEstimatedEnginePower" tcEOSCR			// estimated engine power (SI/SAE)
 	"tDragSpeed" tcEOSCR					// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
@@ -203,7 +203,7 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tFuelEcon" tcEOSCR						// fuel economy (SI/SAE)
 };
 
-#endif // (useDebugTerminalLabels) || (useSWEET64trace)
+#endif // defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 static const uint8_t prgmEngineSpeed[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvInjPulseIdx,		// load injector pulse count into register 2
 	instrMul2byConst, idxCycles0PerSecond,				// set up for conversion of denominator injector cycle count to time in seconds
@@ -663,7 +663,7 @@ static const uint8_t prgmFetchInitialParamValue[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 static const uint8_t prgmLoadCurrentFromEEPROM[] PROGMEM = {
 	instrLdRegEEPROM, 0x01, pCurrTripSignatureIdx,
 	instrLdRegByte, 0x02, guinosig,
@@ -748,7 +748,7 @@ static const uint8_t prgmSaveTankToEEPROM[] PROGMEM = {
 	instrJump, tSaveTrip,
 };
 
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 static const uint8_t prgmLoadTrip[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x01, rvVSSpulseIdx,
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,
@@ -773,7 +773,7 @@ static const uint8_t prgmReadTicksToSeconds[] PROGMEM = {
 	instrJump, tFormatToTime							// go format the number to hhmmss time
 };
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 static const uint8_t prgmFEvTgetDistance[] PROGMEM = {
 	instrLdRegTripFEvTindexed, 0x02, rvVSSpulseIdx,		// load indexed VSS pulses from fuel econ vs time trip variable bank
 	instrClearFlag, SWEET64overflowFlag,				// Z flag is set on data, and V flag is clear
@@ -819,7 +819,7 @@ static const uint8_t prgmFEvTgetFuelEconomy[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 static const uint8_t prgmFEvSgetDistance[] PROGMEM = {
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvVSSpulseIdx,	// load indexed VSS pulses from fuel econ vs speed trip variable bank
@@ -867,7 +867,7 @@ static const uint8_t prgmFEvSgetFuelEconomy[] PROGMEM = {
 };
 
 #endif // useBarFuelEconVsSpeed
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 static const uint8_t prgmTerminalWriteParameterValue[] PROGMEM = {
 	instrStRegEEPROMindexed, 0x06,
 	instrDone											// return to caller
@@ -883,14 +883,14 @@ static const uint8_t prgmParseCharacterToReg[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#endif // useDebugTerminal
+#endif // defined(useDebugTerminal)
 static const uint8_t prgmFormatToTime[] PROGMEM = {
 	instrLdReg, 0x21,									// move time in seconds into register 1
 	instrDoBCDadjust, 0x12, 0x01,						// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 static const uint8_t prgmPressureChannel[] PROGMEM = {
 	instrCmpIndex, mpAnalogMAPfloorIdx - mpMAPpressureIdx,	// is trip index pointing to a valid pressure element?
 	instrBranchIfLT, 4,									// if so, skip ahead
@@ -902,7 +902,7 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 static const uint8_t prgmDragSpeed[] PROGMEM = {
 	instrLdRegVolatile, 0x02, vDragInstantSpeedIdx,		// load instantaneous drag speed measurement
@@ -1010,9 +1010,9 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmFuelCostPerDistance							// tFuelCostPerDistance - fuel cost per unit distance (SI/SAE)
 	,prgmDistancePerFuelCost							// tDistancePerFuelCost - distance per unit fuel cost (SI/SAE)
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	,prgmPressureChannel								// tPressureChannel - absolute pressure (SI/SAE)
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 	,prgmEstimateEnginePower							// tEstimatedEnginePower - estimated engine power (SI/SAE)
 	,prgmDragSpeed										// tDragSpeed - acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
@@ -1033,19 +1033,19 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmLoadTrip
 	,prgmSaveTrip
 	,prgmReadTicksToSeconds								// tReadTicksToSeconds
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	,prgmFEvTgetDistance								// tFEvTgetDistance
 	,prgmFEvTgetConsumedFuel							// tFEvTgetConsumedFuel
 	,prgmFEvTgetFuelEconomy								// tFEvTgetFuelEconomy
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	,prgmFEvSgetDistance								// tFEvSgetDistance
 	,prgmFEvSgetConsumedFuel							// tFEvSgetConsumedFuel
 	,prgmFEvSgetFuelEconomy								// tFEvSgetFuelEconomy
 #endif // useBarFuelEconVsSpeed
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 	,prgmParseCharacterToReg
-#endif //useDebugTerminal
+#endif //defined(useDebugTerminal)
 };
 
 #define nextAllowedValue 0 // S64programList
@@ -1077,10 +1077,10 @@ const uint8_t calcFormatFuelCostPerDistanceIdx =	nextAllowedValue;						// fuel 
 const uint8_t calcFormatDistancePerFuelCostIdx =	calcFormatFuelCostPerDistanceIdx + 2;	// distance per unit fuel cost (SI/SAE)
 #define nextAllowedValue calcFormatDistancePerFuelCostIdx + 2
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 const uint8_t calcFormatPressureIdx =				nextAllowedValue;						// absolute pressure (SI/SAE)
 #define nextAllowedValue calcFormatPressureIdx + 2
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 const uint8_t calcFormatEstimatedPowerIdx =			nextAllowedValue;						// estimated engine power (SI/SAE)
 #define nextAllowedValue calcFormatEstimatedPowerIdx + 2
@@ -1090,7 +1090,7 @@ const uint8_t calcFormatFuelEconomyIdx =			nextAllowedValue;						// fuel econom
 
 const uint8_t calcFormatListCount =					nextAllowedValue;
 
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 static const char terminalFormats[] PROGMEM = {
 	"hhmmss" tcEOS
 	"ms" tcEOS
@@ -1120,10 +1120,10 @@ static const char terminalFormats[] PROGMEM = {
 	"mile/cost" tcEOS
 	"km/cost" tcEOS
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	"psia" tcEOS
 	"kPa" tcEOS
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 	"WHP" tcEOS
 	"kW" tcEOS
@@ -1134,7 +1134,7 @@ static const char terminalFormats[] PROGMEM = {
 	"LPK" tcEOS
 };
 
-#endif // useDebugTerminal
+#endif // defined(useDebugTerminal)
 const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
 	 calcFormatTimeHHmmSSIdx					// tEngineRunTime - engine runtime (hhmmss)
 	,calcFormatTimeHHmmSSIdx					// tRangeTime - estimated total runtime from full tank (hhmmss)
@@ -1187,9 +1187,9 @@ const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { /
 	,calcFormatFuelCostPerDistanceIdx			// tFuelCostPerDistance - fuel cost per unit distance (SI/SAE)
 	,calcFormatDistancePerFuelCostIdx			// tDistancePerFuelCost - distance per unit fuel cost (SI/SAE)
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	,calcFormatPressureIdx						// tPressureChannel - absolute pressure (SI/SAE)
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 	,calcFormatEstimatedPowerIdx				// tEstimatedEnginePower - estimated engine power (SI/SAE)
 	,calcFormatSpeedIdx							// tDragSpeed - acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
@@ -1270,10 +1270,10 @@ const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM =
 	,'D'	// SAE distance per fuel cost
 	,'D'	// SI distance per fuel cost
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	,'P'	// SAE pressure
 	,'P'	// SI pressure
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 	,'H'	// SAE horsepower
 	,'W'	// SI horsepower
@@ -1379,7 +1379,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 	,{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100}
 #endif // defined(useFuelCost)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 
 	// psi
 	,{0b00001110, 0b00001001, 0b00001001, 0b00001110, 0b00001000, 0b00001000, 0b00001000, 0b00000000
@@ -1388,7 +1388,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 	// kPa
 	,{0b00001000, 0b00001000, 0b00001001, 0b00001010, 0b00001100, 0b00001010, 0b00001001, 0b00000000
 	, 0b00011000, 0b00010100, 0b00010100, 0b00011000, 0b00010010, 0b00010101, 0b00010011, 0b00000000}
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useDragRaceFunction
 
 	// HP

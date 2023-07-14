@@ -1,4 +1,68 @@
-#ifdef useBarGraph
+#if defined(useBarGraph)
+#if defined(useBarFuelEconVsSpeed)
+/* fuel economy over speed histograph support section */
+
+static const uint8_t prgmFEvsSpeed[] PROGMEM = {
+	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
+	instrTestReg, 0x02,									// test VSS cycle value
+	instrBranchIfZero, 15,								// if zero, then speed is also zero
+	instrLdReg, 0x21,									// save denominator term for later
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
+	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
+	instrDiv2by1,										// divide to obtain vehicle speed
+
+//cont:
+	instrSubMainFromX, 0x02, mpFEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
+	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
+
+//badRet:
+	instrLdRegByte, 0x02, 0xFF,							// load a 255 into register 2
+	instrDone,											// exit to caller
+
+//cont2:
+	instrDiv2byMain, mpFEvsSpeedQuantumIdx,				// find trip index offset
+	instrLdRegByte, 0x01, bgDataSize - 1,				// is offset greater than the number of available trip slots
+	instrCmpXtoY, 0x21,
+	instrBranchIfLTorE, 2,								// if not, skip ahead
+	instrLdReg, 0x12,									// load the last trip slot index
+
+//cont3:
+	instrAddByteToX, 0x02, FEvsSpeedIdx,				// obtain working fuel econ vs speed trip index value
+	instrDone											// exit to caller
+};
+
+static void bgFEvsSsupport::reset(void)
+{
+
+	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
+
+	FEvSpdTripIdx = 255;
+
+}
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBarFuelEconVsTime)
+/* fuel economy over time histograph support section */
+
+static uint8_t bgFEvsTsupport::getFEvTperiodIdx(void)
+{
+
+	uint8_t oldSREG;
+	uint8_t retVal;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	retVal = FEvTperiodIdx;
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return retVal;
+
+}
+
+#endif // defined(useBarFuelEconVsTime)
 /* Bar Graph support section */
 
 static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -20,7 +84,7 @@ static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (callingDisplayIdx)
 	{
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 		case barFEvTdisplayIdx:
 			labelList = barFEvTfuncNames;
 
@@ -32,10 +96,10 @@ static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			line0CalcIdx = line1CalcIdx;
 			line0TripIdx = currentIdx;
 
-			line1TripIdx = FEvTperiodIdx;
+			line1TripIdx = bgFEvsTsupport::getFEvTperiodIdx();
 			break;
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
@@ -113,7 +177,7 @@ static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tri
 
 	text::stringOut(devLCD, bgSpaces, lineNumber);
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 6, 0);
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, (LCDcharWidth / 2) - 2, 0);
 
 	if (thisCalcFuncObj.isValid & isValidFlag)
 	{
@@ -124,7 +188,8 @@ static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tri
 		text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
 
 	}
-	else text::newLine(devLCD);
+
+	text::newLine(devLCD);
 
 }
 
@@ -376,4 +441,4 @@ static void barGraphSupport::draw(uint8_t color, uint8_t xPos, uint8_t yPos)
 
 }
 
-#endif // useBarGraph
+#endif // defined(useBarGraph)

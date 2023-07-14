@@ -1,4 +1,4 @@
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
  /* Big Clock Display support section */
 
 static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
@@ -51,9 +51,9 @@ static void clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-#ifdef useSoftwareClock
+#if defined(useSoftwareClock)
 			ull2str(pBuff, vClockCycleIdx, tReadTicksToSeconds);
-#endif // useSoftwareClock
+#endif // defined(useSoftwareClock)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
 			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), pBuff, (timer0Status & t0sShowCursor), cursorPos);
@@ -99,7 +99,7 @@ static void clockSet::changeDigitDown(void)
 static void clockSet::set(void)
 {
 
-#ifdef useSoftwareClock
+#if defined(useSoftwareClock)
 	uint8_t b;
 
 	pBuff[4] = '0'; // set seconds to zero
@@ -119,7 +119,7 @@ static void clockSet::set(void)
 
 	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
 
-#endif // useSoftwareClock
+#endif // defined(useSoftwareClock)
 }
 
 static void clockSet::cancel(void)
@@ -129,7 +129,7 @@ static void clockSet::cancel(void)
 
 }
 
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #if defined(useStatusBar)
 /* Status Bar Output support section */
 
@@ -172,7 +172,7 @@ static void statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, tripFormatReverseNames, cursorPos + 1, PSTR(" vs INST"));
+			text::statusOut(devLCD, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
 		case displayOutputIdx:
 			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
 			text::charOut(devLCD, ' ', (LCDcharWidth / 2));
@@ -287,7 +287,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 }
 
 #endif // defined(useStatusBar)
-#ifdef useBigDigitDisplay
+#if defined(useBigDigitDisplay)
 /* Big Digit Output support section */
 
 static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -476,4 +476,4 @@ static void bigDigit::outputDigit(const char * digitDefStr, uint8_t xPos, uint8_
 
 }
 
-#endif // useBigDigitDisplay
+#endif // defined(useBigDigitDisplay)

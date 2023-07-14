@@ -742,9 +742,9 @@ static void LCD::writeByte(uint8_t value, uint8_t flags, uint8_t delay)
 static void LCD::writeNybble(uint8_t value, uint8_t flags)
 {
 
-#ifdef useBufferedLCD
+#if defined(useBufferedLCD)
 	ringBuffer::push(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
-#else // useBufferedLCD
+#else // defined(useBufferedLCD)
 #if defined(usePort4BitLCD)
 	uint8_t oldSREG;
 
@@ -788,7 +788,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 
 	}
 #endif // defined(useTWI4BitLCD)
-#endif // useBufferedLCD
+#endif // defined(useBufferedLCD)
 
 	changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
 
@@ -848,7 +848,7 @@ static void LCD::outputNybble(uint8_t LCDchar)
 
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 		PORTA |= (lcdEnable); // set enable high
 
 		if (LCDchar & lcdDataByte) PORTA |= (lcdRegisterSelect); // set nybble type (command or data)
@@ -868,7 +868,7 @@ static void LCD::outputNybble(uint8_t LCDchar)
 
 		PORTA &= ~(lcdEnable); // set enable low to 'tickle' enable bit
 
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 		// any port commands for any other ATmega2560 board goes here
 
 #endif // defined(__AVR_ATmega2560__)

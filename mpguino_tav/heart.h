@@ -17,7 +17,7 @@ static void delayS(uint16_t ms);
 static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
 static void performSleepMode(uint8_t sleepMode);
 
-#ifdef useBuffering
+#if defined(useBuffering)
 typedef struct
 {
 
@@ -44,13 +44,13 @@ namespace ringBuffer // ringBuffer prototype
 const uint8_t bufferIsFull =	0b10000000;
 const uint8_t bufferIsEmpty =	0b01000000;
 
-#endif // useBuffering
-#ifdef useBarGraph
+#endif // defined(useBuffering)
+#if defined(useBarGraph)
 static const uint8_t bgDataSize = 15;
 
 uint8_t bargraphData[(uint16_t)(bgDataSize)];
 
-#endif // useBarGraph
+#endif // defined(useBarGraph)
 typedef struct
 {
 
@@ -88,9 +88,9 @@ union union_64
 };
 
 static const uint8_t loopsPerSecond = 2; // how many times will we try and loop in a second (also for sampling non-critical ADC channels, if configured)
-#ifdef useAnalogButtons
+#if defined(useAnalogButtons)
 static const uint8_t analogSamplesPerSecond = 32; // how many times will we try to sample ADC button presses in a second
-#endif // useAnalogButtons
+#endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)
 static const uint8_t TWIsamplesPerSecond = 32; // how many times will we try to sample TWI button presses in a second
 #endif // defined(useTWIbuttons)
@@ -109,12 +109,12 @@ static const unsigned int delay1500msTick = (unsigned int)(ceil)((double)(15ul *
 static const unsigned int delay0005msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 200ul)) - 1; // 5 millisecond delay
 static const unsigned int delay0100msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
 
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 static const unsigned int buttonDebounceTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 20ul)) - 1; // 50 millisecond delay button debounce
-#endif // useLegacyButtons
-#ifdef useAnalogButtons
+#endif // defined(useLegacyButtons)
+#if defined(useAnalogButtons)
 static const unsigned int analogSampleTickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(analogSamplesPerSecond * 256ul)) - 1;
-#endif // useAnalogButtons
+#endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)
 static const unsigned int TWItickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(TWIsamplesPerSecond * 256ul)) - 1;
 #endif // defined(useTWIbuttons)
@@ -124,15 +124,15 @@ static const unsigned int JSONtickLength = (unsigned int)(ceil)((double)(16ul * 
 
 // volatile variable array index values - these may be referenced inside an interrupt service routine
 #define nextAllowedValue 0
-#ifdef useCPUreading
+#if defined(useCPUreading)
 static const uint8_t vSystemCycleIdx =				nextAllowedValue;				// system timer tick count
 #define nextAllowedValue vSystemCycleIdx + 1
-#endif // useCPUreading
+#endif // defined(useCPUreading)
 
-#ifdef useSoftwareClock
+#if defined(useSoftwareClock)
 static const uint8_t vClockCycleIdx =				nextAllowedValue;				// software clock tick count
 #define nextAllowedValue vClockCycleIdx + 1
-#endif // useSoftwareClock
+#endif // defined(useSoftwareClock)
 
 static const uint8_t vVehicleStopTimeoutIdx =		nextAllowedValue;				// engine idle timeout value in timer0 ticks
 static const uint8_t vEngineOffTimeoutIdx =			vVehicleStopTimeoutIdx + 1;		// engine off coasting timeout value in timer0 ticks
@@ -148,18 +148,18 @@ static const uint8_t vInjectorCloseDelayIdx =		vInjectorOpenDelayIdx + 1;		// in
 static const uint8_t vInjectorTotalDelayIdx =		vInjectorCloseDelayIdx + 1;		// injector total settle time in timer0 cycles, for injector validity check
 static const uint8_t vInjectorValidMaxWidthIdx =	vInjectorTotalDelayIdx + 1;		// maximum valid fuel injector pulse width in timer0 cycles
 #define nextAllowedValue vInjectorValidMaxWidthIdx + 1
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 static const uint8_t vInjectorCorrectionIdx =		nextAllowedValue;				// Chrysler fuel injector correction value
 #define nextAllowedValue vInjectorCorrectionIdx + 1
-#endif // useChryslerMAPCorrection
-#ifdef useBarFuelEconVsTime
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsTime)
 static const uint8_t vFEvsTimePeriodTimeoutIdx =	nextAllowedValue;				// time period for fuel economy vs time bargraph
 #define nextAllowedValue vFEvsTimePeriodTimeoutIdx + 1
-#endif // useBarFuelEconVsTime
-#ifdef useDebugCPUreading
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useDebugCPUreading)
 static const uint8_t vInterruptAccumulatorIdx =		nextAllowedValue;				// interrupt handler stopwatch direct measurement
 #define nextAllowedValue vInterruptAccumulatorIdx + 1
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 #ifdef useDragRaceFunction
 static const uint8_t vDragInstantSpeedIdx =			nextAllowedValue;
@@ -178,13 +178,13 @@ static const uint8_t vCoastdownMeasurement4Idx =	vCoastdownMeasurement3Idx + 1;
 #define nextAllowedValue vCoastdownMeasurement4Idx + 1
 #endif // useCoastDownCalculator
 
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 static const uint8_t vDebugValue1Idx =				nextAllowedValue;
 static const uint8_t vDebugValue2Idx =				vDebugValue1Idx + 1;
 static const uint8_t vDebugValue3Idx =				vDebugValue2Idx + 1;
 static const uint8_t vDebugValue4Idx =				vDebugValue3Idx + 1;
 #define nextAllowedValue vDebugValue4Idx + 1
-#endif // useDebugTerminal
+#endif // defined(useDebugTerminal)
 
 static const uint8_t vVariableMaxIdx =				nextAllowedValue;
 
@@ -200,7 +200,7 @@ static const uint8_t mpPartialRefuelTankSize =		nextAllowedValue;					// partial
 #define nextAllowedValue mpPartialRefuelTankSize + 1
 #endif // defined(usePartialRefuel)
 
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 static const uint8_t mpMAPpressureIdx =				nextAllowedValue;
 static const uint8_t mpBaroPressureIdx =			mpMAPpressureIdx + 1;
 static const uint8_t mpFuelPressureIdx =			mpBaroPressureIdx + 1;
@@ -209,13 +209,13 @@ static const uint8_t mpAnalogMAPfloorIdx =			mpInjPressureIdx + 1;
 static const uint8_t mpAnalogMAPnumerIdx =			mpAnalogMAPfloorIdx + 1;
 static const uint8_t mpAnalogMAPdenomIdx =			mpAnalogMAPnumerIdx + 1;
 #define nextAllowedValue mpAnalogMAPdenomIdx + 1
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 static const uint8_t mpAnalogBaroFloorIdx =			nextAllowedValue;
 static const uint8_t mpAnalogBaroNumerIdx =			mpAnalogBaroFloorIdx + 1;
 static const uint8_t mpAnalogBaroDenomIdx =			mpAnalogBaroNumerIdx + 1;
 #define nextAllowedValue mpAnalogBaroDenomIdx + 1
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 
 #ifdef useBarFuelEconVsSpeed
 static const uint8_t mpFEvsSpeedMinThresholdIdx =	nextAllowedValue;					// minimum speed for fuel econ vs speed bargraph
@@ -223,13 +223,13 @@ static const uint8_t mpFEvsSpeedQuantumIdx =		mpFEvsSpeedMinThresholdIdx + 1;		/
 #define nextAllowedValue mpFEvsSpeedQuantumIdx + 1
 #endif // useBarFuelEconVsSpeed
 
-#ifdef useCPUreading
+#if defined(useCPUreading)
 static const uint8_t mpMainLoopAccumulatorIdx =		nextAllowedValue;					// main loop stopwatch direct measurement
 static const uint8_t mpIdleAccumulatorIdx =			mpMainLoopAccumulatorIdx + 1;		// stopwatch direct measurement of time that processor actually did jack and shit
 static const uint8_t mpAvailableRAMidx =			mpIdleAccumulatorIdx + 1;			// amount of remaining free RAM
 #define nextAllowedValue mpAvailableRAMidx + 1
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 static const uint8_t mpDebugAccMainLoopIdx =		nextAllowedValue;					// copy of main loop stopwatch direct measurement
 static const uint8_t mpDebugAccIdleIdx =			mpDebugAccMainLoopIdx + 1;			// copy of stopwatch direct measurement of time that processor actually did jack and shit
 static const uint8_t mpDebugAccIdleProcessIdx =		mpDebugAccIdleIdx + 1;				// idle process stopwatch direct measurement
@@ -246,19 +246,19 @@ static const uint8_t mpDebugAccS64sqrtIdx =			nextAllowedValue;					// iSqrt sto
 static const uint8_t mpDebugCountS64sqrtIdx =		mpDebugAccS64sqrtIdx + 1;			// iSqrt direct measurement counter
 #define nextAllowedValue mpDebugCountS64sqrtIdx + 1
 #endif // defined(useIsqrt)
-#endif // useDebugCPUreading
-#endif // useCPUreading
+#endif // defined(useDebugCPUreading)
+#endif // defined(useCPUreading)
 
 static const uint8_t mpVariableMaxIdx =				nextAllowedValue;
 
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 static const char terminalVolatileVarLabels[] PROGMEM = {
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	"vSystemCycleIdx" tcEOSCR					// timer0
-#endif // useCPUreading
-#ifdef useSoftwareClock
+#endif // defined(useCPUreading)
+#if defined(useSoftwareClock)
 	"vClockCycleIdx" tcEOSCR					// timer0
-#endif // useSoftwareClock
+#endif // defined(useSoftwareClock)
 	"vVehicleStopTimeoutIdx" tcEOSCR			// timer0
 	"vEngineOffTimeoutIdx" tcEOSCR				// timer0
 	"vButtonTimeoutIdx" tcEOSCR					// timer0
@@ -272,15 +272,15 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 	"vInjectorCloseDelayIdx" tcEOSCR			// fi close
 	"vInjectorTotalDelayIdx" tcEOSCR			// fi close
 	"vInjectorValidMaxWidthIdx" tcEOSCR			// fi close
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	"vInjectorCorrectionIdx" tcEOSCR			// fi close
-#endif // useChryslerMAPCorrection
-#ifdef useBarFuelEconVsTime
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsTime)
 	"vFEvsTimePeriodTimeoutIdx" tcEOSCR			// timer0
-#endif // useBarFuelEconVsTime
-#ifdef useDebugCPUreading
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useDebugCPUreading)
 	"vInterruptAccumulatorIdx" tcEOSCR			// all interrupts
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 #ifdef useDragRaceFunction
 	"vDragInstantSpeedIdx" tcEOSCR				// vss
 	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
@@ -294,12 +294,12 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 	"vCoastdownMeasurement3Idx" tcEOSCR			// vss
 	"vCoastdownMeasurement4Idx" tcEOSCR			// vss
 #endif // useCoastDownCalculator
-//#ifdef useDebugTerminal
+//#if defined(useDebugTerminal)
 	"vDebugValue1Idx" tcEOSCR
 	"vDebugValue2Idx" tcEOSCR
 	"vDebugValue3Idx" tcEOSCR
 	"vDebugValue4Idx" tcEOSCR
-//#endif // useDebugTerminal
+//#endif // defined(useDebugTerminal)
 };
 
 static const char terminalMainProgramVarLabels[] PROGMEM = {
@@ -309,7 +309,7 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 #if defined(usePartialRefuel)
 	"mpPartialRefuelTankSize" tcEOSCR			// main program only
 #endif // defined(usePartialRefuel)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	"mpMAPpressureIdx" tcEOSCR					// main program only
 	"mpBaroPressureIdx" tcEOSCR					// main program only
 	"mpFuelPressureIdx" tcEOSCR					// main program only
@@ -317,21 +317,21 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpAnalogMAPfloorIdx" tcEOSCR				// main program only
 	"mpAnalogMAPnumerIdx" tcEOSCR				// main program only
 	"mpAnalogMAPdenomIdx" tcEOSCR				// main program only
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	"mpAnalogBaroFloorIdx" tcEOSCR				// main program only
 	"mpAnalogBaroNumerIdx" tcEOSCR				// main program only
 	"mpAnalogBaroDenomIdx" tcEOSCR				// main program only
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
 #ifdef useBarFuelEconVsSpeed
 	"mpFEvsSpeedMinThresholdIdx" tcEOSCR		// main program only
 	"mpFEvsSpeedQuantumIdx" tcEOSCR				// main program only
 #endif // useBarFuelEconVsSpeed
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	"mpMainLoopAccumulatorIdx" tcEOSCR			// main program only
 	"mpIdleAccumulatorIdx" tcEOSCR				// main program only
 	"mpAvailableRAMidx" tcEOSCR					// main program only
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	"mpDebugAccMainLoopIdx" tcEOSCR				// main program only
 	"mpDebugAccIdleIdx" tcEOSCR					// main program only
 	"mpDebugAccIdleProcessIdx" tcEOSCR			// main program only
@@ -346,11 +346,11 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpDebugAccS64sqrtIdx" tcEOSCR				// main program only
 	"mpDebugCountS64sqrtIdx" tcEOSCR			// main program only
 #endif // defined(useIsqrt)
-#endif // useDebugCPUreading
-#endif // useCPUreading
+#endif // defined(useDebugCPUreading)
+#endif // defined(useCPUreading)
 };
 
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 volatile uint32_t volatileVariables[(uint16_t)(vVariableMaxIdx)];
 uint32_t mainProgramVariables[(uint16_t)(mpVariableMaxIdx)];
 
@@ -380,9 +380,9 @@ volatile uint8_t thisButtonState;
 volatile uint8_t lastButtonState;
 volatile uint8_t buttonPress;
 #endif // defined(useButtonInput)
-#ifdef useTestAnalogButtonIdx
+#if defined(useTestAnalogButtonIdx)
 volatile uint8_t thisButtonIdx;
-#endif // useTestAnalogButtonIdx
+#endif // defined(useTestAnalogButtonIdx)
 
 volatile uint8_t mainLoopHeartBeat;
 
@@ -392,9 +392,9 @@ volatile unsigned int watchdogInjectorCount;
 volatile unsigned int watchdogVSSCount;
 volatile unsigned int timer0DelayCount;
 volatile unsigned int displayPauseCount;
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 volatile unsigned int buttonDebounceCount;
-#endif // useLegacyButtons
+#endif // defined(useLegacyButtons)
 
 // these flags specifically tell the system timer0 to do something
 // main program sets flag, system timer0 acknowledges by clearing flag
@@ -423,9 +423,9 @@ const uint8_t t0sShowCursor =			0b00100000;
 #if defined(useButtonInput)
 const uint8_t t0sReadButton =			0b00010000;
 #endif // defined(useButtonInput)
-#if useDataLoggingOutput || useJSONoutput
+#if defined(useDataLoggingOutput) || defined(useJSONoutput)
 const uint8_t t0sOutputLogging =		0b00001000;
-#endif // useDataLoggingOutput || useJSONoutput
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
 #ifdef useDragRaceFunction
 const uint8_t t0sAccelTestFlag =		0b00000100;
 #endif // useDragRaceFunction
@@ -475,9 +475,9 @@ const uint8_t dGoodInjectorWidth =			0b00010000;
 const uint8_t dGoodInjectorRead =			0b00001000;
 const uint8_t dGoodVSSsignal =				0b00000100;
 const uint8_t dGoodVSSRead =				0b00000010;
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 const uint8_t dSampleADC =					0b00000001;
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 
 const uint8_t dGoodEngineRotation =		(dGoodEngineRotationOpen | dGoodEngineRotationClose);
 const uint8_t dGoodEngineRun =			(dGoodEngineRotationOpen | dGoodEngineRotationClose | dInjectorReadInProgress | dGoodInjectorWidth | dGoodInjectorRead);

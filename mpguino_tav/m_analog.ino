@@ -18,13 +18,13 @@ ISR( ADC_vect )
 	uint8_t analogChannelIdx;
 	uint8_t analogChannelMask;
 	uint8_t flag;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint8_t a;
 	uint8_t b;
 	uint16_t c;
 
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	rawValue->u8[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
 	rawValue->u8[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
@@ -105,7 +105,7 @@ ISR( ADC_vect )
 
 	}
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 	if (b < a) c = 256 - a + b; // an overflow occurred
@@ -113,7 +113,7 @@ ISR( ADC_vect )
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 #endif // defined(useAnalogRead)

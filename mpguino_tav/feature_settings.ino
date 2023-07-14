@@ -137,9 +137,9 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 #if defined(useLCDcontrast)
 			if (parameterPtr == pContrastIdx) LCD::setContrast((uint8_t)(str2ull(pBuff))); // adjust contrast dynamically
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 			if (parameterPtr == pLCDcolorIdx) LCD::setRGBcolor((uint8_t)(str2ull(pBuff))); // adjust backlight color dynamically
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 			break;
 
 		case nesSaveParameter:
@@ -178,9 +178,9 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 #if defined(useLCDcontrast)
 		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readByte(pContrastIdx)); // adjust contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 		if ((parameterIdx == pLCDcolorIdx) && (brightnessIdx)) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
-#endif // useAdafruitRGBLCDshield
+#endif // defined(useAdafruitRGBLCDshield)
 
 	}
 

@@ -17,11 +17,11 @@ static const uint8_t prgmInitEEPROM[] PROGMEM = {
 	instrAddIndex, 1,
 	instrCmpIndex, eePtrSettingsEnd,
 	instrBranchIfLT, 246,
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 	instrLdRegByte, 0x02, 0,							// zero out current and tank trip signature bytes
 	instrStRegEEPROM, 0x02, pCurrTripSignatureIdx,
 	instrStRegEEPROM, 0x02, pTankTripSignatureIdx,
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 	instrLdRegByte, 0x02, 1,
 	instrDone											// exit to caller
 };
@@ -139,7 +139,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegVolatile, 0x02, vCoastdownPeriodIdx,		// store coastdown timeout timer ticks value
 
 #endif	// useCoastDownCalculator
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	instrLdRegEEPROM, 0x02, pMAPsensorFloorIdx,			// convert pressure sensor voltage floor to equivalent ADC floor value
 	instrMul2byConst, idxNumerVoltage,
 	instrDiv2byConst, idxDenomVoltage,
@@ -155,7 +155,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrMul2byConst, idxDenomVoltage,					// calculate pressure sensor ADC step slope numerator
 	instrStRegMain, 0x02, mpAnalogMAPnumerIdx,			// store it in volatile variable storage
 
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	instrLdRegEEPROM, 0x02, pBaroSensorFloorIdx,		// convert pressure sensor voltage floor to equivalent ADC floor value
 	instrMul2byConst, idxNumerVoltage,
 	instrDiv2byConst, idxDenomVoltage,
@@ -170,24 +170,24 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrLdRegConst, 0x02, idxDenomVoltage,				// calculate pressure sensor ADC step slope numerator
 	instrMul2byEEPROM, pBaroSensorRangeIdx,
 	instrStRegMain, 0x02, mpAnalogBaroNumerIdx,			// store it in volatile variable storage
-#else	// useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 
 	instrLdRegEEPROM, 0x02, pBarometricPressureIdx,		// fetch reference barometric pressure value in psig * 1000
 	instrStRegMain, 0x02, mpBaroPressureIdx,			// store it in volatile variable storage
-#endif	// useChryslerBaroSensor
+#endif // defined(useChryslerBaroSensor)
 	instrLdRegEEPROM, 0x02, pSysFuelPressureIdx,		// fetch base fuel pressure value in psig * 1000
 	instrStRegMain, 0x02, mpFuelPressureIdx,			// save base fuel pressure value in psig * 1000
 
 	instrLdRegConst, 0x02, idxCorrectionFactor,
 	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 
-#endif	// useChryslerMAPCorrection
-#ifdef useBarFuelEconVsTime
+#endif	// defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsTime)
 	instrLdRegEEPROM, 0x02, pFEvsTimeIdx,				// load fuel econ vs time period stored parameter
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vFEvsTimePeriodTimeoutIdx,	// store fuel econ vs time period timer ticks value
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	instrLdRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,		// obtain low-speed cutoff parameter in (distance)(* 1000) / (hour)
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulses)(* 1000) / (hour)
@@ -202,11 +202,11 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpFEvsSpeedQuantumIdx,		// store speed quantum in (VSS pulses)(* 1000) / (second)
 
 #endif // useBarFuelEconVsSpeed
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	instrLdRegByte, 0x02, 0,
 	instrStRegMain, 0x02, mpMainLoopAccumulatorIdx,		// initialize the cpu utilization stopwatch timer values
 	instrStRegMain, 0x02, mpIdleAccumulatorIdx,
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	instrStRegVolatile, 0x02, vInterruptAccumulatorIdx,
 	instrStRegMain, 0x02, mpDebugAccMainLoopIdx,
 	instrStRegMain, 0x02, mpDebugAccIdleIdx,
@@ -218,9 +218,9 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpDebugCountS64multIdx,
 	instrStRegMain, 0x02, mpDebugAccS64divIdx,
 	instrStRegMain, 0x02, mpDebugCountS64divIdx,
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
-#endif	// useCPUreading
+#endif	// defined(useCPUreading)
 	instrDone											// exit to caller
 };
 
@@ -330,7 +330,7 @@ static void EEPROM::initGuinoHardware(void)
 	// set ADC timer frequency to 1/128 of system timer
 	ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
 
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 	VSSpause = readByte(pVSSpauseIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
@@ -353,10 +353,10 @@ static void EEPROM::initGuinoSoftware(void)
 
 	SWEET64::runPrgm(prgmInitMPGuino, 0); // calculate multiple MPGuino system values for use within code
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	timer0Command |= (t0cResetFEvTime); // reset fuel economy vs time bargraph mechanism
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 	SREG = oldSREG; // restore interrupt flag status
 
 #ifdef useBarFuelEconVsSpeed

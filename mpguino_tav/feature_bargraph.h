@@ -1,4 +1,4 @@
-#ifdef useBarGraph
+#if defined(useBarGraph)
 namespace barGraphSupport /* Bar Graph support section prototype */
 {
 
@@ -63,12 +63,18 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 };
 
 static const char bgSpaces[] PROGMEM = {
-	 0x80, ' ', ' ', 0xF0, 0xF2, 0xF4, 0xF6, ' ', ' ', 0
-	,0x94, ' ', ' ', 0xF1, 0xF3, 0xF5, 0xF7, ' ', ' ', 0
+	"\x80" "  " tcCG0 tcCG2 tcCG4 tcCG6 "  " tcEOS
+	"\x94" "  " tcCG1 tcCG3 tcCG5 tcCG7 "  " tcEOS
 };
 
-#endif // useBarGraph
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
+namespace bgFEvsTsupport /* fuel economy over time histograph support section prototype */
+{
+
+	static uint8_t getFEvTperiodIdx(void);
+
+};
+
 volatile uint8_t FEvTperiodIdx;
 
 static const char barFEvTfuncNames[] PROGMEM = {
@@ -99,16 +105,16 @@ static const uint8_t barFEvTdiffFuncs[] PROGMEM = {
 	,1
 };
 
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-uint8_t FEvSpdTripIdx;
-
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
 namespace bgFEvsSsupport /* fuel economy over speed histograph support section prototype */
 {
 
 	static void reset(void);
 
 };
+
+uint8_t FEvSpdTripIdx;
 
 static const char barFEvSfuncNames[] PROGMEM = {
 	"FE / Speed" tcEOS
@@ -128,43 +134,5 @@ static const uint8_t barFEvSgraphFuncs[] PROGMEM = {
 	,tFEvSgetDistance
 };
 
-static void bgFEvsSsupport::reset(void)
-{
-
-	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
-
-	FEvSpdTripIdx = 255;
-
-}
-
-static const uint8_t prgmFEvsSpeed[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
-	instrTestReg, 0x02,									// test VSS cycle value
-	instrBranchIfZero, 15,								// if zero, then speed is also zero
-	instrLdReg, 0x21,									// save denominator term for later
-	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
-	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
-	instrDiv2by1,										// divide to obtain vehicle speed
-
-//cont:
-	instrSubMainFromX, 0x02, mpFEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
-	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
-
-//badRet:
-	instrLdRegByte, 0x02, 0xFF,							// load a 255 into register 2
-	instrDone,											// exit to caller
-
-//cont2:
-	instrDiv2byMain, mpFEvsSpeedQuantumIdx,				// find trip index offset
-	instrLdRegByte, 0x01, bgDataSize - 1,				// is offset greater than the number of available trip slots
-	instrCmpXtoY, 0x21,
-	instrBranchIfLTorE, 2,								// if not, skip ahead
-	instrLdReg, 0x12,									// load the last trip slot index
-
-//cont3:
-	instrAddByteToX, 0x02, FEvsSpeedIdx,				// obtain working fuel econ vs speed trip index value
-	instrDone											// exit to caller
-};
-
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
+#endif // defined(useBarGraph)

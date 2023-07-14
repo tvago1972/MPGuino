@@ -95,7 +95,7 @@ static void tripVar::update(uint8_t srcTripIdx, uint8_t destTripIdx)
 static void tripVar::add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx)
 {
 
-#ifdef useAssemblyLanguage
+#if defined(useAssemblyLanguage)
 	asm volatile(
 		"   add %A0, %A1            \n"		// 0
 		"   adc %B0, %B1            \n"		// 1
@@ -104,16 +104,16 @@ static void tripVar::add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_
 		: "+r" (collectedArray[(uint16_t)(destTripIdx)])
 		: "r" (collectedArray[(uint16_t)(srcTripIdx)])
 	);
-#else // useAssemblyLanguage
+#else // defined(useAssemblyLanguage)
 	collectedArray[(uint16_t)(destTripIdx)] += collectedArray[(uint16_t)(srcTripIdx)];
-#endif // useAssemblyLanguage
+#endif // defined(useAssemblyLanguage)
 
 }
 
 static void tripVar::add64(uint64_t collectedArray[], uint32_t value, uint8_t destTripIdx)
 {
 
-#ifdef useAssemblyLanguage
+#if defined(useAssemblyLanguage)
 	union union_64 * an;
 
 	an = (union union_64 *)(&collectedArray[(uint16_t)(destTripIdx)]);
@@ -150,9 +150,9 @@ static void tripVar::add64(uint64_t collectedArray[], uint32_t value, uint8_t de
 		: "r" (value)
 
 	);
-#else // useAssemblyLanguage
+#else // defined(useAssemblyLanguage)
 	collectedArray[(uint16_t)(destTripIdx)] += value;
-#endif // useAssemblyLanguage
+#endif // defined(useAssemblyLanguage)
 
 }
 
@@ -164,7 +164,7 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 
 	uint8_t x;
 	uint8_t c;
-#ifdef useAssemblyLanguage
+#if defined(useAssemblyLanguage)
 
 	asm volatile(
 		"	clc						\n"
@@ -180,7 +180,7 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 		: "+e" (an), "+r" (c), "+r" (x)
 		: "e" (ann)
 	);
-#else // useAssemblyLanguage
+#else // defined(useAssemblyLanguage)
 	unsigned int enn;
 	union union_16 * n = (union union_16 *)(&enn);
 
@@ -197,11 +197,11 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 		c = n->u8[1];
 
 	}
-#endif // useAssemblyLanguage
+#endif // defined(useAssemblyLanguage)
 
 }
 
-#ifdef useEEPROMtripStorage
+#if defined(useEEPROMtripStorage)
 static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 {
 
@@ -239,7 +239,7 @@ static uint8_t tripVar::getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx)
 
 }
 
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 /* Trip save/restore/reset support section */
 
 static void tripSupport::init(void)
@@ -310,9 +310,6 @@ static void tripSupport::idleProcess(void)
 static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex)
 {
 
-#ifdef useBarFuelEconVsTime
-	uint8_t oldSREG;
-#endif // useBarFuelEconVsTime
 	uint8_t i;
 	uint8_t j;
 
@@ -338,12 +335,12 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 			break;
 
 #endif // defined(useWindowTripFilter)
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
-			i = FEvTperiodIdx;
+			i = bgFEvsTsupport::getFEvTperiodIdx();
 			break;
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
 			i = FEvSpdTripIdx;
@@ -597,7 +594,7 @@ static void tripSupport::resetWindowFilter(void)
 }
 
 #endif // defined(useWindowTripFilter)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 /* Chrysler returnless fuel pressure correction display section */
 
 static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
@@ -611,7 +608,7 @@ static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 	instrDiv2byMain, mpAnalogMAPdenomIdx,				// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pMAPsensorOffsetIdx,		// add pressure offset value from EEPROM
 	instrStRegMain, 0x02, mpMAPpressureIdx,				// store resulting MAP sensor reading
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	instrDone											// exit to caller
 };
 
@@ -626,7 +623,7 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrDiv2byMain, mpAnalogBaroDenomIdx,				// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pBaroSensorOffsetIdx,		// add pressure offset value from EEPROM
 	instrStRegMain, 0x02, mpBaroPressureIdx,			// store resulting barometric sensor reading
-#endif // useChryslerBaroSensor
+#endif // defined(useChryslerBaroSensor)
 	instrLdRegMain, 0x02, mpFuelPressureIdx,			// get fuel system differential pressure
 	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
 	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
@@ -673,4 +670,4 @@ static uint16_t pressureCorrect::getPressureCorrectPageFormats(uint8_t formatIdx
 
 }
 
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
