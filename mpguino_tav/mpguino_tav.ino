@@ -382,6 +382,15 @@ Logging Output / Debug Monitor I/O
 #define tcOOFF		"\xEE"
 #define tcCR		"\xEF"
 
+#define tcCG0		"\xF0"
+#define tcCG1		"\xF1"
+#define tcCG2		"\xF2"
+#define tcCG3		"\xF3"
+#define tcCG4		"\xF4"
+#define tcCG5		"\xF5"
+#define tcCG6		"\xF6"
+#define tcCG7		"\xF7"
+
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/EEPROM.h>
@@ -507,10 +516,10 @@ static const uint8_t statusMeterDisplayIdx =		nextAllowedValue;
 static const uint8_t bigFEdisplayIdx =				nextAllowedValue;
 #define nextAllowedValue bigFEdisplayIdx + 1
 #endif // defined(useBigFE)
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 static const uint8_t barFEvTdisplayIdx =			nextAllowedValue;
 #define nextAllowedValue barFEvTdisplayIdx + 1
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 static const uint8_t barFEvSdisplayIdx =			nextAllowedValue;
 #define nextAllowedValue barFEvSdisplayIdx + 1
@@ -523,14 +532,14 @@ static const uint8_t bigDTEdisplayIdx =				nextAllowedValue;
 static const uint8_t bigTTEdisplayIdx =				nextAllowedValue;
 #define nextAllowedValue bigTTEdisplayIdx + 1
 #endif // defined(useBigTTE)
-#ifdef useCPUreading
+#if defined(useCPUreading)
 static const uint8_t CPUmonDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue CPUmonDisplayIdx + 1
-#endif // useCPUreading
-#ifdef useClockDisplay
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
 static const uint8_t clockShowDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue clockShowDisplayIdx + 1
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 
 static const uint8_t displayCountUser =				nextAllowedValue;	// this variable is used to figure out how many menu levels the user display section has
 
@@ -541,10 +550,10 @@ static const uint8_t fuelSettingsDisplayIdx =		displaySettingsDisplayIdx + 1;
 static const uint8_t VSSsettingsDisplayIdx =		fuelSettingsDisplayIdx + 1;
 static const uint8_t tankSettingsDisplayIdx =		VSSsettingsDisplayIdx + 1;
 #define nextAllowedValue tankSettingsDisplayIdx + 1
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 static const uint8_t CRFICsettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue CRFICsettingsDisplayIdx + 1
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
 static const uint8_t acdSettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue acdSettingsDisplayIdx + 1
@@ -559,30 +568,30 @@ static const uint8_t settingsMenuLength =			nextAllowedValue - displayCountUser;
 
 static const uint8_t optionalDisplayIdxStart =		nextAllowedValue;
 
-#ifdef useDragRaceFunction
-static const uint8_t dragRaceIdx =					nextAllowedValue;
-#define nextAllowedValue dragRaceIdx + 1
-#endif // useDragRaceFunction
+#ifdef defined(useDragRaceFunction)
+static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue dragRaceDisplayIdx + 1
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 static const uint8_t coastdownIdx =					nextAllowedValue;
 #define nextAllowedValue coastdownIdx + 1
 #endif // useCoastDownCalculator
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 static const uint8_t signalSimDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue signalSimDisplayIdx + 1
-#endif // useSimulatedFIandVSS
-#ifdef useChryslerMAPCorrection
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
 static const uint8_t pressureDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue pressureDisplayIdx + 1
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
 static const uint8_t analogDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue analogDisplayIdx + 1
 #endif // defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 static const uint8_t buttonDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue buttonDisplayIdx + 1
-#endif // useTestButtonValues
+#endif // defined(useTestButtonValues)
 
 // the following screen index defines are for the top-down and subordinate menus, clock set display, number edit display, and main display page edit display
 
@@ -595,10 +604,10 @@ static const uint8_t mainMenuDisplayIdx =			nextAllowedValue;
 static const uint8_t settingsMenuDisplayIdx =		nextAllowedValue;
 static const uint8_t parameterEditDisplayIdx =		settingsMenuDisplayIdx + 1;
 #define nextAllowedValue parameterEditDisplayIdx + 1
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 static const uint8_t clockSetDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue clockSetDisplayIdx + 1
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #if defined(useSavedTrips)
 static const uint8_t tripSaveCurrentDisplayIdx =	nextAllowedValue;
 #define nextAllowedValue tripSaveCurrentDisplayIdx + 1
@@ -624,15 +633,15 @@ static const uint8_t baseMenuLength = 2		// main display category and settings c
 #if defined(useSimulatedFIandVSS)
 	+ 1										// fuel injection/VSS signal simulator display category
 #endif // defined(useSimulatedFIandVSS)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	+ 1										// Chrysler MAP correction pressure display category
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
 	+ 1										// Analog value display category
 #endif // defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 	+ 1										// Button hardware value display category
-#endif // useTestButtonValues;
+#endif // defined(useTestButtonValues);
 ;
 
 static uint8_t displayCursor[(uint16_t)(displayCountTotal)];
@@ -648,9 +657,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useBigFE)
 	,{bigFEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // defined(useBigFE)
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	,{barFEvTdisplayIdx,			mainDisplayIdx,				displayCountUser,	4,							dfSplitScreen,	barGraphSupport::displayHandler}
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 #ifdef useBarFuelEconVsSpeed
 	,{barFEvSdisplayIdx,			mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	barGraphSupport::displayHandler}
 #endif // useBarFuelEconVsSpeed
@@ -660,42 +669,42 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useBigTTE)
 	,{bigTTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // defined(useBigTTE)
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	,{CPUmonDisplayIdx,				mainDisplayIdx,				displayCountUser,	1,							dfSplitScreen,	systemInfo::displayHandler}
-#endif // useCPUreading
-#ifdef useClockDisplay
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
 	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							dfFullScreen,	clockDisplay::displayHandler}
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		dfFullScreen,	menu::displayHandler}
 	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		dfFullScreen,	menu::displayHandler}
 	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		dfFullScreen,	menu::displayHandler}
 	,{tankSettingsDisplayIdx,		tankSettingsDisplayIdx,		1,					eePtrSettingsTankLen,		dfFullScreen,	menu::displayHandler}
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		dfFullScreen,	menu::displayHandler}
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		dfFullScreen,	menu::displayHandler}
 #endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	dfFullScreen,	menu::displayHandler}
 	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		dfFullScreen,	menu::displayHandler}
-#ifdef useDragRaceFunction
-	,{dragRaceIdx,	1,	4,	accelerationTest::goDisplay,	button::doNothing}
-#endif // useDragRaceFunction
+#if defined(useDragRaceFunction)
+	,{dragRaceDisplayIdx,			dragRaceDisplayIdx,			1,					4,							dfFullScreen,	accelerationTest::displayHandler}
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	,{coastdownIdx,	1,	3,	coastdown::goDisplay,	button::doNothing}
 #endif // useCoastDownCalculator
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	,{signalSimDisplayIdx,			signalSimDisplayIdx,		1,					4,							0,				signalSim::displayHandler}
-#endif // useSimulatedFIandVSS
-#ifdef useChryslerMAPCorrection
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
 	,{pressureDisplayIdx,			pressureDisplayIdx,			1,					1,							0,				pressureCorrect::displayHandler}
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
 	,{analogDisplayIdx,				analogDisplayIdx,			1,					1,							0,				analogReadViewer::displayHandler}
 #endif // defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							0,				buttonView::displayHandler}
-#endif // useTestButtonValues
+#endif // defined(useTestButtonValues)
 
 // the following screen entries do not show up in the top-down menu list
 
@@ -705,9 +714,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #endif // defined(useExpandedMainDisplay)
 	,{0,							settingsMenuDisplayIdx,		1,					settingsMenuLength,			dfFullScreen,	menu::displayHandler}
 	,{0,							parameterEditDisplayIdx,	1,					12,							dfFullScreen,	parameterEdit::displayHandler}
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 	,{0,							clockSetDisplayIdx,			1,					4,							dfFullScreen,	clockSet::displayHandler}
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #if defined(useSavedTrips)
 	,{0,							tripSaveCurrentDisplayIdx,	1,					tsfCurrentLen,				dfFullScreen,	menu::displayHandler}
 #endif // defined(useSavedTrips)
@@ -1185,27 +1194,27 @@ static void transferDisplay(void)
 static void idleProcess(void)
 {
 
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	uint32_t idleStart;
-#endif // useCPUreading
 
+#endif // defined(useCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(0);
 
 #endif // defined(useActivityLED)
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	idleStart = systemInfo::cycles0(); // record starting time
 
-#endif // useCPUreading
+#endif // defined(useCPUreading)
 	performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	idleTimerLength += systemInfo::findCycleLength(idleStart, systemInfo::cycles0());
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	idleStart = systemInfo::cycles0(); // record starting time
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
-#endif // useCPUreading
+#endif // defined(useCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(1);
 
@@ -1216,16 +1225,16 @@ static void idleProcess(void)
 
 		changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
 
-#ifdef useCPUreading
+#if defined(useCPUreading)
 		systemInfo::idleProcess();
 
-#endif // useCPUreading
+#endif // defined(useCPUreading)
 		tripSupport::idleProcess();
 
 	}
 
 #if defined(useAnalogRead)
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	if (analogStatus & asReadMAPchannel)
 	{
 
@@ -1235,8 +1244,8 @@ static void idleProcess(void)
 
 	}
 
-#endif // useChryslerMAPCorrection
-#ifdef useChryslerBaroSensor
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useChryslerBaroSensor)
 	if (analogStatus & asReadBaroChannel)
 	{
 
@@ -1246,8 +1255,8 @@ static void idleProcess(void)
 
 	}
 
-#endif // useChryslerBaroSensor
-#ifdef useAnalogButtons
+#endif // defined(useChryslerBaroSensor)
+#if defined(useAnalogButtons)
 	if (analogStatus & asReadButtonChannel)
 	{
 
@@ -1259,9 +1268,9 @@ static void idleProcess(void)
 			if (analogValue[(unsigned int)(analogButtonChannelIdx)] >= pgm_read_word(&analogButtonThreshold[(unsigned int)(x)]))
 			{
 
-#ifdef useTestAnalogButtonIdx
+#if defined(useTestAnalogButtonIdx)
 				thisButtonIdx = x;
-#endif //  useTestAnalogButtonIdx
+#endif //  defined(useTestAnalogButtonIdx)
 				button::inject(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
 				break;
 
@@ -1271,7 +1280,7 @@ static void idleProcess(void)
 
 	}
 
-#endif // useAnalogButtons
+#endif // defined(useAnalogButtons)
 #endif // useAnalogRead
 #ifdef useDragRaceFunction
 	if (timer0Status & t0sAccelTestFlag)
@@ -1284,7 +1293,7 @@ static void idleProcess(void)
 	}
 
 #endif // useDragRaceFunction
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
 	{
 
@@ -1303,11 +1312,11 @@ static void idleProcess(void)
 
 	}
 
-#endif // useSimulatedFIandVSS
-#ifdef useDebugCPUreading
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useDebugCPUreading)
 	idleProcessTimerLength += systemInfo::findCycleLength(idleStart, systemInfo::cycles0());
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
@@ -1317,9 +1326,9 @@ int main(void)
 
 	uint8_t i;
 	uint8_t j;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint32_t displayStart;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
@@ -1329,11 +1338,11 @@ int main(void)
 
 	tripSupport::init();
 
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	debugFlags = (debugVSSflag | debugInjectorFlag);
 	signalSim::configurePorts();
 
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)
 #ifdef useDragRaceFunction
 	accelerationFlags &= ~accelTestClearFlags;
 	lastAccelTestStatus = accelerationFlags;
@@ -1357,18 +1366,18 @@ int main(void)
 	text::stringOut(devLCD, titleMPGuino);
 	text::stringOut(devLCD, dateMPGuino);
 
-#ifdef outputLoggingSplash
+#if defined(outputLoggingSplash)
 	text::stringOut(devLogOutput, titleMPGuino);
 	text::stringOut(devLogOutput, dateMPGuino);
 
-#endif // outputLoggingSplash
-#ifdef outputDebugTerminalSplash
+#endif // defined(outputLoggingSplash)
+#if defined(outputDebugTerminalSplash)
 	text::stringOut(devDebugTerminal, titleMPGuino);
 	text::stringOut(devDebugTerminal, dateMPGuino);
 
 	terminalState = 0;
 
-#endif // outputDebugTerminalSplash
+#endif // defined(outputDebugTerminalSplash)
 	delay0(0); // show splash screen for 1.5 seconds
 
 #if defined(useTestButtonValues)
@@ -1381,24 +1390,24 @@ int main(void)
 	if (i) text::statusOut(devLCD, PSTR("AutoRestore Done"));
 
 #endif // defined(useSavedTrips)
-#ifdef useCPUreading
+#if defined(useCPUreading)
 	mainStart = systemInfo::cycles0();
 	idleTimerLength = 0;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	idleProcessTimerLength = 0;
 	monitorState = 0;
 	displayTimerLength = 0;
 	SWEET64timerLength = 0;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
-#endif // useCPUreading
+#endif // defined(useCPUreading)
 	while (true)
 	{
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 		displayStart = systemInfo::cycles0();
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 		if (activityChangeFlags & afActivityTimeoutFlag)
 		{
 
@@ -1411,11 +1420,11 @@ int main(void)
 				doGoDeepSleep();
 
 #else // useDeepSleep
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 				clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
 				text::charOut(devLCD, 0x12); // set backlight brightness to zero
 
-#else // useClockDisplay
+#else // defined(useClockDisplay)
 #if defined(useLCDoutput)
 				LCD::shutdown(); // shut down the LCD display
 
@@ -1424,7 +1433,7 @@ int main(void)
 				TFT::shutdown(); // shut down the TFT display
 
 #endif // defined(useTFToutput)
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #endif // useDeepSleep
 			}
 			else // if MPGuino is commanded to wake up
@@ -1482,10 +1491,10 @@ int main(void)
 		}
 
 #endif // defined(useWindowTripFilter) || defined(useSavedTrips)
-#ifdef useDebugTerminal
+#if defined(useDebugTerminal)
 		terminal::mainProcess();
 
-#endif // useDebugTerminal
+#endif // defined(useDebugTerminal)
 #if defined(useButtonInput)
 		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
 		{
@@ -1497,24 +1506,24 @@ int main(void)
 		}
 
 #endif // defined(useButtonInput)
-#if useDataLoggingOutput || useJSONoutput
+#if defined(useDataLoggingOutput) || defined(useJSONoutput)
 		// this part of the main loop handles logging data output
 		if (timer0Status & t0sOutputLogging)
 		{
 
 			changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
 
-#ifdef useDataLoggingOutput
+#if defined(useDataLoggingOutput)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
 
-#endif // useDataLoggingOutput
+#endif // defined(useDataLoggingOutput)
 #ifdef useJSONoutput
 			if (awakeFlags & aAwakeOnVehicle) doOutputJSON();
 
 #endif // useJSONoutput
 		}
 
-#endif // useDataLoggingOutput || useJSONoutput
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
 		if (timer0Status & t0sUpdateDisplay)
@@ -1574,10 +1583,10 @@ int main(void)
 				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
 #ifndef useDeepSleep
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 					clockDisplay::displayHandler(displayOutputIdx, 0); // display the software clock
 
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #endif // useDeepSleep
 					break;
 
@@ -1589,10 +1598,10 @@ int main(void)
 
 		}
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 		displayTimerLength =+ systemInfo::findCycleLength(displayStart, systemInfo::cycles0());
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 		idleProcess(); // all functions are completed at this point, so wait for an interrupt to occur
 
 	}

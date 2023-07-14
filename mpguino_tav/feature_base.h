@@ -20,18 +20,18 @@ static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer t
 #ifdef useCoastDownCalculator
 	"Coastdown" tcEOSCR
 #endif // useCoastDownCalculator
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	"Sensor Sim" tcEOSCR
-#endif // useSimulatedFIandVSS
-#ifdef useChryslerMAPCorrection
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
 	"Pressures" tcEOSCR
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
 	"ADC readings" tcEOSCR
 #endif // defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 	"Button Values" tcEOSCR
-#endif // useTestButtonValues
+#endif // defined(useTestButtonValues)
 };
 
 namespace mainDisplay /* main display section prototype */
@@ -55,7 +55,7 @@ namespace mainDisplay /* main display section prototype */
 static const char mainMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
 	"Main Display" tcEOSCR
 #if defined(useStatusBar)
-	"(trip)vsINST FE" tcEOSCR
+	"INSTvs(trip) FE" tcEOSCR
 #endif // defined(useStatusBar)
 #if defined(useBigFE)
 	"Big FuelEcon" tcEOSCR
@@ -75,9 +75,9 @@ static const char mainMenuTitles[] PROGMEM = {	// each title must be no longer t
 #if defined(useCPUreading)
 	"CPU Info" tcEOSCR
 #endif // defined(useCPUreading)
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 	"Clock" tcEOSCR
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 };
 
 static const char mainDisplayPageTitles[] PROGMEM = {
@@ -193,7 +193,7 @@ namespace displayEdit /* Programmable main display page edit support section pro
 	static void changeItemUp(void);
 #if defined(useButtonCrossConfig)
 	static void changeItemDown(void);
-#endif // useButtonCrossConfig
+#endif // defined(useButtonCrossConfig)
 	static void changeItem(uint8_t changeDir);
 
 };

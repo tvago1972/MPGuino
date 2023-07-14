@@ -369,7 +369,7 @@ static void displayEdit::changeItemDown(void)
 
 }
 
-#endif // useButtonCrossConfig
+#endif // defined(useButtonCrossConfig)
 static void displayEdit::changeItem(uint8_t changeDir)
 {
 

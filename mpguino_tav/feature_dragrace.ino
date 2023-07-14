@@ -1,70 +1,9 @@
 #ifdef useDragRaceFunction
-// drag race function
-//
+ /* Acceleration Test support section */
+ 
 // upon successful arming, the drag race function will measure times to reach the distance specified by the EEPROM parameter pDragDistanceIdx (preset to 1/4 mile),
 // and to reach the speed specified by the EEPROM parameter pDragSpeedIdx (preset to 60 MPH).
 
-uint8_t accelTestStatus;
-uint8_t lastAccelTestStatus;
-
-/*
-
-meaning of value contained in accel test state variable accelTestState is as follows:
-
-0  - no status change
-1  - accel test ready
-2  - accel test armed
-3  - accel test finished
-4  - accel test cancelled
-5  - accel test distance checkpoint reached
-6  - accel test half speed checkpoint reached
-7  - accel test half speed and distance checkpoints reached
-8  - accel test full speed checkpoint reached
-9  - accel test full speed and distance checkpoints reached
-10 - accel test full speed and half speed checkpoints reached
-11 - accel test full speed, half speed, and distance checkpoints reached
-12 - invalid accel test state encountered
-
-*/
-uint8_t accelTestState;
-
-static const char accelTestStateMsgs[] PROGMEM = {
-	"\r"
-	"Drag Ready\r"
-	"Drag Test Start\r"
-	"Drag Finished\r"
-	"Drag Cancelled\r"
-	"DIST\r"
-	"     HALF\r"
-	"DIST HALF\r"
-	"          FULL\r"
-	"DIST      FULL\r"
-	"     HALF FULL\r"
-	"DIST HALF FULL\r"
-	"Drag Test Fail\r"
-};
-
-static const uint16_t accelTestPageFormats[] PROGMEM = {
-	 (dragDistanceIdx << 8 ) |			(tFuelEcon)
-	,(dragDistanceIdx << 8 ) |			(tDragSpeed)				// for calculations, it really doesn't matter what trip index is used here
-	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
-	,(dragDistanceIdx << 8 ) |			(tEstimatedEnginePower)		// for calculations, it really doesn't matter what trip index is used here
-
-	,(dragHalfSpeedIdx << 8 ) |			(tAccelTestTime)
-	,(dragHalfSpeedIdx << 8 ) |			(tFuelUsed)
-	,(dragHalfSpeedIdx << 8 ) |			(tDistance)
-	,(dragHalfSpeedIdx << 8 ) |			(tFuelEcon)
-
-	,(dragFullSpeedIdx << 8 ) |			(tAccelTestTime)
-	,(dragFullSpeedIdx << 8 ) |			(tFuelUsed)
-	,(dragFullSpeedIdx << 8 ) |			(tDistance)
-	,(dragFullSpeedIdx << 8 ) |			(tFuelEcon)
-
-	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
-	,(dragDistanceIdx << 8 ) |			(tFuelUsed)
-	,(dragDistanceIdx << 8 ) |			(tDistance)
-	,(dragDistanceIdx << 8 ) |			(tFuelEcon)
-};
 
 static const uint8_t prgmInitializeAccelTest[] PROGMEM = {
 	instrLdRegConst, 0x02, idxCycles0PerSecond,			// fetch cycles per second constant
@@ -107,18 +46,31 @@ static const uint8_t prgmAccelTestCompareFullSpeeds[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-void accelerationTest::goDisplay(void)
+static void accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	if (accelTestState) // if acceleration test state has changed
+	switch (cmd)
 	{
 
-		// display status message for new state
-		text::statusOut(devLCD, accelTestStateMsgs, accelTestState);
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx:
+			if (accelTestState) // if acceleration test state has changed
+			{
+
+				// display status message for new state
+				text::statusOut(devLCD, accelTestStateMsgs, accelTestState);
+
+			}
+
+			mainDisplay::outputPage(accelTestPageFormats, cursorPos, 136, 0);
+
+			break;
+
+		default:
+			break;
 
 	}
-
-	mainDisplay::outputPage(accelTestPageFormats, displayCursor[(unsigned int)(dragRaceIdx)], 136, 0);
 
 }
 
