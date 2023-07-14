@@ -300,6 +300,10 @@ const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
 
 #endif // defined(useAnalogMuxButtons)
 #if defined(useLCDoutput)
+static const char brightMsg[] PROGMEM = {
+	"Backlight = " tcEOS
+};
+
 #if defined(useBinaryLCDbrightness)
 static const char brightString[] PROGMEM = {
 	"ON" tcLCDLO tcEOS

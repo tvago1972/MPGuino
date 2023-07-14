@@ -88,8 +88,17 @@ static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t st
 	initStatus(dev);
 	stringOut(dev, findStr(sList, strIdx));
 	stringOut(dev, str);
-	newLine(dev);
-	delayS(holdDelay);
+	commitStatus(dev);
+
+}
+
+static void text::statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx)
+{
+
+	initStatus(dev);
+	stringOut(dev, str);
+	stringOut(dev, findStr(sList, strIdx));
+	commitStatus(dev);
 
 }
 
@@ -105,8 +114,7 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 
 	initStatus(dev);
 	stringOut(dev, str);
-	newLine(dev);
-	delayS(holdDelay);
+	commitStatus(dev);
 
 }
 
@@ -115,11 +123,19 @@ static void text::initStatus(interfaceDevice &dev)
 
 	delayS(0);
 
-#ifdef blankScreenOnMessage
+#if defined(blankScreenOnMessage)
 	charOut(dev, 0x0C); // clear the entire screen
-#else // blankScreenOnMessage
+#else // defined(blankScreenOnMessage)
 	gotoXY(dev, 0, 0); // go to the first line
-#endif // blankScreenOnMessage
+#endif // defined(blankScreenOnMessage)
+
+}
+
+static void text::commitStatus(interfaceDevice &dev)
+{
+
+	newLine(dev);
+	delayS(holdDelay);
 
 }
 

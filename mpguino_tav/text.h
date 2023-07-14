@@ -13,9 +13,11 @@ namespace text /* text string output section prototype */
 	static uint8_t charOut(interfaceDevice &dev, uint8_t chr);
 
 	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str);
+	static void statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx);
 	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx);
 	static void statusOut(interfaceDevice &dev, const char * str);
 	static void initStatus(interfaceDevice &dev);
+	static void commitStatus(interfaceDevice &dev);
 	static void stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
 	static void stringOut(interfaceDevice &dev, const char * str);
 	static void stringOut(interfaceDevice &dev, char * str);

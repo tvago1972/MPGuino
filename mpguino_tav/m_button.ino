@@ -30,7 +30,7 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 #if defined(useScreenEditor)
 	,{btnShortPressLR,	displayEdit::entry}
 #endif // defined(useScreenEditor)
-#ifdef useButtonCrossConfig
+#if defined(useButtonCrossConfig)
 		,{btnShortPressD,	button::longRight}
 	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
@@ -48,10 +48,10 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
 	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
 	#endif // defined(useLCDoutput)
@@ -68,10 +68,10 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressLCR,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
@@ -103,7 +103,7 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	,{btnLongPressC,	parameterEdit::save}
 	,{btnShortPressLR,	parameterEdit::save}
 	,{btnLongPressR,	parameterEdit::readInitial}
-#ifdef useButtonCrossConfig
+#if defined(useButtonCrossConfig)
 		,{btnShortPressUL,	parameterEdit::findLeft}
 		,{btnShortPressUR,	parameterEdit::findRight}
 		,{btnLongPressD,	parameterEdit::readMinValue}
@@ -111,13 +111,13 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 		,{btnShortPressU,	parameterEdit::changeDigitUp}
 		,{btnShortPressD,	parameterEdit::changeDigitDown}
 		,{btnShortPressC,	parameterEdit::save}
-#else // useButtonCrossConfig
+#else // defined(useButtonCrossConfig)
 		,{btnShortPressLC,	parameterEdit::findLeft}
 		,{btnShortPressCR,	parameterEdit::findRight}
 		,{btnLongPressCR,	parameterEdit::readMinValue}
 		,{btnLongPressLC,	parameterEdit::readMaxValue}
 		,{btnShortPressC,	parameterEdit::changeDigitUp}
-#endif // useButtonCrossConfig
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
@@ -130,7 +130,7 @@ static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 #if LCDcharHeight == 4
 	,{btnLongPressC,	transferDisplay}
 #endif // LCDcharHeight == 4
-#ifdef useButtonCrossConfig
+#if defined(useButtonCrossConfig)
 		,{btnShortPressD,	button::longRight}
 	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
@@ -148,10 +148,10 @@ static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
 	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
 	#endif // defined(useLCDoutput)
@@ -168,15 +168,15 @@ static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
 #endif // defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph)
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
@@ -184,7 +184,7 @@ static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	,{btnLongPressL,	button::longLeft}
 	,{btnLongPressC,	clockSet::entry}
 	,{btnShortPressLR,	clockSet::entry}
-#ifdef useButtonCrossConfig
+#if defined(useButtonCrossConfig)
 		,{btnShortPressD,	button::longRight}
 	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
@@ -202,10 +202,10 @@ static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressUR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
 	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
 	#endif // defined(useLCDoutput)
@@ -222,10 +222,10 @@ static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	#else // defined(useSavedTrips)
 		,{btnLongPressCR,	tripSupport::resetCurrent}
 	#endif // defined(useSavedTrips)
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
@@ -236,50 +236,50 @@ static const buttonVariable bpListClockSet[] PROGMEM = {
 	,{btnLongPressLR,	clockSet::cancel}
 	,{btnLongPressC,	clockSet::set}
 	,{btnShortPressLR,	clockSet::set}
-#ifdef useButtonCrossConfig
+#if defined(useButtonCrossConfig)
 		,{btnShortPressU,	clockSet::changeDigitUp}
 		,{btnShortPressD,	clockSet::changeDigitDown}
 		,{btnShortPressC,	clockSet::set}
-#else // useButtonCrossConfig
+#else // defined(useButtonCrossConfig)
 		,{btnShortPressC,	clockSet::changeDigitUp}
-#endif // useButtonCrossConfig
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #if defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
 static const buttonVariable bpListMiscViewer[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
 	,{btnLongPressL,	menu::entry}
-#ifdef useButtonCrossConfig
-#if defined(useLCDoutput)
+#if defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
 		,{btnShortPressU,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressC,	menu::entry}
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressU,	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#else // useButtonCrossConfig
-#if defined(useLCDoutput)
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
 		,{btnShortPressC,	button::doNextBright}
-#endif // defined(useLCDoutput)
+	#endif // defined(useLCDoutput)
 		,{btnShortPressLCR,	menu::entry}
-	#ifdef useCPUreading
+	#if defined(useCPUreading)
 		,{btnLongPressLCR, 	systemInfo::showCPUloading}
-	#endif // useCPUreading
-#endif // useButtonCrossConfig
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
 	,{buttonsUp,		button::noSupport}
 };
 
 #endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 static const buttonVariable bpListButtonView[] PROGMEM = {
 	 {buttonsUp,		button::doNothing}
 };
 
-#endif // useTestButtonValues
-#ifdef useButtonCrossConfig
+#endif // defined(useTestButtonValues)
+#if defined(useButtonCrossConfig)
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
@@ -294,7 +294,7 @@ static const buttonVariable bpListCoastdown[] PROGMEM = {
 };
 
 #endif // useCoastDownCalculator
-#else // useButtonCrossConfig
+#else // defined(useButtonCrossConfig)
 #ifdef useDragRaceFunction
 static const buttonVariable bpListDragRace[] PROGMEM = {
 	{btnLongPressR,		accelerationTest::goTrigger}
@@ -309,7 +309,7 @@ static const buttonVariable bpListCoastdown[] PROGMEM = {
 };
 
 #endif // useCoastDownCalculator
-#endif //useButtonCrossConfig
+#endif // defined(useButtonCrossConfig)
 static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)] PROGMEM = {
 
 // the following screen entries are in the top-down menu list
@@ -336,16 +336,16 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #if defined(useCPUreading)
 	,blListSecondaryDisplay
 #endif // defined(useCPUreading)
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 	,bpListClockDisplay
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 	,bpListMenu
 	,bpListMenu
 	,bpListMenu
 	,bpListMenu
-#ifdef useChryslerMAPCorrection
+#if defined(useChryslerMAPCorrection)
 	,bpListMenu
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,bpListMenu
 #endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
@@ -357,18 +357,18 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #ifdef useCoastDownCalculator
 	,bpListCoastdown
 #endif // useCoastDownCalculator
-#ifdef useSimulatedFIandVSS
+#if defined(useSimulatedFIandVSS)
 	,bpListMiscViewer
-#endif // useSimulatedFIandVSS
-#ifdef useChryslerMAPCorrection
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
 	,bpListMiscViewer
-#endif // useChryslerMAPCorrection
+#endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
 	,bpListMiscViewer
 #endif // defined(useDebugAnalog)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 	,bpListButtonView
-#endif // useTestButtonValues
+#endif // defined(useTestButtonValues)
 
 // the following screen entries do not show up in the top-down menu list
 
@@ -378,9 +378,9 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #endif // defined(useExpandedMainDisplay)
 	,bpListMenu
 	,bpListParameterEdit
-#ifdef useClockDisplay
+#if defined(useClockDisplay)
 	,bpListClockSet
-#endif // useClockDisplay
+#endif // defined(useClockDisplay)
 #if defined(useSavedTrips)
 	,bpListMenu
 #endif // defined(useSavedTrips)
@@ -522,7 +522,7 @@ static void button::noSupport(void)
 	text::stringOut(devLCD, PSTR("Btn 0x"));
 	text::hexByteOut(devLCD, buttonPress);
 	text::stringOut(devLCD, PSTR(" Pressed"));
-	delayS(holdDelay);
+	text::commitStatus(devLCD);
 
 }
 
@@ -551,10 +551,7 @@ static void button::inject(uint8_t buttonValue)
 static void button::doNextBright(void)
 {
 
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, PSTR("Backlight = "));
-	text::stringOut(devLCD, brightString, brightnessIdx);
-	delayS(holdDelay);
+	text::statusOut(devLCD, brightMsg, brightString, brightnessIdx);
 
 }
 
