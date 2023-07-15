@@ -569,8 +569,8 @@ static const uint8_t settingsMenuLength =			nextAllowedValue - displayCountUser;
 static const uint8_t optionalDisplayIdxStart =		nextAllowedValue;
 
 #if defined(useDragRaceFunction)
-static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
-#define nextAllowedValue dragRaceDisplayIdx + 1
+static const uint8_t dragRaceMenuDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue dragRaceMenuDisplayIdx + 1
 #endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 static const uint8_t coastdownIdx =					nextAllowedValue;
@@ -620,6 +620,10 @@ static const uint8_t tripSaveTankDisplayIdx =		nextAllowedValue;
 static const uint8_t displayEditDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue displayEditDisplayIdx + 1
 #endif // defined(useScreenEditor)
+#if defined(useDragRaceFunction)
+static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue dragRaceDisplayIdx + 1
+#endif // defined(useDragRaceFunction)
 
 static const char displayCountTotal =				nextAllowedValue;
 
@@ -687,8 +691,11 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	dfFullScreen,	menu::displayHandler}
 	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		dfFullScreen,	menu::displayHandler}
+
+
+
 #if defined(useDragRaceFunction)
-	,{dragRaceDisplayIdx,			dragRaceDisplayIdx,			1,					4,							dfFullScreen,	accelerationTest::displayHandler}
+	,{dragRaceMenuDisplayIdx,		dragRaceMenuDisplayIdx,		1,					6,							dfFullScreen,	menu::displayHandler}
 #endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	,{coastdownIdx,	1,	3,	coastdown::goDisplay,	button::doNothing}
@@ -726,6 +733,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useScreenEditor)
 	,{0,							displayEditDisplayIdx,		1,					8,							dfSplitScreen,	displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
+#if defined(useDragRaceFunction)
+	,{0,							dragRaceDisplayIdx,			1,					4,							dfFullScreen,	accelerationTest::displayHandler}
+#endif // defined(useDragRaceFunction)
 };
 
 #define nextAllowedValue 0
@@ -760,6 +770,10 @@ static const uint8_t tripSaveCurrentMenuIdx =	nextAllowedValue;
 static const uint8_t tripSaveTankMenuIdx =		nextAllowedValue;
 #define nextAllowedValue tripSaveTankMenuIdx + 1
 #endif // defined(useEnhancedTripReset)
+#if defined(useDragRaceFunction)
+static const uint8_t accelTestMenuIdx =			nextAllowedValue;
+#define nextAllowedValue accelTestMenuIdx + 1
+#endif // defined(useDragRaceFunction)
 
 static const uint8_t menuCount =				nextAllowedValue;
 
@@ -804,11 +818,14 @@ static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
 	,{timeoutSettingsDisplayIdx,	parmLabels,				eePtrSettingsTimeoutStart,	parameterEdit::menuHandler}
 	,{miscSettingsDisplayIdx,		parmLabels,				eePtrSettingsMiscStart,		parameterEdit::menuHandler}
 #if defined(useSavedTrips)
-	,{tripSaveCurrentDisplayIdx,	tripSaveFuncNames,		tsfCurrentStart,			tripSave::menuHandler}
+	,{tripSaveCurrentDisplayIdx,	tripSaveMenuTitles,		tsfCurrentStart,			tripSave::menuHandler}
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
-	,{tripSaveTankDisplayIdx,		tripSaveFuncNames,		tsfTankStart,				tripSave::menuHandler}
+	,{tripSaveTankDisplayIdx,		tripSaveMenuTitles,		tsfTankStart,				tripSave::menuHandler}
 #endif // defined(useEnhancedTripReset)
+#if defined(useDragRaceFunction)
+	,{dragRaceMenuDisplayIdx,		accelTestMenuTitles,	0,							accelerationTest::menuHandler}
+#endif // defined(useDragRaceFunction)
 };
 
 static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -842,7 +859,14 @@ static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			thisMenuData.menuTitlesOffset = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].menuTitlesOffset);
 			thisMenuData.menuHandler = (menuHandlerFunc)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuHandler));
 
-			if(thisMenuData.menuHandler(menuInitialEntryIdx, cursorPos)) thisMenuHeight = 0;
+			if(thisMenuData.menuHandler(menuInitialEntryIdx, cursorPos)) // if the menu cursor is to be reset to 1 upon entry, retVal will be set to 1
+			{
+
+				displayCursor[(uint16_t)(thisMenuData.displayIdx)] = 0;
+				cursorPos = 0;
+				thisMenuHeight = 0;
+
+			}
 			else thisMenuHeight = menuHeight[(uint16_t)(menuIdx)];
 
 		case displayCursorUpdateIdx: // menu display window is (menuTop + LCDcharHeight - 1) with wraparound
@@ -1343,9 +1367,7 @@ int main(void)
 
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDragRaceFunction)
-	accelerationFlags &= ~(accelTestClearFlags);
-	lastAccelTestStatus = accelerationFlags;
-	accelTestStatus = accelerationFlags;
+	accelerationTest::init();
 
 #endif // defined(useDragRaceFunction)
 	thisMenuData.displayIdx = mainDisplayIdx;
@@ -1464,8 +1486,14 @@ int main(void)
 
 			changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
 
-			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent(); // if vehicle movement is detected
+			// if vehicle movement is detected
+			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
+#if defined(useDragRaceFunction)
+			// if vehicle is stopped
+			if ((activityFlags & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
+
+#endif // defined(useDragRaceFunction)
 		}
 
 #if defined(useWindowTripFilter) || defined(useSavedTrips)

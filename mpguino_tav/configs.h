@@ -76,7 +76,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useDataLoggingOutput true			// Ability to output 5 basic parameters to a data logger or SD card, once every refresh period (0.5 second)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
-//#define useDragRaceFunction true			// (inw) Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
+#define useDragRaceFunction true			// (inw) Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 //#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 

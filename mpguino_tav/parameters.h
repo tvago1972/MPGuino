@@ -703,7 +703,7 @@ static const char parmLabels[] PROGMEM = {
 // drag race / coastdown calc settings
 
 #if defined(useVehicleMass)
-	tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
+	"Veh" tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
 #endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	"FrArea*1000 " tcOMOFF "ft" tcOTOG "m" tcOON "^2" tcEOSCR

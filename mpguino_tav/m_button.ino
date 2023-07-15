@@ -121,8 +121,8 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#if defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph)
-static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
+#if defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction)
+static const buttonVariable bpListSecondaryDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
 	,{btnLongPressR,	button::longRight}
@@ -175,7 +175,7 @@ static const buttonVariable blListSecondaryDisplay[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#endif // defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph)
+#endif // defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction)
 #if defined(useClockDisplay)
 static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
@@ -280,13 +280,6 @@ static const buttonVariable bpListButtonView[] PROGMEM = {
 
 #endif // defined(useTestButtonValues)
 #if defined(useButtonCrossConfig)
-#ifdef useDragRaceFunction
-static const buttonVariable bpListDragRace[] PROGMEM = {
-	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
@@ -295,13 +288,6 @@ static const buttonVariable bpListCoastdown[] PROGMEM = {
 
 #endif // useCoastDownCalculator
 #else // defined(useButtonCrossConfig)
-#ifdef useDragRaceFunction
-static const buttonVariable bpListDragRace[] PROGMEM = {
-	{btnLongPressR,		accelerationTest::goTrigger}
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useDragRaceFunction
 #ifdef useCoastDownCalculator
 static const buttonVariable bpListCoastdown[] PROGMEM = {
 	{btnLongPressR,		coastdown::goTrigger}
@@ -316,25 +302,25 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 
 	 bpListMainDisplay
 #if defined(useStatusBar)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useStatusBar)
 #if defined(useBigFE)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useBigFE)
 #if defined(useBarFuelEconVsTime)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBigDTE)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useBigTTE)
 #if defined(useCPUreading)
-	,blListSecondaryDisplay
+	,bpListSecondaryDisplay
 #endif // defined(useCPUreading)
 #if defined(useClockDisplay)
 	,bpListClockDisplay
@@ -351,9 +337,9 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,bpListMenu
 	,bpListMenu
-#ifdef useDragRaceFunction
-	,bpListDragRace
-#endif // useDragRaceFunction
+#if defined(useDragRaceFunction)
+	,bpListMenu
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	,bpListCoastdown
 #endif // useCoastDownCalculator
@@ -390,6 +376,9 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #if defined(useScreenEditor)
 	,bpListMainDisplayEdit
 #endif // defined(useScreenEditor)
+#if defined(useDragRaceFunction)
+	,bpListSecondaryDisplay
+#endif // defined(useDragRaceFunction)
 };
 
 static void button::init(void)

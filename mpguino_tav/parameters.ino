@@ -128,11 +128,6 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpPartialRefuelTankSize,		// save partial refuel tank size in cycles
 
 #endif // defined(usePartialRefuel)
-#if defined(useDragRaceFunction)
-	instrLdRegByte, 0x02, 0,							// zero out accel test top speed and estimated engine power
-	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,
-
-#endif	// defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	instrLdRegEEPROM, 0x02, pCoastdownSamplePeriodIdx,	// coastdown timer ticks value
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
@@ -221,6 +216,27 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 #endif // defined(useDebugCPUreading)
 
 #endif	// defined(useCPUreading)
+#if defined(useDragRaceFunction)
+	instrLdRegEEPROM, 0x02, pDragSpeedIdx,				// load acceleration test full speed parameter in (distance)(* 1000) / (hour)
+	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulse)(* 1000) / (hour)
+	instrLdReg, 0x21,									// save denominator term for later
+	instrLdRegConst, 0x02, idxSecondsPerHour,			// fetch (second) / (hour) constant
+	instrMul2byConst, idxCycles0PerSecond,				// term is now (timer0 cycles) / (hour) term
+	instrMul2byConst, idxDecimalPoint,					// term is now (timer0 cycles)(* 1000) / (hour)
+	instrMul2byByte, 2,									// term is now (timer0 cycles)(* 2000) / (hour)
+	instrDiv2by1,										// perform conversion, term is now in (timer0 cycles)(* 2) / (VSS pulse)
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelHalfPeriodValueIdx,	// save it to accel test half-speed period tripwire variable
+	instrDiv2byByte, 2,									// term is now (timer0 cycles) / (VSS pulse)
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelFullPeriodValueIdx,	// save it to accel test full-speed period tripwire variable
+	instrLdRegEEPROM, 0x02, pPulsesPerDistanceIdx,		// fetch drag function distance parameter value in VSS pulses
+	instrMul2byEEPROM, pDragDistanceIdx,				// multiply by drag function distance parameter value in unit distance
+	instrDiv2byConst, idxDecimalPoint,					// get rid of decimal formatting factor
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelDistanceValueIdx,	// save it to accel test distanct tripwire variable
+
+#endif // defined(useDragRaceFunction)
 	instrDone											// exit to caller
 };
 
