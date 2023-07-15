@@ -284,14 +284,19 @@ static void tripSupport::idleProcess(void)
 		k = translateTripIndex(x, 0);
 		m = translateTripIndex(x, 1);
 
-		if (m & 0x80) // if transfer bit set
+		if (m > raw1tripIdx) // if a valid target trip variable was specified
 		{
 
-			tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
-			tripVar::reset(k); // reset source trip variable
+			if (m & 0x80) // if transfer bit set
+			{
+
+				tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
+				tripVar::reset(k); // reset source trip variable
+
+			}
+			else tripVar::update(k, m); // otherwise, just do trip update
 
 		}
-		else tripVar::update(k, m); // otherwise, just do trip update
 
 	}
 
@@ -341,12 +346,12 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 			break;
 
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
 			i = FEvSpdTripIdx;
 			break;
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 		default:
 			break;
 

@@ -541,9 +541,13 @@ static void terminal::outputParameterValue(uint8_t lineNumber)
 static void terminal::outputParameterExtra(uint8_t lineNumber)
 {
 
+	uint8_t i;
+
+	i = EEPROM::getLength(lineNumber);
+
 	text::hexByteOut(devDebugTerminal, EEPROM::getParameterFlags(lineNumber));
 	text::charOut(devDebugTerminal, '-');
-	text::hexByteOut(devDebugTerminal, EEPROM::getLength(lineNumber));
+	text::hexByteOut(devDebugTerminal, i);
 	text::charOut(devDebugTerminal, '-');
 	text::hexWordOut(devDebugTerminal, EEPROM::getAddress(lineNumber));
 	if (lineNumber < eePtrSettingsEnd)
@@ -555,28 +559,22 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		text::stringOut(devDebugTerminal, PSTR(")"));
 
 	}
-#if defined(useEEPROMtripStorage)
-	else if (lineNumber < eePtrSavedTripsEnd)
+	else if (lineNumber < eePtrEnd)
 	{
+
+		if (i & 0x07) i += 0x08;
+		i >>= 3;
 
 		text::charOut(devDebugTerminal, ' ');
 		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-		text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
+
+		for (uint8_t x = 7; x < 8; x--)
+			if (x < i) text::hexByteOut(devDebugTerminal, ((union union_64 *)(&s64reg[(uint16_t)(s64reg2)]))->u8[(uint16_t)(x)]);
+			else text::stringOut(devDebugTerminal, PSTR("  "));
+
 		text::charOut(devDebugTerminal, ' ');
 
 	}
-#endif // defined(useEEPROMtripStorage)
-#if defined(useScreenEditor)
-	else if (lineNumber < eePtrDisplayPagesEnd)
-	{
-
-		text::charOut(devDebugTerminal, ' ');
-		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-		text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
-		text::charOut(devDebugTerminal, ' ');
-
-	}
-#endif // defined(useScreenEditor)
 
 }
 
@@ -1131,6 +1129,12 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 							case 0:
 								outputFlags(activityFlags, terminalActivityFlagStr);
+#if defined(useBarFuelEconVsSpeed)
+
+								text::stringOut(devDebugTerminal, PSTR("FEvSpdTripIdx = " tcEOS));
+								text::hexByteOut(devDebugTerminal, FEvSpdTripIdx);
+								text::newLine(devDebugTerminal);
+#endif // defined(useBarFuelEconVsSpeed)
 							case '+':	// add
 							case '-':	// subtract
 							case '*':	// multiply
