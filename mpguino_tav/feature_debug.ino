@@ -693,6 +693,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
            I - inject button press
                 short (l, c, r, u, d)
                  long (L, C, R, U, D)
+           S - toggles display status line echo to terminal
            ? - displays this help
 
 	numbers or button presses are separated by spaces
@@ -906,12 +907,26 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #if defined(useDebugTerminalHelp)
 					case '?':   // display help
-						terminalCmd = chr;
-						terminalLine = 0; // initialize terminal output line
-						terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
+
+							terminalCmd = chr;
+							terminalLine = 0; // initialize terminal output line
+							terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+
+						}
+
 						break;
 
 #endif // defined(useDebugTerminalHelp)
+					case 'S':	// toggle display status line echo to terminal
+						chr = '\\'; // reset input mode and pending command
+
+						if ((terminalMode & tmButtonInput) == 0) peek ^= 0x80;
+
+						break;
+
 					case '.':	// specify source address
 						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
@@ -1129,6 +1144,11 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 							case 0:
 								outputFlags(activityFlags, terminalActivityFlagStr);
+								outputFlags(peek, terminalPeekStr);
+#if defined(useDragRaceFunction)
+
+								outputFlags(accelerationFlags, terminalAccelerationFlagStr);
+#endif // defined(useDragRaceFunction)
 #if defined(useBarFuelEconVsSpeed)
 
 								text::stringOut(devDebugTerminal, PSTR("FEvSpdTripIdx = " tcEOS));

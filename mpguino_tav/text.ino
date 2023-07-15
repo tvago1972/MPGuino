@@ -90,6 +90,17 @@ static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t st
 	stringOut(dev, str);
 	commitStatus(dev);
 
+#if defined(useDebugTerminal)
+	if (peek & 0x80)
+	{
+
+		stringOut(devDebugTerminal, findStr(sList, strIdx));
+		stringOut(devDebugTerminal, str);
+		newLine(devDebugTerminal);
+
+	}
+
+#endif // defined(useDebugTerminal)
 }
 
 static void text::statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx)
@@ -100,6 +111,17 @@ static void text::statusOut(interfaceDevice &dev, const char * str, const char *
 	stringOut(dev, findStr(sList, strIdx));
 	commitStatus(dev);
 
+#if defined(useDebugTerminal)
+	if (peek & 0x80)
+	{
+
+		stringOut(devDebugTerminal, str);
+		stringOut(devDebugTerminal, findStr(sList, strIdx));
+		newLine(devDebugTerminal);
+
+	}
+
+#endif // defined(useDebugTerminal)
 }
 
 static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx)
@@ -116,6 +138,16 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 	stringOut(dev, str);
 	commitStatus(dev);
 
+#if defined(useDebugTerminal)
+	if (peek & 0x80)
+	{
+
+		stringOut(devDebugTerminal, str);
+		newLine(devDebugTerminal);
+
+	}
+
+#endif // defined(useDebugTerminal)
 }
 
 static void text::initStatus(interfaceDevice &dev)

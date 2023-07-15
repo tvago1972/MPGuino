@@ -279,6 +279,7 @@ static const char terminalHelp[] PROGMEM = {
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
+	"           S - toggles display status line echo to terminal" tcEOSCR
 	"           ? - displays this help" tcEOSCR
 	tcEOS
 };
@@ -293,6 +294,7 @@ static uint8_t terminalByte;
 static uint8_t terminalSource;
 static uint8_t terminalTarget;
 
+static uint8_t peek;
 static uint8_t chr;
 static uint8_t inpIdx;
 static uint8_t readIdx;
@@ -312,7 +314,7 @@ static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
 
-const char terminalActivityFlagStr[] PROGMEM = {
+static const char terminalActivityFlagStr[] PROGMEM = {
 	"activityFlags: " tcEOS
 	"EngOff" tcOTOG "running" tcEOS
 	"VehStop" tcOTOG "moving" tcEOS
@@ -325,6 +327,18 @@ const char terminalActivityFlagStr[] PROGMEM = {
 #else // defined(useInterruptBasedTWI)
 	"1" tcOTOG "0" tcEOS
 #endif // defined(useInterruptBasedTWI)
+	"1" tcOTOG "0" tcEOS
+};
+
+static const char terminalPeekStr[] PROGMEM = {
+	"peek: " tcEOS
+	"ECHO" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
 	"1" tcOTOG "0" tcEOS
 };
 
