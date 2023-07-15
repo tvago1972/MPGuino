@@ -14,9 +14,9 @@ static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer t
 	"Main Display" tcEOSCR
 #endif // defined(useExpandedMainDisplay)
 	"Settings" tcEOSCR
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"Accel Test" tcEOSCR
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	"Coastdown" tcEOSCR
 #endif // useCoastDownCalculator

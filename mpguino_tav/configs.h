@@ -62,7 +62,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useBigTTE true						// Show big time-to-empty displays
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 #define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
-//#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
+#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 #define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define useFuelCost true					// Show fuel cost
@@ -87,7 +87,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
-//#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
+#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
@@ -445,35 +445,35 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // defined(useBufferedSerial3Port)
 #endif // defined(useLCDserialPort3)
 
-#ifdef useLoggingSerialPort0
+#if defined(useLoggingSerialPort0)
 #define useSerial0Port true
 #define devLogOutput devSerial0
 #define outputLoggingSplash true
-#endif // useLoggingSerialPort0
+#endif // defined(useLoggingSerialPort0)
 
-#ifdef useLoggingSerialPort1
+#if defined(useLoggingSerialPort1)
 #define useSerial1Port true
 #define devLogOutput devSerial1
 #define outputLoggingSplash true
-#endif // useLoggingSerialPort1
+#endif // defined(useLoggingSerialPort1)
 
-#ifdef useLoggingSerialPort2
+#if defined(useLoggingSerialPort2)
 #define useSerial2Port true
 #define devLogOutput devSerial2
 #define outputLoggingSplash true
-#endif // useLoggingSerialPort2
+#endif // defined(useLoggingSerialPort2)
 
-#ifdef useLoggingSerialPort3
+#if defined(useLoggingSerialPort3)
 #define useSerial3Port true
 #define devLogOutput devSerial3
 #define outputLoggingSplash true
-#endif // useLoggingSerialPort3
+#endif // defined(useLoggingSerialPort3)
 
-#ifdef useLoggingUSBserial
+#if defined(useLoggingUSBserial)
 #define useUSBserial true
 #define devLogOutput devUSB
 #define outputLoggingSplash true
-#endif // useLoggingUSBserial
+#endif // defined(useLoggingUSBserial)
 
 #if defined(useDebugTerminalSerialPort0)
 #define useSerial0Port true
@@ -503,11 +503,11 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define outputDebugTerminalSplash true
 #endif // defined(useDebugTerminalSerialPort3)
 
-#ifdef useDebugTerminalUSBserial
+#if defined(useDebugTerminalUSBserial)
 #define useUSBserial true
 #define devDebugTerminal devUSB
 #define outputDebugTerminalSplash true
-#endif // useDebugTerminalUSBserial
+#endif // defined(useDebugTerminalUSBserial)
 
 #if defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedSerial2Port) || defined(useBufferedSerial3Port) \
 	|| defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useSerial2PortInput) || defined(useSerial3PortInput) \
@@ -576,9 +576,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(useOutputPins)
 
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 #define useVehicleMass true
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 #if defined(useSavedTrips)
 #define useEEPROMtripStorage true
@@ -651,14 +651,14 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // defined(useDataLoggingOutput)
 #endif // ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingUSBserial) ) != 1
 
-#ifdef useUSBserial
+#if defined(useUSBserial)
 #if defined(__AVR_ATmega328P__)
 #error *** Cannot use ATmega328/128 hardware and useUSBserial!!! ***
 #endif // defined(__AVR_ATmega328P__)
 #if defined(__AVR_ATmega2560__)
 #error *** Cannot use ATmega2560 hardware and useUSBserial!!! ***
 #endif // defined(__AVR_ATmega2560__)
-#endif // useUSBserial
+#endif // defined(useUSBserial)
 
 #if defined(useSerial1Port)
 #if defined(__AVR_ATmega328P__)

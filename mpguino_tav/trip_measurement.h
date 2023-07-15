@@ -64,7 +64,7 @@ const uint8_t terminalIdx =				nextAllowedValue;
 #define nextAllowedValue terminalIdx + 1
 #endif // defined(useDebugTerminal)
 
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 const uint8_t dragRawHalfSpeedIdx =		nextAllowedValue;
 const uint8_t dragRawFullSpeedIdx =		dragRawHalfSpeedIdx + 1;
 const uint8_t dragRawDistanceIdx =		dragRawFullSpeedIdx + 1;
@@ -72,7 +72,7 @@ const uint8_t dragHalfSpeedIdx =		dragRawDistanceIdx + 1;
 const uint8_t dragFullSpeedIdx =		dragHalfSpeedIdx + 1;
 const uint8_t dragDistanceIdx =			dragFullSpeedIdx + 1;
 #define nextAllowedValue dragDistanceIdx + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 #if defined(useWindowTripFilter)
 const uint8_t windowTripFilterIdx =		nextAllowedValue;
@@ -87,10 +87,10 @@ const uint8_t FEvsTimeEndIdx =			FEvsTimeIdx + bgDataSize - 1;
 #define nextAllowedValue FEvsTimeEndIdx + 1
 #endif // defined(useBarFuelEconVsTime)
 
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 const uint8_t FEvsSpeedIdx =			nextAllowedValue;
 #define nextAllowedValue FEvsSpeedIdx + bgDataSize
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 const uint8_t tripSlotCount =			nextAllowedValue;
 
@@ -123,14 +123,14 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 #if defined(useDebugTerminal)
 	,']'
 #endif // defined(useDebugTerminal)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,'h'
 	,'f'
 	,'d'
 	,'H'
 	,'F'
 	,'D'
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #if defined(useWindowTripFilter)
 	,'W'						// ensure there are as many of these as is specified in windowTripFilterSize
 	,'W'
@@ -154,7 +154,7 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 	,'P'
 	,'P'
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,'0'						// ensure there are as many of these as is specified in bgDataSize
 	,'1'
 	,'2'
@@ -170,7 +170,7 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 	,'C'
 	,'D'
 	,'E'
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useEEPROMtripStorage)
 	,'<'
 	,'('
@@ -275,14 +275,14 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"eocIdleTankIdx" tcEOSCR
 #endif // defined(trackIdleEOCdata)
 	"terminalIdx" tcEOSCR
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"dragRawHalfSpeedIdx" tcEOSCR
 	"dragRawFullSpeedIdx" tcEOSCR
 	"dragRawDistanceIdx" tcEOSCR
 	"dragHalfSpeedIdx" tcEOSCR
 	"dragFullSpeedIdx" tcEOSCR
 	"dragDistanceIdx" tcEOSCR
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #if defined(useWindowTripFilter)
 	"windowTripFilterIdx[00]" tcEOSCR
 	"windowTripFilterIdx[01]" tcEOSCR
@@ -306,7 +306,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"FEvsTimeIdx[13]" tcEOSCR
 	"FEvsTimeIdx[14]" tcEOSCR
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	"FEvsSpeedIdx[00]" tcEOSCR
 	"FEvsSpeedIdx[01]" tcEOSCR
 	"FEvsSpeedIdx[02]" tcEOSCR
@@ -322,7 +322,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"FEvsSpeedIdx[12]" tcEOSCR
 	"FEvsSpeedIdx[13]" tcEOSCR
 	"FEvsSpeedIdx[14]" tcEOSCR
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useEEPROMtripStorage)
 	"EEPROMcurrentIdx" tcEOSCR
 	"EEPROMtankIdx" tcEOSCR

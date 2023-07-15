@@ -161,13 +161,13 @@ static const uint8_t vInterruptAccumulatorIdx =		nextAllowedValue;				// interru
 #define nextAllowedValue vInterruptAccumulatorIdx + 1
 #endif // defined(useDebugCPUreading)
 
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 static const uint8_t vDragInstantSpeedIdx =			nextAllowedValue;
 static const uint8_t vAccelHalfPeriodValueIdx =		vDragInstantSpeedIdx + 1;
 static const uint8_t vAccelFullPeriodValueIdx =		vAccelHalfPeriodValueIdx + 1;
 static const uint8_t vAccelDistanceValueIdx =		vAccelFullPeriodValueIdx + 1;
 #define nextAllowedValue vAccelDistanceValueIdx + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 #ifdef useCoastDownCalculator
 static const uint8_t vCoastdownPeriodIdx =			nextAllowedValue;
@@ -217,11 +217,11 @@ static const uint8_t mpAnalogBaroDenomIdx =			mpAnalogBaroNumerIdx + 1;
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 static const uint8_t mpFEvsSpeedMinThresholdIdx =	nextAllowedValue;					// minimum speed for fuel econ vs speed bargraph
 static const uint8_t mpFEvsSpeedQuantumIdx =		mpFEvsSpeedMinThresholdIdx + 1;		// speed quantum for each bar in fuel econ vs speed bargraph
 #define nextAllowedValue mpFEvsSpeedQuantumIdx + 1
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 #if defined(useCPUreading)
 static const uint8_t mpMainLoopAccumulatorIdx =		nextAllowedValue;					// main loop stopwatch direct measurement
@@ -281,12 +281,12 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 #if defined(useDebugCPUreading)
 	"vInterruptAccumulatorIdx" tcEOSCR			// all interrupts
 #endif // defined(useDebugCPUreading)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"vDragInstantSpeedIdx" tcEOSCR				// vss
 	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
 	"vAccelFullPeriodValueIdx" tcEOSCR			// vss
 	"vAccelDistanceValueIdx" tcEOSCR			// vss
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	"vCoastdownPeriodIdx" tcEOSCR				// timer0, vss
 	"vCoastdownMeasurement1Idx" tcEOSCR			// vss
@@ -323,10 +323,10 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 	"mpAnalogBaroDenomIdx" tcEOSCR				// main program only
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	"mpFEvsSpeedMinThresholdIdx" tcEOSCR		// main program only
 	"mpFEvsSpeedQuantumIdx" tcEOSCR				// main program only
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading)
 	"mpMainLoopAccumulatorIdx" tcEOSCR			// main program only
 	"mpIdleAccumulatorIdx" tcEOSCR				// main program only
@@ -426,9 +426,9 @@ const uint8_t t0sReadButton =			0b00010000;
 #if defined(useDataLoggingOutput) || defined(useJSONoutput)
 const uint8_t t0sOutputLogging =		0b00001000;
 #endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 const uint8_t t0sAccelTestFlag =		0b00000100;
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 const uint8_t t0sCoastdownTestFlag =	0b00000010;
 #endif // useCoastDownCalculator

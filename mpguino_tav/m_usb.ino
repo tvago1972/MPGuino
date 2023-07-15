@@ -57,7 +57,7 @@ static void usbSupport::shutdown(void)
 
 }
 
-#ifdef useUSBserial
+#if defined(useUSBserial)
 static void usbDevice::init(void)
 {
 
@@ -465,5 +465,5 @@ ISR(USB_GEN_vect)
 
 }
 
-#endif // useUSBserial
+#endif // defined(useUSBserial)
 #endif // defined(__AVR_ATmega32U4__)

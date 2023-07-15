@@ -128,11 +128,11 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpPartialRefuelTankSize,		// save partial refuel tank size in cycles
 
 #endif // defined(usePartialRefuel)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	instrLdRegByte, 0x02, 0,							// zero out accel test top speed and estimated engine power
 	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,
 
-#endif	// useDragRaceFunction
+#endif	// defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	instrLdRegEEPROM, 0x02, pCoastdownSamplePeriodIdx,	// coastdown timer ticks value
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
@@ -188,7 +188,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegVolatile, 0x02, vFEvsTimePeriodTimeoutIdx,	// store fuel econ vs time period timer ticks value
 
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	instrLdRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,		// obtain low-speed cutoff parameter in (distance)(* 1000) / (hour)
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulses)(* 1000) / (hour)
 	instrDiv2byConst, idxSecondsPerHour,				// term is now (VSS pulses)(* 1000) / (second)
@@ -201,7 +201,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpFEvsSpeedQuantumIdx,		// store speed quantum in (VSS pulses)(* 1000) / (second)
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading)
 	instrLdRegByte, 0x02, 0,
 	instrStRegMain, 0x02, mpMainLoopAccumulatorIdx,		// initialize the cpu utilization stopwatch timer values
@@ -359,10 +359,10 @@ static void EEPROM::initGuinoSoftware(void)
 #endif // defined(useBarFuelEconVsTime)
 	SREG = oldSREG; // restore interrupt flag status
 
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	bgFEvsSsupport::reset();
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useWindowTripFilter)
 	tripSupport::resetWindowFilter();
 

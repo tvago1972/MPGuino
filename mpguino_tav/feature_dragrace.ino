@@ -1,4 +1,4 @@
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
  /* Acceleration Test support section */
  
 // upon successful arming, the drag race function will measure times to reach the distance specified by the EEPROM parameter pDragDistanceIdx (preset to 1/4 mile),
@@ -110,7 +110,7 @@ uint8_t accelerationTest::triggerTest(void)
 		oldSREG = SREG; // save interrupt flag status
 		cli(); // disable interrupts
 
-		accelerationFlags &= ~accelTestClearFlags; // reset drag race capture flags
+		accelerationFlags &= ~(accelTestClearFlags); // reset drag race capture flags
 		accelerationFlags |= (accelTestCompleteFlags); // signal that drag function is cancelled
 
 		SREG = oldSREG; // restore state of interrupt flag
@@ -169,7 +169,7 @@ uint8_t accelerationTest::triggerTest(void)
 
 }
 
-void accelerationTest::idleProcess(void)
+static void accelerationTest::idleProcess(void)
 {
 
 	uint8_t oldSREG;
@@ -193,11 +193,11 @@ void accelerationTest::idleProcess(void)
 		{
 
 			case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = 1;
+				accelTestState = atsReady;
 				break;
 
 			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = 2;
+				accelTestState = atsActive;
 				break;
 
 			case (accelTestFinished):
@@ -210,43 +210,43 @@ void accelerationTest::idleProcess(void)
 
 				}
 
-				accelTestState = 3;
+				accelTestState = atsFinished;
 				break;
 
 			case (accelTestFinished | accelTestCancelled):
-				accelTestState = 4;
+				accelTestState = atsCancelled;
 				break;
 
 			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
-				accelTestState = 5;
+				accelTestState = atsCheckPointDist;
 				break;
 
 			case (accelTestActive | accelTestFullSpeed | accelTestDistance):
-				accelTestState = 6;
+				accelTestState = atsCheckPointHalf;
 				break;
 
 			case (accelTestActive | accelTestFullSpeed):
-				accelTestState = 7;
+				accelTestState = atsCheckPointDistHalf;
 				break;
 
 			case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = 8;
+				accelTestState = atsCheckPointFull;
 				break;
 
 			case (accelTestActive | accelTestHalfSpeed):
-				accelTestState = 9;
+				accelTestState = atsCheckPointDistFull;
 				break;
 
 			case (accelTestActive | accelTestDistance):
-				accelTestState = 10;
+				accelTestState = atsCheckPointHalfFull;
 				break;
 
 			case (accelTestActive):
-				accelTestState = 11;
+				accelTestState = atsCheckPointDistHalfFull;
 				break;
 
 			default:
-				accelTestState = 12;
+				accelTestState = atsInvalidState;
 				break;
 
 		}
@@ -255,7 +255,7 @@ void accelerationTest::idleProcess(void)
 	else
 	{
 
-		accelTestState = 0;
+		accelTestState = atsNoStatusChange;
 
 		if (accelerationFlags & accelTestFinished)
 		{
@@ -263,7 +263,7 @@ void accelerationTest::idleProcess(void)
 			if (EEPROM::readByte(pDragAutoFlagIdx))
 			{
 
-				if (accelerationTest::triggerTest() == 0) accelTestState = 1;
+				if (accelerationTest::triggerTest() == 0) accelTestState = atsReady;
 
 			}
 
@@ -273,4 +273,4 @@ void accelerationTest::idleProcess(void)
 
 }
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)

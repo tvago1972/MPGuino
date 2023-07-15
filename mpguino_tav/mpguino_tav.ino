@@ -520,10 +520,10 @@ static const uint8_t bigFEdisplayIdx =				nextAllowedValue;
 static const uint8_t barFEvTdisplayIdx =			nextAllowedValue;
 #define nextAllowedValue barFEvTdisplayIdx + 1
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 static const uint8_t barFEvSdisplayIdx =			nextAllowedValue;
 #define nextAllowedValue barFEvSdisplayIdx + 1
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBigDTE)
 static const uint8_t bigDTEdisplayIdx =				nextAllowedValue;
 #define nextAllowedValue bigDTEdisplayIdx + 1
@@ -554,10 +554,10 @@ static const uint8_t tankSettingsDisplayIdx =		VSSsettingsDisplayIdx + 1;
 static const uint8_t CRFICsettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue CRFICsettingsDisplayIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 static const uint8_t acdSettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue acdSettingsDisplayIdx + 1
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 static const uint8_t timeoutSettingsDisplayIdx =	nextAllowedValue;
 static const uint8_t miscSettingsDisplayIdx =		timeoutSettingsDisplayIdx + 1;
 #define nextAllowedValue miscSettingsDisplayIdx + 1
@@ -568,7 +568,7 @@ static const uint8_t settingsMenuLength =			nextAllowedValue - displayCountUser;
 
 static const uint8_t optionalDisplayIdxStart =		nextAllowedValue;
 
-#ifdef defined(useDragRaceFunction)
+#if defined(useDragRaceFunction)
 static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue dragRaceDisplayIdx + 1
 #endif // defined(useDragRaceFunction)
@@ -624,9 +624,9 @@ static const uint8_t displayEditDisplayIdx =		nextAllowedValue;
 static const char displayCountTotal =				nextAllowedValue;
 
 static const uint8_t baseMenuLength = 2		// main display category and settings categories
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	+ 1										// accel test display category
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 	+ 1										// coastdown test display category
 #endif // useCoastDownCalculator
@@ -660,9 +660,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useBarFuelEconVsTime)
 	,{barFEvTdisplayIdx,			mainDisplayIdx,				displayCountUser,	4,							dfSplitScreen,	barGraphSupport::displayHandler}
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,{barFEvSdisplayIdx,			mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	barGraphSupport::displayHandler}
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBigDTE)
 	,{bigDTEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // defined(useBigDTE)
@@ -745,10 +745,10 @@ static const uint8_t tankSettingMenuIdx =		VSSsettingMenuIdx + 1;
 static const uint8_t CRFICsettingMenuIdx =		nextAllowedValue;
 #define nextAllowedValue CRFICsettingMenuIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 static const uint8_t acdSettingMenuIdx =		nextAllowedValue;
 #define nextAllowedValue acdSettingMenuIdx + 1
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 static const uint8_t timeoutSettingMenuIdx =	nextAllowedValue;
 static const uint8_t miscSettingMenuIdx =		timeoutSettingMenuIdx + 1;
 #define nextAllowedValue miscSettingMenuIdx + 1
@@ -798,9 +798,9 @@ static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
 #if defined(useChryslerMAPCorrection)
 	,{CRFICsettingsDisplayIdx,		parmLabels,				eePtrSettingsCRFICstart,	parameterEdit::menuHandler}
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,{acdSettingsDisplayIdx,		parmLabels,				eePtrSettingsACDstart,		parameterEdit::menuHandler}
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	,{timeoutSettingsDisplayIdx,	parmLabels,				eePtrSettingsTimeoutStart,	parameterEdit::menuHandler}
 	,{miscSettingsDisplayIdx,		parmLabels,				eePtrSettingsMiscStart,		parameterEdit::menuHandler}
 #if defined(useSavedTrips)
@@ -1282,7 +1282,7 @@ static void idleProcess(void)
 
 #endif // defined(useAnalogButtons)
 #endif // useAnalogRead
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	if (timer0Status & t0sAccelTestFlag)
 	{
 
@@ -1292,7 +1292,7 @@ static void idleProcess(void)
 
 	}
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #if defined(useSimulatedFIandVSS)
 	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
 	{
@@ -1325,7 +1325,6 @@ int main(void)
 {
 
 	uint8_t i;
-	uint8_t j;
 #if defined(useDebugCPUreading)
 	uint32_t displayStart;
 #endif // defined(useDebugCPUreading)
@@ -1334,21 +1333,21 @@ int main(void)
 
 	initCore(); // go initialize core MPGuino functionality
 
-	j = EEPROM::powerUpCheck();
+	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required
 
-	tripSupport::init();
+	tripSupport::init(); // go initialize trip variable storage
 
 #if defined(useSimulatedFIandVSS)
 	debugFlags = (debugVSSflag | debugInjectorFlag);
 	signalSim::configurePorts();
 
 #endif // defined(useSimulatedFIandVSS)
-#ifdef useDragRaceFunction
-	accelerationFlags &= ~accelTestClearFlags;
+#if defined(useDragRaceFunction)
+	accelerationFlags &= ~(accelTestClearFlags);
 	lastAccelTestStatus = accelerationFlags;
 	accelTestStatus = accelerationFlags;
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	thisMenuData.displayIdx = mainDisplayIdx;
 
 	sei();
@@ -1536,10 +1535,10 @@ int main(void)
 			outputPin::setOutputPin2(1);
 
 #endif // defined(useOutputPins)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 			// this section handles all MPGuino activity modes
 			// engine running and vehicle in motion and a button being pressed
 			// engine not running and vehicle in motion (Engine Off Coasting) and a button being pressed

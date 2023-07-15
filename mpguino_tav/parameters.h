@@ -18,156 +18,156 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 
 };
 
-const uint8_t guinosig =		0b10110111;
+static const uint8_t guinosig =		0b10110111;
 
 // start of remarkably long EEPROM stored settings section
 
 /* parameter sizes in bits */
 
-const uint8_t pSizeSignature =				24;
+static const uint8_t pSizeSignature =					24;
 
 // display settings
 
 #if defined(useLCDcontrast)
-const uint8_t pSizeContrast =				1;
+static const uint8_t pSizeContrast =					1;
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-const uint8_t pSizeLCDcolor =				3;
+static const uint8_t pSizeLCDcolor =					3;
 #endif // defined(useAdafruitRGBLCDshield)
-const uint8_t pSizeMetricMode =				1;
-const uint8_t pSizeAlternateFE =			1;
+static const uint8_t pSizeMetricMode =					1;
+static const uint8_t pSizeAlternateFE =					1;
 #if defined(useFuelCost)
-const uint8_t pSizeFuelUnitCost =			24;
+static const uint8_t pSizeFuelUnitCost =				24;
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pSizeOutputPin1Mode =			3;
-const uint8_t pSizeOutputPin2Mode =			3;
+static const uint8_t pSizeOutputPin1Mode =				3;
+static const uint8_t pSizeOutputPin2Mode =				3;
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-const uint8_t pSizeVoltageOffset =			12;
+static const uint8_t pSizeVoltageOffset =				12;
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-const uint8_t pSizeSerialDataLogging =		1;
+static const uint8_t pSizeSerialDataLogging =			1;
 #endif // defined(useDataLoggingOutput)
 #if defined(useBarFuelEconVsTime)
-const uint8_t pSizeFEvsTime =				16;
+static const uint8_t pSizeFEvsTime =					16;
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
-const uint8_t pSizeBarLowSpeedCutoff =		24;
-const uint8_t pSizeBarSpeedQuantumIdx =		24;
-#endif // useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t pSizeBarLowSpeedCutoff =			24;
+static const uint8_t pSizeBarSpeedQuantumIdx =			24;
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
 #if defined(useFuelPressure)
-const uint8_t pSizeSysFuelPressure =		32;
+static const uint8_t pSizeSysFuelPressure =				32;
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const uint8_t pSizeRefFuelPressure =		32;
-const uint8_t pSizeInjectorCount =			8;
-const uint8_t pSizeInjectorSize =			20;
+static const uint8_t pSizeRefFuelPressure =				32;
+static const uint8_t pSizeInjectorCount =				8;
+static const uint8_t pSizeInjectorSize =				20;
 #endif // useCalculatedFuelFactor
-const uint8_t pSizeMicroSecondsPerGallon =	32;
-const uint8_t pSizeInjEdgeTrigger =			1;
-const uint8_t pSizeInjectorOpeningTime =	16;
-const uint8_t pSizeInjectorClosingTime =	16;
-const uint8_t pSizeCrankRevPerInj =			8;
-const uint8_t pSizeMinGoodRPM =				16;
+static const uint8_t pSizeMicroSecondsPerGallon =		32;
+static const uint8_t pSizeInjEdgeTrigger =				1;
+static const uint8_t pSizeInjectorOpeningTime =			16;
+static const uint8_t pSizeInjectorClosingTime =			16;
+static const uint8_t pSizeCrankRevPerInj =				8;
+static const uint8_t pSizeMinGoodRPM =					16;
 
 // vehicle speed sensor settings
 
-const uint8_t pSizePulsesPerDistance =		18;
-const uint8_t pSizeVSSpause =				8;
-const uint8_t pSizeMinGoodSpeed =			16;
-const uint8_t pSizeTankSize =				24;
-const uint8_t pSizeTankBingoSize =			pSizeTankSize;
+static const uint8_t pSizePulsesPerDistance =			18;
+static const uint8_t pSizeVSSpause =					8;
+static const uint8_t pSizeMinGoodSpeed =				16;
+static const uint8_t pSizeTankSize =					24;
+static const uint8_t pSizeTankBingoSize =				pSizeTankSize;
 #if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
-const uint8_t pSizeMAPsensorFloor =			16;
-const uint8_t pSizeMAPsensorCeiling =		16;
-const uint8_t pSizeMAPsensorRange =			32;
-const uint8_t pSizeMAPsensorOffset =		32;
+static const uint8_t pSizeMAPsensorFloor =				16;
+static const uint8_t pSizeMAPsensorCeiling =			16;
+static const uint8_t pSizeMAPsensorRange =				32;
+static const uint8_t pSizeMAPsensorOffset =				32;
 #if defined(useChryslerBaroSensor)
-const uint8_t pSizeBaroSensorFloor =		16;
-const uint8_t pSizeBaroSensorCeiling =		16;
-const uint8_t pSizeBaroSensorRange =		32;
-const uint8_t pSizeBaroSensorOffset =		32;
+static const uint8_t pSizeBaroSensorFloor =				16;
+static const uint8_t pSizeBaroSensorCeiling =			16;
+static const uint8_t pSizeBaroSensorRange =				32;
+static const uint8_t pSizeBaroSensorOffset =			32;
 #else // defined(useChryslerBaroSensor)
-const uint8_t pSizeBarometricPressure =		32;
+static const uint8_t pSizeBarometricPressure =			32;
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
-const uint8_t pSizeVehicleMass =			16;
-#endif // useVehicleMass
+#if defined(useVehicleMass)
+static const uint8_t pSizeVehicleMass =					16;
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
-const uint8_t pSizeVehicleFrontalArea =		16;
-const uint8_t pSizeLocustDensity =			16;
-const uint8_t pSizeCoefficientD =			16;
-const uint8_t pSizeCoefficientV =			16;
-const uint8_t pSizeCoefficientRR =			16;
-const uint8_t pSizeCoastdownSamplePeriod =	8;
+static const uint8_t pSizeVehicleFrontalArea =			16;
+static const uint8_t pSizeLocustDensity =				16;
+static const uint8_t pSizeCoefficientD =				16;
+static const uint8_t pSizeCoefficientV =				16;
+static const uint8_t pSizeCoefficientRR =				16;
+static const uint8_t pSizeCoastdownSamplePeriod =		8;
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const uint8_t pSizeDragSpeed =				24;
-const uint8_t pSizeDragDistance =			16;
-const uint8_t pSizeDragAutoFlag =			1;
-#endif // useDragRaceFunction
+#if defined(useDragRaceFunction)
+static const uint8_t pSizeDragSpeed =					24;
+static const uint8_t pSizeDragDistance =				16;
+static const uint8_t pSizeDragAutoFlag =				1;
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 
-const uint8_t pSizeIdleTimeout =			8;
-const uint8_t pSizeEOCtimeout =				8;
-const uint8_t pSizeButtonTimeout =			8;
-const uint8_t pSizeParkTimeout =			8;
-const uint8_t pSizeActivityTimeout =		8;
-const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
-const uint8_t pSizeWakeupResetCurrentOnMove =	1;
+static const uint8_t pSizeIdleTimeout =					8;
+static const uint8_t pSizeEOCtimeout =					8;
+static const uint8_t pSizeButtonTimeout =				8;
+static const uint8_t pSizeParkTimeout =					8;
+static const uint8_t pSizeActivityTimeout =				8;
+static const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
+static const uint8_t pSizeWakeupResetCurrentOnMove =	1;
 #if defined(useSavedTrips)
-const uint8_t pSizeAutoSaveActive =			1;
+static const uint8_t pSizeAutoSaveActive =				1;
 #endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
-const uint8_t pSizeScratchpad =				32;
+static const uint8_t pSizeScratchpad =					32;
 
 // settings inaccessible from the menu
 
 #if defined(usePartialRefuel)
-const uint8_t pSizeRefuelSize =				pSizeTankSize;
+static const uint8_t pSizeRefuelSize =					pSizeTankSize;
 #if defined(useEEPROMtripStorage)
-const uint8_t pSizeRefuelSaveSizeIdx =		pSizeTankSize;
+static const uint8_t pSizeRefuelSaveSizeIdx =			pSizeTankSize;
 #endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
 
 #if defined(useEEPROMtripStorage)
-const uint8_t pSizeCurrTripSignatureIdx =	8;
-const uint8_t pSizeTankTripSignatureIdx =	8;
-const uint8_t pSizeCurrTripVSSpulseIdx =	32;
-const uint8_t pSizeCurrTripVSScycleIdx =	64;
-const uint8_t pSizeCurrTripInjPulseIdx =	32;
-const uint8_t pSizeCurrTripInjCycleIdx =	64;
-const uint8_t pSizeCurrTripEngCycleIdx =	64;
-const uint8_t pSizeTankTripVSSpulseIdx =	32;
-const uint8_t pSizeTankTripVSScycleIdx =	64;
-const uint8_t pSizeTankTripInjPulseIdx =	32;
-const uint8_t pSizeTankTripInjCycleIdx =	64;
-const uint8_t pSizeTankTripEngCycleIdx =	64;
+static const uint8_t pSizeCurrTripSignatureIdx =		8;
+static const uint8_t pSizeTankTripSignatureIdx =		8;
+static const uint8_t pSizeCurrTripVSSpulseIdx =			32;
+static const uint8_t pSizeCurrTripVSScycleIdx =			64;
+static const uint8_t pSizeCurrTripInjPulseIdx =			32;
+static const uint8_t pSizeCurrTripInjCycleIdx =			64;
+static const uint8_t pSizeCurrTripEngCycleIdx =			64;
+static const uint8_t pSizeTankTripVSSpulseIdx =			32;
+static const uint8_t pSizeTankTripVSScycleIdx =			64;
+static const uint8_t pSizeTankTripInjPulseIdx =			32;
+static const uint8_t pSizeTankTripInjCycleIdx =			64;
+static const uint8_t pSizeTankTripEngCycleIdx =			64;
 #if defined(trackIdleEOCdata)
-const uint8_t pSizeCurrIEOCvssPulseIdx =	32;
-const uint8_t pSizeCurrIEOCvssCycleIdx =	64;
-const uint8_t pSizeCurrIEOCinjPulseIdx =	32;
-const uint8_t pSizeCurrIEOCinjCycleIdx =	64;
-const uint8_t pSizeCurrIEOCengCycleIdx =	64;
-const uint8_t pSizeTankIEOCvssPulseIdx =	32;
-const uint8_t pSizeTankIEOCvssCycleIdx =	64;
-const uint8_t pSizeTankIEOCinjPulseIdx =	32;
-const uint8_t pSizeTankIEOCinjCycleIdx =	64;
-const uint8_t pSizeTankIEOCengCycleIdx =	64;
+static const uint8_t pSizeCurrIEOCvssPulseIdx =			32;
+static const uint8_t pSizeCurrIEOCvssCycleIdx =			64;
+static const uint8_t pSizeCurrIEOCinjPulseIdx =			32;
+static const uint8_t pSizeCurrIEOCinjCycleIdx =			64;
+static const uint8_t pSizeCurrIEOCengCycleIdx =			64;
+static const uint8_t pSizeTankIEOCvssPulseIdx =			32;
+static const uint8_t pSizeTankIEOCvssCycleIdx =			64;
+static const uint8_t pSizeTankIEOCinjPulseIdx =			32;
+static const uint8_t pSizeTankIEOCinjCycleIdx =			64;
+static const uint8_t pSizeTankIEOCengCycleIdx =			64;
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 
@@ -175,444 +175,444 @@ const uint8_t pSizeTankIEOCengCycleIdx =	64;
 
 /* parameter addresses from sizes defined above */
 
-const uint8_t eeAdrSignature = 0;
+static const uint8_t eeAdrSignature = 0;
 
 #define nextAllowedValue eeAdrSignature
-const unsigned int pAddressSignature =					nextAllowedValue;
+static const unsigned int pAddressSignature =					nextAllowedValue;
 #define nextAllowedValue pAddressSignature + byteSize(pSizeSignature)
 
 // display settings
 
 #if defined(useLCDcontrast)
-const unsigned int pAddressContrast =					nextAllowedValue;
+static const unsigned int pAddressContrast =					nextAllowedValue;
 #define nextAllowedValue pAddressContrast + byteSize(pSizeContrast)
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-const unsigned int pAddressLCDcolor =					nextAllowedValue;
+static const unsigned int pAddressLCDcolor =					nextAllowedValue;
 #define nextAllowedValue pAddressLCDcolor + byteSize(pSizeLCDcolor)
 #endif // defined(useAdafruitRGBLCDshield)
-const unsigned int pAddressMetricMode =					nextAllowedValue;
-const unsigned int pAddressAlternateFE =				pAddressMetricMode + byteSize(pSizeMetricMode);
+static const unsigned int pAddressMetricMode =					nextAllowedValue;
+static const unsigned int pAddressAlternateFE =					pAddressMetricMode + byteSize(pSizeMetricMode);
 #define nextAllowedValue pAddressAlternateFE + byteSize(pSizeAlternateFE)
 #if defined(useFuelCost)
-const unsigned int pAddressFuelUnitCost =				nextAllowedValue;
+static const unsigned int pAddressFuelUnitCost =				nextAllowedValue;
 #define nextAllowedValue pAddressFuelUnitCost + byteSize(pSizeFuelUnitCost)
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pAddressOutputPin1Mode =					nextAllowedValue;
-const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
+static const uint8_t pAddressOutputPin1Mode =					nextAllowedValue;
+static const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
 #define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-const unsigned int pAddressVoltageOffset =				nextAllowedValue;
+static const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
+static const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
 #endif // defined(useDataLoggingOutput)
 #if defined(useBarFuelEconVsTime)
-const unsigned int pAddressFEvsTime =					nextAllowedValue;
+static const unsigned int pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
-const unsigned int pAddressBarLowSpeedCutoff =			nextAllowedValue;
-const unsigned int pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
+#if defined(useBarFuelEconVsSpeed)
+static const unsigned int pAddressBarLowSpeedCutoff =			nextAllowedValue;
+static const unsigned int pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
 #define nextAllowedValue pAddressBarSpeedQuantumIdx + byteSize(pSizeBarSpeedQuantumIdx)
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
 #if defined(useFuelPressure)
-const unsigned int pAddressSysFuelPressure =			nextAllowedValue;
+static const unsigned int pAddressSysFuelPressure =				nextAllowedValue;
 #define nextAllowedValue pAddressSysFuelPressure + byteSize(pSizeSysFuelPressure)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const unsigned int pAddressRefFuelPressure =			nextAllowedValue;
-const unsigned int pAddressInjectorCount =				pAddressRefFuelPressure + byteSize(pSizeRefFuelPressure);
-const unsigned int pAddressInjectorSize =				pAddressInjectorCount + byteSize(pSizeInjectorCount);
+static const unsigned int pAddressRefFuelPressure =				nextAllowedValue;
+static const unsigned int pAddressInjectorCount =				pAddressRefFuelPressure + byteSize(pSizeRefFuelPressure);
+static const unsigned int pAddressInjectorSize =				pAddressInjectorCount + byteSize(pSizeInjectorCount);
 #define nextAllowedValue pAddressInjectorSize + byteSize(pSizeInjectorSize)
 #endif // useCalculatedFuelFactor
-const unsigned int pAddressMicroSecondsPerGallon =		nextAllowedValue;
-const unsigned int pAddressInjEdgeTrigger =				pAddressMicroSecondsPerGallon + byteSize(pSizeMicroSecondsPerGallon);
-const unsigned int pAddressInjectorOpeningTime =		pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
-const unsigned int pAddressInjectorClosingTime =		pAddressInjectorOpeningTime + byteSize(pSizeInjectorOpeningTime);
-const unsigned int pAddressCrankRevPerInj =				pAddressInjectorClosingTime + byteSize(pSizeInjectorClosingTime);
-const unsigned int pAddressMinGoodRPM =					pAddressCrankRevPerInj + byteSize(pSizeCrankRevPerInj);
+static const unsigned int pAddressMicroSecondsPerGallon =		nextAllowedValue;
+static const unsigned int pAddressInjEdgeTrigger =				pAddressMicroSecondsPerGallon + byteSize(pSizeMicroSecondsPerGallon);
+static const unsigned int pAddressInjectorOpeningTime =			pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
+static const unsigned int pAddressInjectorClosingTime =			pAddressInjectorOpeningTime + byteSize(pSizeInjectorOpeningTime);
+static const unsigned int pAddressCrankRevPerInj =				pAddressInjectorClosingTime + byteSize(pSizeInjectorClosingTime);
+static const unsigned int pAddressMinGoodRPM =					pAddressCrankRevPerInj + byteSize(pSizeCrankRevPerInj);
 #define nextAllowedValue pAddressMinGoodRPM + byteSize(pSizeMinGoodRPM)
 
 // vehicle speed sensor settings
 
-const unsigned int pAddressPulsesPerDistance =			nextAllowedValue;
-const unsigned int pAddressVSSpause =					pAddressPulsesPerDistance + byteSize(pSizePulsesPerDistance);
-const unsigned int pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVSSpause);
+static const unsigned int pAddressPulsesPerDistance =			nextAllowedValue;
+static const unsigned int pAddressVSSpause =					pAddressPulsesPerDistance + byteSize(pSizePulsesPerDistance);
+static const unsigned int pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVSSpause);
 #define nextAllowedValue pAddressMinGoodSpeed + byteSize(pSizeMinGoodSpeed)
 
 // fuel tank size settings
 
-const unsigned int pAddressTankSize =					nextAllowedValue;
-const unsigned int pAddressTankBingoSize =				pAddressTankSize + byteSize(pSizeTankSize);
+static const unsigned int pAddressTankSize =					nextAllowedValue;
+static const unsigned int pAddressTankBingoSize =				pAddressTankSize + byteSize(pSizeTankSize);
 #define nextAllowedValue pAddressTankBingoSize + byteSize(pSizeTankBingoSize)
 #if defined(useChryslerMAPCorrection)
 
 // Chrysler settings
 
-const unsigned int pAddressMAPsensorFloor =				nextAllowedValue;
-const unsigned int pAddressMAPsensorCeiling =			pAddressMAPsensorFloor + byteSize(pSizeMAPsensorFloor);
-const unsigned int pAddressMAPsensorRange =				pAddressMAPsensorCeiling + byteSize(pSizeMAPsensorCeiling);
-const unsigned int pAddressMAPsensorOffset =			pAddressMAPsensorRange + byteSize(pSizeMAPsensorRange);
+static const unsigned int pAddressMAPsensorFloor =				nextAllowedValue;
+static const unsigned int pAddressMAPsensorCeiling =			pAddressMAPsensorFloor + byteSize(pSizeMAPsensorFloor);
+static const unsigned int pAddressMAPsensorRange =				pAddressMAPsensorCeiling + byteSize(pSizeMAPsensorCeiling);
+static const unsigned int pAddressMAPsensorOffset =				pAddressMAPsensorRange + byteSize(pSizeMAPsensorRange);
 #define nextAllowedValue pAddressMAPsensorOffset + byteSize(pSizeMAPsensorOffset)
 #if defined(useChryslerBaroSensor)
-const unsigned int pAddressBaroSensorFloor =			nextAllowedValue;
-const unsigned int pAddressBaroSensorCeiling =			pAddressBaroSensorFloor + byteSize(pSizeBaroSensorFloor);
-const unsigned int pAddressBaroSensorRange =			pAddressBaroSensorCeiling + byteSize(pSizeBaroSensorCeiling);
-const unsigned int pAddressBaroSensorOffset =			pAddressBaroSensorRange + byteSize(pSizeBaroSensorRange);
+static const unsigned int pAddressBaroSensorFloor =				nextAllowedValue;
+static const unsigned int pAddressBaroSensorCeiling =			pAddressBaroSensorFloor + byteSize(pSizeBaroSensorFloor);
+static const unsigned int pAddressBaroSensorRange =				pAddressBaroSensorCeiling + byteSize(pSizeBaroSensorCeiling);
+static const unsigned int pAddressBaroSensorOffset =			pAddressBaroSensorRange + byteSize(pSizeBaroSensorRange);
 #define nextAllowedValue pAddressBaroSensorOffset + byteSize(pSizeBaroSensorOffset)
 #else // defined(useChryslerBaroSensor)
-const unsigned int pAddressBarometricPressure =			nextAllowedValue;
+static const unsigned int pAddressBarometricPressure =			nextAllowedValue;
 #define nextAllowedValue pAddressBarometricPressure + byteSize(pSizeBarometricPressure)
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
-const unsigned int pAddressVehicleMass =				nextAllowedValue;
+#if defined(useVehicleMass)
+static const unsigned int pAddressVehicleMass =					nextAllowedValue;
 #define nextAllowedValue pAddressVehicleMass + byteSize(pSizeVehicleMass)
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
-const unsigned int pAddressVehicleFrontalArea =			nextAllowedValue;
-const unsigned int pAddressLocustDensity =				pAddressVehicleFrontalArea + byteSize(pSizeVehicleFrontalArea);
-const unsigned int pAddressCoefficientD =				pAddressLocustDensity + byteSize(pSizeLocustDensity);
-const unsigned int pAddressCoefficientV =				pAddressCoefficientD + byteSize(pSizeCoefficientD);
-const unsigned int pAddressCoefficientRR =				pAddressCoefficientV + byteSize(pSizeCoefficientV);
-const unsigned int pAddressCoastdownSamplePeriod =		pAddressCoefficientRR + byteSize(pSizeCoefficientRR);
+static const unsigned int pAddressVehicleFrontalArea =			nextAllowedValue;
+static const unsigned int pAddressLocustDensity =				pAddressVehicleFrontalArea + byteSize(pSizeVehicleFrontalArea);
+static const unsigned int pAddressCoefficientD =				pAddressLocustDensity + byteSize(pSizeLocustDensity);
+static const unsigned int pAddressCoefficientV =				pAddressCoefficientD + byteSize(pSizeCoefficientD);
+static const unsigned int pAddressCoefficientRR =				pAddressCoefficientV + byteSize(pSizeCoefficientV);
+static const unsigned int pAddressCoastdownSamplePeriod =		pAddressCoefficientRR + byteSize(pSizeCoefficientRR);
 #define nextAllowedValue pAddressCoastdownSamplePeriod + byteSize(pSizeCoastdownSamplePeriod)
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const unsigned int pAddressDragSpeed =					nextAllowedValue;
-const unsigned int pAddressDragDistance =				pAddressDragSpeed + byteSize(pSizeDragSpeed);
-const unsigned int pAddressDragAutoFlag =				pAddressDragDistance + byteSize(pSizeDragDistance);
+#if defined(useDragRaceFunction)
+static const unsigned int pAddressDragSpeed =					nextAllowedValue;
+static const unsigned int pAddressDragDistance =				pAddressDragSpeed + byteSize(pSizeDragSpeed);
+static const unsigned int pAddressDragAutoFlag =				pAddressDragDistance + byteSize(pSizeDragDistance);
 #define nextAllowedValue pAddressDragAutoFlag + byteSize(pSizeDragAutoFlag)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 
-const unsigned int pAddressIdleTimeout =				nextAllowedValue;
-const unsigned int pAddressEOCtimeout =					pAddressIdleTimeout + byteSize(pSizeIdleTimeout);
-const unsigned int pAddressButtonTimeout =				pAddressEOCtimeout + byteSize(pSizeEOCtimeout);
-const unsigned int pAddressParkTimeout =				pAddressButtonTimeout + byteSize(pSizeButtonTimeout);
-const unsigned int pAddressActivityTimeout =			pAddressParkTimeout + byteSize(pSizeParkTimeout);
-const unsigned int pAddressWakeupResetCurrentOnEngine =	pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
-const unsigned int pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
+static const unsigned int pAddressIdleTimeout =					nextAllowedValue;
+static const unsigned int pAddressEOCtimeout =					pAddressIdleTimeout + byteSize(pSizeIdleTimeout);
+static const unsigned int pAddressButtonTimeout =				pAddressEOCtimeout + byteSize(pSizeEOCtimeout);
+static const unsigned int pAddressParkTimeout =					pAddressButtonTimeout + byteSize(pSizeButtonTimeout);
+static const unsigned int pAddressActivityTimeout =				pAddressParkTimeout + byteSize(pSizeParkTimeout);
+static const unsigned int pAddressWakeupResetCurrentOnEngine =	pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
+static const unsigned int pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
 #define nextAllowedValue pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove)
 #if defined(useSavedTrips)
-const unsigned int pAddressAutoSaveActive =				nextAllowedValue;
+static const unsigned int pAddressAutoSaveActive =				nextAllowedValue;
 #define nextAllowedValue pAddressAutoSaveActive + byteSize(pSizeAutoSaveActive)
 #endif // defined(useSavedTrips)
 
 // miscellaneous settings
 
-const unsigned int pAddressScratchpad =					nextAllowedValue;
+static const unsigned int pAddressScratchpad =					nextAllowedValue;
 #define nextAllowedValue pAddressScratchpad + byteSize(pSizeScratchpad)
 
 // settings inaccessible from the menu
 
 #if defined(usePartialRefuel)
-const unsigned int pAddressRefuelSize =					nextAllowedValue;
+static const unsigned int pAddressRefuelSize =					nextAllowedValue;
 #define nextAllowedValue pAddressRefuelSize + byteSize(pSizeRefuelSize)
 #if defined(useEEPROMtripStorage)
-const uint8_t pAddressRefuelSaveSizeIdx =				nextAllowedValue;
+static const uint8_t pAddressRefuelSaveSizeIdx =				nextAllowedValue;
 #define nextAllowedValue pAddressRefuelSaveSizeIdx + byteSize(pSizeRefuelSaveSizeIdx)
 #endif // defined(useEEPROMtripStorage)
 #endif // defined(usePartialRefuel)
 
 #if defined(useEEPROMtripStorage)
-const uint8_t pAddressCurrTripSignatureIdx =			nextAllowedValue;
-const uint8_t pAddressTankTripSignatureIdx =			pAddressCurrTripSignatureIdx + byteSize(pSizeCurrTripSignatureIdx);
-const uint8_t pAddressCurrTripVSSpulseIdx =				pAddressTankTripSignatureIdx + byteSize(pSizeTankTripSignatureIdx);
-const uint8_t pAddressCurrTripVSScycleIdx =				pAddressCurrTripVSSpulseIdx + byteSize(pSizeCurrTripVSSpulseIdx);
-const uint8_t pAddressCurrTripInjPulseIdx =				pAddressCurrTripVSScycleIdx + byteSize(pSizeCurrTripVSScycleIdx);
-const uint8_t pAddressCurrTripInjCycleIdx =				pAddressCurrTripInjPulseIdx + byteSize(pSizeCurrTripInjPulseIdx);
-const uint8_t pAddressCurrTripEngCycleIdx =				pAddressCurrTripInjCycleIdx + byteSize(pSizeCurrTripInjCycleIdx);
-const uint8_t pAddressTankTripVSSpulseIdx =				pAddressCurrTripEngCycleIdx + byteSize(pSizeCurrTripEngCycleIdx);
-const uint8_t pAddressTankTripVSScycleIdx =				pAddressTankTripVSSpulseIdx + byteSize(pSizeTankTripVSSpulseIdx);
-const uint8_t pAddressTankTripInjPulseIdx =				pAddressTankTripVSScycleIdx + byteSize(pSizeTankTripVSScycleIdx);
-const uint8_t pAddressTankTripInjCycleIdx =				pAddressTankTripInjPulseIdx + byteSize(pSizeTankTripInjPulseIdx);
-const uint8_t pAddressTankTripEngCycleIdx =				pAddressTankTripInjCycleIdx + byteSize(pSizeTankTripInjCycleIdx);
+static const uint8_t pAddressCurrTripSignatureIdx =				nextAllowedValue;
+static const uint8_t pAddressTankTripSignatureIdx =				pAddressCurrTripSignatureIdx + byteSize(pSizeCurrTripSignatureIdx);
+static const uint8_t pAddressCurrTripVSSpulseIdx =				pAddressTankTripSignatureIdx + byteSize(pSizeTankTripSignatureIdx);
+static const uint8_t pAddressCurrTripVSScycleIdx =				pAddressCurrTripVSSpulseIdx + byteSize(pSizeCurrTripVSSpulseIdx);
+static const uint8_t pAddressCurrTripInjPulseIdx =				pAddressCurrTripVSScycleIdx + byteSize(pSizeCurrTripVSScycleIdx);
+static const uint8_t pAddressCurrTripInjCycleIdx =				pAddressCurrTripInjPulseIdx + byteSize(pSizeCurrTripInjPulseIdx);
+static const uint8_t pAddressCurrTripEngCycleIdx =				pAddressCurrTripInjCycleIdx + byteSize(pSizeCurrTripInjCycleIdx);
+static const uint8_t pAddressTankTripVSSpulseIdx =				pAddressCurrTripEngCycleIdx + byteSize(pSizeCurrTripEngCycleIdx);
+static const uint8_t pAddressTankTripVSScycleIdx =				pAddressTankTripVSSpulseIdx + byteSize(pSizeTankTripVSSpulseIdx);
+static const uint8_t pAddressTankTripInjPulseIdx =				pAddressTankTripVSScycleIdx + byteSize(pSizeTankTripVSScycleIdx);
+static const uint8_t pAddressTankTripInjCycleIdx =				pAddressTankTripInjPulseIdx + byteSize(pSizeTankTripInjPulseIdx);
+static const uint8_t pAddressTankTripEngCycleIdx =				pAddressTankTripInjCycleIdx + byteSize(pSizeTankTripInjCycleIdx);
 #define nextAllowedValue pAddressTankTripEngCycleIdx + byteSize(pSizeTankTripEngCycleIdx)
 #if defined(trackIdleEOCdata)
-const uint8_t pAddressCurrIEOCvssPulseIdx =				nextAllowedValue;
-const uint8_t pAddressCurrIEOCvssCycleIdx =				pAddressCurrIEOCvssPulseIdx + byteSize(pSizeCurrIEOCvssPulseIdx);
-const uint8_t pAddressCurrIEOCinjPulseIdx =				pAddressCurrIEOCvssCycleIdx + byteSize(pSizeCurrIEOCvssCycleIdx);
-const uint8_t pAddressCurrIEOCinjCycleIdx =				pAddressCurrIEOCinjPulseIdx + byteSize(pSizeCurrIEOCinjPulseIdx);
-const uint8_t pAddressCurrIEOCengCycleIdx =				pAddressCurrIEOCinjCycleIdx + byteSize(pSizeCurrIEOCinjCycleIdx);
-const uint8_t pAddressTankIEOCvssPulseIdx =				pAddressCurrIEOCengCycleIdx + byteSize(pSizeCurrIEOCengCycleIdx);
-const uint8_t pAddressTankIEOCvssCycleIdx =				pAddressTankIEOCvssPulseIdx + byteSize(pSizeTankIEOCvssPulseIdx);
-const uint8_t pAddressTankIEOCinjPulseIdx =				pAddressTankIEOCvssCycleIdx + byteSize(pSizeTankIEOCvssCycleIdx);
-const uint8_t pAddressTankIEOCinjCycleIdx =				pAddressTankIEOCinjPulseIdx + byteSize(pSizeTankIEOCinjPulseIdx);
-const uint8_t pAddressTankIEOCengCycleIdx =				pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
+static const uint8_t pAddressCurrIEOCvssPulseIdx =				nextAllowedValue;
+static const uint8_t pAddressCurrIEOCvssCycleIdx =				pAddressCurrIEOCvssPulseIdx + byteSize(pSizeCurrIEOCvssPulseIdx);
+static const uint8_t pAddressCurrIEOCinjPulseIdx =				pAddressCurrIEOCvssCycleIdx + byteSize(pSizeCurrIEOCvssCycleIdx);
+static const uint8_t pAddressCurrIEOCinjCycleIdx =				pAddressCurrIEOCinjPulseIdx + byteSize(pSizeCurrIEOCinjPulseIdx);
+static const uint8_t pAddressCurrIEOCengCycleIdx =				pAddressCurrIEOCinjCycleIdx + byteSize(pSizeCurrIEOCinjCycleIdx);
+static const uint8_t pAddressTankIEOCvssPulseIdx =				pAddressCurrIEOCengCycleIdx + byteSize(pSizeCurrIEOCengCycleIdx);
+static const uint8_t pAddressTankIEOCvssCycleIdx =				pAddressTankIEOCvssPulseIdx + byteSize(pSizeTankIEOCvssPulseIdx);
+static const uint8_t pAddressTankIEOCinjPulseIdx =				pAddressTankIEOCvssCycleIdx + byteSize(pSizeTankIEOCvssCycleIdx);
+static const uint8_t pAddressTankIEOCinjCycleIdx =				pAddressTankIEOCinjPulseIdx + byteSize(pSizeTankIEOCinjPulseIdx);
+static const uint8_t pAddressTankIEOCengCycleIdx =				pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
 #define nextAllowedValue pAddressTankIEOCengCycleIdx + byteSize(pSizeTankIEOCengCycleIdx)
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 
-const unsigned int eeAdrSettingsEnd =					nextAllowedValue;
+static const unsigned int eeAdrSettingsEnd =					nextAllowedValue;
 
 #if defined(useScreenEditor)
-const unsigned int eeAdrScreensStart =					nextAllowedValue;
-const unsigned int eeAdrScreensEnd =					eeAdrScreensStart + 2 * mainDisplayFormatSize;
+static const unsigned int eeAdrScreensStart =					nextAllowedValue;
+static const unsigned int eeAdrScreensEnd =						eeAdrScreensStart + 2 * mainDisplayFormatSize;
 #define nextAllowedValue eeAdrScreensEnd
 
 #endif // defined(useScreenEditor)
-const unsigned int eeAdrStorageEnd =					nextAllowedValue;
+static const unsigned int eeAdrStorageEnd =						nextAllowedValue;
 
 #define nextAllowedValue 0
-const uint8_t pSignatureIdx =			nextAllowedValue;
+static const uint8_t pSignatureIdx =					nextAllowedValue;
 #define nextAllowedValue pSignatureIdx + 1
 
 /* parameter indexes corresponding to sizes and addresses defined above */
 
 // this is the start of all EEPROM parameters that show up in the general settings screen
 
-const uint8_t eePtrSettingsStart =			nextAllowedValue;
+static const uint8_t eePtrSettingsStart =				nextAllowedValue;
 
 // display settings
 
-const uint8_t eePtrSettingsDispStart =		nextAllowedValue;
+static const uint8_t eePtrSettingsDispStart =			nextAllowedValue;
 
 #if defined(useLCDcontrast)
-const uint8_t pContrastIdx =				nextAllowedValue;
+static const uint8_t pContrastIdx =						nextAllowedValue;
 #define nextAllowedValue pContrastIdx + 1
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-const uint8_t pLCDcolorIdx =				nextAllowedValue;
+static const uint8_t pLCDcolorIdx =						nextAllowedValue;
 #define nextAllowedValue pLCDcolorIdx + 1
 #endif // defined(useAdafruitRGBLCDshield)
-const uint8_t pMetricModeIdx =				nextAllowedValue;
-const uint8_t pAlternateFEidx =				pMetricModeIdx + 1;
+static const uint8_t pMetricModeIdx =					nextAllowedValue;
+static const uint8_t pAlternateFEidx =					pMetricModeIdx + 1;
 #define nextAllowedValue pAlternateFEidx + 1
 #if defined(useFuelCost)
-const uint8_t pCostPerQuantity =			nextAllowedValue;
+static const uint8_t pCostPerQuantity =					nextAllowedValue;
 #define nextAllowedValue pCostPerQuantity + 1
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pOutputPin1Mode =				nextAllowedValue;
-const uint8_t pOutputPin2Mode =				pOutputPin1Mode + 1;
+static const uint8_t pOutputPin1Mode =					nextAllowedValue;
+static const uint8_t pOutputPin2Mode =					pOutputPin1Mode + 1;
 #define nextAllowedValue pOutputPin2Mode + 1
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-const uint8_t pVoltageOffset =				nextAllowedValue;
+static const uint8_t pVoltageOffset =					nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-const uint8_t pSerialDataLoggingIdx =		nextAllowedValue;
+static const uint8_t pSerialDataLoggingIdx =			nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
 #endif // defined(useDataLoggingOutput)
 #if defined(useBarFuelEconVsTime)
-const uint8_t pFEvsTimeIdx =				nextAllowedValue;
+static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
-const uint8_t pBarLowSpeedCutoffIdx =		nextAllowedValue;
-const uint8_t pBarSpeedQuantumIdx =			pBarLowSpeedCutoffIdx + 1;
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t pBarLowSpeedCutoffIdx =			nextAllowedValue;
+static const uint8_t pBarSpeedQuantumIdx =				pBarLowSpeedCutoffIdx + 1;
 #define nextAllowedValue pBarSpeedQuantumIdx + 1
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
-const uint8_t eePtrSettingsDispEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsDispLen =		eePtrSettingsDispEnd - eePtrSettingsDispStart;
+static const uint8_t eePtrSettingsDispEnd =				nextAllowedValue;
+static const uint8_t eePtrSettingsDispLen =				eePtrSettingsDispEnd - eePtrSettingsDispStart;
 
 // fuel injection settings
 
-const uint8_t eePtrSettingsInjStart =		nextAllowedValue;
+static const uint8_t eePtrSettingsInjStart =			nextAllowedValue;
 
 #if defined(useFuelPressure)
-const uint8_t pSysFuelPressureIdx =			nextAllowedValue;
+static const uint8_t pSysFuelPressureIdx =				nextAllowedValue;
 #define nextAllowedValue pSysFuelPressureIdx + 1
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const uint8_t pRefFuelPressureIdx =			nextAllowedValue;
-const uint8_t pInjectorCountIdx =			pRefFuelPressureIdx + 1;
-const uint8_t pInjectorSizeIdx =			pInjectorCountIdx + 1;
+static const uint8_t pRefFuelPressureIdx =				nextAllowedValue;
+static const uint8_t pInjectorCountIdx =				pRefFuelPressureIdx + 1;
+static const uint8_t pInjectorSizeIdx =					pInjectorCountIdx + 1;
 #define nextAllowedValue pInjectorSizeIdx + 1
 #endif // useCalculatedFuelFactor
-const uint8_t pMicroSecondsPerGallonIdx =	nextAllowedValue;
-const uint8_t pInjEdgeTriggerIdx =			pMicroSecondsPerGallonIdx + 1;
-const uint8_t pInjectorOpeningTimeIdx =		pInjEdgeTriggerIdx + 1;
-const uint8_t pInjectorClosingTimeIdx =		pInjectorOpeningTimeIdx + 1;
-const uint8_t pCrankRevPerInjIdx =			pInjectorClosingTimeIdx + 1;
-const uint8_t pMinGoodRPMidx =				pCrankRevPerInjIdx + 1;
+static const uint8_t pMicroSecondsPerGallonIdx =		nextAllowedValue;
+static const uint8_t pInjEdgeTriggerIdx =				pMicroSecondsPerGallonIdx + 1;
+static const uint8_t pInjectorOpeningTimeIdx =			pInjEdgeTriggerIdx + 1;
+static const uint8_t pInjectorClosingTimeIdx =			pInjectorOpeningTimeIdx + 1;
+static const uint8_t pCrankRevPerInjIdx =				pInjectorClosingTimeIdx + 1;
+static const uint8_t pMinGoodRPMidx =					pCrankRevPerInjIdx + 1;
 #define nextAllowedValue pMinGoodRPMidx + 1
 
-const uint8_t eePtrSettingsInjEnd =			nextAllowedValue;
-const uint8_t eePtrSettingsInjLen =			eePtrSettingsInjEnd - eePtrSettingsInjStart;
+static const uint8_t eePtrSettingsInjEnd =				nextAllowedValue;
+static const uint8_t eePtrSettingsInjLen =				eePtrSettingsInjEnd - eePtrSettingsInjStart;
 
 // vehicle speed sensor settings
 
-const uint8_t eePtrSettingsVSSstart =		nextAllowedValue;
+static const uint8_t eePtrSettingsVSSstart =			nextAllowedValue;
 
-const uint8_t pPulsesPerDistanceIdx =		nextAllowedValue;
-const uint8_t pVSSpauseIdx =				pPulsesPerDistanceIdx + 1;
-const uint8_t pMinGoodSpeedidx =			pVSSpauseIdx + 1;
+static const uint8_t pPulsesPerDistanceIdx =			nextAllowedValue;
+static const uint8_t pVSSpauseIdx =						pPulsesPerDistanceIdx + 1;
+static const uint8_t pMinGoodSpeedidx =					pVSSpauseIdx + 1;
 #define nextAllowedValue pMinGoodSpeedidx + 1
 
-const uint8_t eePtrSettingsVSSend =			nextAllowedValue;
-const uint8_t eePtrSettingsVSSlen =			eePtrSettingsVSSend - eePtrSettingsVSSstart;
+static const uint8_t eePtrSettingsVSSend =				nextAllowedValue;
+static const uint8_t eePtrSettingsVSSlen =				eePtrSettingsVSSend - eePtrSettingsVSSstart;
 
 // fuel tank size settings
 
-const uint8_t eePtrSettingsTankStart =		nextAllowedValue;
+static const uint8_t eePtrSettingsTankStart =			nextAllowedValue;
 
-const uint8_t pTankSizeIdx =				nextAllowedValue;
-const uint8_t pTankBingoSizeIdx =			pTankSizeIdx + 1;
+static const uint8_t pTankSizeIdx =						nextAllowedValue;
+static const uint8_t pTankBingoSizeIdx =				pTankSizeIdx + 1;
 #define nextAllowedValue pTankBingoSizeIdx + 1
 
-const uint8_t eePtrSettingsTankEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsTankLen =		eePtrSettingsTankEnd - eePtrSettingsTankStart;
+static const uint8_t eePtrSettingsTankEnd =				nextAllowedValue;
+static const uint8_t eePtrSettingsTankLen =				eePtrSettingsTankEnd - eePtrSettingsTankStart;
 #if defined(useChryslerMAPCorrection)
 
 // chrysler settings
 
-const uint8_t eePtrSettingsCRFICstart =		nextAllowedValue;
+static const uint8_t eePtrSettingsCRFICstart =			nextAllowedValue;
 
-const uint8_t pMAPsensorFloorIdx =			nextAllowedValue;
-const uint8_t pMAPsensorCeilingIdx =		pMAPsensorFloorIdx + 1;
-const uint8_t pMAPsensorRangeIdx =			pMAPsensorCeilingIdx + 1;
-const uint8_t pMAPsensorOffsetIdx =			pMAPsensorRangeIdx + 1;
+static const uint8_t pMAPsensorFloorIdx =				nextAllowedValue;
+static const uint8_t pMAPsensorCeilingIdx =				pMAPsensorFloorIdx + 1;
+static const uint8_t pMAPsensorRangeIdx =				pMAPsensorCeilingIdx + 1;
+static const uint8_t pMAPsensorOffsetIdx =				pMAPsensorRangeIdx + 1;
 #define nextAllowedValue pMAPsensorOffsetIdx + 1
 #if defined(useChryslerBaroSensor)
-const uint8_t pBaroSensorFloorIdx =			nextAllowedValue;
-const uint8_t pBaroSensorCeilingIdx =		pBaroSensorFloorIdx + 1;
-const uint8_t pBaroSensorRangeIdx =			pBaroSensorCeilingIdx + 1;
-const uint8_t pBaroSensorOffsetIdx =		pBaroSensorRangeIdx + 1;
+static const uint8_t pBaroSensorFloorIdx =				nextAllowedValue;
+static const uint8_t pBaroSensorCeilingIdx =			pBaroSensorFloorIdx + 1;
+static const uint8_t pBaroSensorRangeIdx =				pBaroSensorCeilingIdx + 1;
+static const uint8_t pBaroSensorOffsetIdx =				pBaroSensorRangeIdx + 1;
 #define nextAllowedValue pBaroSensorOffsetIdx + 1
 #else // defined(useChryslerBaroSensor)
-const uint8_t pBarometricPressureIdx =		nextAllowedValue;
+static const uint8_t pBarometricPressureIdx =			nextAllowedValue;
 #define nextAllowedValue pBarometricPressureIdx + 1
 #endif // defined(useChryslerBaroSensor)
 
-const uint8_t eePtrSettingsCRFICend =		nextAllowedValue;
-const uint8_t eePtrSettingsCRFIClen =		eePtrSettingsCRFICend - eePtrSettingsCRFICstart;
+static const uint8_t eePtrSettingsCRFICend =			nextAllowedValue;
+static const uint8_t eePtrSettingsCRFIClen =			eePtrSettingsCRFICend - eePtrSettingsCRFICstart;
 #endif // defined(useChryslerMAPCorrection)
 
 // drag race / coastdown calc settings
 
-const uint8_t eePtrSettingsACDstart =		nextAllowedValue;
+static const uint8_t eePtrSettingsACDstart =			nextAllowedValue;
 
-#ifdef useVehicleMass
-const uint8_t pVehicleMassIdx =				nextAllowedValue;
+#if defined(useVehicleMass)
+static const uint8_t pVehicleMassIdx =					nextAllowedValue;
 #define nextAllowedValue pVehicleMassIdx + 1
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
-const uint8_t pVehicleFrontalAreaIdx =		nextAllowedValue;
-const uint8_t pLocustDensityIdx =			pVehicleFrontalAreaIdx + 1;
-const uint8_t pCoefficientDidx =			pLocustDensityIdx + 1;
-const uint8_t pCoefficientVidx =			pCoefficientDidx + 1;
-const uint8_t pCoefficientRRidx =			pCoefficientVidx + 1;
-const uint8_t pCoastdownSamplePeriodIdx =	pCoefficientRRidx + 1;
+static const uint8_t pVehicleFrontalAreaIdx =			nextAllowedValue;
+static const uint8_t pLocustDensityIdx =				pVehicleFrontalAreaIdx + 1;
+static const uint8_t pCoefficientDidx =					pLocustDensityIdx + 1;
+static const uint8_t pCoefficientVidx =					pCoefficientDidx + 1;
+static const uint8_t pCoefficientRRidx =				pCoefficientVidx + 1;
+static const uint8_t pCoastdownSamplePeriodIdx =		pCoefficientRRidx + 1;
 #define nextAllowedValue pCoastdownSamplePeriodIdx + 1
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const uint8_t pDragSpeedIdx =				nextAllowedValue;
-const uint8_t pDragDistanceIdx =			pDragSpeedIdx + 1;
-const uint8_t pDragAutoFlagIdx =			pDragDistanceIdx + 1;
+#if defined(useDragRaceFunction)
+static const uint8_t pDragSpeedIdx =					nextAllowedValue;
+static const uint8_t pDragDistanceIdx =					pDragSpeedIdx + 1;
+static const uint8_t pDragAutoFlagIdx =					pDragDistanceIdx + 1;
 #define nextAllowedValue pDragAutoFlagIdx + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
-const uint8_t eePtrSettingsACDend =			nextAllowedValue;
-const uint8_t eePtrSettingsACDlen =			eePtrSettingsACDend - eePtrSettingsACDstart;
+static const uint8_t eePtrSettingsACDend =				nextAllowedValue;
+static const uint8_t eePtrSettingsACDlen =				eePtrSettingsACDend - eePtrSettingsACDstart;
 
 // timeout settings
 
-const uint8_t eePtrSettingsTimeoutStart =	nextAllowedValue;
+static const uint8_t eePtrSettingsTimeoutStart =		nextAllowedValue;
 
-const uint8_t pIdleTimeoutIdx =				nextAllowedValue;
-const uint8_t pEOCtimeoutIdx =				pIdleTimeoutIdx + 1;
-const uint8_t pButtonTimeoutIdx =			pEOCtimeoutIdx + 1;
-const uint8_t pParkTimeoutIdx =				pButtonTimeoutIdx + 1;
-const uint8_t pActivityTimeoutIdx =			pParkTimeoutIdx + 1;
-const uint8_t pWakeupResetCurrentOnEngineIdx =	pActivityTimeoutIdx + 1;
-const uint8_t pWakeupResetCurrentOnMoveIdx =	pWakeupResetCurrentOnEngineIdx + 1;
+static const uint8_t pIdleTimeoutIdx =					nextAllowedValue;
+static const uint8_t pEOCtimeoutIdx =					pIdleTimeoutIdx + 1;
+static const uint8_t pButtonTimeoutIdx =				pEOCtimeoutIdx + 1;
+static const uint8_t pParkTimeoutIdx =					pButtonTimeoutIdx + 1;
+static const uint8_t pActivityTimeoutIdx =				pParkTimeoutIdx + 1;
+static const uint8_t pWakeupResetCurrentOnEngineIdx =	pActivityTimeoutIdx + 1;
+static const uint8_t pWakeupResetCurrentOnMoveIdx =		pWakeupResetCurrentOnEngineIdx + 1;
 #define nextAllowedValue pWakeupResetCurrentOnMoveIdx + 1
 #if defined(useSavedTrips)
-const uint8_t pAutoSaveActiveIdx =			nextAllowedValue;
+static const uint8_t pAutoSaveActiveIdx =				nextAllowedValue;
 #define nextAllowedValue pAutoSaveActiveIdx + 1
 #endif // defined(useSavedTrips)
 
-const uint8_t eePtrSettingsTimeoutEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsTimeoutLen =		eePtrSettingsTimeoutEnd - eePtrSettingsTimeoutStart;
+static const uint8_t eePtrSettingsTimeoutEnd =			nextAllowedValue;
+static const uint8_t eePtrSettingsTimeoutLen =			eePtrSettingsTimeoutEnd - eePtrSettingsTimeoutStart;
 
 // miscellaneous settings
 
-const uint8_t eePtrSettingsMiscStart =		nextAllowedValue;
+static const uint8_t eePtrSettingsMiscStart =			nextAllowedValue;
 
-const uint8_t pScratchpadIdx =				nextAllowedValue;
+static const uint8_t pScratchpadIdx =					nextAllowedValue;
 #define nextAllowedValue pScratchpadIdx + 1
 
-const uint8_t eePtrSettingsMiscEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsMiscLen =		eePtrSettingsMiscEnd - eePtrSettingsMiscStart;
+static const uint8_t eePtrSettingsMiscEnd =				nextAllowedValue;
+static const uint8_t eePtrSettingsMiscLen =				eePtrSettingsMiscEnd - eePtrSettingsMiscStart;
 
-const uint8_t eePtrSettingsVisibleEnd =	nextAllowedValue;
+static const uint8_t eePtrSettingsVisibleEnd =			nextAllowedValue;
 
 // settings inaccessible from the menu
 
 #if defined(usePartialRefuel)
-const uint8_t pRefuelSizeIdx =				nextAllowedValue;
+static const uint8_t pRefuelSizeIdx =					nextAllowedValue;
 #define nextAllowedValue pRefuelSizeIdx + 1
 #endif // defined(usePartialRefuel)
 
-const uint8_t eePtrSettingsEnd =			nextAllowedValue;
+static const uint8_t eePtrSettingsEnd =					nextAllowedValue;
 
 #if defined(useEEPROMtripStorage)
-const uint8_t eePtrSavedTripsStart = 		nextAllowedValue;
+static const uint8_t eePtrSavedTripsStart = 			nextAllowedValue;
 
 #if defined(usePartialRefuel)
-const uint8_t pRefuelSaveSizeIdx =			nextAllowedValue;
+static const uint8_t pRefuelSaveSizeIdx =				nextAllowedValue;
 #define nextAllowedValue pRefuelSaveSizeIdx + 1
 #endif // defined(usePartialRefuel)
-const uint8_t pCurrTripSignatureIdx =		nextAllowedValue;
-const uint8_t pTankTripSignatureIdx =		pCurrTripSignatureIdx + 1;
-const uint8_t pCurrTripVSSpulseIdx =		pTankTripSignatureIdx + 1;
-const uint8_t pCurrTripVSScycleIdx =		pCurrTripVSSpulseIdx + 1;
-const uint8_t pCurrTripInjPulseIdx =		pCurrTripVSScycleIdx + 1;
-const uint8_t pCurrTripInjCycleIdx =		pCurrTripInjPulseIdx + 1;
-const uint8_t pCurrTripEngCycleIdx =		pCurrTripInjCycleIdx + 1;
-const uint8_t pTankTripVSSpulseIdx =		pCurrTripEngCycleIdx + 1;
-const uint8_t pTankTripVSScycleIdx =		pTankTripVSSpulseIdx + 1;
-const uint8_t pTankTripInjPulseIdx =		pTankTripVSScycleIdx + 1;
-const uint8_t pTankTripInjCycleIdx =		pTankTripInjPulseIdx + 1;
-const uint8_t pTankTripEngCycleIdx =		pTankTripInjCycleIdx + 1;
+static const uint8_t pCurrTripSignatureIdx =			nextAllowedValue;
+static const uint8_t pTankTripSignatureIdx =			pCurrTripSignatureIdx + 1;
+static const uint8_t pCurrTripVSSpulseIdx =				pTankTripSignatureIdx + 1;
+static const uint8_t pCurrTripVSScycleIdx =				pCurrTripVSSpulseIdx + 1;
+static const uint8_t pCurrTripInjPulseIdx =				pCurrTripVSScycleIdx + 1;
+static const uint8_t pCurrTripInjCycleIdx =				pCurrTripInjPulseIdx + 1;
+static const uint8_t pCurrTripEngCycleIdx =				pCurrTripInjCycleIdx + 1;
+static const uint8_t pTankTripVSSpulseIdx =				pCurrTripEngCycleIdx + 1;
+static const uint8_t pTankTripVSScycleIdx =				pTankTripVSSpulseIdx + 1;
+static const uint8_t pTankTripInjPulseIdx =				pTankTripVSScycleIdx + 1;
+static const uint8_t pTankTripInjCycleIdx =				pTankTripInjPulseIdx + 1;
+static const uint8_t pTankTripEngCycleIdx =				pTankTripInjCycleIdx + 1;
 #define nextAllowedValue pTankTripEngCycleIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t pCurrIEOCvssPulseIdx =		nextAllowedValue;
-const uint8_t pCurrIEOCvssCycleIdx =		pCurrIEOCvssPulseIdx + 1;
-const uint8_t pCurrIEOCinjPulseIdx =		pCurrIEOCvssCycleIdx + 1;
-const uint8_t pCurrIEOCinjCycleIdx =		pCurrIEOCinjPulseIdx + 1;
-const uint8_t pCurrIEOCengCycleIdx =		pCurrIEOCinjCycleIdx + 1;
-const uint8_t pTankIEOCvssPulseIdx =		pCurrIEOCengCycleIdx + 1;
-const uint8_t pTankIEOCvssCycleIdx =		pTankIEOCvssPulseIdx + 1;
-const uint8_t pTankIEOCinjPulseIdx =		pTankIEOCvssCycleIdx + 1;
-const uint8_t pTankIEOCinjCycleIdx =		pTankIEOCinjPulseIdx + 1;
-const uint8_t pTankIEOCengCycleIdx =		pTankIEOCinjCycleIdx + 1;
+static const uint8_t pCurrIEOCvssPulseIdx =				nextAllowedValue;
+static const uint8_t pCurrIEOCvssCycleIdx =				pCurrIEOCvssPulseIdx + 1;
+static const uint8_t pCurrIEOCinjPulseIdx =				pCurrIEOCvssCycleIdx + 1;
+static const uint8_t pCurrIEOCinjCycleIdx =				pCurrIEOCinjPulseIdx + 1;
+static const uint8_t pCurrIEOCengCycleIdx =				pCurrIEOCinjCycleIdx + 1;
+static const uint8_t pTankIEOCvssPulseIdx =				pCurrIEOCengCycleIdx + 1;
+static const uint8_t pTankIEOCvssCycleIdx =				pTankIEOCvssPulseIdx + 1;
+static const uint8_t pTankIEOCinjPulseIdx =				pTankIEOCvssCycleIdx + 1;
+static const uint8_t pTankIEOCinjCycleIdx =				pTankIEOCinjPulseIdx + 1;
+static const uint8_t pTankIEOCengCycleIdx =				pTankIEOCinjCycleIdx + 1;
 #define nextAllowedValue pTankIEOCengCycleIdx + 1
 #endif // defined(trackIdleEOCdata)
 
-const uint8_t eePtrSavedTripsEnd = 			nextAllowedValue;
-const uint8_t eePtrSavedTripsLen = 			eePtrSavedTripsEnd - eePtrSavedTripsStart;
+static const uint8_t eePtrSavedTripsEnd = 				nextAllowedValue;
+static const uint8_t eePtrSavedTripsLen = 				eePtrSavedTripsEnd - eePtrSavedTripsStart;
 
 #endif // defined(useEEPROMtripStorage)
-const uint8_t eePtrStorageEnd =				nextAllowedValue;
+static const uint8_t eePtrStorageEnd =					nextAllowedValue;
 
 #if defined(useScreenEditor)
-const uint8_t eePtrDisplayPagesStart =		nextAllowedValue;
-const uint8_t eePtrDisplayPagesEnd =		eePtrDisplayPagesStart + mainDisplayFormatSize;
+static const uint8_t eePtrDisplayPagesStart =			nextAllowedValue;
+static const uint8_t eePtrDisplayPagesEnd =				eePtrDisplayPagesStart + mainDisplayFormatSize;
 #define nextAllowedValue eePtrDisplayPagesEnd
 
 #endif // defined(useScreenEditor)
-const uint8_t eePtrEnd =					nextAllowedValue;
+static const uint8_t eePtrEnd =							nextAllowedValue;
 
 /* labels for parameters definitions above */
 
-const char parmLabels[] PROGMEM = {
+static const char parmLabels[] PROGMEM = {
 	"MPGuinoSig" tcEOSCR
 
 // display settings
@@ -645,10 +645,10 @@ const char parmLabels[] PROGMEM = {
 #if defined(useBarFuelEconVsTime)
 	"FE/Time Period s" tcEOSCR
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	"bgLower*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
 	"bgSize*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
@@ -702,9 +702,9 @@ const char parmLabels[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	"FrArea*1000 " tcOMOFF "ft" tcOTOG "m" tcOON "^2" tcEOSCR
 	"rho*1000 " tcOMOFF "lb/yd" tcOTOG "kg/m" tcOON "^3" tcEOSCR
@@ -713,11 +713,11 @@ const char parmLabels[] PROGMEM = {
 	"C(rr) * 1000" tcEOSCR
 	"Cd SamplePd (s)" tcEOSCR
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"DragSpd " tcOMOFF "MPH" tcOTOG "kph" tcOON "*1000" tcEOSCR
 	"DragDist " tcOMOFF "mi" tcOTOG "km" tcOON "*1000" tcEOSCR
 	"DragAutoTrigger" tcEOSCR
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 
@@ -857,7 +857,7 @@ static const uint8_t pfDoMetricModeConversion =	pfHardwareInitMPGuino + 32;
 static const uint8_t pfChangeDisplay =			pfDoMetricModeConversion + 32;
 static const uint8_t pfCalculateFuelParams =	pfChangeDisplay + 32;
 
-const uint8_t paramsLength[] PROGMEM = {
+static const uint8_t paramsLength[] PROGMEM = {
 	 (pSizeSignature & 0x07) | pfHardwareInitMPGuino							// EEPROM MPGuino signature long word
 
 // display settings
@@ -886,10 +886,10 @@ const uint8_t paramsLength[] PROGMEM = {
 #if defined(useBarFuelEconVsTime)
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph lower speed
 	,(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
@@ -938,9 +938,9 @@ const uint8_t paramsLength[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	,(pSizeVehicleMass & 0x07)													// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,(pSizeVehicleFrontalArea & 0x07)											// Vehicle Frontal Area * 1000 (ft^2 or m^2)
 	,(pSizeLocustDensity & 0x07)												// Air density (lb/yd^3 or kg/m^3)
@@ -949,11 +949,11 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeCoefficientRR & 0x07)												// Vehicle C(rr) * 1000
 	,(pSizeCoastdownSamplePeriod & 0x07)										// Sample Period in seconds
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,(pSizeDragSpeed & 0x07)													// Drag speed cutoff (MPH or kph) * 1000
 	,(pSizeDragDistance & 0x07)													// Drag distance cutoff (miles or km) * 1000
 	,(pSizeDragAutoFlag & 0x07)													// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 
@@ -1012,7 +1012,7 @@ const uint8_t paramsLength[] PROGMEM = {
 
 /* parameter EEPROM addresses for parameter definitions above */
 
-const uint8_t paramAddrs[] PROGMEM = {
+static const uint8_t paramAddrs[] PROGMEM = {
 	(uint8_t)(pAddressSignature)					// EEPROM signature long word for MPGuino
 
 // display settings
@@ -1041,10 +1041,10 @@ const uint8_t paramAddrs[] PROGMEM = {
 #if defined(useBarFuelEconVsTime)
 	,(uint8_t)(pAddressFEvsTime)					// Period Of FE over Time Bar Graph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,(uint8_t)(pAddressBarLowSpeedCutoff)			// FE vs Speed Bargraph lower speed
 	,(uint8_t)(pAddressBarSpeedQuantumIdx)			// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
@@ -1093,9 +1093,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	,(uint8_t)(pAddressVehicleMass)					// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,(uint8_t)(pAddressVehicleFrontalArea)			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
 	,(uint8_t)(pAddressLocustDensity)				// Air density (lb/yd^3 or kg/m^3)
@@ -1104,11 +1104,11 @@ const uint8_t paramAddrs[] PROGMEM = {
 	,(uint8_t)(pAddressCoefficientRR)				// Vehicle C(rr) * 1000
 	,(uint8_t)(pAddressCoastdownSamplePeriod)		// Sample Period in seconds
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,(uint8_t)(pAddressDragSpeed)					// Drag speed cutoff (MPH or kph) * 1000
 	,(uint8_t)(pAddressDragDistance)				// Drag distance cutoff (miles or km) * 1000
 	,(uint8_t)(pAddressDragAutoFlag)				// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 
@@ -1166,9 +1166,9 @@ const uint8_t paramAddrs[] PROGMEM = {
 
 /* parameter values for parameter definitions above */
 
-const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 16) + ((uint32_t)(eePtrEnd) << 8) + (uint32_t)(eeAdrSettingsEnd);
+static const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 16) + ((uint32_t)(eePtrEnd) << 8) + (uint32_t)(eeAdrSettingsEnd);
 
-const uint32_t params[] PROGMEM = {
+static const uint32_t params[] PROGMEM = {
 	 newEEPROMsignature	// EEPROM MPGuino signature long word
 
 // display settings
@@ -1197,10 +1197,10 @@ const uint32_t params[] PROGMEM = {
 #if defined(useBarFuelEconVsTime)
 	,60					// Length Of BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,25000				// FE vs Speed Bargraph lower speed
 	,5000				// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 
 // fuel injection settings
 
@@ -1249,9 +1249,9 @@ const uint32_t params[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	,4000				// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,25400				// Vehicle Frontal Area (ft^2 or m^2)
 	,2065				// Air density (lb/yd^3 or kg/m^3)
@@ -1260,11 +1260,11 @@ const uint32_t params[] PROGMEM = {
 	,8					// C(rr)
 	,3					// Sample Period in seconds
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,60000				// Drag speed cutoff (MPH or kph) * 1000
 	,250				// Drag distance cutoff (miles or km) * 1000
 	,0					// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 // timeout settings
 

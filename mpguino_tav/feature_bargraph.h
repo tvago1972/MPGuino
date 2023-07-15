@@ -12,56 +12,6 @@ namespace barGraphSupport /* Bar Graph support section prototype */
 
 };
 
-static const uint8_t prgmGenerateHistographData[] PROGMEM = {
-	instrLdJumpReg,										// save jump register value of input function
-	instrLxdI, bgDataSize,
-	instrLdRegByte, 0x03, 0,
-
-//loop:
-	instrAddIndex, 255,									// decrement index
-	instrCallImplied,									// go call input function
-	instrBranchIfE, 10,									// if function result is zero, go skip
-	instrTestReg, 0x03,									// test currently saved high value
-	instrBranchIfE, 4,									// if high value is zero, go save what the input function returned
-	instrCmpXtoY, 0x23,									// otherwise, compare current value to high value
-	instrBranchIfLTorE,	2,								// if not higher, skip
-
-//cont0:
-	instrLdReg, 0x23,									// save high value
-
-//cont1:
-	instrTestIndex,
-	instrBranchIfNotE, 238,
-	instrLdReg, 0x32,									// load high value
-	instrDiv2byByte, 100,								// divide by normalization value
-	instrLdReg, 0x23,									// save high value
-
-//loop2:
-	instrTestReg, 0x03,									// is high value zero
-	instrBranchIfE, 42,									// if so, just store a zero - can't divide by zero
-	instrCallImplied,									// go call input function
-	instrBranchIfNotE, 12,								// if function result is not zero, go skip
-	instrBranchIfOverflow, 5,
-	instrLdRegByte, 0x02, 0,							// load zero value into main register
-	instrSkip, 9,
-
-//ovfl:
-	instrLdRegByte, 0x02, 255,							// load overflow value into main register
-	instrSkip, 4,
-
-//cont2:
-	instrLdReg, 0x31,									// recall high value
-	instrDiv2by1,										// go normalize value
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-
-//cont3:
-	instrStRegBGdataIndexed, 0x02,						// save normalized value
-	instrAddIndex, 1,									// bump index up
-	instrCmpIndex, bgDataSize,							// processed through all of fuel econ vs time trip variable bank?
-	instrBranchIfLT, 225,								// if not, loop back
-	instrDone											// return to caller
-};
-
 static const char bgSpaces[] PROGMEM = {
 	"\x80" "  " tcCG0 tcCG2 tcCG4 tcCG6 "  " tcEOS
 	"\x94" "  " tcCG1 tcCG3 tcCG5 tcCG7 "  " tcEOS
@@ -115,6 +65,36 @@ namespace bgFEvsSsupport /* fuel economy over speed histograph support section p
 };
 
 uint8_t FEvSpdTripIdx;
+
+static const uint8_t prgmFEvsSpeed[] PROGMEM = {
+	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
+	instrTestReg, 0x02,									// test VSS cycle value
+	instrBranchIfZero, 15,								// if zero, then speed is also zero
+	instrLdReg, 0x21,									// save denominator term for later
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
+	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
+	instrDiv2by1,										// divide to obtain vehicle speed
+
+//cont:
+	instrSubMainFromX, 0x02, mpFEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
+	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
+
+//badRet:
+	instrLdRegByte, 0x02, 0xFF,							// load a 255 into register 2
+	instrDone,											// exit to caller
+
+//cont2:
+	instrDiv2byMain, mpFEvsSpeedQuantumIdx,				// find trip index offset
+	instrLdRegByte, 0x01, bgDataSize - 1,				// is offset greater than the number of available trip slots
+	instrCmpXtoY, 0x21,
+	instrBranchIfLTorE, 2,								// if not, skip ahead
+	instrLdReg, 0x12,									// load the last trip slot index
+
+//cont3:
+	instrAddByteToX, 0x02, FEvsSpeedIdx,				// obtain working fuel econ vs speed trip index value
+	instrDone											// exit to caller
+};
 
 static const char barFEvSfuncNames[] PROGMEM = {
 	"FE / Speed" tcEOS

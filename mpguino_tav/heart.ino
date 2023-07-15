@@ -199,17 +199,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 		if (accelerationFlags & accelTestInProgress) // if acceleration test has started
 		{
 
-			timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+			timer0Status |= (t0sAccelTestFlag);
 			accelerationFlags &= ~(accelTestClearFlags); // reset drag race capture flags
 			accelerationFlags |= (accelTestCompleteFlags); // signal that drag function is cancelled
 
 		}
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 		internalFlags |= internalCancelCDT; // coastdown test will cancel if vehicle is idling
 
@@ -1003,11 +1003,11 @@ ISR( INT1_vect )
 			tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx); // add to fuel injector total cycle accumulator
 
 #endif // defined(trackIdleEOCdata)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 			// add to distance acceleration fuel injector total cycle accumulator
 			if (accelerationFlags & accelTestActive) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 		}
 
 		// if the injector pulse width is valid
@@ -1042,7 +1042,7 @@ ISR( INT1_vect )
 			tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawTripIdx); // add to fuel injector open cycle accumulator
 
 #endif // defined(trackIdleEOCdata)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 			if (accelerationFlags & accelTestActive)
 			{
 
@@ -1051,7 +1051,7 @@ ISR( INT1_vect )
 
 			}
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 		}
 
 	}
@@ -1279,13 +1279,13 @@ static void updateVSS(unsigned long thisVSStime)
 		}
 
 #endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 		if (accelerationFlags & accelTestTriggered) // if accel test function is triggered
 		{
 
-				accelerationFlags &= ~accelTestTriggered; // switch status from 'triggered' to 'active'
-				accelerationFlags |= accelTestActive;
-				timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+				accelerationFlags &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
+				accelerationFlags |= (accelTestActive);
+				timer0Status |= (t0sAccelTestFlag);
 
 		}
 
@@ -1304,8 +1304,8 @@ static void updateVSS(unsigned long thisVSStime)
 				else
 				{
 
-					accelerationFlags &= ~accelTestDistance; // otherwise, mark drag function distance measurement as complete
-					timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+					accelerationFlags &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
+					timer0Status |= (t0sAccelTestFlag);
 
 				}
 
@@ -1316,8 +1316,8 @@ static void updateVSS(unsigned long thisVSStime)
 
 				// copy drag raw trip variable to drag full speed trip variable
 				tripVar::transfer(dragRawDistanceIdx, dragRawHalfSpeedIdx);
-				accelerationFlags &= ~accelTestHalfSpeed; // mark drag function speed measurement as complete
-				timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+				accelerationFlags &= ~(accelTestHalfSpeed); // mark drag function speed measurement as complete
+				timer0Status |= (t0sAccelTestFlag);
 
 			}
 
@@ -1326,23 +1326,23 @@ static void updateVSS(unsigned long thisVSStime)
 
 				// copy drag raw trip variable to drag full speed trip variable
 				tripVar::transfer(dragRawDistanceIdx, dragRawFullSpeedIdx);
-				accelerationFlags &= ~accelTestFullSpeed; // mark drag function speed measurement as complete
-				timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+				accelerationFlags &= ~(accelTestFullSpeed); // mark drag function speed measurement as complete
+				timer0Status |= (t0sAccelTestFlag);
 
 			}
 
 			if ((accelerationFlags & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
 			{
 
-				accelerationFlags &= ~accelTestActive; // switch status from 'active' to 'finished'
-				accelerationFlags |= accelTestFinished;
-				timer0Status |= (t0sAccelTestFlag | t0sUpdateDisplay);
+				accelerationFlags &= ~(accelTestActive); // switch status from 'active' to 'finished'
+				accelerationFlags |= (accelTestFinished);
+				timer0Status |= (t0sAccelTestFlag);
 
 			}
 
 		}
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	}
 
 	dirty |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read

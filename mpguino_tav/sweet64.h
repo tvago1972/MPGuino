@@ -768,13 +768,13 @@ const uint8_t convIdx[] PROGMEM = {
 #if defined(usePartialRefuel)
 	,pRefuelSizeIdx
 #endif // defined(usePartialRefuel)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,pDragSpeedIdx
 	,pDragDistanceIdx
-#endif // useDragRaceFunction
-#ifdef useVehicleMass
+#endif // defined(useDragRaceFunction)
+#if defined(useVehicleMass)
 	,pVehicleMassIdx
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,pVehicleFrontalAreaIdx
 	,pLocustDensityIdx
@@ -793,10 +793,10 @@ const uint8_t convIdx[] PROGMEM = {
 	,pBarometricPressureIdx
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,pBarLowSpeedCutoffIdx
 	,pBarSpeedQuantumIdx
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelCost)
 	,pCostPerQuantity
 #endif // defined(useFuelCost)
@@ -845,9 +845,9 @@ const uint8_t idxDenomArea =				idxOneHundredMillion;			// denominator to conver
 
 const uint8_t idxOneBillion =				idxOneHundredMillion + 1;
 const uint8_t idxDenomVolume =				idxOneBillion;					// denominator to convert US gallons to liters
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 const uint8_t idxNumerMass =				idxOneBillion;					// numerator to convert pounds to kilograms
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 
 const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
 const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
@@ -872,10 +872,10 @@ const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to grou
 const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
 #endif // defined(useCarVoltageOutput)
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 const uint8_t idxDenomMass =				nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 const uint8_t idxNumerArea =				nextAllowedValue;				// numerator to convert square feet to square meters
 const uint8_t idxDenomDensity =				idxNumerArea + 1;				// denominator to convert SAE density to metric density
@@ -889,10 +889,10 @@ const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in 
 const uint8_t idxNumerImperialGallon =		nextAllowedValue;				// numerator to convert Imperial gallons to liters
 #define nextAllowedValue idxNumerImperialGallon + 1
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #define nextAllowedValue idxPowerFactor + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 const uint8_t idxMaxConstant =				nextAllowedValue;
 
@@ -941,9 +941,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 	"idxOneBillion"
 	"/idxDenomVolume"
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	"/idxNumerMass"
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 	tcEOSCR
 
 	"idxCycles0PerSecond" tcEOSCR
@@ -965,9 +965,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxResistanceR5" tcEOSCR
 	"idxResistanceR6" tcEOSCR
 #endif // defined(useCarVoltageOutput)
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	"idxDenomMass" tcEOSCR
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	"idxNumerArea" tcEOSCR
 	"idxDenomDensity" tcEOSCR
@@ -978,9 +978,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 #ifdef useImperialGallon
 	"idxNumerImperialGallon" tcEOSCR
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"idxPowerFactor" tcEOSCR
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 };
 
 #endif // defined(useDebugTerminalLabels)
@@ -1027,9 +1027,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 
 	,1000000000ul					// idxOneBillion
 									// idxDenomVolume - denominator to convert US gallons to liters
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 									// idxNumerMass - numerator to convert pounds to kilograms
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 
 	,t0CyclesPerSecond						// idxCycles0PerSecond - timer0 clock cycles per second
 	,256ul									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
@@ -1050,9 +1050,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 	,9600ul									// idxResistanceR5 - resistor next to ground (via meelis11)
 	,27000ul								// idxResistanceR6 - resistor next to diode  (via meelis11)
 #endif // defined(useCarVoltageOutput)
-#ifdef useVehicleMass
+#if defined(useVehicleMass)
 	,2204622621ul							// idxDenomMass - denominator to convert pounds to kilograms
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,9290304ul								// idxNumerArea - numerator to convert square feet to square meters
 	,168555ul								// idxDenomDensity - denominator to convert SAE density to metric density
@@ -1063,9 +1063,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 #ifdef useImperialGallon
 	,454609ul								// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,22840ul								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 };
 
 const uint8_t convNumerIdx[] PROGMEM = {
@@ -1076,13 +1076,13 @@ const uint8_t convNumerIdx[] PROGMEM = {
 #if defined(usePartialRefuel)
 	,idxNumerVolume							// pRefuelSizeIdx
 #endif // defined(usePartialRefuel)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,idxNumerDistance						// pDragSpeedIdx
 	,idxNumerDistance						// pDragDistanceIdx
-#endif // useDragRaceFunction
-#ifdef useVehicleMass
+#endif // defined(useDragRaceFunction)
+#if defined(useVehicleMass)
 	,idxNumerMass							// pVehicleMassIdx
-#endif // useVehicleMass
+#endif // defined(useVehicleMass)
 #ifdef useCoastDownCalculator
 	,idxNumerArea							// pVehicleFrontalAreaIdx
 	,idxNumerDensity						// pLocustDensityIdx
@@ -1101,10 +1101,10 @@ const uint8_t convNumerIdx[] PROGMEM = {
 	,idxNumerPressure						// pBarometricPressureIdx
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,idxNumerDistance						// pBarLowSpeedCutoffIdx
 	,idxNumerDistance						// pBarSpeedQuantumIdx
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelCost)
 	,idxDenomVolume							// pCostPerQuantity
 #endif // defined(useFuelCost)

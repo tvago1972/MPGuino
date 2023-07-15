@@ -67,10 +67,10 @@ static const uint8_t tAlternatorChannel =			nextAllowedValue;				// DC voltage
 #define nextAllowedValue tAlternatorChannel + 1
 #endif // defined(useCarVoltageOutput)
 
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 static const uint8_t tAccelTestTime =				nextAllowedValue;				// acceleration test time (s.s)
 #define nextAllowedValue tAccelTestTime + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 static const uint8_t dfMaxValNonConversion =		nextAllowedValue;				// maximum index for function indexes that return results that are not affected by metric conversions
 
@@ -97,11 +97,11 @@ static const uint8_t tDistancePerFuelCost =			tFuelCostPerDistance + 1;		// dist
 static const uint8_t tPressureChannel =				nextAllowedValue;				// absolute pressure (SI/SAE)
 #define nextAllowedValue tPressureChannel + 1
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 static const uint8_t tEstimatedEnginePower =		nextAllowedValue;				// estimated engine power (SI/SAE)
 static const uint8_t tDragSpeed =					tEstimatedEnginePower + 1;		// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
 #define nextAllowedValue tDragSpeed + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 static const uint8_t dfMaxValSingleFormat =			nextAllowedValue;				// maximum index for function indexes that return results that only have single metric formats
 
@@ -130,12 +130,12 @@ static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
 static const uint8_t tFEvTgetFuelEconomy =			tFEvTgetConsumedFuel + 1;
 #define nextAllowedValue tFEvTgetFuelEconomy + 1
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 static const uint8_t tFEvSgetDistance =				nextAllowedValue;
 static const uint8_t tFEvSgetConsumedFuel =			tFEvSgetDistance + 1;
 static const uint8_t tFEvSgetFuelEconomy =			tFEvSgetConsumedFuel + 1;
 #define nextAllowedValue tFEvSgetFuelEconomy + 1
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useDebugTerminal)
 static const uint8_t tParseCharacterToReg =			nextAllowedValue;
 #define nextAllowedValue tParseCharacterToReg + 1
@@ -173,9 +173,9 @@ static const char terminalTripFuncNames[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	"tAlternatorChannel" tcEOSCR			// DC voltage
 #endif // defined(useCarVoltageOutput)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"tAccelTestTime" tcEOSCR				// acceleration test time (s.s)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	"tFuelUsed" tcEOSCR						// fuel quantity used (SI/SAE)
 	"tFuelRate" tcEOSCR						// fuel consumption rate (SI/SAE)
 	"tDistance" tcEOSCR						// vehicle distance traveled (SI/SAE)
@@ -196,10 +196,10 @@ static const char terminalTripFuncNames[] PROGMEM = {
 #if defined(useChryslerMAPCorrection)
 	"tPressureChannel" tcEOSCR				// absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"tEstimatedEnginePower" tcEOSCR			// estimated engine power (SI/SAE)
 	"tDragSpeed" tcEOSCR					// acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	"tFuelEcon" tcEOSCR						// fuel economy (SI/SAE)
 };
 
@@ -820,7 +820,7 @@ static const uint8_t prgmFEvTgetFuelEconomy[] PROGMEM = {
 };
 
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 static const uint8_t prgmFEvSgetDistance[] PROGMEM = {
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvVSSpulseIdx,	// load indexed VSS pulses from fuel econ vs speed trip variable bank
 	instrClearFlag, SWEET64overflowFlag,				// Z flag is set on data, and V flag is clear
@@ -866,7 +866,7 @@ static const uint8_t prgmFEvSgetFuelEconomy[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useDebugTerminal)
 static const uint8_t prgmTerminalWriteParameterValue[] PROGMEM = {
 	instrStRegEEPROMindexed, 0x06,
@@ -903,7 +903,7 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 };
 
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 static const uint8_t prgmDragSpeed[] PROGMEM = {
 	instrLdRegVolatile, 0x02, vDragInstantSpeedIdx,		// load instantaneous drag speed measurement
 	instrTestReg, 0x02,									// test speed measurement
@@ -957,7 +957,7 @@ static const uint8_t prgmAccelTestTime[] PROGMEM = {
 	instrDone
 };
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 const uint8_t * const S64programList[] PROGMEM = {
 // these SWEET64 program addresses correspond to the display functions to either screen or logging output
 	 prgmEngineRunTime									// tEngineRunTime - engine runtime (hhmmss)
@@ -990,9 +990,9 @@ const uint8_t * const S64programList[] PROGMEM = {
 #if defined(useCarVoltageOutput)
 	,prgmAlternatorChannel								// tAlternatorChannel - DC voltage
 #endif // defined(useCarVoltageOutput)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,prgmAccelTestTime									// tAccelTestTime - acceleration test time (s.s)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,prgmFuelUsed										// tFuelUsed - fuel quantity used (SI/SAE)
 	,prgmFuelRate										// tFuelRate - fuel consumption rate (SI/SAE)
 	,prgmDistance										// tDistance - vehicle distance traveled (SI/SAE)
@@ -1013,10 +1013,10 @@ const uint8_t * const S64programList[] PROGMEM = {
 #if defined(useChryslerMAPCorrection)
 	,prgmPressureChannel								// tPressureChannel - absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,prgmEstimateEnginePower							// tEstimatedEnginePower - estimated engine power (SI/SAE)
 	,prgmDragSpeed										// tDragSpeed - acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,prgmFuelEcon										// tFuelEcon - fuel economy (SI/SAE)
 
 // this is the start of the internal SWEET64 index program address list
@@ -1038,11 +1038,11 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmFEvTgetConsumedFuel							// tFEvTgetConsumedFuel
 	,prgmFEvTgetFuelEconomy								// tFEvTgetFuelEconomy
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	,prgmFEvSgetDistance								// tFEvSgetDistance
 	,prgmFEvSgetConsumedFuel							// tFEvSgetConsumedFuel
 	,prgmFEvSgetFuelEconomy								// tFEvSgetFuelEconomy
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useDebugTerminal)
 	,prgmParseCharacterToReg
 #endif //defined(useDebugTerminal)
@@ -1063,10 +1063,10 @@ const uint8_t calcFormatFuelRateCostIdx =			calcFormatFuelCostIdx + 1;				// fue
 const uint8_t calcFormatanalogDisplayIdx =				nextAllowedValue;						// voltage
 #define nextAllowedValue calcFormatanalogDisplayIdx + 1
 #endif // useAnalogRead
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 const uint8_t calcFormatTimeInTenthsSecIdx =		nextAllowedValue;						// time in tenths of seconds
 #define nextAllowedValue calcFormatTimeInTenthsSecIdx + 1
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 const uint8_t calcFormatFuelQuantityIdx =			nextAllowedValue;						// fuel quantity (SAE/SI)
 const uint8_t calcFormatFuelRateIdx =				calcFormatFuelQuantityIdx + 2;			// fuel rate (SAE/SI)
 const uint8_t calcFormatDistanceIdx =				calcFormatFuelRateIdx + 2;				// distance travelled (SAE/SI)
@@ -1081,10 +1081,10 @@ const uint8_t calcFormatDistancePerFuelCostIdx =	calcFormatFuelCostPerDistanceId
 const uint8_t calcFormatPressureIdx =				nextAllowedValue;						// absolute pressure (SI/SAE)
 #define nextAllowedValue calcFormatPressureIdx + 2
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 const uint8_t calcFormatEstimatedPowerIdx =			nextAllowedValue;						// estimated engine power (SI/SAE)
 #define nextAllowedValue calcFormatEstimatedPowerIdx + 2
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 const uint8_t calcFormatFuelEconomyIdx =			nextAllowedValue;						// fuel economy (SAE/SI)
 #define nextAllowedValue calcFormatFuelEconomyIdx + 4
 
@@ -1103,9 +1103,9 @@ static const char terminalFormats[] PROGMEM = {
 #if defined(useAnalogRead)
 	"V(dc)" tcEOS
 #endif // useAnalogRead
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"tenths" tcEOS
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	"gallon" tcEOS
 	"liter" tcEOS
 	"gallon/hour" tcEOS
@@ -1124,10 +1124,10 @@ static const char terminalFormats[] PROGMEM = {
 	"psia" tcEOS
 	"kPa" tcEOS
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	"WHP" tcEOS
 	"kW" tcEOS
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	"MPG" tcEOS
 	"L/100km" tcEOS
 	"gal/100miles" tcEOS
@@ -1167,9 +1167,9 @@ const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { /
 #if defined(useCarVoltageOutput)
 	,calcFormatanalogDisplayIdx					// tAlternatorChannel - DC voltage
 #endif // defined(useCarVoltageOutput)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,calcFormatTimeInTenthsSecIdx				// tAccelTestTime - acceleration test time (s.s)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,calcFormatFuelQuantityIdx					// tFuelUsed - fuel quantity used (SI/SAE)
 	,calcFormatFuelRateIdx						// tFuelRate - fuel consumption rate (SI/SAE)
 	,calcFormatDistanceIdx						// tDistance - vehicle distance traveled (SI/SAE)
@@ -1190,10 +1190,10 @@ const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { /
 #if defined(useChryslerMAPCorrection)
 	,calcFormatPressureIdx						// tPressureChannel - absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,calcFormatEstimatedPowerIdx				// tEstimatedEnginePower - estimated engine power (SI/SAE)
 	,calcFormatSpeedIdx							// tDragSpeed - acceleration test maximum vehicle speed at 1/4 mile (SI/SAE)
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,calcFormatFuelEconomyIdx					// tFuelEcon - fuel economy (SI/SAE)
 };
 
@@ -1253,9 +1253,9 @@ const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM =
 #if defined(useAnalogRead)
 	,'V'	// voltage
 #endif // useAnalogRead
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,'s'	// time in tenths of seconds
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,'G'	// SAE fuel used
 	,'L'	// SI fuel used
 	,'g'	// SAE fuel rate
@@ -1274,10 +1274,10 @@ const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM =
 	,'P'	// SAE pressure
 	,'P'	// SI pressure
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	,'H'	// SAE horsepower
 	,'W'	// SI horsepower
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 	,'E'	// SAE fuel economy
 	,'E'	// SI fuel economy
 	,'E'	// alternate SAE fuel economy
@@ -1322,13 +1322,13 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 	// voltage
 	,{0b00010001, 0b00010001, 0b00010001, 0b00001010, 0b00000100, 0b00000000, 0b00000000, 0b00000000
 	, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00010001, 0b00011010, 0b00011010, 0b00010001}
-#endif // useAnalogRead
-#ifdef useDragRaceFunction
+#endif // defined(useAnalogRead)
+#if defined(useDragRaceFunction)
 
 	// time in tenths of seconds
 	,{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101}
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 	// gallons
 	,{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000101, 0b00000011
@@ -1389,7 +1389,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 	,{0b00001000, 0b00001000, 0b00001001, 0b00001010, 0b00001100, 0b00001010, 0b00001001, 0b00000000
 	, 0b00011000, 0b00010100, 0b00010100, 0b00011000, 0b00010010, 0b00010101, 0b00010011, 0b00000000}
 #endif // defined(useChryslerMAPCorrection)
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 
 	// HP
 	,{0b00001001, 0b00001001, 0b00001001, 0b00001111, 0b00001001, 0b00001001, 0b00001001, 0b00000000
@@ -1398,7 +1398,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 	// kW
 	,{0b00100000, 0b01000000, 0b01110000, 0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000000
 	, 0b00010001, 0b00010001, 0b00010101, 0b00010101, 0b00010101, 0b00001010, 0b00001010, 0b00000000}
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 	// miles per gallon
 	,{0b00011011, 0b00010101, 0b00010101, 0b00000000, 0b00000110, 0b00000101, 0b00000110, 0b00000100

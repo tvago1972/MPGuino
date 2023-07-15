@@ -13,9 +13,9 @@ static const char settingsMenuTitles[] PROGMEM = {	// each title must be no long
 #if defined(useChryslerMAPCorrection)
 	"Chrysler MAP" tcEOSCR
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	"VehicleParam" tcEOSCR
-#endif // defined(useCoastDownCalculator) or defined(useDragRaceFunction)
+#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
 	"Timeout" tcEOSCR
 	"Miscellaneous" tcEOSCR
 };

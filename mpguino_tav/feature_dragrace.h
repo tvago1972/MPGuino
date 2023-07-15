@@ -1,53 +1,46 @@
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 namespace accelerationTest /* Acceleration Test support section prototype */
 {
 
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
-
 	void goTrigger(void);
 	uint8_t triggerTest(void);
-	void idleProcess(void);
+	static void idleProcess(void);
 
 }
 
-volatile uint8_t accelerationFlags;
+static volatile uint8_t accelerationFlags;
 
-const uint8_t accelTestActive =				0b10000000;
-const uint8_t accelTestTriggered =			0b01000000;
-const uint8_t accelTestFullSpeed =			0b00100000;
-const uint8_t accelTestHalfSpeed =			0b00010000;
-const uint8_t accelTestDistance =			0b00001000;
-const uint8_t accelTestCancelled =			0b00000100;
-const uint8_t accelTestFinished =			0b00000010;
+static const uint8_t accelTestActive =				0b10000000;
+static const uint8_t accelTestTriggered =			0b01000000;
+static const uint8_t accelTestFullSpeed =			0b00100000;
+static const uint8_t accelTestHalfSpeed =			0b00010000;
+static const uint8_t accelTestDistance =			0b00001000;
+static const uint8_t accelTestCancelled =			0b00000100;
+static const uint8_t accelTestFinished =			0b00000010;
 
-const uint8_t accelTestMeasurementFlags =	accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance;
-const uint8_t accelTestInProgress =			accelTestActive | accelTestTriggered;
-const uint8_t accelTestCompleteFlags =		accelTestCancelled | accelTestFinished;
-const uint8_t accelTestClearFlags =			accelTestInProgress | accelTestMeasurementFlags | accelTestCompleteFlags;
+static const uint8_t accelTestMeasurementFlags =	accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance;
+static const uint8_t accelTestInProgress =			accelTestActive | accelTestTriggered;
+static const uint8_t accelTestCompleteFlags =		accelTestCancelled | accelTestFinished;
+static const uint8_t accelTestClearFlags =			accelTestInProgress | accelTestMeasurementFlags | accelTestCompleteFlags;
 
-uint8_t accelTestStatus;
-uint8_t lastAccelTestStatus;
+static uint8_t accelTestStatus;
+static uint8_t lastAccelTestStatus;
+static uint8_t accelTestState;
 
-/*
-
-meaning of value contained in accel test state variable accelTestState is as follows:
-
-0  - no status change
-1  - accel test ready
-2  - accel test armed
-3  - accel test finished
-4  - accel test cancelled
-5  - accel test distance checkpoint reached
-6  - accel test half speed checkpoint reached
-7  - accel test half speed and distance checkpoints reached
-8  - accel test full speed checkpoint reached
-9  - accel test full speed and distance checkpoints reached
-10 - accel test full speed and half speed checkpoints reached
-11 - accel test full speed, half speed, and distance checkpoints reached
-12 - invalid accel test state encountered
-
-*/
-uint8_t accelTestState;
+static const uint8_t atsNoStatusChange =			0;
+static const uint8_t atsReady =						atsNoStatusChange + 1;
+static const uint8_t atsActive =					atsReady + 1;
+static const uint8_t atsFinished =					atsActive + 1;
+static const uint8_t atsCancelled =					atsFinished + 1;
+static const uint8_t atsCheckPointDist =			atsCancelled + 1;
+static const uint8_t atsCheckPointHalf =			atsCheckPointDist + 1;
+static const uint8_t atsCheckPointDistHalf =		atsCheckPointHalf + 1;
+static const uint8_t atsCheckPointFull =			atsCheckPointDistHalf + 1;
+static const uint8_t atsCheckPointDistFull =		atsCheckPointFull + 1;
+static const uint8_t atsCheckPointHalfFull =		atsCheckPointDistFull + 1;
+static const uint8_t atsCheckPointDistHalfFull =	atsCheckPointHalfFull + 1;
+static const uint8_t atsInvalidState =				atsCheckPointDistHalfFull + 1;
 
 static const char accelTestStateMsgs[] PROGMEM = {
 	tcEOS
@@ -66,7 +59,7 @@ static const char accelTestStateMsgs[] PROGMEM = {
 };
 
 #if defined(useJSONoutput)
-const char JSONaccelTestStateMsgs[] PROGMEM = {
+static const char JSONaccelTestStateMsgs[] PROGMEM = {
 	tcEOS
 	"Drag Ready" tcEOS
 	"Testing" tcEOS
@@ -105,4 +98,4 @@ static const uint16_t accelTestPageFormats[] PROGMEM = {
 	,(dragDistanceIdx << 8 ) |			(tFuelEcon)
 };
 
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
