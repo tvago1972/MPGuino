@@ -162,7 +162,8 @@ static const uint8_t vInterruptAccumulatorIdx =		nextAllowedValue;				// interru
 #endif // defined(useDebugCPUreading)
 
 #if defined(useDragRaceFunction)
-static const uint8_t vDragInstantSpeedIdx =			nextAllowedValue;
+static const uint8_t vDragRawInstantSpeedIdx =		nextAllowedValue;
+static const uint8_t vDragInstantSpeedIdx =			vDragRawInstantSpeedIdx + 1;
 static const uint8_t vAccelHalfPeriodValueIdx =		vDragInstantSpeedIdx + 1;
 static const uint8_t vAccelFullPeriodValueIdx =		vAccelHalfPeriodValueIdx + 1;
 static const uint8_t vAccelDistanceValueIdx =		vAccelFullPeriodValueIdx + 1;
@@ -282,6 +283,7 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 	"vInterruptAccumulatorIdx" tcEOSCR			// all interrupts
 #endif // defined(useDebugCPUreading)
 #if defined(useDragRaceFunction)
+	"vDragRawInstantSpeedIdx" tcEOSCR			// vss
 	"vDragInstantSpeedIdx" tcEOSCR				// vss
 	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
 	"vAccelFullPeriodValueIdx" tcEOSCR			// vss

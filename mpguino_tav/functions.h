@@ -921,11 +921,11 @@ static const uint8_t prgmDragSpeed[] PROGMEM = {
 
 static const uint8_t prgmEstimateEnginePower[] PROGMEM = {
 	instrCall, tDragSpeed,								// calculate vehicle speed (this will be the maximum vehicle speed obtained during the acceleration test)
-	instrBranchifSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
+	instrBranchIfSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
 
 //cont1:
 	instrMul2byConst, idxDenomDistance,					// multiply by numerator to convert km/hr to MPH
-	instrDiv2byConst, idxNumerDistance					// divide by denominator to convert km/hr to MPH
+	instrDiv2byConst, idxNumerDistance,					// divide by denominator to convert km/hr to MPH
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont2:
@@ -937,7 +937,7 @@ static const uint8_t prgmEstimateEnginePower[] PROGMEM = {
 	instrMul2byEEPROM, pVehicleMassIdx,					// multiply estimate by vehicle weight
 	instrDiv2byConst, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrBranchifSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
+	instrBranchIfSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
 
 //cont3:
 	instrMul2byConst, idxDenomMass,						// multiply by numerator to convert kg to lbf
@@ -1030,8 +1030,8 @@ const uint8_t * const S64programList[] PROGMEM = {
 	,prgmFormatToTime									// tFormatToTime
 	,prgmFormatToNumber									// tFormatToNumber
 	,prgmRoundOffNumber									// tRoundOffNumber
-	,prgmLoadTrip
-	,prgmSaveTrip
+	,prgmLoadTrip										// tLoadTrip
+	,prgmSaveTrip										// tSaveTrip
 	,prgmReadTicksToSeconds								// tReadTicksToSeconds
 #if defined(useBarFuelEconVsTime)
 	,prgmFEvTgetDistance								// tFEvTgetDistance
@@ -1060,12 +1060,12 @@ const uint8_t calcFormatFuelRateCostIdx =			calcFormatFuelCostIdx + 1;				// fue
 #define nextAllowedValue calcFormatFuelRateCostIdx + 1
 #endif // defined(useFuelCost)
 #if defined(useAnalogRead)
-const uint8_t calcFormatanalogDisplayIdx =				nextAllowedValue;						// voltage
+const uint8_t calcFormatanalogDisplayIdx =			nextAllowedValue;						// voltage
 #define nextAllowedValue calcFormatanalogDisplayIdx + 1
 #endif // useAnalogRead
 #if defined(useDragRaceFunction)
-const uint8_t calcFormatTimeInTenthsSecIdx =		nextAllowedValue;						// time in tenths of seconds
-#define nextAllowedValue calcFormatTimeInTenthsSecIdx + 1
+const uint8_t calcFormatTimeInSecIdx =				nextAllowedValue;						// time in seconds
+#define nextAllowedValue calcFormatTimeInSecIdx + 1
 #endif // defined(useDragRaceFunction)
 const uint8_t calcFormatFuelQuantityIdx =			nextAllowedValue;						// fuel quantity (SAE/SI)
 const uint8_t calcFormatFuelRateIdx =				calcFormatFuelQuantityIdx + 2;			// fuel rate (SAE/SI)
@@ -1104,7 +1104,7 @@ static const char terminalFormats[] PROGMEM = {
 	"V(dc)" tcEOS
 #endif // useAnalogRead
 #if defined(useDragRaceFunction)
-	"tenths" tcEOS
+	"sec" tcEOS
 #endif // defined(useDragRaceFunction)
 	"gallon" tcEOS
 	"liter" tcEOS
@@ -1168,7 +1168,7 @@ const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { /
 	,calcFormatanalogDisplayIdx					// tAlternatorChannel - DC voltage
 #endif // defined(useCarVoltageOutput)
 #if defined(useDragRaceFunction)
-	,calcFormatTimeInTenthsSecIdx				// tAccelTestTime - acceleration test time (s.s)
+	,calcFormatTimeInSecIdx						// tAccelTestTime - acceleration test time (s.s)
 #endif // defined(useDragRaceFunction)
 	,calcFormatFuelQuantityIdx					// tFuelUsed - fuel quantity used (SI/SAE)
 	,calcFormatFuelRateIdx						// tFuelRate - fuel consumption rate (SI/SAE)
@@ -1211,7 +1211,7 @@ const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM =
 	,3 | 0x80	// voltage
 #endif // defined(useAnalogRead)
 #if defined(useDragRaceFunction)
-	,1			// time in tenths of seconds
+	,1			// time in seconds
 #endif // defined(useDragRaceFunction)
 	,2			// SAE fuel quantity
 	,2			// SI fuel quantity
@@ -1254,7 +1254,7 @@ const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM =
 	,'V'	// voltage
 #endif // useAnalogRead
 #if defined(useDragRaceFunction)
-	,'s'	// time in tenths of seconds
+	,'s'	// time in seconds
 #endif // defined(useDragRaceFunction)
 	,'G'	// SAE fuel used
 	,'L'	// SI fuel used
@@ -1325,7 +1325,7 @@ const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROG
 #endif // defined(useAnalogRead)
 #if defined(useDragRaceFunction)
 
-	// time in tenths of seconds
+	// time in seconds
 	,{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101}
 #endif // defined(useDragRaceFunction)

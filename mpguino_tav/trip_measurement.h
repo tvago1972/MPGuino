@@ -4,9 +4,10 @@ namespace tripVar /* trip data collection basic function prototype */
 	static void reset(uint8_t tripIdx);
 	static void transfer(uint8_t srcTripIdx, uint8_t destTripIdx);
 	static void update(uint8_t srcTripIdx, uint8_t destTripIdx);
-	static void add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
-	static void add64(uint64_t collectedArray[], uint32_t value, uint8_t destTripIdx);
+	static void update64(uint64_t collectedCycleArray[], uint32_t value, uint8_t destTripIdx);
+	static void update64(uint64_t collectedCycleArray[], uint32_t collectedPulseArray[], uint32_t value, uint8_t destTripIdx);
 	static void add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
+	static void add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
 #if defined(useEEPROMtripStorage)
 	static uint8_t getBaseEEPROMaddress(uint8_t tripIdx, uint8_t dataIdx);
 #endif // defined(useEEPROMtripStorage)
@@ -246,7 +247,7 @@ static const uint8_t tripFormatLabelCGRAM[][4] PROGMEM = {
 	,{0b00000000, 0b00000011, 0b00000010, 0b00000110} // italic I
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-	 {0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
+	,{0b00000000, 0b00000001, 0b00000010, 0b00000100} // /
 	,{0b00000000, 0b00000010, 0b00000101, 0b00000010} // full circle
 	,{0b00000000, 0b00000110, 0b00000101, 0b00000110} // D
 #endif // defined(useDragRaceFunction)
@@ -481,7 +482,7 @@ static const uint8_t tsfTankResetIdx =					nextAllowedValue;
 static const uint8_t tsfTankEnd =						nextAllowedValue;
 static const uint8_t tsfTankLen =						tsfTankEnd - tsfTankStart;
 
-const char tripSaveFuncNames[] PROGMEM = {
+static const char tripSaveMenuTitles[] PROGMEM = {
 #if defined(useSavedTrips)
 	"Save CURR Trip" tcEOSCR
 	"Load CURR Trip" tcEOSCR

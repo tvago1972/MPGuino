@@ -92,31 +92,13 @@ static void tripVar::update(uint8_t srcTripIdx, uint8_t destTripIdx)
 
 }
 
-static void tripVar::add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx)
-{
-
-#if defined(useAssemblyLanguage)
-	asm volatile(
-		"   add %A0, %A1            \n"		// 0
-		"   adc %B0, %B1            \n"		// 1
-		"   adc %C0, %C1            \n"		// 2
-		"   adc %D0, %D1            \n"		// 3
-		: "+r" (collectedArray[(uint16_t)(destTripIdx)])
-		: "r" (collectedArray[(uint16_t)(srcTripIdx)])
-	);
-#else // defined(useAssemblyLanguage)
-	collectedArray[(uint16_t)(destTripIdx)] += collectedArray[(uint16_t)(srcTripIdx)];
-#endif // defined(useAssemblyLanguage)
-
-}
-
-static void tripVar::add64(uint64_t collectedArray[], uint32_t value, uint8_t destTripIdx)
+static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t value, uint8_t destTripIdx)
 {
 
 #if defined(useAssemblyLanguage)
 	union union_64 * an;
 
-	an = (union union_64 *)(&collectedArray[(uint16_t)(destTripIdx)]);
+	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
 
 	uint8_t x;
 
@@ -151,7 +133,73 @@ static void tripVar::add64(uint64_t collectedArray[], uint32_t value, uint8_t de
 
 	);
 #else // defined(useAssemblyLanguage)
-	collectedArray[(uint16_t)(destTripIdx)] += value;
+	collectedCycleArray[(uint16_t)(destTripIdx)] += value;
+#endif // defined(useAssemblyLanguage)
+
+}
+
+static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t collectedPulseArray[], uint32_t value, uint8_t destTripIdx)
+{
+
+#if defined(useAssemblyLanguage)
+	union union_64 * an;
+
+	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
+
+	uint8_t x;
+
+	asm volatile(
+		"	ld	__tmp_reg__, %a0	\n"		// 0
+		"   add __tmp_reg__, %A2    \n"
+		"	st	%a0+, __tmp_reg__	\n"
+
+		"	ld	__tmp_reg__, %a0	\n"		// 1
+		"   adc __tmp_reg__, %B2    \n"
+		"	st	%a0+, __tmp_reg__	\n"
+
+		"	ld	__tmp_reg__, %a0	\n"		// 2
+		"   adc __tmp_reg__, %C2    \n"
+		"	st	%a0+, __tmp_reg__	\n"
+
+		"	ld	__tmp_reg__, %a0	\n"		// 3
+		"   adc __tmp_reg__, %D2    \n"
+		"	st	%a0+, __tmp_reg__	\n"
+
+		"	ldi	%A1, 4				\n"		// initialize counter
+
+		"l_add64a%=:				\n"
+		"	ld	__tmp_reg__, %a0	\n"		// 4
+		"   adc __tmp_reg__, __zero_reg__    \n"
+		"	st	%a0+, __tmp_reg__	\n"
+		"	dec	%A1					\n"
+		"	brne l_add64a%=			\n"
+
+		: "+e" (an), "+r" (x)
+		: "r" (value)
+
+	);
+#else // defined(useAssemblyLanguage)
+	update64(collectedCycleArray, value, destTripIdx);
+#endif // defined(useAssemblyLanguage)
+
+	collectedPulseArray[(uint16_t)(destTripIdx)]++;
+
+}
+
+static void tripVar::add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx)
+{
+
+#if defined(useAssemblyLanguage)
+	asm volatile(
+		"   add %A0, %A1            \n"		// 0
+		"   adc %B0, %B1            \n"		// 1
+		"   adc %C0, %C1            \n"		// 2
+		"   adc %D0, %D1            \n"		// 3
+		: "+r" (collectedArray[(uint16_t)(destTripIdx)])
+		: "r" (collectedArray[(uint16_t)(srcTripIdx)])
+	);
+#else // defined(useAssemblyLanguage)
+	collectedArray[(uint16_t)(destTripIdx)] += collectedArray[(uint16_t)(srcTripIdx)];
 #endif // defined(useAssemblyLanguage)
 
 }

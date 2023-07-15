@@ -675,6 +675,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 			{
 
 				case e00:	// do nothing
+				case e18:	// instrTestIndex
 					break;
 
 				case e01:	// instrBranchIfGTorE
@@ -747,15 +748,6 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					else loopFlag = 0;
 					break;
 
-				case e18:	// instrTestIndex
-					if (tripIdx) SWEET64processorFlags &= ~(SWEET64zeroFlag);
-					else SWEET64processorFlags |= (SWEET64zeroFlag);
-
-					if (tripIdx & 0x80) SWEET64processorFlags |= (SWEET64minusFlag);
-					else SWEET64processorFlags &= ~(SWEET64minusFlag);
-
-					break;
-
 				case e19:	// instrTraceRestore
 #if defined(useSWEET64trace)
 					if (traceSave & SWEET64traceFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
@@ -821,6 +813,26 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 				default:	// invalid sxx code detected, exit program
 					loopFlag = 0;
+					break;
+
+			}
+
+			switch (opcodeSuffix) // this is to allow multiple instructions to test the index register
+			{
+
+				case e23:	// load index
+				case e24:	// load index EEPROM
+				case e26:	// load index EEPROM parameter length
+				case e18:	// instrTestIndex
+					if (tripIdx) SWEET64processorFlags &= ~(SWEET64zeroFlag);
+					else SWEET64processorFlags |= (SWEET64zeroFlag);
+
+					if (tripIdx & 0x80) SWEET64processorFlags |= (SWEET64minusFlag);
+					else SWEET64processorFlags &= ~(SWEET64minusFlag);
+
+					break;
+
+				default:	// ignore the code
 					break;
 
 			}

@@ -187,6 +187,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 				activityFlags |= (afVehicleStoppedFlag); // flag vehicle as stopped
 				awakeFlags &= ~(aAwakeVehicleMoving); // vehicle is no longer awake on detected vehicle movement
 
+#if defined(useDragRaceFunction)
+				if (accelerationFlags & accelTestActive) // if accel test function is active
+				{
+
+					accelerationFlags &= ~(accelTestClearFlags); // reset accel test capture flags
+					accelerationFlags |= (accelTestCompleteFlags); // signal that accel test is cancelled
+					timer0Status |= (t0sAccelTestFlag);
+
+				}
+
+#endif // defined(useDragRaceFunction)
 			}
 
 		}
@@ -199,17 +210,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-#if defined(useDragRaceFunction)
-		if (accelerationFlags & accelTestInProgress) // if acceleration test has started
-		{
-
-			timer0Status |= (t0sAccelTestFlag);
-			accelerationFlags &= ~(accelTestClearFlags); // reset drag race capture flags
-			accelerationFlags |= (accelTestCompleteFlags); // signal that drag function is cancelled
-
-		}
-
-#endif // defined(useDragRaceFunction)
 #ifdef useCoastDownCalculator
 		internalFlags |= internalCancelCDT; // coastdown test will cancel if vehicle is idling
 
@@ -996,16 +996,32 @@ ISR( INT1_vect )
 			}
 
 #if defined(trackIdleEOCdata)
-			if (awakeFlags & aAwakeVehicleMoving) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx); // add to fuel injector total cycle accumulator
-			else tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawEOCidleTripIdx); // add to idle fuel injector total cycle accumulator
+			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving
+				// add to raw fuel injector total cycle accumulator
+				tripVar::update64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx);
+			else // if vehicle is not moving
+				// add to raw idle fuel injector total cycle accumulator
+				tripVar::update64(collectedEngCycleCount, engineRotationPeriod, curRawEOCidleTripIdx);
 
 #else // defined(trackIdleEOCdata)
-			tripVar::add64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx); // add to fuel injector total cycle accumulator
+			// add to raw fuel injector total cycle accumulator
+			tripVar::update64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx);
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-			// add to distance acceleration fuel injector total cycle accumulator
-			if (accelerationFlags & accelTestActive) tripVar::add64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
+			if (accelerationFlags & accelTestActive)
+			{
+
+				// add to raw accel test distance fuel injector total cycle accumulator
+				if (accelerationFlags & accelTestDistance) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
+
+				// add to raw accel test full speed fuel injector total cycle accumulator
+				if (accelerationFlags & accelTestFullSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawFullSpeedIdx);
+
+				// add to raw accel test half speed fuel injector total cycle accumulator
+				if (accelerationFlags & accelTestHalfSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawHalfSpeedIdx);
+
+			}
 
 #endif // defined(useDragRaceFunction)
 		}
@@ -1022,32 +1038,33 @@ ISR( INT1_vect )
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(trackIdleEOCdata)
-			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving, save injector measurements in active raw trip variable
-			{
-
-				collectedInjPulseCount[(uint16_t)(curRawTripIdx)]++; // add to fuel injector pulse count
-				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawTripIdx); // add to fuel injector open cycle accumulator
-
-			}
-			else // if vehicle is not moving, save injector measurements in active idle/EOC raw trip variable
-			{
-
-				collectedInjPulseCount[(uint16_t)(curRawEOCidleTripIdx)]++; // add to idle fuel injector pulse count
-				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawEOCidleTripIdx); // add to idle fuel injector open cycle accumulator
-
-			}
+			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving
+				// update fuel injector open cycle accumulator, and fuel injector pulse count
+				tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, curRawTripIdx);
+			else // if vehicle is not moving
+				// update idle fuel injector open cycle accumulator, and idle fuel injector pulse count
+				tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, curRawEOCidleTripIdx); 
 
 #else // defined(trackIdleEOCdata)
-			collectedInjPulseCount[(uint16_t)(curRawTripIdx)]++; // add to fuel injector pulse count
-			tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, curRawTripIdx); // add to fuel injector open cycle accumulator
+			// update fuel injector open cycle accumulator, and fuel injector pulse count
+			tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, curRawTripIdx);
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
 			if (accelerationFlags & accelTestActive)
 			{
 
-				collectedInjPulseCount[(uint16_t)(dragRawDistanceIdx)]++; // update the distance acceleration injector pulse count
-				tripVar::add64(collectedInjCycleCount, thisInjectorPulseLength, dragRawDistanceIdx); // add to distance acceleration fuel injector open cycle accumulator
+				// update raw accel test distance fuel injector open cycle accumulator, and raw accel test distance fuel injector pulse count
+				if (accelerationFlags & accelTestDistance)
+					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawDistanceIdx);
+
+				// update raw accel test full speed fuel injector open cycle accumulator, and raw accel test full speed fuel injector pulse count
+				if (accelerationFlags & accelTestFullSpeed)
+					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawFullSpeedIdx);
+
+				// update raw accel test half speed fuel injector open cycle accumulator, and raw accel test half speed fuel injector pulse count
+				if (accelerationFlags & accelTestHalfSpeed)
+					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawHalfSpeedIdx);
 
 			}
 
@@ -1222,9 +1239,13 @@ static void ringBuffer::flush(ringBufferVariable &bfr)
 static void updateVSS(unsigned long thisVSStime)
 {
 
-	static unsigned long lastVSStime;
+	static uint32_t lastVSStime;
+#if defined(useDragRaceFunction)
+	static uint32_t accelTestDistanceCount;
+	static uint32_t accelTestVSStime;
 
-	static unsigned long cycleLength;
+#endif // defined(useDragRaceFunction)
+	static uint32_t cycleLength;
 
 	if (dirty & dGoodVSSsignal) // if a valid VSS signal had previously been read in
 	{
@@ -1248,24 +1269,16 @@ static void updateVSS(unsigned long thisVSStime)
 		}
 
 #if defined(trackIdleEOCdata)
-		if (awakeFlags & aAwakeEngineRunning)
-		{
-
-			collectedVSSpulseCount[(unsigned int)(curRawTripIdx)]++;
-			tripVar::add64(collectedVSScycleCount, cycleLength, curRawTripIdx); // add to VSS cycle accumulator
-
-		}
-		else // if the engine is not running, vehicle is in EOC mode
-		{
-
-			collectedVSSpulseCount[(unsigned int)(curRawEOCidleTripIdx)]++;
-			tripVar::add64(collectedVSScycleCount, cycleLength, curRawEOCidleTripIdx); // add to EOC VSS cycle accumulator
-
-		}
+		if (awakeFlags & aAwakeEngineRunning) // if the engine is running
+			// update raw VSS cycle accumulator, and raw VSS pulse count
+			tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawTripIdx);
+		else // if the engine is not running
+			// update raw EOC VSS cycle accumulator, and raw EOC VSS pulse count
+			tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawEOCidleTripIdx);
 
 #else // defined(trackIdleEOCdata)
-		collectedVSSpulseCount[(unsigned int)(curRawTripIdx)]++;
-		tripVar::add64(collectedVSScycleCount, cycleLength, curRawTripIdx); // add to VSS cycle accumulator
+		// update raw VSS cycle accumulator, and raw VSS pulse count
+		tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawTripIdx);
 
 #endif // defined(trackIdleEOCdata)
 #ifdef useCoastDownCalculator
@@ -1279,70 +1292,105 @@ static void updateVSS(unsigned long thisVSStime)
 		}
 
 #endif // useCoastDownCalculator
-#if defined(useDragRaceFunction)
-		if (accelerationFlags & accelTestTriggered) // if accel test function is triggered
+#if defined(useDragRaceFunction) || defined(useCoastDownCalculator)
+		if (awakeFlags & aAwakeVehicleMoving) // if vehicle is considered to be moving
 		{
+
+#if defined(useDragRaceFunction)
+			if (accelerationFlags & accelTestTriggered) // if accel test function is triggered
+			{
 
 				accelerationFlags &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
 				accelerationFlags |= (accelTestActive);
 				timer0Status |= (t0sAccelTestFlag);
 
-		}
+				// initialize trap distance variables
+				accelTestDistanceCount = volatileVariables[(uint16_t)(vAccelDistanceValueIdx)];
+				accelTestVSStime = 0;
 
-		if (accelerationFlags & accelTestActive) // if accel test function is active
-		{
+			}
 
-			if (volatileVariables[(uint16_t)(vDragInstantSpeedIdx)] > cycleLength) volatileVariables[(uint16_t)(vDragInstantSpeedIdx)] = cycleLength; // if this vehicle speed is larger than previous vehicle speed
-
-			collectedVSSpulseCount[(unsigned int)(dragRawDistanceIdx)]++; // update the accel test distance measurement VSS pulse count
-			tripVar::add64(collectedVSScycleCount, cycleLength, dragRawDistanceIdx); // update the accel test distance measurement VSS cycle accumulator
-
-			if (accelerationFlags & accelTestDistance)
+			if (accelerationFlags & accelTestActive) // if accel test function is active
 			{
 
-				if (volatileVariables[(uint16_t)(vAccelDistanceValueIdx)]) volatileVariables[(uint16_t)(vAccelDistanceValueIdx)]--; // count down drag distance setpoint in VSS pulses
-				else
+				if (accelerationFlags & accelTestDistance)
 				{
 
-					accelerationFlags &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
+					if (accelTestDistanceCount)
+					{
+
+						accelTestDistanceCount--; // count down drag distance setpoint in VSS pulses
+
+						// update raw accel test distance VSS cycle accumulator, and raw accel test distance VSS pulse count
+						tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, dragRawDistanceIdx);
+
+						if (accelTestVSStime) // fetch largest instantaneous speed
+						{
+
+							if (cycleLength < accelTestVSStime) accelTestVSStime = cycleLength;
+
+						}
+						else accelTestVSStime = cycleLength;
+
+					}
+					else
+					{
+
+						accelerationFlags &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
+						timer0Status |= (t0sAccelTestFlag);
+						volatileVariables[(uint16_t)(vDragRawInstantSpeedIdx)] = accelTestVSStime;
+
+					}
+
+				}
+
+				if (accelerationFlags & accelTestHalfSpeed)
+				{
+
+					if (cycleLength < volatileVariables[(uint16_t)(vAccelHalfPeriodValueIdx)])
+					{
+
+						accelerationFlags &= ~(accelTestHalfSpeed); // mark drag function half speed measurement as complete
+						timer0Status |= (t0sAccelTestFlag);
+
+					}
+					else
+						// update raw accel test half speed VSS cycle accumulator, and raw accel test half speed VSS pulse count
+						tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, dragRawHalfSpeedIdx);
+
+				}
+
+				if (accelerationFlags & accelTestFullSpeed)
+				{
+
+					if (cycleLength < volatileVariables[(uint16_t)(vAccelFullPeriodValueIdx)])
+					{
+
+						accelerationFlags &= ~(accelTestFullSpeed); // mark drag function full speed measurement as complete
+						timer0Status |= (t0sAccelTestFlag);
+
+					}
+					else
+						// update raw accel test full speed VSS cycle accumulator, and raw accel test full speed VSS pulse count
+						tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, dragRawFullSpeedIdx);
+
+				}
+
+				if ((accelerationFlags & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
+				{
+
+					accelerationFlags &= ~(accelTestActive); // switch status from 'active' to 'finished'
+					accelerationFlags |= (accelTestFinished);
 					timer0Status |= (t0sAccelTestFlag);
 
 				}
 
 			}
 
-			if ((accelerationFlags & accelTestHalfSpeed) && (cycleLength < volatileVariables[(uint16_t)(vAccelHalfPeriodValueIdx)])) // if instantaneous speed is greater than drag function speed
-			{
-
-				// copy drag raw trip variable to drag full speed trip variable
-				tripVar::transfer(dragRawDistanceIdx, dragRawHalfSpeedIdx);
-				accelerationFlags &= ~(accelTestHalfSpeed); // mark drag function speed measurement as complete
-				timer0Status |= (t0sAccelTestFlag);
-
-			}
-
-			if ((accelerationFlags & accelTestFullSpeed) && (cycleLength < volatileVariables[(uint16_t)(vAccelFullPeriodValueIdx)])) // if instantaneous speed is greater than drag function speed
-			{
-
-				// copy drag raw trip variable to drag full speed trip variable
-				tripVar::transfer(dragRawDistanceIdx, dragRawFullSpeedIdx);
-				accelerationFlags &= ~(accelTestFullSpeed); // mark drag function speed measurement as complete
-				timer0Status |= (t0sAccelTestFlag);
-
-			}
-
-			if ((accelerationFlags & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
-			{
-
-				accelerationFlags &= ~(accelTestActive); // switch status from 'active' to 'finished'
-				accelerationFlags |= (accelTestFinished);
-				timer0Status |= (t0sAccelTestFlag);
-
-			}
-
+#endif // defined(useDragRaceFunction)
 		}
 
-#endif // defined(useDragRaceFunction)
+#endif // defined(useDragRaceFunction) || defined(useCoastDownCalculator)
 	}
 
 	dirty |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read

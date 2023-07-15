@@ -2,13 +2,46 @@
 namespace accelerationTest /* Acceleration Test support section prototype */
 {
 
+	static void init(void);
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
-	void goTrigger(void);
-	uint8_t triggerTest(void);
+	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint16_t getAccelTestDisplayPageFormat(uint8_t formatIdx);
+	static void triggerTest(void);
 	static void idleProcess(void);
 
 }
 
+static const char accelTestMenuTitles[] PROGMEM = {
+	"Stats" tcEOSCR
+	"Arm Accel Test" tcEOSCR
+	"Test AutoArm 1-Y" tcEOSCR
+	"TstDist " tcOMOFF "mi" tcOTOG "km" tcOON "*1000" tcEOSCR
+	"TstSpd " tcOMOFF "MPH" tcOTOG "kph" tcOON "*1000" tcEOSCR
+	"Veh" tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
+};
+
+static const uint8_t accelTestParamList[] PROGMEM = {
+	 pDragAutoFlagIdx
+	,pDragDistanceIdx
+	,pDragSpeedIdx
+	,pVehicleMassIdx
+};
+
+
+#if defined(useDebugTerminal)
+const char terminalAccelerationFlagStr[] PROGMEM = {
+	"accelerationFlags: " tcEOS
+	"ACTIVE" tcOTOG "dormant" tcEOS
+	"TRIGGERED" tcOTOG "dormant" tcEOS
+	"FULL-SPEED" tcOTOG "fsreached" tcEOS
+	"HALF-SPEED" tcOTOG "hsreached" tcEOS
+	"DISTANCE" tcOTOG "distancereached" tcEOS
+	"CANCELLED" tcOTOG "0" tcEOS
+	"FINISHED" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 static volatile uint8_t accelerationFlags;
 
 static const uint8_t accelTestActive =				0b10000000;
@@ -76,6 +109,16 @@ static const char JSONaccelTestStateMsgs[] PROGMEM = {
 };
 
 #endif // defined(useJSONoutput)
+static const uint8_t attTriggerNormal =				0;
+static const uint8_t attVehicleStillMoving =		attTriggerNormal + 1;
+static const uint8_t attTriggerForced =				attVehicleStillMoving + 1;
+
+static const char accelTestTriggerMsgs[] PROGMEM = {
+	"DragTest Armed" tcEOS
+	"Stop Vehicle" tcEOS
+	"DragTest Manual" tcEOS
+};
+
 static const uint16_t accelTestPageFormats[] PROGMEM = {
 	 (dragDistanceIdx << 8 ) |			(tFuelEcon)
 	,(dragDistanceIdx << 8 ) |			(tDragSpeed)				// for calculations, it really doesn't matter what trip index is used here
