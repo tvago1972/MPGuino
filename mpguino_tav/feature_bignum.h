@@ -19,8 +19,8 @@ namespace clockSet
 };
 
 #endif // defined(useClockDisplay)
-#if defined(useStatusBar)
-namespace statusBar /* Status Bar Output support section prototype */
+#if defined(useStatusMeter)
+namespace statusBar /* Status Meter Output support section prototype */
 {
 
 	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
@@ -222,7 +222,7 @@ static const uint8_t statusBarOverflowFont[] PROGMEM = {
 	0b00000000,
 };
 
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigDigitDisplay)
 namespace bigDigit /* Big Digit output support section prototype */
 {

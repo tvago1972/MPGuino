@@ -296,7 +296,7 @@ static unsigned long str2ull(char * strBuffer)
 	while ((loopFlag) && (x < 17))
 	{
 
-		if ((c = strBuffer[(unsigned int)(x++)])) // if a non-NULL character is read in
+		if ((c = strBuffer[(uint16_t)(x++)])) // if a non-NULL character is read in
 		{
 
 			n *= 10; // shift accumulator left one digit
@@ -395,8 +395,8 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 
 		}
 
-		strBuffer[(unsigned int)(strPos++)] = 0; // mark end of string buffer with a NULL character
-		strBuffer[(unsigned int)(strPos++)] = digCnt; // store digit count at 1 past the string buffer end
+		strBuffer[(uint16_t)(strPos++)] = 0; // mark end of string buffer with a NULL character
+		strBuffer[(uint16_t)(strPos++)] = digCnt; // store digit count at 1 past the string buffer end
 
 	}
 
@@ -537,7 +537,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 
 		strcpy_P(strBuffer, ((decimalFlag & dfOverflow9s) ? overFlow9Str : overFlowStr)); // copy overflow string into buffer
 
-		if (windowLength) strBuffer[(unsigned int)(windowLength)] = 0; // mark new end of string buffer
+		if (windowLength) strBuffer[(uint16_t)(windowLength)] = 0; // mark new end of string buffer
 
 	}
 

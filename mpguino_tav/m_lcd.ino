@@ -404,7 +404,7 @@ static void LCD::setBrightness(uint8_t idx)
 #if defined(usePort4BitLCD)
 #if defined(__AVR_ATmega32U4__)
 #if defined(useTinkerkitLCDmodule)
-	OCR1B = pgm_read_byte(&brightness[(unsigned int)(idx)]);
+	OCR1B = pgm_read_byte(&brightness[(uint16_t)(idx)]);
 
 #endif // defined(useTinkerkitLCDmodule)
 	// any port commands for any other ATmega32U4 board goes here
@@ -412,7 +412,7 @@ static void LCD::setBrightness(uint8_t idx)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 #if defined(useArduinoMega2560)
-	OCR1A = pgm_read_byte(&brightness[(unsigned int)(idx)]);
+	OCR1A = pgm_read_byte(&brightness[(uint16_t)(idx)]);
 
 #endif // defined(useArduinoMega2560)
 	// any port commands for any other ATmega2560 board goes here
@@ -420,11 +420,11 @@ static void LCD::setBrightness(uint8_t idx)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 #if defined(useLegacyLCD)
-	OCR1A = pgm_read_byte(&brightness[(unsigned int)(idx)]);
+	OCR1A = pgm_read_byte(&brightness[(uint16_t)(idx)]);
 
 #endif // defined(useLegacyLCD)
 #if defined(useDFR0009LCD)
-	OCR1B = pgm_read_byte(&brightness[(unsigned int)(idx)]);
+	OCR1B = pgm_read_byte(&brightness[(uint16_t)(idx)]);
 
 #endif // defined(useDFR0009LCD)
 	// any port commands for any other ATmega168/328/328P board goes here
@@ -485,7 +485,7 @@ static void LCD::setRGBcolor(uint8_t idx)
 	uint8_t RGBbitMask;
 	uint8_t byt;
 
-	RGBbitMask = pgm_read_byte(&RGBcolors[(unsigned int)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
+	RGBbitMask = pgm_read_byte(&RGBcolors[(uint16_t)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
 
 	byt = RGBbitMask; // get the color bitmask pattern
 	byt ^= portSwitches; // flip the color bitmask by what's stored in the portSwitches register
@@ -599,7 +599,7 @@ static void LCD::writeData(uint8_t value)
 		case 0x19:	// turn on display with cursor and character blink
 #if defined(use4BitLCD)
 			x = value - 0x15;
-			writeCommand(pgm_read_byte(&lcdDisplayModes[(unsigned int)(x)])); // set display mode
+			writeCommand(pgm_read_byte(&lcdDisplayModes[(uint16_t)(x)])); // set display mode
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 			charFlags |= (lcdCharOutput);

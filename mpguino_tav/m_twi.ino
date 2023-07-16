@@ -41,7 +41,7 @@ ISR( TWI_vect )
 			break;
 
 		case TW_MR_DATA_ACK: // data received, ACK sent
-			twiDataBuffer[(unsigned int)(twiDataBufferIdx++)] = TWDR; // put byte into buffer
+			twiDataBuffer[(uint16_t)(twiDataBufferIdx++)] = TWDR; // put byte into buffer
 		case TW_MR_SLA_ACK:  // address sent, ACK received
 			if(twiDataBufferIdx < twiDataBufferLen) TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK if more bytes are expected
 			else TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE)); // otherwise, send NEGATIVE ACK
@@ -202,7 +202,7 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	if(twiDataBufferLen < twiDataBufferSize)
 	{
 
-		twiDataBuffer[(unsigned int)(twiDataBufferLen++)] = data;
+		twiDataBuffer[(uint16_t)(twiDataBufferLen++)] = data;
 		return 0;
 
 	}

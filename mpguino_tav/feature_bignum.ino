@@ -75,8 +75,8 @@ static void clockSet::entry(void)
 static void clockSet::changeDigitUp(void)
 {
 
-	pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])]++;
-	if (pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] > '9') pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] = '0';
+	pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]++;
+	if (pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] > '9') pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '0';
 
 	if (pBuff[2] > '5') pBuff[2] = '0'; // this will only happen if clockSetDisplayIdx == 2
 	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '0'; // this will only happen if clockSetDisplayIdx == 0 or 1
@@ -87,8 +87,8 @@ static void clockSet::changeDigitUp(void)
 static void clockSet::changeDigitDown(void)
 {
 
-	pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])]--;
-	if (pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] < '0') pBuff[(unsigned int)(displayCursor[(unsigned int)(clockSetDisplayIdx)])] = '9';
+	pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]--;
+	if (pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] < '0') pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '9';
 
 	if (pBuff[2] > '5') pBuff[2] = '5'; // this will only happen if clockSetDisplayIdx == 2
 	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '3'; // this will only happen if clockSetDisplayIdx == 0 or 1
@@ -108,10 +108,10 @@ static void clockSet::set(void)
 	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in pBuff into time value usable by prgmChangeSoftwareClock
 	{
 
-		b = pBuff[(unsigned int)(x)] - '0';
+		b = pBuff[(uint16_t)(x)] - '0';
 		b *= 10;
-		b += pBuff[(unsigned int)(x + 1)] - '0';
-		((union union_64 *)(&s64reg[s64reg3]))->u8[(unsigned int)(x)] = b;
+		b += pBuff[(uint16_t)(x + 1)] - '0';
+		((union union_64 *)(&s64reg[s64reg3]))->u8[(uint16_t)(x)] = b;
 
 	}
 
@@ -130,8 +130,8 @@ static void clockSet::cancel(void)
 }
 
 #endif // defined(useClockDisplay)
-#if defined(useStatusBar)
-/* Status Bar Output support section */
+#if defined(useStatusMeter)
+/* Status Meter Output support section */
 
 // normalizes instant fuel economy relative to either current or tank trip fuel economy, then converts to the range 0-255
 //
@@ -286,7 +286,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 
 }
 
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigDigitDisplay)
 /* Big Digit Output support section */
 
@@ -400,8 +400,8 @@ static void bigDigit::outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, ui
 	{
 
 		if (blinkPos== 4) val[6] = ';'; // if hh:mm separator is selected, blink it
-		else if (blinkPos < 2) val[(unsigned int)(blinkPos + 4)] = ' '; // if digit 0 or 1 is selected, blink it
-		else if (blinkPos < 4) val[(unsigned int)(blinkPos + 5)] = ' '; // otherwise, if digit 2 or 3 is selected, blink it
+		else if (blinkPos < 2) val[(uint16_t)(blinkPos + 4)] = ' '; // if digit 0 or 1 is selected, blink it
+		else if (blinkPos < 4) val[(uint16_t)(blinkPos + 5)] = ' '; // otherwise, if digit 2 or 3 is selected, blink it
 
 	}
 

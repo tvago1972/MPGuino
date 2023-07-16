@@ -128,12 +128,12 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpPartialRefuelTankSize,		// save partial refuel tank size in cycles
 
 #endif // defined(usePartialRefuel)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	instrLdRegEEPROM, 0x02, pCoastdownSamplePeriodIdx,	// coastdown timer ticks value
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vCoastdownPeriodIdx,		// store coastdown timeout timer ticks value
 
-#endif	// useCoastDownCalculator
+#endif	// defined(useCoastDownCalculator)
 #if defined(useChryslerMAPCorrection)
 	instrLdRegEEPROM, 0x02, pMAPsensorFloorIdx,			// convert pressure sensor voltage floor to equivalent ADC floor value
 	instrMul2byConst, idxNumerVoltage,

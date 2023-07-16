@@ -74,7 +74,7 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogValue[(unsigned int)(analogValueIdx)] = rawRead; // save the value just read in
+		analogValue[(uint16_t)(analogValueIdx)] = rawRead; // save the value just read in
 		analogStatus |= (analogBitmask); // signal to main program that an analog channel was read in
 		if (analogCommand & acSampleChannelActive)
 		{
@@ -91,7 +91,7 @@ ISR( ADC_vect )
 	if (flag)
 	{
 
-		ADMUX = pgm_read_byte(&analogChannelValue[(unsigned int)(analogChannelIdx)]); // select next analog channel to read
+		ADMUX = pgm_read_byte(&analogChannelValue[(uint16_t)(analogChannelIdx)]); // select next analog channel to read
 		ADCSRA |= ((1 << ADSC) | (1 << ADIF) | (1 << ADIE)); // start ADC read, enable interrupt, and clear interrupt flag
 
 	}

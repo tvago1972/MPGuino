@@ -1135,7 +1135,7 @@ static const char terminalFormats[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminal)
-const uint8_t calcFormatList[(unsigned int)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
+const uint8_t calcFormatList[(uint16_t)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
 	 calcFormatTimeHHmmSSIdx					// tEngineRunTime - engine runtime (hhmmss)
 	,calcFormatTimeHHmmSSIdx					// tRangeTime - estimated total runtime from full tank (hhmmss)
 	,calcFormatTimeHHmmSSIdx					// tReserveTime - estimated reserve runtime from full tank (hhmmss)
@@ -1241,7 +1241,7 @@ const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM =
 	,1			// alternate SI fuel economy
 };
 
-const uint8_t calcFormatLabelText[(unsigned int)(calcFormatListCount)] PROGMEM = { // S64programList
+const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
 	 's'	// time in HHmmSS format
 	,'m'	// time in milliseconds
 	,'t'	// engine speed
@@ -1291,7 +1291,7 @@ static const uint8_t isValidFlag =		0b00100000;
 static const uint8_t isValidCalcObj =	0b11000000;
 
 #if defined(useSpiffyTripLabels)
-const uint8_t calcFormatLabelCGRAM[(unsigned int)(calcFormatListCount)][16] PROGMEM = { // S64programList
+const uint8_t calcFormatLabelCGRAM[(uint16_t)(calcFormatListCount)][16] PROGMEM = { // S64programList
 	// time in HHmmSS format
 	 {0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	, 0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101}

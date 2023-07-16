@@ -201,7 +201,7 @@ const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(unsign
 
 //	btnShortPressDC,	// 08
 
-const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
+const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 	buttonsUp,			// 00
 	btnShortPressULC,	// 01
 	btnShortPressUL,	// 02
@@ -262,7 +262,7 @@ const unsigned int analogButtonThreshold[] PROGMEM = {
 
 const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(unsigned int));
 
-const uint8_t analogTranslate[(unsigned int)(analogButtonCount)] PROGMEM = {
+const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 	buttonsUp,
 	btnShortPressUDCRL,
 	btnShortPressULCR,

@@ -121,7 +121,7 @@ static const buttonVariable bpListParameterEdit[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#if defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction)
+#if defined(useBigDigitDisplay) || defined(useStatusMeter) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction) || defined(useCoastDownCalculator)
 static const buttonVariable bpListSecondaryDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
 	,{btnShortPressL,	button::shortLeft}
@@ -175,7 +175,7 @@ static const buttonVariable bpListSecondaryDisplay[] PROGMEM = {
 	,{buttonsUp,		button::noSupport}
 };
 
-#endif // defined(useBigDigitDisplay) || defined(useStatusBar) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction)
+#endif // defined(useBigDigitDisplay) || defined(useStatusMeter) || defined(useCPUreading) || defined(useBarGraph) || defined(useDragRaceFunction) || defined(useCoastDownCalculator)
 #if defined(useClockDisplay)
 static const buttonVariable bpListClockDisplay[] PROGMEM = {
 	 {btnShortPressR,	button::shortRight}
@@ -279,31 +279,14 @@ static const buttonVariable bpListButtonView[] PROGMEM = {
 };
 
 #endif // defined(useTestButtonValues)
-#if defined(useButtonCrossConfig)
-#ifdef useCoastDownCalculator
-static const buttonVariable bpListCoastdown[] PROGMEM = {
-	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useCoastDownCalculator
-#else // defined(useButtonCrossConfig)
-#ifdef useCoastDownCalculator
-static const buttonVariable bpListCoastdown[] PROGMEM = {
-	{btnLongPressR,		coastdown::goTrigger}
-	,{buttonsUp,		button::noSupport}
-};
-
-#endif // useCoastDownCalculator
-#endif // defined(useButtonCrossConfig)
 static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)] PROGMEM = {
 
 // the following screen entries are in the top-down menu list
 
 	 bpListMainDisplay
-#if defined(useStatusBar)
+#if defined(useStatusMeter)
 	,bpListSecondaryDisplay
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigFE)
 	,bpListSecondaryDisplay
 #endif // defined(useBigFE)
@@ -332,17 +315,17 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #if defined(useChryslerMAPCorrection)
 	,bpListMenu
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#if defined(useVehicleParameters)
 	,bpListMenu
-#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 	,bpListMenu
 	,bpListMenu
 #if defined(useDragRaceFunction)
 	,bpListMenu
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
-	,bpListCoastdown
-#endif // useCoastDownCalculator
+#if defined(useCoastDownCalculator)
+	,bpListMenu
+#endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
 	,bpListMiscViewer
 #endif // defined(useSimulatedFIandVSS)
@@ -379,6 +362,9 @@ static const buttonVariablePointer menuButtonList[(uint16_t)(displayCountTotal)]
 #if defined(useDragRaceFunction)
 	,bpListSecondaryDisplay
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,bpListSecondaryDisplay
+#endif // defined(useCoastDownCalculator)
 };
 
 static void button::init(void)
@@ -487,7 +473,7 @@ static void button::doCommand(void)
 	uint8_t i;
 
 	bp = buttonPress; // capture button state
-	bpPtr = (const buttonVariable *)(pgm_read_word(&(menuButtonList[(unsigned int)(thisMenuData.displayIdx)].buttonVariableList)));
+	bpPtr = (const buttonVariable *)(pgm_read_word(&(menuButtonList[(uint16_t)(thisMenuData.displayIdx)].buttonVariableList)));
 
 	while (true)
 	{

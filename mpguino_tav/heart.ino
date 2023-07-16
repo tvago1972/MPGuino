@@ -571,7 +571,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			analogCommand |= (acSampleGround); // signal to ADC interrupt that the last requested conversion was for internal ground
 			analogStatus &= ~(asHardwareReady);
 
-			ADMUX = pgm_read_byte(&analogChannelValue[(unsigned int)(analogGroundIdx)]);
+			ADMUX = pgm_read_byte(&analogChannelValue[(uint16_t)(analogGroundIdx)]);
 			ADCSRA |= ((1 << ADSC) | (1 << ADIF) | (1 << ADIE)); // start ADC read, enable interrupt, and clear interrupt flag, because this crappy hardware allows the ADC interrupt to alway do free running mode
 
 		}
@@ -1199,7 +1199,7 @@ static void ringBuffer::push(ringBufferVariable &bfr, uint8_t value)
 static void ringBuffer::pushInterrupt(ringBufferVariable &bfr, uint8_t value)
 {
 
-	bfr.data[(unsigned int)(bfr.start++)] = value; // save a buffered character
+	bfr.data[(uint16_t)(bfr.start++)] = value; // save a buffered character
 
 	if (bfr.status & bufferIsEmpty) bfr.status &= ~(bufferIsEmpty); // mark buffer as no longer empty
 	if (bfr.start == bfr.size) bfr.start = 0; // handle wrap-around
@@ -1216,7 +1216,7 @@ static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 	else
 	{
 
-		value = bfr.data[(unsigned int)(bfr.end++)]; // pull a buffered character
+		value = bfr.data[(uint16_t)(bfr.end++)]; // pull a buffered character
 
 		if (bfr.status & bufferIsFull) bfr.status &= ~(bufferIsFull); // mark buffer as no longer full
 		if (bfr.end == bfr.size) bfr.end = 0; // handle wrap-around
@@ -1292,7 +1292,7 @@ static void updateVSS(unsigned long thisVSStime)
 		}
 
 #endif // useCoastDownCalculator
-#if defined(useDragRaceFunction) || defined(useCoastDownCalculator)
+#if defined(useVehicleParameters)
 		if (awakeFlags & aAwakeVehicleMoving) // if vehicle is considered to be moving
 		{
 
@@ -1390,7 +1390,7 @@ static void updateVSS(unsigned long thisVSStime)
 #endif // defined(useDragRaceFunction)
 		}
 
-#endif // defined(useDragRaceFunction) || defined(useCoastDownCalculator)
+#endif // defined(useVehicleParameters)
 	}
 
 	dirty |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read

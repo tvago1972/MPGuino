@@ -295,7 +295,7 @@ static void buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
 #if defined(useAnalogButtons)
-			text::hexWordOut(devLCD, (uint16_t)(analogValue[(unsigned int)(analogButtonChannelIdx)]));
+			text::hexWordOut(devLCD, (uint16_t)(analogValue[(uint16_t)(analogButtonChannelIdx)]));
 #endif // defined(useAnalogButtons)
 			text::newLine(devLCD);
 			text::hexByteOut(devLCD, thisButtonState);
@@ -1598,8 +1598,8 @@ static void signalSim::idleProcessFuel(void)
 	{
 
 		case 0:
-			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
-			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(debugFIPidx)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(debugFIPidx)]);
 			debugFIPWgoodTickLength = debugFIPtickLength - 63;
 			changeBitFlags(debugFlags, 0, debugFIPready);
 			break;
@@ -1608,8 +1608,8 @@ static void signalSim::idleProcessFuel(void)
 			break;
 
 		case 2:
-			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(debugFIPlength - debugFIPidx - 1)]);
 			debugFIPWgoodTickLength = debugFIPtickLength - 63;
 			changeBitFlags(debugFlags, 0, debugFIPready);
 			break;
@@ -1644,7 +1644,7 @@ static void signalSim::idleProcessVSS(void)
 	{
 
 		case 0:
-			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(uint16_t)(debugVSSidx)]);
 			changeBitFlags(debugFlags, 0, debugVSSready);
 			break;
 
@@ -1652,7 +1652,7 @@ static void signalSim::idleProcessVSS(void)
 			break;
 
 		case 2:
-			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(uint16_t)(debugVSSlength - debugVSSidx - 1)]);
 			changeBitFlags(debugFlags, 0, debugVSSready);
 			break;
 

@@ -129,9 +129,9 @@ const uint8_t analogAlternatorChannelIdx =	analog1Idx;
 #endif // defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
 #endif // defined(useCarVoltageOutput)
 
-volatile unsigned int analogValue[(unsigned int)(dfMaxValAnalogCount)];
+volatile unsigned int analogValue[(uint16_t)(dfMaxValAnalogCount)];
 
-const uint8_t analogChannelValue[(unsigned int)(dfMaxAnalogCount)] PROGMEM = { // points to the next channel to be read
+const uint8_t analogChannelValue[(uint16_t)(dfMaxAnalogCount)] PROGMEM = { // points to the next channel to be read
 #if defined(__AVR_ATmega32U4__)
 #if defined(useChryslerMAPCorrection)
 	 (1 << REFS0)|									(1 << MUX2)|	(1 << MUX1)					// 0 PF6 A1 MAP sensor

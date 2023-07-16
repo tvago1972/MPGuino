@@ -39,17 +39,17 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		thisCalcFuncObj.tripIdx = tripIdx;
 		thisCalcFuncObj.calcIdx = calcIdx;
 
-		calcFmtIdx = pgm_read_byte(&calcFormatList[(unsigned int)(calcIdx)]);
+		calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]);
 		if ((calcIdx >= dfMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
 		if ((calcIdx >= dfMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
 
 		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
-		i = pgm_read_byte(&calcFormatDecimalPlaces[(unsigned int)(calcFmtIdx)]);
+		i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
 		thisCalcFuncObj.decimalPlaces = i & 0x7F;
 		thisCalcFuncObj.suppressTripLabel = i & 0x80;
 		if (thisCalcFuncObj.suppressTripLabel) thisCalcFuncObj.tripChar = ' ';
 		else thisCalcFuncObj.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
-		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(unsigned int)(calcFmtIdx)]);
+		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
 
 	}
 
@@ -89,7 +89,7 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	{
 
 		strcpy_P(strBuff, overFlowStr);
-		thisCalcFuncObj.strBuffer[(unsigned int)(windowLength)] = 0;
+		thisCalcFuncObj.strBuffer[(uint16_t)(windowLength)] = 0;
 
 	}
 
