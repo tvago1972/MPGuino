@@ -17,9 +17,9 @@ static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer t
 #if defined(useDragRaceFunction)
 	"Accel Test" tcEOSCR
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"Coastdown" tcEOSCR
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
 	"Sensor Sim" tcEOSCR
 #endif // defined(useSimulatedFIandVSS)
@@ -54,9 +54,9 @@ namespace mainDisplay /* main display section prototype */
 
 static const char mainMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
 	"Main Display" tcEOSCR
-#if defined(useStatusBar)
+#if defined(useStatusMeter)
 	"INSTvs(trip) FE" tcEOSCR
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigFE)
 	"Big FuelEcon" tcEOSCR
 #endif // defined(useBigFE)

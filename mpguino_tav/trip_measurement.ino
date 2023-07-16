@@ -366,7 +366,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 	uint8_t i;
 	uint8_t j;
 
-	j = pgm_read_byte(&tripUpdateList[(unsigned int)(tripTransferIdx)][(unsigned int)(tripDirIndex)]);
+	j = pgm_read_byte(&tripUpdateList[(uint16_t)(tripTransferIdx)][(uint16_t)(tripDirIndex)]);
 	i = j & 0x7F; // strip off upper bit for now, to look at the trip index in question
 
 	switch (i)
@@ -432,7 +432,11 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			retVal = 1;
 			break;
 
-		case menuCursorUpdateIdx:
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, tripSaveMenuTitles, cursorPos + thisMenuData.menuTitlesOffset);
+			break;
+
+		case menuSecondLineInitIdx:
 #if defined(usePartialRefuel)
 			if (thisCursorPos == tsfAddPartialIdx)
 			{
@@ -443,7 +447,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			}
 
 #endif //  defined(usePartialRefuel)
-		case menuDisplayStatusIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
+		case menuSecondLineFlagIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
 #if defined(usePartialRefuel)
 			if (thisCursorPos == tsfAddPartialIdx) retVal = 1;
 
@@ -454,7 +458,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 #endif //  defined(useSavedTrips)
 			break;
 
-		case menuDisplayOutputIdx:
+		case menuSecondLineOutIdx:
 #if defined(usePartialRefuel)
 			if (thisCursorPos == tsfAddPartialIdx)
 			{

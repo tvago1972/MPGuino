@@ -27,7 +27,6 @@ static const uint8_t accelTestParamList[] PROGMEM = {
 	,pVehicleMassIdx
 };
 
-
 #if defined(useDebugTerminal)
 const char terminalAccelerationFlagStr[] PROGMEM = {
 	"accelerationFlags: " tcEOS

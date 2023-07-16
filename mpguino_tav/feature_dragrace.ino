@@ -128,7 +128,11 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			retVal = 1;
 			break;
 
-		case menuCursorUpdateIdx:
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, accelTestMenuTitles, cursorPos);
+			break;
+
+		case menuSecondLineInitIdx:
 			if (cursorPos > 1)
 			{
 
@@ -137,11 +141,11 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-		case menuDisplayStatusIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
+		case menuSecondLineFlagIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
 			if (cursorPos > 1) retVal = 1;
 			break;
 
-		case menuDisplayOutputIdx:
+		case menuSecondLineOutIdx:
 			if (cursorPos > 1)
 			{
 

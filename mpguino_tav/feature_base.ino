@@ -8,6 +8,10 @@ static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, baseMenuTitles, cursorPos);
+			break;
+
 		case menuDoSelectionIdx:
 			switch (cursorPos)
 			{
@@ -111,6 +115,10 @@ static uint8_t mainDisplay::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 	switch (cmd)
 	{
+
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, mainMenuTitles, cursorPos);
+			break;
 
 		case menuDoSelectionIdx:
 			retVal = mainDisplayIdx + cursorPos;

@@ -497,10 +497,11 @@ static const uint8_t displayCursorUpdateIdx =	displayInitialEntryIdx + 1;		// ..
 static const uint8_t displayOutputIdx =			displayCursorUpdateIdx + 1;		// ...to this call
 
 static const uint8_t menuInitialEntryIdx =		0;								// if the associated menu cursor is reset upon entry
-static const uint8_t menuCursorUpdateIdx =		menuInitialEntryIdx + 1;		// if the associated menu entry has additional info, initializes info
-static const uint8_t menuDisplayStatusIdx =		menuCursorUpdateIdx + 1;		// if the associated menu entry has additional info, returns a 1
-static const uint8_t menuDisplayOutputIdx =		menuDisplayStatusIdx + 1;		// if the associated menu entry has additional info, displays info line
-static const uint8_t menuDoSelectionIdx =		menuDisplayOutputIdx + 1;		// performs optional defined associated action, and returns next display index
+static const uint8_t menuFirstLineOutIdx =		menuInitialEntryIdx + 1;		// displays first line for menu
+static const uint8_t menuSecondLineInitIdx =	menuFirstLineOutIdx + 1;		// if the associated menu entry has additional info, initializes info
+static const uint8_t menuSecondLineFlagIdx =	menuSecondLineInitIdx + 1;		// if the associated menu entry has additional info, returns a 1
+static const uint8_t menuSecondLineOutIdx =		menuSecondLineFlagIdx + 1;		// if the associated menu entry has additional info, displays info line
+static const uint8_t menuDoSelectionIdx =		menuSecondLineOutIdx + 1;		// performs optional defined associated action, and returns next display index
 static const uint8_t menuExitIdx =				menuDoSelectionIdx + 1;			// performs optional defined exit action, and returns next display index
 
 // the following display index defines are for the main MPGuino displays
@@ -508,10 +509,10 @@ static const uint8_t menuExitIdx =				menuDoSelectionIdx + 1;			// performs opti
 #define nextAllowedValue 0
 static const uint8_t mainDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue mainDisplayIdx + 1
-#if defined(useStatusBar)
+#if defined(useStatusMeter)
 static const uint8_t statusMeterDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue statusMeterDisplayIdx + 1
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigFE)
 static const uint8_t bigFEdisplayIdx =				nextAllowedValue;
 #define nextAllowedValue bigFEdisplayIdx + 1
@@ -554,10 +555,10 @@ static const uint8_t tankSettingsDisplayIdx =		VSSsettingsDisplayIdx + 1;
 static const uint8_t CRFICsettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue CRFICsettingsDisplayIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#if defined(useVehicleParameters)
 static const uint8_t acdSettingsDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue acdSettingsDisplayIdx + 1
-#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 static const uint8_t timeoutSettingsDisplayIdx =	nextAllowedValue;
 static const uint8_t miscSettingsDisplayIdx =		timeoutSettingsDisplayIdx + 1;
 #define nextAllowedValue miscSettingsDisplayIdx + 1
@@ -572,10 +573,10 @@ static const uint8_t optionalDisplayIdxStart =		nextAllowedValue;
 static const uint8_t dragRaceMenuDisplayIdx =		nextAllowedValue;
 #define nextAllowedValue dragRaceMenuDisplayIdx + 1
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
-static const uint8_t coastdownIdx =					nextAllowedValue;
-#define nextAllowedValue coastdownIdx + 1
-#endif // useCoastDownCalculator
+#if defined(useCoastDownCalculator)
+static const uint8_t coastdownMenuDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue coastdownMenuDisplayIdx + 1
+#endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
 static const uint8_t signalSimDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue signalSimDisplayIdx + 1
@@ -624,6 +625,10 @@ static const uint8_t displayEditDisplayIdx =		nextAllowedValue;
 static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
 #define nextAllowedValue dragRaceDisplayIdx + 1
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+static const uint8_t coastdownDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue coastdownDisplayIdx + 1
+#endif // defined(useCoastDownCalculator)
 
 static const char displayCountTotal =				nextAllowedValue;
 
@@ -631,9 +636,9 @@ static const uint8_t baseMenuLength = 2		// main display category and settings c
 #if defined(useDragRaceFunction)
 	+ 1										// accel test display category
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	+ 1										// coastdown test display category
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
 	+ 1										// fuel injection/VSS signal simulator display category
 #endif // defined(useSimulatedFIandVSS)
@@ -655,9 +660,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 // the following display entries are referenced from the menu section
 
 	 {mainDisplayIdx,				mainDisplayIdx,				displayCountUser,	mainDisplayPageCount,		dfSplitScreen,	mainDisplay::displayHandler}
-#if defined(useStatusBar)
+#if defined(useStatusMeter)
 	,{statusMeterDisplayIdx,		mainDisplayIdx,				displayCountUser,	2,							dfSplitScreen,	statusBar::displayHandler}
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 #if defined(useBigFE)
 	,{bigFEdisplayIdx,				mainDisplayIdx,				displayCountUser,	3,							dfSplitScreen,	bigDigit::displayHandler}
 #endif // defined(useBigFE)
@@ -679,6 +684,9 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useClockDisplay)
 	,{clockShowDisplayIdx,			mainDisplayIdx,				displayCountUser,	1,							dfFullScreen,	clockDisplay::displayHandler}
 #endif // defined(useClockDisplay)
+
+// the following displays are for the various settings groups
+
 	,{displaySettingsDisplayIdx,	displaySettingsDisplayIdx,	1,					eePtrSettingsDispLen,		dfFullScreen,	menu::displayHandler}
 	,{fuelSettingsDisplayIdx,		fuelSettingsDisplayIdx,		1,					eePtrSettingsInjLen,		dfFullScreen,	menu::displayHandler}
 	,{VSSsettingsDisplayIdx,		VSSsettingsDisplayIdx,		1,					eePtrSettingsVSSlen,		dfFullScreen,	menu::displayHandler}
@@ -686,20 +694,20 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useChryslerMAPCorrection)
 	,{CRFICsettingsDisplayIdx,		CRFICsettingsDisplayIdx,	1,					eePtrSettingsCRFIClen,		dfFullScreen,	menu::displayHandler}
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#if defined(useVehicleParameters)
 	,{acdSettingsDisplayIdx,		acdSettingsDisplayIdx,		1,					eePtrSettingsACDlen,		dfFullScreen,	menu::displayHandler}
-#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 	,{timeoutSettingsDisplayIdx,	timeoutSettingsDisplayIdx,	1,					eePtrSettingsTimeoutLen,	dfFullScreen,	menu::displayHandler}
 	,{miscSettingsDisplayIdx,		miscSettingsDisplayIdx,		1,					eePtrSettingsMiscLen,		dfFullScreen,	menu::displayHandler}
 
-
+// the following displays are for options selected via configs.h
 
 #if defined(useDragRaceFunction)
 	,{dragRaceMenuDisplayIdx,		dragRaceMenuDisplayIdx,		1,					6,							dfFullScreen,	menu::displayHandler}
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
-	,{coastdownIdx,	1,	3,	coastdown::goDisplay,	button::doNothing}
-#endif // useCoastDownCalculator
+#if defined(useCoastDownCalculator)
+	,{coastdownMenuDisplayIdx,		coastdownMenuDisplayIdx,	1,					8,							dfFullScreen,	menu::displayHandler}
+#endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
 	,{signalSimDisplayIdx,			signalSimDisplayIdx,		1,					4,							0,				signalSim::displayHandler}
 #endif // defined(useSimulatedFIandVSS)
@@ -713,7 +721,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{buttonDisplayIdx,				buttonDisplayIdx,			1,					1,							0,				buttonView::displayHandler}
 #endif // defined(useTestButtonValues)
 
-// the following screen entries do not show up in the top-down menu list
+// the following display entries do not show up in the top-down menu list
 
 	,{0,							baseMenuDisplayIdx,			1,					baseMenuLength,				dfFullScreen,	menu::displayHandler}
 #if defined(useExpandedMainDisplay)
@@ -734,8 +742,11 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	,{0,							displayEditDisplayIdx,		1,					8,							dfSplitScreen,	displayEdit::displayHandler}
 #endif // defined(useScreenEditor)
 #if defined(useDragRaceFunction)
-	,{0,							dragRaceDisplayIdx,			1,					4,							dfFullScreen,	accelerationTest::displayHandler}
+	,{0,							dragRaceDisplayIdx,			1,					4,							0,				accelerationTest::displayHandler}
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,{0,							coastdownDisplayIdx,		1,					4,							0,				coastdown::displayHandler}
+#endif // defined(useCoastDownCalculator)
 };
 
 #define nextAllowedValue 0
@@ -755,10 +766,10 @@ static const uint8_t tankSettingMenuIdx =		VSSsettingMenuIdx + 1;
 static const uint8_t CRFICsettingMenuIdx =		nextAllowedValue;
 #define nextAllowedValue CRFICsettingMenuIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#if defined(useVehicleParameters)
 static const uint8_t acdSettingMenuIdx =		nextAllowedValue;
 #define nextAllowedValue acdSettingMenuIdx + 1
-#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 static const uint8_t timeoutSettingMenuIdx =	nextAllowedValue;
 static const uint8_t miscSettingMenuIdx =		timeoutSettingMenuIdx + 1;
 #define nextAllowedValue miscSettingMenuIdx + 1
@@ -774,6 +785,10 @@ static const uint8_t tripSaveTankMenuIdx =		nextAllowedValue;
 static const uint8_t accelTestMenuIdx =			nextAllowedValue;
 #define nextAllowedValue accelTestMenuIdx + 1
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+static const uint8_t coastdownTestMenuIdx =		nextAllowedValue;
+#define nextAllowedValue coastdownTestMenuIdx + 1
+#endif // defined(useCoastDownCalculator)
 
 static const uint8_t menuCount =				nextAllowedValue;
 
@@ -785,7 +800,6 @@ typedef struct
 {
 
 	uint8_t displayIdx;
-	const char * menuTitlesPtr;
 	uint8_t menuTitlesOffset;
 	menuHandlerFunc menuHandler;
 
@@ -800,32 +814,35 @@ static uint8_t menuLength;
 static uint8_t displayHeight;
 
 static const menuData menuParameters[(uint16_t)(menuCount)] PROGMEM = {
-	 {baseMenuDisplayIdx,			baseMenuTitles,			0,							baseMenu::menuHandler}
+	 {baseMenuDisplayIdx,			0,							baseMenu::menuHandler}
 #if defined(useExpandedMainDisplay)
-	,{mainMenuDisplayIdx,			mainMenuTitles,			0,							mainDisplay::menuHandler}
+	,{mainMenuDisplayIdx,			0,							mainDisplay::menuHandler}
 #endif // defined(useExpandedMainDisplay)
-	,{settingsMenuDisplayIdx,		settingsMenuTitles,		0,							settings::menuHandler}
-	,{displaySettingsDisplayIdx,	parmLabels,				eePtrSettingsDispStart,		parameterEdit::menuHandler}
-	,{fuelSettingsDisplayIdx,		parmLabels,				eePtrSettingsInjStart,		parameterEdit::menuHandler}
-	,{VSSsettingsDisplayIdx,		parmLabels,				eePtrSettingsVSSstart,		parameterEdit::menuHandler}
-	,{tankSettingsDisplayIdx,		parmLabels,				eePtrSettingsTankStart,		parameterEdit::menuHandler}
+	,{settingsMenuDisplayIdx,		0,							settings::menuHandler}
+	,{displaySettingsDisplayIdx,	eePtrSettingsDispStart,		parameterEdit::menuHandler}
+	,{fuelSettingsDisplayIdx,		eePtrSettingsInjStart,		parameterEdit::menuHandler}
+	,{VSSsettingsDisplayIdx,		eePtrSettingsVSSstart,		parameterEdit::menuHandler}
+	,{tankSettingsDisplayIdx,		eePtrSettingsTankStart,		parameterEdit::menuHandler}
 #if defined(useChryslerMAPCorrection)
-	,{CRFICsettingsDisplayIdx,		parmLabels,				eePtrSettingsCRFICstart,	parameterEdit::menuHandler}
+	,{CRFICsettingsDisplayIdx,		eePtrSettingsCRFICstart,	parameterEdit::menuHandler}
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCoastDownCalculator) || defined(useDragRaceFunction)
-	,{acdSettingsDisplayIdx,		parmLabels,				eePtrSettingsACDstart,		parameterEdit::menuHandler}
-#endif // defined(useCoastDownCalculator) || defined(useDragRaceFunction)
-	,{timeoutSettingsDisplayIdx,	parmLabels,				eePtrSettingsTimeoutStart,	parameterEdit::menuHandler}
-	,{miscSettingsDisplayIdx,		parmLabels,				eePtrSettingsMiscStart,		parameterEdit::menuHandler}
+#if defined(useVehicleParameters)
+	,{acdSettingsDisplayIdx,		eePtrSettingsACDstart,		parameterEdit::menuHandler}
+#endif // defined(useVehicleParameters)
+	,{timeoutSettingsDisplayIdx,	eePtrSettingsTimeoutStart,	parameterEdit::menuHandler}
+	,{miscSettingsDisplayIdx,		eePtrSettingsMiscStart,		parameterEdit::menuHandler}
 #if defined(useSavedTrips)
-	,{tripSaveCurrentDisplayIdx,	tripSaveMenuTitles,		tsfCurrentStart,			tripSave::menuHandler}
+	,{tripSaveCurrentDisplayIdx,	tsfCurrentStart,			tripSave::menuHandler}
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
-	,{tripSaveTankDisplayIdx,		tripSaveMenuTitles,		tsfTankStart,				tripSave::menuHandler}
+	,{tripSaveTankDisplayIdx,		tsfTankStart,				tripSave::menuHandler}
 #endif // defined(useEnhancedTripReset)
 #if defined(useDragRaceFunction)
-	,{dragRaceMenuDisplayIdx,		accelTestMenuTitles,	0,							accelerationTest::menuHandler}
+	,{dragRaceMenuDisplayIdx,		0,							accelerationTest::menuHandler}
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,{coastdownMenuDisplayIdx,		0,							coastdown::menuHandler}
+#endif // defined(useCoastDownCalculator)
 };
 
 static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -855,7 +872,6 @@ static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			// load pre-defined parameters for the given menu index
 			i = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].displayIdx);
 			menuLength = pgm_read_byte(&displayParameters[(uint16_t)(i)].displayPageCount);
-			thisMenuData.menuTitlesPtr = (const char *)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuTitlesPtr));
 			thisMenuData.menuTitlesOffset = pgm_read_byte(&menuParameters[(uint16_t)(menuIdx)].menuTitlesOffset);
 			thisMenuData.menuHandler = (menuHandlerFunc)(pgm_read_word(&menuParameters[(uint16_t)(menuIdx)].menuHandler));
 
@@ -872,7 +888,7 @@ static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx: // menu display window is (menuTop + LCDcharHeight - 1) with wraparound
 			displayHeight = LCDcharHeight;
 
-			displayHeight -= thisMenuData.menuHandler(menuCursorUpdateIdx, cursorPos);
+			displayHeight -= thisMenuData.menuHandler(menuSecondLineInitIdx, cursorPos);
 
 			if (displayHeight > menuLength) displayHeight = menuLength;
 
@@ -905,19 +921,19 @@ static void menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 					if (displayHeight > 1) text::charOut(devLCD, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
 
-					text::stringOut(devLCD, thisMenuData.menuTitlesPtr, menuLine + thisMenuData.menuTitlesOffset); // output menu element
+					thisMenuData.menuHandler(menuFirstLineOutIdx, menuLine); // output menu element
 
 					// if supplementary information is to be shown at the cursor position
 					if (menuLine == cursorPos)
 					{
 
-						flg = thisMenuData.menuHandler(menuDisplayStatusIdx, menuLine);
+						flg = thisMenuData.menuHandler(menuSecondLineFlagIdx, menuLine);
 
 						if (flg)
 						{
 
 							text::gotoXY(devLCD, 0, ++displayLine);
-							thisMenuData.menuHandler(menuDisplayOutputIdx, menuLine);
+							thisMenuData.menuHandler(menuSecondLineOutIdx, menuLine);
 
 						}
 
@@ -1035,7 +1051,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 	uint8_t maxVal;
 	uint8_t x; // base menu level
 
-	x = (pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].baseDisplayIdx)) & 0x7F; // base menu level
+	x = (pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].baseDisplayIdx)) & 0x7F; // base menu level
 	displayIdxChange = 0;
 
 	wrapAroundFlag = 0; // initially, signal that no wrap-around occurred
@@ -1046,9 +1062,9 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		if (moveX & 0x80) cursorXdirection = 0xFF;
 		else cursorXdirection = 0x01;
 
-		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayPageCount); // "horizontal" size
+		maxVal = pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].displayPageCount); // "horizontal" size
 
-		v = displayCursor[(unsigned int)(thisMenuData.displayIdx)] + cursorXdirection; // perform move
+		v = displayCursor[(uint16_t)(thisMenuData.displayIdx)] + cursorXdirection; // perform move
 		thisMenuHeight += cursorXdirection;
 
 		if (v == maxVal) // if screen cursor bumped up to screen level size
@@ -1069,7 +1085,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 
 		if (wrapAroundFlag) moveY = cursorXdirection; // if wrap-around occurred, signal direction to next screen level
 
-		displayCursor[(unsigned int)(thisMenuData.displayIdx)] = v;
+		displayCursor[(uint16_t)(thisMenuData.displayIdx)] = v;
 
 	}
 
@@ -1079,7 +1095,7 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		if (moveY & 0x80) moveY = 0xFF;
 		else moveY = 0x01;
 
-		maxVal = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayGroupCount); // "vertical" size
+		maxVal = pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].displayGroupCount); // "vertical" size
 
 		v = thisMenuData.displayIdx - x + moveY;
 
@@ -1099,9 +1115,9 @@ static void cursor::moveRelative(uint8_t moveY, uint8_t moveX)
 		{
 
 			if (moveY == 1) v = 0; // if direction was forward, set current cursor to zero
-			else v = pgm_read_byte(&displayParameters[(unsigned int)(thisMenuData.displayIdx)].displayPageCount) - 1; // else, set current cursor to end of new menu level
+			else v = pgm_read_byte(&displayParameters[(uint16_t)(thisMenuData.displayIdx)].displayPageCount) - 1; // else, set current cursor to end of new menu level
 
-			displayCursor[(unsigned int)(thisMenuData.displayIdx)] = v;
+			displayCursor[(uint16_t)(thisMenuData.displayIdx)] = v;
 
 		}
 
@@ -1289,13 +1305,13 @@ static void idleProcess(void)
 		for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 		{
 
-			if (analogValue[(unsigned int)(analogButtonChannelIdx)] >= pgm_read_word(&analogButtonThreshold[(unsigned int)(x)]))
+			if (analogValue[(uint16_t)(analogButtonChannelIdx)] >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
 			{
 
 #if defined(useTestAnalogButtonIdx)
 				thisButtonIdx = x;
 #endif //  defined(useTestAnalogButtonIdx)
-				button::inject(pgm_read_byte(&analogTranslate[(unsigned int)(x)]));
+				button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
 				break;
 
 			}
