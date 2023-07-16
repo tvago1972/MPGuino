@@ -8,6 +8,10 @@ static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, settingsMenuTitles, cursorPos);
+			break;
+
 		case menuDoSelectionIdx:
 			retVal = displaySettingsDisplayIdx + cursorPos;
 			break;
@@ -68,19 +72,174 @@ static const uint8_t prgmCompareWithMaximumParamValue[] PROGMEM = {
 };
 
 static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
-	instrLxdI, 0,										// zero the trip index register
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert minimum good speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pMinGoodSpeedidx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMinGoodSpeedidx,
 
-//loop:
-	instrLdRegEEPROMindirect, 0x02,						// load an EEPROM parameter, indexed into the convIdx array
-	instrLdRegNumer, 0x01,								// load numerator into register 1
-	instrMul2by1,										// multiply EEPROM parameter value by numerator
-	instrLdRegDenom, 0x01,								// load denominator into register 1
-	instrDiv2by1,										// divide EEPROM parameter value by denominator
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegEEPROMindirect, 0x02,						// store converted EEPROM parameter
-	instrAddIndex, 1,									// bump conversion index stored in trip index register
-	instrCmpIndex, convSize,							// finished processing list of EEPROM parameters?
-	instrBranchIfLT, 239,								// if not, loop back
+	instrLdRegConstMetric, 0x12, idxDenomDistance,		// convert pulses per distance value in (count) / (distance)
+	instrLdRegConstMetric, 0x21, idxNumerDistance,
+	instrMul2byEEPROM, pPulsesPerDistanceIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pPulsesPerDistanceIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert total tank size value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pTankSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pTankSizeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert bingo tank size value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pTankBingoSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pTankBingoSizeIdx,
+
+#if defined(usePartialRefuel)
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert refuel quantity value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pRefuelSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefuelSizeIdx,
+
+#if defined(useEEPROMtripStorage)
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert saved refuel quantity value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pRefuelSaveSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefuelSaveSizeIdx,
+
+#endif // defined(useEEPROMtripStorage)
+#endif // defined(usePartialRefuel)
+#if defined(useFuelCost)
+	instrLdRegConstMetric, 0x12, idxDenomVolume,		// convert fuel cost value in (cost) / (volume)
+	instrLdRegConstMetric, 0x21, idxNumerVolume,
+	instrMul2byEEPROM, pCostPerQuantity,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pCostPerQuantity,
+
+#endif // defined(useFuelCost)
+#if defined(useChryslerMAPCorrection)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure range value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pMAPsensorRangeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMAPsensorRangeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure offset value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pMAPsensorOffsetIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMAPsensorOffsetIdx,
+
+#if defined(useChryslerBaroSensor)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure range value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBaroSensorRangeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBaroSensorRangeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure offset value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBaroSensorOffsetIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBaroSensorOffsetIdx,
+
+#else // defined(useChryslerBaroSensor)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference barometric pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBarometricPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarometricPressureIdx,
+
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsSpeed)
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph minimum speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pBarLowSpeedCutoffIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph bar width value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pBarSpeedQuantumIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarSpeedQuantumIdx,
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useVehicleParameters)
+	instrLdRegConstMetric, 0x12, idxNumerMass,		// convert vehicle mass (weight) value in (mass)
+	instrLdRegConstMetric, 0x21, idxDenomMass,
+	instrMul2byEEPROM, pVehicleMassIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pVehicleMassIdx,
+
+#if defined(useCoastDownCalculator)
+	instrLdRegConstMetric, 0x12, idxNumerArea,		// convert frontal area value in (area)
+	instrLdRegConstMetric, 0x21, idxDenomArea,
+	instrMul2byEEPROM, pVehicleFrontalAreaIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pVehicleFrontalAreaIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDensity,	// convert vehicle mass (weight) value in (mass) / (volume)
+	instrLdRegConstMetric, 0x21, idxDenomDensity,
+	instrMul2byEEPROM, pLocustDensityIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pLocustDensityIdx,
+
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pDragSpeedIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pDragSpeedIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined distance value value in (distance)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pDragDistanceIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pDragDistanceIdx,
+
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#ifdef useCalculatedFuelFactor
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert system fuel pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pSysFuelPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pSysFuelPressureIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference fuel injector pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pRefFuelPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefFuelPressureIdx,
+
+#endif // useCalculatedFuelFactor
 	instrDone											// return to caller
 };
 
@@ -202,18 +361,22 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, parmLabels, cursorPos + thisMenuData.menuTitlesOffset);
+			break;
+
 		case menuInitialEntryIdx:
 			numberEditObj.neStatusMessage = pseStatusMessages;
 			break;
 
-		case menuCursorUpdateIdx:
+		case menuSecondLineInitIdx:
 			numberEditObj.parameterIdx = cursorPos + thisMenuData.menuTitlesOffset;
 			parameterEdit::sharedFunctionCall(nesLoadInitial);
-		case menuDisplayStatusIdx:
+		case menuSecondLineFlagIdx:
 			retVal = 1;
 			break;
 
-		case menuDisplayOutputIdx:
+		case menuSecondLineOutIdx:
 			text::stringOut(devLCD, pBuff); // output supplementary information
 			text::newLine(devLCD); // clear to the end of the line
 			break;
@@ -255,18 +418,18 @@ static void parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			for (uint8_t x = 0; x < 10; x++) // scan all of numeric buffer from left to right
 			{
 
-				c = pBuff[(unsigned int)(x)]; // fetch a character from buffer
+				c = pBuff[(uint16_t)(x)]; // fetch a character from buffer
 
 				if (x > cursorPos) // if current position is past cursor position, just make sure leading spaces get turned into zero digits
 				{
 
-					if (c == ' ') pBuff[(unsigned int)(x)] = '0';
+					if (c == ' ') pBuff[(uint16_t)(x)] = '0';
 
 				}
 				else // if current position is before or at cursor position, ensure leading spaces up to either cursor position or to first non-zero digit
 				{
 
-					if ((c == ' ') || (c == '0')) pBuff[(unsigned int)(x)] = k; // if character is either a space or a zero digit, it may be leading so change it
+					if ((c == ' ') || (c == '0')) pBuff[(uint16_t)(x)] = k; // if character is either a space or a zero digit, it may be leading so change it
 					else k = '0'; // character is a non-zero digit, so change leading character value to a zero digit
 
 				}
@@ -332,17 +495,17 @@ static void parameterEdit::entry(void)
 static void parameterEdit::findLeft(void)
 {
 
-	displayCursor[(unsigned int)(parameterEditDisplayIdx)] = 9;
+	displayCursor[(uint16_t)(parameterEditDisplayIdx)] = 9;
 
 	// do a nice thing and put the edit cursor at the first non zero number
-	for (uint8_t x = 9; x < 10; x--) if (pBuff[(unsigned int)(x)] != ' ') displayCursor[(unsigned int)(parameterEditDisplayIdx)] = x;
+	for (uint8_t x = 9; x < 10; x--) if (pBuff[(uint16_t)(x)] != ' ') displayCursor[(uint16_t)(parameterEditDisplayIdx)] = x;
 
 }
 
 static void parameterEdit::findRight(void)
 {
 
-	displayCursor[(unsigned int)(parameterEditDisplayIdx)] = 9;
+	displayCursor[(uint16_t)(parameterEditDisplayIdx)] = 9;
 
 }
 
@@ -387,7 +550,7 @@ static void parameterEdit::changeDigitDown(void)
 static void parameterEdit::changeDigit(uint8_t digitDir)
 {
 
-	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
+	uint8_t cp = displayCursor[(uint16_t)(parameterEditDisplayIdx)];
 	uint8_t c = '0';
 	uint8_t d = ' ';
 
@@ -404,14 +567,14 @@ static void parameterEdit::changeDigit(uint8_t digitDir)
 			break;
 
 		default:
-			w = pBuff[(unsigned int)(cp)]; // fetch digit from stored numeric string representing parameter to be changed
+			w = pBuff[(uint16_t)(cp)]; // fetch digit from stored numeric string representing parameter to be changed
 
 			if (w == ' ') w = '0'; // if this is a leading space, use 0 as working digit
 			w += digitDir; // adjust working digit
 			if (w > '9') w = '0'; // handle working digit rollover
 			if (w < '0') w = '9'; // handle working digit rollover
 
-			pBuff[(unsigned int)(cp)] = w;
+			pBuff[(uint16_t)(cp)] = w;
 
 			str2ull(pBuff); // convert parameter buffer string into uint64_t
 			w = (uint8_t)(SWEET64::runPrgm(prgmCompareWithMaximumParamValue, numberEditObj.parameterIdx));
@@ -443,7 +606,7 @@ static void parameterEdit::changeDigit(uint8_t digitDir)
 static void parameterEdit::save(void)
 {
 
-	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
+	uint8_t cp = displayCursor[(uint16_t)(parameterEditDisplayIdx)];
 	uint8_t retVal;
 
 	switch (cp)
@@ -465,7 +628,7 @@ static void parameterEdit::save(void)
 
 		default:
 			cp = 10;
-			displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
+			displayCursor[(uint16_t)(parameterEditDisplayIdx)] = cp;
 			displayHandler(displayCursorUpdateIdx, cp);
 			break;
 
@@ -476,14 +639,14 @@ static void parameterEdit::save(void)
 static void parameterEdit::cancel(void)
 {
 
-	uint8_t cp = displayCursor[(unsigned int)(parameterEditDisplayIdx)];
+	uint8_t cp = displayCursor[(uint16_t)(parameterEditDisplayIdx)];
 	const char * str;
 
 	if (cp != 11)
 	{
 
 		cp = 11;
-		displayCursor[(unsigned int)(parameterEditDisplayIdx)] = cp;
+		displayCursor[(uint16_t)(parameterEditDisplayIdx)] = cp;
 		displayHandler(displayCursorUpdateIdx, cp);
 
 	}

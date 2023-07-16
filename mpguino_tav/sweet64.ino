@@ -222,6 +222,12 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 				operand = 0x05;
 				break;
 
+			case r07:	// fetch rX and rY from program, shift rY to rX if in metric mode
+				operand = fetchByte(sched);
+				if (metricFlag & metricMode) operand >>= 4; // if in metric mode, shift rY into rX
+				else operand &= 0x0F; // otherwise, throw rY away and keep rX
+				break;
+
 			default:	// invalid rxx code detected, exit program
 				loopFlag = 0;
 				break;
@@ -249,10 +255,6 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 			case p02:	// load primary operand from index
 				operand += tripIdx;
-				break;
-
-			case p04:	// load primary operand with EEPROM indirect[index]
-				operand += pgm_read_byte(&convIdx[(unsigned int)(tripIdx)]);
 				break;
 
 			default:	// invalid pxx code detected, exit program
@@ -357,13 +359,8 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					break;
 
 #endif // defined(useBarGraph)
-				case i12:	// load rX with denominator for constant
-					operand ^= 1;
-				case i13:	// load rX with numerator for constant
-					if (metricFlag & metricMode) operand ^= 1;
-					operand ^= pgm_read_byte(&convNumerIdx[(unsigned int)(operand)]);
 				case i14:	// load rX with const
-					init64(regX, pgm_read_dword(&convNumbers[(uint16_t)(operand)]));
+					init64(regX, pgm_read_dword(&constantNumberList[(uint16_t)(operand)]));
 					break;
 
 				case i15:	// load rX with EEPROM init
