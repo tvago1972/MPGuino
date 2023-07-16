@@ -54,18 +54,20 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // selectable options - any conflicts will be reported at compile time
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
-#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
+#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
+#define useFuelCost true					// Show fuel cost
+#define useDragRaceFunction true			// Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
 #define useBigFE true						// Show big fuel economy displays
 #define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-#define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 #define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 #define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
-#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
-#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
-#define useFuelCost true					// Show fuel cost
+#define useStatusMeter true					// displays a graphical meter for use with MPG display
+#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+#define useSpiffyBigChars true				// Provides better number font with use with big number displays above
+#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
+#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 #define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
@@ -76,15 +78,14 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useDataLoggingOutput true			// Ability to output 5 basic parameters to a data logger or SD card, once every refresh period (0.5 second)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
-#define useDragRaceFunction true			// (inw) Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 //#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 
 // performance enhancement options - all may be chosen independently of one another
 //
 #define useBufferedLCD true					// Speed up LCD output
-#define useBufferedSerial0Port true			// Speed up serial port 0 output
-//#define useBufferedSerial1Port true			// Speed up serial port 1 output
+//#define useBufferedSerial0Port true			// Speed up serial port 0 output
+#define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
 #define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
@@ -100,15 +101,14 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // debug terminal I/O port options - choose one or the other with useDebugTerminal, or an error will result
 //
-#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board)
+//#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
+#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalUSBserial true		// select USB CDC output for PC-MPGuino terminal interface (TinkerKit! LCD module)
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
-#define useStatusBar true					// (inw) displays a graphical bar for use with MPG display
 //#define useBluetooth true					// (inw) Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
@@ -275,9 +275,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useBigTimeDisplay true
 #endif // defined(useSoftwareClock)
 
-#if defined(useStatusBar)
+#if defined(useStatusMeter)
 #define useExpandedMainDisplay true
-#endif // defined(useStatusBar)
+#endif // defined(useStatusMeter)
 
 #if defined(useBigFE)
 #define useExpandedMainDisplay true
@@ -318,9 +318,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useBigDigitDisplay true
 #endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
 
-#if defined(useBigDigitDisplay) || defined(useStatusBar)
+#if defined(useBigDigitDisplay) || defined(useStatusMeter)
 #define useLCDfonts true
-#endif // defined(useBigDigitDisplay) || defined(useStatusBar)
+#endif // defined(useBigDigitDisplay) || defined(useStatusMeter)
 
 #if defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
 #define useLCDgraphics true
@@ -354,10 +354,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useAnalogRead true
 #endif // defined(useCarVoltageOutput)
 
-#ifdef useCoastDownCalculator
-#define useVehicleMass true
+#if defined(useCoastDownCalculator)
+#define useVehicleParameters true
 #define useMatrixMath true
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 
 #ifdef useFuelParamCalculator
 #define useMatrixMath true
@@ -577,7 +577,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // defined(useOutputPins)
 
 #if defined(useDragRaceFunction)
-#define useVehicleMass true
+#define useVehicleParameters true
 #endif // defined(useDragRaceFunction)
 
 #if defined(useSavedTrips)

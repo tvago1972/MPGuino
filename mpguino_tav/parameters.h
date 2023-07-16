@@ -101,22 +101,22 @@ static const uint8_t pSizeBarometricPressure =			32;
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 static const uint8_t pSizeVehicleMass =					16;
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 static const uint8_t pSizeVehicleFrontalArea =			16;
 static const uint8_t pSizeLocustDensity =				16;
 static const uint8_t pSizeCoefficientD =				16;
 static const uint8_t pSizeCoefficientV =				16;
 static const uint8_t pSizeCoefficientRR =				16;
 static const uint8_t pSizeCoastdownSamplePeriod =		8;
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 static const uint8_t pSizeDragSpeed =					24;
 static const uint8_t pSizeDragDistance =				16;
 static const uint8_t pSizeDragAutoFlag =				1;
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 
@@ -276,11 +276,10 @@ static const unsigned int pAddressBarometricPressure =			nextAllowedValue;
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 static const unsigned int pAddressVehicleMass =					nextAllowedValue;
 #define nextAllowedValue pAddressVehicleMass + byteSize(pSizeVehicleMass)
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 static const unsigned int pAddressVehicleFrontalArea =			nextAllowedValue;
 static const unsigned int pAddressLocustDensity =				pAddressVehicleFrontalArea + byteSize(pSizeVehicleFrontalArea);
 static const unsigned int pAddressCoefficientD =				pAddressLocustDensity + byteSize(pSizeLocustDensity);
@@ -288,13 +287,14 @@ static const unsigned int pAddressCoefficientV =				pAddressCoefficientD + byteS
 static const unsigned int pAddressCoefficientRR =				pAddressCoefficientV + byteSize(pSizeCoefficientV);
 static const unsigned int pAddressCoastdownSamplePeriod =		pAddressCoefficientRR + byteSize(pSizeCoefficientRR);
 #define nextAllowedValue pAddressCoastdownSamplePeriod + byteSize(pSizeCoastdownSamplePeriod)
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 static const unsigned int pAddressDragSpeed =					nextAllowedValue;
 static const unsigned int pAddressDragDistance =				pAddressDragSpeed + byteSize(pSizeDragSpeed);
 static const unsigned int pAddressDragAutoFlag =				pAddressDragDistance + byteSize(pSizeDragDistance);
 #define nextAllowedValue pAddressDragAutoFlag + byteSize(pSizeDragAutoFlag)
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 
@@ -498,11 +498,10 @@ static const uint8_t eePtrSettingsCRFIClen =			eePtrSettingsCRFICend - eePtrSett
 
 static const uint8_t eePtrSettingsACDstart =			nextAllowedValue;
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 static const uint8_t pVehicleMassIdx =					nextAllowedValue;
 #define nextAllowedValue pVehicleMassIdx + 1
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 static const uint8_t pVehicleFrontalAreaIdx =			nextAllowedValue;
 static const uint8_t pLocustDensityIdx =				pVehicleFrontalAreaIdx + 1;
 static const uint8_t pCoefficientDidx =					pLocustDensityIdx + 1;
@@ -510,13 +509,14 @@ static const uint8_t pCoefficientVidx =					pCoefficientDidx + 1;
 static const uint8_t pCoefficientRRidx =				pCoefficientVidx + 1;
 static const uint8_t pCoastdownSamplePeriodIdx =		pCoefficientRRidx + 1;
 #define nextAllowedValue pCoastdownSamplePeriodIdx + 1
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 static const uint8_t pDragSpeedIdx =					nextAllowedValue;
 static const uint8_t pDragDistanceIdx =					pDragSpeedIdx + 1;
 static const uint8_t pDragAutoFlagIdx =					pDragDistanceIdx + 1;
 #define nextAllowedValue pDragAutoFlagIdx + 1
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 static const uint8_t eePtrSettingsACDend =				nextAllowedValue;
 static const uint8_t eePtrSettingsACDlen =				eePtrSettingsACDend - eePtrSettingsACDstart;
@@ -702,22 +702,22 @@ static const char parmLabels[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 	"Veh" tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"FrArea*1000 " tcOMOFF "ft" tcOTOG "m" tcOON "^2" tcEOSCR
 	"rho*1000 " tcOMOFF "lb/yd" tcOTOG "kg/m" tcOON "^3" tcEOSCR
 	"C(d) * 1000" tcEOSCR
 	"C(v) * 1000" tcEOSCR
 	"C(rr) * 1000" tcEOSCR
 	"Cd SamplePd (s)" tcEOSCR
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 	"DragSpd " tcOMOFF "MPH" tcOTOG "kph" tcOON "*1000" tcEOSCR
 	"DragDist " tcOMOFF "mi" tcOTOG "km" tcOON "*1000" tcEOSCR
 	"DragAutoTrigger" tcEOSCR
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 
@@ -938,22 +938,22 @@ static const uint8_t paramsLength[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 	,(pSizeVehicleMass & 0x07)													// Vehicle Weight/Mass (lbs or kg)
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,(pSizeVehicleFrontalArea & 0x07)											// Vehicle Frontal Area * 1000 (ft^2 or m^2)
 	,(pSizeLocustDensity & 0x07)												// Air density (lb/yd^3 or kg/m^3)
 	,(pSizeCoefficientD & 0x07)													// Vehicle C(d) * 1000
 	,(pSizeCoefficientV & 0x07)													// Vehicle C(v) * 1000
 	,(pSizeCoefficientRR & 0x07)												// Vehicle C(rr) * 1000
 	,(pSizeCoastdownSamplePeriod & 0x07)										// Sample Period in seconds
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 	,(pSizeDragSpeed & 0x07)													// Drag speed cutoff (MPH or kph) * 1000
 	,(pSizeDragDistance & 0x07)													// Drag distance cutoff (miles or km) * 1000
 	,(pSizeDragAutoFlag & 0x07)													// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 
@@ -1093,22 +1093,22 @@ static const uint8_t paramAddrs[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 	,(uint8_t)(pAddressVehicleMass)					// Vehicle Weight/Mass (lbs or kg)
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,(uint8_t)(pAddressVehicleFrontalArea)			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
 	,(uint8_t)(pAddressLocustDensity)				// Air density (lb/yd^3 or kg/m^3)
 	,(uint8_t)(pAddressCoefficientD)				// Vehicle C(d) * 1000
 	,(uint8_t)(pAddressCoefficientV)				// Vehicle C(v) * 1000
 	,(uint8_t)(pAddressCoefficientRR)				// Vehicle C(rr) * 1000
 	,(uint8_t)(pAddressCoastdownSamplePeriod)		// Sample Period in seconds
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 	,(uint8_t)(pAddressDragSpeed)					// Drag speed cutoff (MPH or kph) * 1000
 	,(uint8_t)(pAddressDragDistance)				// Drag distance cutoff (miles or km) * 1000
 	,(uint8_t)(pAddressDragAutoFlag)				// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 
@@ -1249,22 +1249,22 @@ static const uint32_t params[] PROGMEM = {
 
 // drag race / coastdown calc settings
 
-#if defined(useVehicleMass)
+#if defined(useVehicleParameters)
 	,4000				// Vehicle Weight/Mass (lbs or kg)
-#endif // defined(useVehicleMass)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,25400				// Vehicle Frontal Area (ft^2 or m^2)
 	,2065				// Air density (lb/yd^3 or kg/m^3)
 	,346				// C(d)
 	,1					// C(v)
 	,8					// C(rr)
 	,3					// Sample Period in seconds
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 	,60000				// Drag speed cutoff (MPH or kph) * 1000
 	,250				// Drag distance cutoff (miles or km) * 1000
 	,0					// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 
 // timeout settings
 

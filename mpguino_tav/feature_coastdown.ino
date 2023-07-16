@@ -1,6 +1,84 @@
 #ifdef useCoastDownCalculator
 /* Coastdown Calculator support section */
 
+static void coastdown::displayHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+
+
+}
+
+static uint8_t coastdown::menuHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	uint8_t retVal = 0;
+
+	switch (cmd)
+	{
+
+		case menuInitialEntryIdx:
+			numberEditObj.neStatusMessage = pseStatusMessages;
+			retVal = 1;
+			break;
+
+		case menuFirstLineOutIdx:
+			text::stringOut(devLCD, coastdownTestMenuTitles, cursorPos);
+			break;
+
+		case menuSecondLineInitIdx:
+			if (cursorPos)
+			{
+
+				numberEditObj.parameterIdx = pgm_read_byte(&coastdownTestParamList[(uint16_t)(cursorPos - 1)]);
+				parameterEdit::sharedFunctionCall(nesLoadInitial);
+
+			}
+
+		case menuSecondLineFlagIdx: // if the menu cursor line has supplemental information, retVal will be set to 1
+			if (cursorPos) retVal = 1;
+			break;
+
+		case menuSecondLineOutIdx:
+			if (cursorPos)
+			{
+
+				text::stringOut(devLCD, pBuff); // output supplementary information
+				text::newLine(devLCD); // clear to the end of the line
+
+			}
+
+			break;
+
+		case menuDoSelectionIdx:
+			if (cursorPos)
+			{
+
+					numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+					retVal = parameterEditDisplayIdx; // go to parameter edit display index
+
+			}
+			else
+			{
+
+				retVal = coastdownDisplayIdx;
+
+			}
+
+			break;
+
+		case menuExitIdx:
+			retVal = baseMenuDisplayIdx;
+			break;
+
+		default:
+			break;
+
+	}
+
+	return retVal;
+
+}
+
 void coastdown::goDisplay(void)
 {
 
@@ -67,13 +145,13 @@ void coastdown::goDisplay(void)
 
 		text::gotoXY(devLCD, 8, 1);
 		text::stringOut(devLCD, PSTR(" ACTIVE"));
-		text::charOut(devLCD, pgm_read_byte(&coastdownSymbol[(unsigned int)(coastdownCharIdx++)]));
+		text::charOut(devLCD, pgm_read_byte(&coastdownSymbol[(uint16_t)(coastdownCharIdx++)]));
 
 	}
 	else
 	{
 
-		i = displayCursor[(unsigned int)(coastdownIdx)] + pCoefficientDidx;
+		i = displayCursor[(uint16_t)(coastdownIdx)] + pCoefficientDidx;
 
 		SWEET64::runPrgm(prgmFetchParameterValue, i);
 		ull2str(pBuff, 0, tFormatToNumber);
