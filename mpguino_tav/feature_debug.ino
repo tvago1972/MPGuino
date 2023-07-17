@@ -511,14 +511,7 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 {
 
-	calcFuncObj thisCalcFuncObj;
-
-	// perform the required decimal formatting
-	thisCalcFuncObj = translateCalcIdx(terminalIdx, lineNumber, termNumberBuff, decWindow, 0);
-
-	text::stringOut(devDebugTerminal, thisCalcFuncObj.strBuffer); // output the number
-	text::charOut(devDebugTerminal, ' ');
-	text::stringOut(devDebugTerminal, terminalFormats, thisCalcFuncObj.calcFmtIdx);
+	outputTripFunctionValue(devDebugTerminal, terminalIdx, lineNumber, termNumberBuff, decWindow, dfOutputTripChar);
 
 }
 

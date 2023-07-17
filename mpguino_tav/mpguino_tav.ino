@@ -1560,10 +1560,10 @@ int main(void)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
 
 #endif // defined(useDataLoggingOutput)
-#ifdef useJSONoutput
-			if (awakeFlags & aAwakeOnVehicle) doOutputJSON();
+#if defined(useJSONoutput)
+			if ((awakeFlags & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
 
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)
 		}
 
 #endif // defined(useDataLoggingOutput) || defined(useJSONoutput)

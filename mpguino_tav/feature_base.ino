@@ -284,7 +284,7 @@ static void displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	switch (cmd)
 	{
-
+//TODO - cause cursor to skip over trip index for those calc indices which do not depend on trip index
 		case displayInitialEntryIdx:
 			basePageIdx = displayCursor[(uint16_t)(mainDisplayIdx)] * 4;
 			for (uint8_t x = 0; x < 4; x++) displayEditPageFormats[(uint16_t)(x)] = mainDisplay::getMainDisplayPageFormat(basePageIdx + x);
