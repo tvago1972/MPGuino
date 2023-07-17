@@ -22,65 +22,172 @@ static void doOutputDataLog(void)
 }
 
 #endif // defined(useDataLoggingOutput)
-#ifdef useJSONoutput
-static const uint8_t prgmJSON23tankFE[] PROGMEM = {
-	instrMul2byByte, 2,									// multiply results by a 2
-	instrDiv2byByte, 3,									// divide results by a 3
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrDone											// exit to caller
-};
+#if defined(useJSONoutput)
+/* JSON formatting support section */
 
-static const uint8_t prgmJSON53tankFE[] PROGMEM = {
-	instrMul2byByte, 5,									// multiply results by a 5
-	instrDiv2byByte, 3,									// divide results by a 3
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmJSONminValue[] PROGMEM = {
-	instrCmpXtoY, 0x21,
-	instrBranchIfLTorE, 2,								// if register 2 contents are less than or equal to register 1 contents, skip
-	instrLdReg, 0x12,									// load register 2 with contents of register 1
-
-//ret:
-	instrDone											// exit to caller
-};
-
-void doOutputJSONnumber(const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces, const char * labelStr)
+static void JSON::init(interfaceDevice &dev)
 {
 
+	JSONlevel = 0;
+	JSONflag[(uint16_t)(JSONlevel)] = 0;
+
+	text::stringOut(dev, PSTR("\n\n")); // begin JSON payload
+
+}
+
+static void JSON::openElement(interfaceDevice &dev, uint8_t elementType)
+{
+
+	outputElementNext(dev, elementType);
+
+	JSONflag[(uint16_t)(JSONlevel)] |= (elementType);
+
+	JSONlevel++;
+	JSONflag[(uint16_t)(JSONlevel)] = 0;
+
+	outputElementStart(dev, elementType);
+
+}
+
+static void JSON::openKey(interfaceDevice &dev, const char * str, uint8_t elementType)
+{
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) closeElementInternal(dev);
+
+	openElement(dev, 0);
+
+	text::charOut(dev, '"');
+	text::stringOut(dev, str);
+	text::stringOut(dev, PSTR("\":"));
+
+	JSONflag[(uint16_t)(JSONlevel)] |= (elementType | JSONflagKey);
+
+	outputElementStart(dev, elementType);
+
+}
+
+static void JSON::closeElement(interfaceDevice &dev)
+{
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) closeElementInternal(dev);
+
+	closeElementInternal(dev);
+
+}
+
+static void JSON::closeElementInternal(interfaceDevice &dev)
+{
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) outputElementEnd(dev);
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagString) text::charOut(dev, '"');
+
+	JSONlevel--;
+
+	outputElementEnd(dev);
+
+	if (JSONlevel == 0) text::stringOut(dev, PSTR("\n\n")); // end JSON payload, and go trigger read on python.script
+
+}
+
+static void JSON::outputElementStart(interfaceDevice &dev, uint8_t elementType)
+{
+
+	if (elementType & JSONflagArray) text::charOut(dev, '[');
+
+	if (elementType & JSONflagObject) text::charOut(dev, '{');
+
+	if (elementType & JSONflagString) text::charOut(dev, '"');
+
+}
+
+static void JSON::outputElementNext(interfaceDevice &dev, uint8_t elementType)
+{
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagString)
+	{
+
+		text::charOut(dev, '"');
+		JSONflag[(uint16_t)(JSONlevel)] &= ~(JSONflagString);
+
+	}
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagMany) text::charOut(dev, ',');
+
+	JSONflag[(uint16_t)(JSONlevel)] |= (JSONflagMany);
+
+	if (elementType & JSONflagString)
+	{
+
+		text::charOut(dev, '"');
+		JSONflag[(uint16_t)(JSONlevel)] |= (JSONflagString);
+
+	}
+
+}
+
+static void JSON::outputElementEnd(interfaceDevice &dev)
+{
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagArray) text::charOut(dev, ']');
+
+	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagObject) text::charOut(dev, '}');
+
+}
+
+static void JSON::outputNumber(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx)
+{
+
+	calcFuncObj thisCalcFuncObj;
+
+	// perform the required decimal formatting
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 0, dfOverflow9s);
+
+	outputElementNext(dev, 0);
+	text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
+
+}
+
+static void JSON::outputNumber(interfaceDevice &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces)
+{
+
+	outputElementNext(dev, 0);
 	SWEET64::runPrgm(sched, tripIdx);
-	doOutputJSONnumber(decimalPlaces, labelStr);
+	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 
 }
 
-void doOutputJSONnumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalPlaces, const char * labelStr)
+static void JSON::outputNumber(interfaceDevice &dev, union union_64 * an, uint8_t decimalPlaces)
 {
 
-	SWEET64::doCalculate(tripIdx, calcIdx);
-	doOutputJSONnumber(decimalPlaces, labelStr);
+	outputElementNext(dev, 0);
+	SWEET64::copy64((union union_64 *)(&s64reg[s64reg2]), an);
+	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 
 }
+
+static void JSON::outputNumber(interfaceDevice &dev, uint32_t an, uint8_t decimalPlaces)
+{
+
+	outputElementNext(dev, 0);
+	SWEET64::init64((union union_64 *)(&s64reg[s64reg2]), an);
+	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
+
+}
+
+/* skybolt JSON packet output support section */
+
+static const uint8_t prgmFindHalfReserveRange[] PROGMEM = {
+	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
+	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,			// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
+	instrShiftRegRight, 0x02,							// shift result right one bit
+	instrJump, tCalculateFuelDistance					// go format it
+};
 
 void doOutputJSONnumber(unsigned long an, uint8_t decimalPlaces, const char * labelStr)
 {
 
 	SWEET64::init64((union union_64 *)(&s64reg[s64reg2]), an);
-	doOutputJSONnumber(decimalPlaces, labelStr);
-
-}
-
-void doOutputJSONnumber(union union_64 * an, uint8_t decimalPlaces, const char * labelStr)
-{
-
-	SWEET64::copy64((union union_64 *)(&s64reg[s64reg2]), an);
-	doOutputJSONnumber(decimalPlaces, labelStr);
-
-}
-
-void doOutputJSONnumber(uint8_t decimalPlaces, const char * labelStr)
-{
-
 	text::stringOut(devLogOutput, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 	text::stringOut(devLogOutput, labelStr); // output the label part
 
@@ -89,16 +196,15 @@ void doOutputJSONnumber(uint8_t decimalPlaces, const char * labelStr)
 void doOutputJSON(void) //skybolt added json output function
 {
 
+	calcFuncObj thisCalcFuncObj;
+
 	static uint8_t subtitleCount1 = 2;
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 	static uint8_t subtitleCount2 = 3;
-#endif // useDragRaceFunction
 
-	uint8_t oldSREG;
-
-	uint64_t instFuelEcon;
-	uint64_t tankFuelEcon;
-	uint64_t tankFuelEcon53;
+	uint32_t targetSpeed;
+	uint32_t targetDistance;
+#endif // defined(useDragRaceFunction)
 
 	if (timer0Status & t0sOutputJSON) // replaced timerChecker with this because systemInfo::cycles0() is a compile-time option that could break JSON output if #useCPUreading is not set
 	{
@@ -106,111 +212,133 @@ void doOutputJSON(void) //skybolt added json output function
 		changeBitFlags(timer0Status, t0sOutputJSON, 0); // clear JSON subtitle change timer command
 
 		if (!(--subtitleCount1)) subtitleCount1 = 2;
-#ifdef useDragRaceFunction
+#if defined(useDragRaceFunction)
 		if (!(--subtitleCount2)) subtitleCount2 = 3;
-#endif // useDragRaceFunction
+#endif // defined(useDragRaceFunction)
 
 	}
 
-	unsigned long reserveQuantity = SWEET64::runPrgm(prgmReserveRemainingFuel, 0);
+	JSON::init(devLogOutput); // begin JSON payload
 
-	unsigned long tankSize = SWEET64::runPrgm(prgmFetchParameterValue, pTankSizeIdx);
-
-	text::stringOut(devLogOutput, PSTR("\n\n[")); // begin JSON payload
+	JSON::openElement(devLogOutput, JSONflagArray);
 
 	// first graph, fuel
-	text::stringOut(devLogOutput, PSTR("{\"title\":\""));
 
-	if (reserveQuantity == 0) text::stringOut(devLogOutput, PSTR("fumes remaining, ")); // fumes left
-	else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " remaining, ")); // reserve remaining fuel left
+	JSON::openElement(devLogOutput, JSONflagObject);
 
-	doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " e-reserve\",\n")); // bingo remaining fuel left
-	//  doOutputJSONnumber(instantIdx, tEngineSpeed, 0, PSTR(" RPM\",\n")); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
+	JSON::openKey(devLogOutput, JSONtitleStr, JSONflagString);
+	thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, pBuff, 4, dfOverflow9s); // reserve remaining fuel left
+	if (thisCalcFuncObj.value == 0) text::stringOut(devLogOutput, PSTR("fumes")); // fumes left
+	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // reserve remaining fuel left
+	text::stringOut(devLogOutput, PSTR(" remaining, "));
+	outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, pBuff, 0, dfOverflow9s); // bingo remaining fuel left
+	text::stringOut(devLogOutput, PSTR(" e-reserve"));
 
+	// outputTripFunctionValue(devLogOutput, instantIdx, tEngineSpeed, pBuff, 0, dfOverflow9s); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
+
+	JSON::openKey(devLogOutput, JSONsubtitleStr, JSONflagString);
 	switch (subtitleCount1)
 	{
 
 		case 2:
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"fuel used: "));
-
-			doOutputJSONnumber(currentIdx, tFuelUsed, 3, PSTR(" trip " tcOMOFF "gal" tcOTOG "L" tcOON "; ")); // current trip fuel used
-			doOutputJSONnumber(tankIdx, tFuelUsed, 3, PSTR(" tank " tcOMOFF "gal" tcOTOG "L" tcOON "; ")); // tank trip fuel used
-			doOutputJSONnumber(instantIdx, tFuelRate, 3, PSTR(" using " tcOMOFF "gal" tcOTOG "L" tcOON "/hr\",\n")); // current rate of fuel burn in units/time
+			text::stringOut(devLogOutput, PSTR("fuel used: "));
+			text::stringOut(devLogOutput, PSTR("trip "));
+			outputTripFunctionValue(devLogOutput, currentIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // current trip fuel used
+			text::stringOut(devLogOutput, PSTR("; tank "));
+			outputTripFunctionValue(devLogOutput, tankIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // tank trip fuel used
+			text::stringOut(devLogOutput, PSTR("; using "));
+			outputTripFunctionValue(devLogOutput, instantIdx, tFuelRate, pBuff, 0, dfOverflow9s); // current rate of fuel burn in units/time
 
 			break;
 
 		case 1:
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"eco stats: "));
+			text::stringOut(devLogOutput, PSTR("eco stats: "));
 #if defined(trackIdleEOCdata)
-			doOutputJSONnumber(eocIdleTankIdx, tFuelUsed, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " used@idle, "));
-			doOutputJSONnumber(eocIdleTankIdx, tDistance, 1, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " fuel cut\",\n"));
+			text::stringOut(devLogOutput, PSTR("used@idle "));
+			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tFuelUsed, pBuff, 0, dfOverflow9s);
+			text::stringOut(devLogOutput, PSTR(", fuel cut "));
+			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tDistance, pBuff, 0, dfOverflow9s);
 #else // defined(trackIdleEOCdata)
-			if (reserveQuantity == 0) text::stringOut(devLogOutput, PSTR("fumes remaining, ")); // fumes left
-			else doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " remaining, ")); // reserve remaining fuel left
-			doOutputJSONnumber(prgmBingoFuelRemaining, 0, 3, PSTR(" " tcOMOFF "gal" tcOTOG "L" tcOON " e-reserve\",\n")); // bingo remaining fuel left
+			thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, pBuff, 4, dfOverflow9s); // reserve remaining fuel left
+			if (thisCalcFuncObj.value == 0) text::stringOut(devLogOutput, PSTR("fumes")); // fumes left
+			else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // reserve remaining fuel left
+			text::stringOut(devLogOutput, PSTR(" remaining, "));
+			outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, pBuff, 0, dfOverflow9s); // bingo remaining fuel left
+			text::stringOut(devLogOutput, PSTR(" e-reserve"));
 #endif // defined(trackIdleEOCdata)
 
 			break;
 
 	}
 
-	reserveQuantity = SWEET64::runPrgm(prgmFetchParameterValue, pTankBingoSizeIdx);
+	//ranges do not have to be in order, d3js libraries will auto sort, so you can make it easier to read the code by changing the order
+	JSON::openKey(devLogOutput, JSONrangesStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, tankIdx, tFuelQuantity); // largest, full tank size (e.g, 13.8 g)
+	JSON::outputNumber(devLogOutput, tankIdx, tReserveQuantity); // full tank less reserve (e.g.13.8g - 2.2g = 11.6g)
+	JSON::outputNumber(devLogOutput, tankIdx, tBingoQuantity); // reserve amount (e.g. 2.2g)
 
-	text::stringOut(devLogOutput, PSTR("\"ranges\":[")); //ranges do not have to be in order, d3js libraries will auto sort, so you can make it easier to read the code by changing the order
-	doOutputJSONnumber(tankSize, 3, PSTR(",")); // largest, full tank size (e.g, 13.8 g)
-	doOutputJSONnumber(tankSize - reserveQuantity, 3, PSTR(",")); // full tank less reserve (e.g.13.8g - 2.2g = 11.6g)
-	doOutputJSONnumber(reserveQuantity, 3, PSTR("],\n")); // reserve amount (e.g. 2.2g)
+	JSON::openKey(devLogOutput, JSONmeasuresStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, tankIdx, tReserveRemainingFuel); // reserve remaining fuel left
+	JSON::outputNumber(devLogOutput, tankIdx, tRemainingFuel); // total remaining fuel left
 
-	text::stringOut(devLogOutput, PSTR("\"measures\":["));
-	doOutputJSONnumber(prgmReserveRemainingFuel, 0, 3, PSTR(",")); // reserve remaining fuel left
-	doOutputJSONnumber(prgmRemainingFuel, 0, 3, PSTR("],\n")); // total remaining fuel left
+	JSON::openKey(devLogOutput, JSONmarkersStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, instantIdx, tFuelRate); // current rate of fuel burn in units/time
 
-	text::stringOut(devLogOutput, PSTR("\"markers\":["));
-	doOutputJSONnumber(instantIdx, tFuelRate, 3, PSTR("]},\n\n")); // current rate of fuel burn in units/time
+	JSON::closeElement(devLogOutput);
 
 	// second graph, distance
-	text::stringOut(devLogOutput, PSTR("{\"title\":\""));
-	doOutputJSONnumber(prgmReserveDistanceToEmpty, tankIdx, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON " to e, ")); // distance to bingo
-	doOutputJSONnumber(prgmBingoDistanceToEmpty, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " e-reserve\",\n")); // distance to fully empty tank from bingo
+	JSON::openElement(devLogOutput, JSONflagObject);
 
+	JSON::openKey(devLogOutput, JSONtitleStr, JSONflagString);
+	outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistanceToEmpty, pBuff, 0, dfOverflow9s); // distance to bingo
+	text::stringOut(devLogOutput, PSTR(" to e, "));
+	outputTripFunctionValue(devLogOutput, tankIdx, tBingoDistanceToEmpty, pBuff, 0, dfOverflow9s); // distance to fully empty tank from bingo
+	text::stringOut(devLogOutput, PSTR(" e-reserve"));
+
+	JSON::openKey(devLogOutput, JSONsubtitleStr, JSONflagString);
 	switch (subtitleCount1)
 	{
 
 		case 2:
-			//   text::stringOut(devLogOutput, PSTR("\"subtitle\":\"trip/tank distance: "));
-			//   doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON "/")); // current trip distance
-			//   doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // current trip distance
+			//	text::stringOut(devLogOutput, PSTR("trip/tank distance: "));
+			//	outputTripFunctionValue(devLogOutput, currentIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			//	text::stringOut(devLogOutput, PSTR("/"));
+			//	outputTripFunctionValue(devLogOutput, tankIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
 
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\""));
-			doOutputJSONnumber(currentIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " trip distance, ")); // current trip distance
-			doOutputJSONnumber(tankIdx, tDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " tank distance\",\n")); // current trip distance
-
+			outputTripFunctionValue(devLogOutput, currentIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			text::stringOut(devLogOutput, PSTR(" trip distance, "));
+			outputTripFunctionValue(devLogOutput, tankIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			text::stringOut(devLogOutput, PSTR(" tank distance"));
 			break;
 
 		case 1:
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\""));
-			doOutputJSONnumber(prgmReserveDistance, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " safe range, ")); // reserve range
-			doOutputJSONnumber(prgmRangeDistance, tankIdx, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON " dry range\",\n")); // distance to fully empty tank
-
+			outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistance, pBuff, 0, dfOverflow9s); // reserve range
+			text::stringOut(devLogOutput, PSTR(" safe range, "));
+			outputTripFunctionValue(devLogOutput, tankIdx, tRangeDistance, pBuff, 0, dfOverflow9s); // distance to fully empty tank
+			text::stringOut(devLogOutput, PSTR(" dry range"));
 			break;
 
 	}
 
-	text::stringOut(devLogOutput, PSTR("\"ranges\":["));
-	doOutputJSONnumber(prgmRangeDistance, tankIdx, 1, PSTR(",")); // maximum range
-	doOutputJSONnumber(prgmReserveDistance, tankIdx, 1, PSTR(",")); // range 2, safe range
-	doOutputJSONnumber(prgmFindHalfReserveRange, tankIdx, 1, PSTR("],\n")); // range 3, half of safe range
+	JSON::openKey(devLogOutput, JSONrangesStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, tankIdx, tRangeDistance); // maximum range
+	JSON::outputNumber(devLogOutput, tankIdx, tReserveDistance); // range 2, safe range
+	JSON::outputNumber(devLogOutput, prgmFindHalfReserveRange, tankIdx, 1); // range 3, half of safe range
 
-	text::stringOut(devLogOutput, PSTR("\"measures\":["));
-	doOutputJSONnumber(prgmBingoDistance, tankIdx, 2, PSTR("],\n")); // shows miles of e-reserve in bar form
+	JSON::openKey(devLogOutput, JSONmeasuresStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, tankIdx, tBingoDistance); // shows miles of e-reserve in bar form
 
-	text::stringOut(devLogOutput, PSTR("\"markers\":["));
-	doOutputJSONnumber(tankIdx, tDistanceToEmpty, 2, PSTR("]},\n\n")); // line is distance to empty
+	JSON::openKey(devLogOutput, JSONmarkersStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, tankIdx, tDistanceToEmpty); // line is distance to empty
+
+	JSON::closeElement(devLogOutput);
 
 	// third graph, econ
-	text::stringOut(devLogOutput, PSTR("{\"title\":\"")); // gal or L
 
-#ifdef useDragRaceFunction
+	JSON::openElement(devLogOutput, JSONflagObject);
+
+	JSON::openKey(devLogOutput, JSONtitleStr, JSONflagString);
+#if defined(useDragRaceFunction)
 	// there was a bug in some of the drag cancel logic when using Adafruit. I disabled some statements
 	// to get it to work. (Was tripping at 0.718 or 0.0718 seconds (don't remember exact digits)
 	//
@@ -232,85 +360,137 @@ void doOutputJSON(void) //skybolt added json output function
 	{
 
 		text::stringOut(devLogOutput, findStr(JSONaccelTestStateMsgs, accelTestState));
-		text::stringOut(devLogOutput, PSTR(" ...\",\n"));
+		text::stringOut(devLogOutput, PSTR(" ..."));
 
 	}
 	else // else not racing or waiting, go to normal
 	{
 
-		text::stringOut(devLogOutput, PSTR("trip/tank/inst: ")); // gal or L
-		doOutputJSONnumber(currentIdx, tFuelEcon, 3, PSTR("/ ")); // current fuel economy
-		doOutputJSONnumber(tankIdx, tFuelEcon, 3, PSTR("/ ")); // tank fuel economy
-		reserveQuantity = SWEET64::doCalculate(instantIdx, tFuelEcon);
-		if (reserveQuantity > 9999999) text::stringOut(devLogOutput, PSTR("infinite\",\n"));
-		else doOutputJSONnumber(instantIdx, tFuelEcon, 3, PSTR("\",\n")); // instantaneous fuel economy
+		text::stringOut(devLogOutput, PSTR("fuel economy trip/tank/inst: ")); // gal or L
+		thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // current fuel economy
+		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+		text::stringOut(devLogOutput, PSTR("/ "));
+		thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // tank fuel economy
+		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+		text::stringOut(devLogOutput, PSTR("/ "));
+		thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // instantaneous fuel economy
+		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+		text::stringOut(devLogOutput, PSTR(" "));
+		text::stringOut(devLogOutput, thisCalcFuncObj.calcFormatLabelPtr);
 
 	}
+#else // defined(useDragRaceFunction)
+	text::stringOut(devLogOutput, PSTR("fuel economy trip/tank/inst: ")); // gal or L
+	thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // current fuel economy
+	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+	text::stringOut(devLogOutput, PSTR("/ "));
+	thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // tank fuel economy
+	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+	text::stringOut(devLogOutput, PSTR("/ "));
+	thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // instantaneous fuel economy
+	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
+	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
+	text::stringOut(devLogOutput, PSTR(" "));
+	text::stringOut(devLogOutput, thisCalcFuncObj.calcFormatLabelPtr);
+#endif // defined(useDragRaceFunction)
+
+	JSON::openKey(devLogOutput, JSONsubtitleStr, JSONflagString);
+#if defined(useDragRaceFunction)
+	targetSpeed = SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx); // accel test speed
+	targetDistance = SWEET64::runPrgm(prgmFetchParameterValue, pDragDistanceIdx); // accel test distance
 
 	switch (subtitleCount2)
 	{
 
 		case 3:
 			//1 & 2 seconds display
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"accel time: 0-"));
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx) / 2, 0, PSTR("/"));
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(": "));
-			doOutputJSONnumber(dragHalfSpeedIdx, tAccelTestTime, 2, PSTR("/")); // 0-30 time
-			doOutputJSONnumber(dragFullSpeedIdx, tAccelTestTime, 2, PSTR(", ")); // 0-60 time
-			doOutputJSONnumber(dragDistanceIdx, tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON " in ")); // trap distance
-			doOutputJSONnumber(dragDistanceIdx, tAccelTestTime, 2, PSTR(" @")); // trap time
-			doOutputJSONnumber(dragDistanceIdx, tSpeed, 3, PSTR(tcOMOFF "mph" tcOTOG "kph" tcOON "; ")); // trap speed
-			doOutputJSONnumber(dragHalfSpeedIdx, tEstimatedEnginePower, 0, PSTR(tcOMOFF "hp" tcOTOG "kW" tcOON " @")); // estimated engine power
-			doOutputJSONnumber(dragHalfSpeedIdx, tDragSpeed, 0, PSTR(tcOMOFF "mph" tcOTOG "kph" tcOON "\",\n")); // max speed
+			text::stringOut(devLogOutput, PSTR("accel time: 0-"));
 
+			doOutputJSONnumber(targetSpeed / 2, 0, PSTR("/"));
+			doOutputJSONnumber(targetSpeed, 0, PSTR(": "));
+
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tAccelTestTime, pBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(half speed) time
+			text::stringOut(devLogOutput, PSTR("/"));
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tAccelTestTime, pBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(full speed) time
+			text::stringOut(devLogOutput, PSTR(", "));
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDistance, pBuff, 0, dfOverflow9s); // trap distance
+			text::stringOut(devLogOutput, PSTR(" in "));
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tAccelTestTime, pBuff, 0, dfOverflow9s); // trap time
+			text::stringOut(devLogOutput, PSTR(" @"));
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tTrapSpeed, pBuff, 0, dfOverflow9s); // trap speed
+			text::stringOut(devLogOutput, PSTR("; "));
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tEstimatedEnginePower, pBuff, 0, dfOverflow9s); // estimated engine power
+			text::stringOut(devLogOutput, PSTR(" @"));
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDragSpeed, pBuff, 0, dfOverflow9s); // max speed
 			break;
 
 		case 2:
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"accel fuel: "));
+			text::stringOut(devLogOutput, PSTR("accel fuel: "));
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // 0-(half speed) fuel
+			text::stringOut(devLogOutput, PSTR(" to "));
 
-			doOutputJSONnumber(dragHalfSpeedIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // 0-half fuel
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx) / 2, 0, PSTR(", ")); // 0-half speed
-			doOutputJSONnumber(dragFullSpeedIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // 0-full fuel
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(", ")); // 0-full speed
-			doOutputJSONnumber(dragDistanceIdx, tFuelUsed, 3, PSTR(tcOMOFF "ga" tcOTOG "L" tcOON " to ")); // trap fuel
-			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // "to [trap distance]"
+			doOutputJSONnumber(targetSpeed / 2, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(half speed)
+
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // 0-(full speed) fuel
+			text::stringOut(devLogOutput, PSTR(" to "));
+
+			doOutputJSONnumber(targetSpeed, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(full speed)
+
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // trap fuel
+			text::stringOut(devLogOutput, PSTR(" to "));
+
+			doOutputJSONnumber(targetDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON ", ")); // to [trap distance]
 
 			break;
 
 		case 1:
-			text::stringOut(devLogOutput, PSTR("\"subtitle\":\"accel fuel: "));
+			text::stringOut(devLogOutput, PSTR("accel fuel: "));
 
-			doOutputJSONnumber(dragHalfSpeedIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); // 0-30 mpg
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx) / 2, 0, PSTR(", ")); // 0-half speed
-			doOutputJSONnumber(dragFullSpeedIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); // 0-60 mpg
-			doOutputJSONnumber(SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx), 0, PSTR(", ")); // 0-60 speed
-			doOutputJSONnumber(dragDistanceIdx, tFuelEcon, 3, PSTR(tcOMOFF "mpg" tcOTOG "L100" tcOON " to ")); //trap mpg
-			doOutputJSONnumber(dragDistanceIdx,  tDistance * 1, 2, PSTR(tcOMOFF "mi" tcOTOG "km" tcOON "\",\n")); // "to [trap distance]"
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // 0-(half speed) mpg
+			text::stringOut(devLogOutput, PSTR(" to "));
+
+			doOutputJSONnumber(targetSpeed / 2, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(half speed)
+
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // 0-(full speed) mpg
+			text::stringOut(devLogOutput, PSTR(" to "));
+
+			doOutputJSONnumber(targetSpeed, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(full speed)
+
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // trap mpg
+			text::stringOut(devLogOutput, PSTR(" to "));
+
+			doOutputJSONnumber(targetDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON ", ")); // to [trap distance]
 
 			break;
 
 	}
+#else // defined(useDragRaceFunction)
+	text::stringOut(devLogOutput, PSTR("[this space intentionally left blank]"));
+#endif // defined(useDragRaceFunction)
 
-#else // useDragRaceFunction
-	text::stringOut(devLogOutput, PSTR("\"subtitle\":\"[this space intentionally left blank]\",\n"));
-
-#endif // useDragRaceFunction
-	text::stringOut(devLogOutput, PSTR("\"ranges\":[18,24,"));
-
+	JSON::openKey(devLogOutput, JSONrangesStr, JSONflagArray);
 	// set scale at 40mpg or instant econ up to 999 mpg. Folks like to watch their mpg meter go to extremes
-	doOutputJSONnumber(min(max(40000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 999000), 3, PSTR("],\n"));
+	JSON::outputNumber(devLogOutput, 18000ul, 3);
+	JSON::outputNumber(devLogOutput, 24000ul, 3);
+	JSON::outputNumber(devLogOutput, min(max(40000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 999000), 3);
 
-	text::stringOut(devLogOutput, PSTR("\"measures\":["));
-	doOutputJSONnumber(currentIdx, tFuelEcon, 3, PSTR(",")); // current fuel economy
-	doOutputJSONnumber(tankIdx, tFuelEcon, 3, PSTR("],\n")); // tank fuel economy
+	JSON::openKey(devLogOutput, JSONmeasuresStr, JSONflagArray);
+	JSON::outputNumber(devLogOutput, currentIdx, tFuelEcon); // current fuel economy
+	JSON::outputNumber(devLogOutput, tankIdx, tFuelEcon); // tank fuel economy
 
-	text::stringOut(devLogOutput, PSTR("\"markers\":["));
-
+	JSON::openKey(devLogOutput, JSONmarkersStr, JSONflagArray);
 	// instantaneous fuel economy, do not let scale exceed 999
-	doOutputJSONnumber(min(999000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 3, PSTR("]"));
+	JSON::outputNumber(devLogOutput, min(999000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 3);
 
-	text::stringOut(devLogOutput, PSTR("\}]\n" tcEOSCR)); // end JSON payload, and go trigger read on python.script
+	JSON::closeElement(devLogOutput);
+
+	JSON::closeElement(devLogOutput); // end JSON payload, and go trigger read on python.script
 
 } // end sendJson function
 
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)

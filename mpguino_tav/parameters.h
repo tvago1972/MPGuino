@@ -49,6 +49,9 @@ static const uint8_t pSizeVoltageOffset =				12;
 #if defined(useDataLoggingOutput)
 static const uint8_t pSizeSerialDataLogging =			1;
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const uint8_t pSizeJSONoutput =					1;
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t pSizeFEvsTime =					16;
 #endif // defined(useBarFuelEconVsTime)
@@ -211,6 +214,10 @@ static const unsigned int pAddressVoltageOffset =				nextAllowedValue;
 static const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const unsigned int pAddressJSONoutput =					nextAllowedValue;
+#define nextAllowedValue pAddressJSONoutput + byteSize(pSizeJSONoutput)
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 static const unsigned int pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
@@ -408,6 +415,10 @@ static const uint8_t pVoltageOffset =					nextAllowedValue;
 static const uint8_t pSerialDataLoggingIdx =			nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const uint8_t pJSONoutputIdx =					nextAllowedValue;
+#define nextAllowedValue pJSONoutputIdx + 1
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
@@ -642,6 +653,9 @@ static const char parmLabels[] PROGMEM = {
 #if defined(useDataLoggingOutput)
 	"DLogSerial 1-Yes" tcEOSCR
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	"JSONoutput 1-Yes" tcEOSCR
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 	"FE/Time Period s" tcEOSCR
 #endif // defined(useBarFuelEconVsTime)
@@ -883,6 +897,9 @@ static const uint8_t paramsLength[] PROGMEM = {
 #if defined(useDataLoggingOutput)
 	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,(pSizeJSONoutput & 0x07)													// JSON output Enable
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
@@ -1038,6 +1055,9 @@ static const uint8_t paramAddrs[] PROGMEM = {
 #if defined(useDataLoggingOutput)
 	,(uint8_t)(pAddressSerialDataLogging)			// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,(uint8_t)(pAddressJSONoutput)					// JSON output Enable
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 	,(uint8_t)(pAddressFEvsTime)					// Period Of FE over Time Bar Graph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
@@ -1194,6 +1214,9 @@ static const uint32_t params[] PROGMEM = {
 #if defined(useDataLoggingOutput)
 	,1					// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,1					// JSON output Enable
+#endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
 	,60					// Length Of BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)

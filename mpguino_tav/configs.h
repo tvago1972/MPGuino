@@ -22,8 +22,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
 //#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
-//#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
-#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
+#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
+//#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
 
 // the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
 // LCD device options, if specified.
@@ -64,7 +64,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 #define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define useStatusMeter true					// displays a graphical meter for use with MPG display
-#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 #define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 #define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
@@ -79,12 +79,12 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
-//#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
+#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 
 // performance enhancement options - all may be chosen independently of one another
 //
 #define useBufferedLCD true					// Speed up LCD output
-//#define useBufferedSerial0Port true			// Speed up serial port 0 output
+#define useBufferedSerial0Port true			// Speed up serial port 0 output
 #define useBufferedSerial1Port true			// Speed up serial port 1 output
 //#define useBufferedSerial2Port true			// Speed up serial port 2 output
 //#define useBufferedSerial3Port true			// Speed up serial port 3 output
@@ -93,7 +93,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // logging output port options - choose one or the other with the above logging output options, or an error will result
 //
-//#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
+#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
 //#define useLoggingSerialPort1 true		// select logging output on serial port channel 1 (ATmega2560 board)
 //#define useLoggingSerialPort2 true		// select logging output on serial port channel 2 (ATmega2560 board)
 //#define useLoggingSerialPort3 true		// select logging output on serial port channel 3 (ATmega2560 board)

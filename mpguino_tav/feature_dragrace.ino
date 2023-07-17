@@ -66,6 +66,19 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,		// store raw top speed value to regular top speed
 
 //cont4:
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 14,								// if zero, then perform copy
+	instrLdRegVolatile, 0x02, vDragRawTrapSpeedIdx,		// load raw trap speed
+	instrLdRegVolatile, 0x01, vDragTrapSpeedIdx,		// load regular trap speed
+	instrTestReg, 0x01,									// test regular trap speed
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw trap speed to regular trap speed
+	instrBranchIfGT, 3,									// if raw trap speed is smaller than regular trap speed, skip
+
+//copyTopSpeed:
+	instrStRegVolatile, 0x02, vDragTrapSpeedIdx,		// store raw trap speed value to regular trap speed
+
+//cont5:
 	instrDone											// exit to caller
 };
 

@@ -27,9 +27,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // defined(useButtonInput)
 	static unsigned int cursorCount;
 	static unsigned int loopCount;
-#ifdef useJSONoutput
+#if defined(useJSONoutput)
 	static unsigned int JSONtimeoutCount;
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)
 	static uint8_t previousActivity;
 	static uint8_t internalFlags;
 #if defined(useAnalogButtons)
@@ -459,7 +459,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useButtonInput)
-#ifdef useJSONoutput
+#if defined(useJSONoutput)
 	if (JSONtimeoutCount) JSONtimeoutCount--;
 	else
 	{
@@ -469,7 +469,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)
 	if (loopCount) loopCount--;
 	else
 	{
@@ -1338,7 +1338,8 @@ static void updateVSS(unsigned long thisVSStime)
 
 						accelerationFlags &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
 						timer0Status |= (t0sAccelTestFlag);
-						volatileVariables[(uint16_t)(vDragRawInstantSpeedIdx)] = accelTestVSStime;
+						volatileVariables[(uint16_t)(vDragRawInstantSpeedIdx)] = accelTestVSStime; // store maximum recorded speed
+						volatileVariables[(uint16_t)(vDragRawTrapSpeedIdx)] = cycleLength; // store trap speed
 
 					}
 

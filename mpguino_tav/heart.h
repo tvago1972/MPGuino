@@ -118,9 +118,9 @@ static const unsigned int analogSampleTickLength  = (unsigned int)(ceil)((double
 #if defined(useTWIbuttons)
 static const unsigned int TWItickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(TWIsamplesPerSecond * 256ul)) - 1;
 #endif // defined(useTWIbuttons)
-#ifdef useJSONoutput
+#if defined(useJSONoutput)
 static const unsigned int JSONtickLength = (unsigned int)(ceil)((double)(16ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.6 second delay
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)
 
 // volatile variable array index values - these may be referenced inside an interrupt service routine
 #define nextAllowedValue 0
@@ -164,7 +164,9 @@ static const uint8_t vInterruptAccumulatorIdx =		nextAllowedValue;				// interru
 #if defined(useDragRaceFunction)
 static const uint8_t vDragRawInstantSpeedIdx =		nextAllowedValue;
 static const uint8_t vDragInstantSpeedIdx =			vDragRawInstantSpeedIdx + 1;
-static const uint8_t vAccelHalfPeriodValueIdx =		vDragInstantSpeedIdx + 1;
+static const uint8_t vDragRawTrapSpeedIdx =			vDragInstantSpeedIdx + 1;
+static const uint8_t vDragTrapSpeedIdx =			vDragRawTrapSpeedIdx + 1;
+static const uint8_t vAccelHalfPeriodValueIdx =		vDragTrapSpeedIdx + 1;
 static const uint8_t vAccelFullPeriodValueIdx =		vAccelHalfPeriodValueIdx + 1;
 static const uint8_t vAccelDistanceValueIdx =		vAccelFullPeriodValueIdx + 1;
 #define nextAllowedValue vAccelDistanceValueIdx + 1
@@ -434,9 +436,9 @@ const uint8_t t0sAccelTestFlag =		0b00000100;
 #ifdef useCoastDownCalculator
 const uint8_t t0sCoastdownTestFlag =	0b00000010;
 #endif // useCoastDownCalculator
-#ifdef useJSONoutput
+#if defined(useJSONoutput)
 const uint8_t t0sOutputJSON =			0b00000001;
-#endif // useJSONoutput
+#endif // defined(useJSONoutput)
 
 // these status flags inform the main program about MPGuino awake state
 volatile uint8_t awakeFlags;

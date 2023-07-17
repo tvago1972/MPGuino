@@ -60,6 +60,9 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	if (thisCalcFuncObj.isValid)
 	{
 
+#if defined(useDebugTerminal) || defined(useJSONoutput)
+		thisCalcFuncObj.calcFormatLabelPtr = findStr(calcFormatLabels, thisCalcFuncObj.calcFmtIdx);
+#endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
 		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx)
 		{
@@ -79,7 +82,7 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		else
 		{
 
-			SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx); // perform calculation
+			thisCalcFuncObj.value = SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx); // perform calculation
 			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
 
 		}
@@ -97,3 +100,27 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 }
 
+#if defined(useDebugTerminal) || defined(useJSONoutput)
+static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+{
+
+	calcFuncObj thisCalcFuncObj;
+
+	// perform the required decimal formatting
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag);
+
+	text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
+
+	if ((decimalFlag & dfSuppressLabel) == 0)
+	{
+
+		text::charOut(dev, ' ');
+		text::stringOut(dev, thisCalcFuncObj.calcFormatLabelPtr);
+
+		if (decimalFlag & dfOutputTripChar) text::charOut(dev, thisCalcFuncObj.tripChar);
+
+	}
+
+}
+
+#endif // defined(useDebugTerminal) || defined(useJSONoutput)
