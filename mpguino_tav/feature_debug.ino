@@ -72,7 +72,7 @@ static void systemInfo::idleProcess(void)
 #endif // defined(useDebugCPUreading)
 }
 
-static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
+static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint16_t availableRAMptr;
@@ -92,7 +92,7 @@ static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(devLCD, PSTR(" T"));
 #endif // LCDcharWidth == 20
-			text::stringOut(devLCD, ull2str(pBuff, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
+			text::stringOut(devLCD, ull2str(nBuff, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(devLCD, 0, 1);
 #if LCDcharWidth == 20
@@ -102,7 +102,7 @@ static void systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 #endif // LCDcharWidth == 20
 			mainProgramVariables[(uint16_t)(mpAvailableRAMidx)] = availableRAMptr;
 			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
-			text::stringOut(devLCD, ull2str(pBuff, 0, (LCDcharWidth / 2) - 2, 0));
+			text::stringOut(devLCD, ull2str(nBuff, 0, (LCDcharWidth / 2) - 2, 0));
 			break;
 
 		default:
@@ -117,7 +117,7 @@ static void systemInfo::showCPUload(void)
 
 	text::stringOut(devLCD, PSTR("C%"));
 	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
-	text::stringOut(devLCD, ull2str(pBuff, 2, 6, 0));
+	text::stringOut(devLCD, ull2str(nBuff, 2, 6, 0));
 #if defined(useDebugCPUreading)
 	monitorState = 1;
 #endif // defined(useDebugCPUreading)
@@ -285,7 +285,7 @@ static void activityLED::output(uint8_t val)
 #if defined(useTestButtonValues)
 /* Button input value viewer section */
 
-static void buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)
@@ -1106,10 +1106,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugButtonInjection)
 							case 'P':   // enter a stored parameter value
-								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0))
 								{
 
-									parameterEdit::onEEPROMchange(prgmPtr, terminalAddress++);
+									parameterEdit::onEEPROMchange(prgmTerminalWriteParameterValue, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
 									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
 
@@ -1122,7 +1122,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							case 'M':   // enter a main program variable value
 							case 'T':   // enter a trip variable measurement value
 							case 'V':   // enter a volatile variable value
-								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0))
 								{
 
 									SWEET64::runPrgm(prgmPtr, terminalAddress++);
@@ -1139,9 +1139,11 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								outputFlags(activityFlags, terminalActivityFlagStr);
 								outputFlags(peek, terminalPeekStr);
 #if defined(useDragRaceFunction)
-
 								outputFlags(accelerationFlags, terminalAccelerationFlagStr);
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+								outputFlags(coastdownFlags, terminalCoastdownFlagStr);
+#endif // defined(useCoastDownCalculator)
 #if defined(useBarFuelEconVsSpeed)
 
 								text::stringOut(devDebugTerminal, PSTR("FEvSpdTripIdx = " tcEOS));
@@ -1233,11 +1235,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						case 'P':   // list available stored parameters
 							maxLine = eePtrEnd;
 #if defined(useDebugTerminalLabels)
-							labelList = parmLabels;
+							labelList = terminalParameterNames;
 #endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputParameterValue;
 							extraFunc = terminal::outputParameterExtra;
-							prgmPtr = prgmTerminalWriteParameterValue;
 							break;
 
 						case 'R':	// list available trip variables
@@ -1417,7 +1418,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugTerminal)
 #if defined(useSimulatedFIandVSS)
-static void signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t i;
