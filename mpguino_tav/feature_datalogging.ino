@@ -12,7 +12,7 @@ static void doOutputDataLog(void)
 		if ((x + 1) == dLIcount) c = '\n';
 
 		// perform the required decimal formatting
-		thisCalcFuncObj = translateCalcIdx(pgm_read_word(&dataLogTripCalcFormats[(uint16_t)(x)]), pBuff, 0, dfOverflow9s);
+		thisCalcFuncObj = translateCalcIdx(pgm_read_word(&dataLogTripCalcFormats[(uint16_t)(x)]), nBuff, 0, dfOverflow9s);
 
 		text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // output the number
 		text::charOut(devLogOutput, c);
@@ -141,7 +141,7 @@ static void JSON::outputNumber(interfaceDevice &dev, uint8_t tripIdx, uint8_t ca
 	calcFuncObj thisCalcFuncObj;
 
 	// perform the required decimal formatting
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, 0, dfOverflow9s);
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, nBuff, 0, dfOverflow9s);
 
 	outputElementNext(dev, 0);
 	text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
@@ -153,7 +153,7 @@ static void JSON::outputNumber(interfaceDevice &dev, const uint8_t * sched, uint
 
 	outputElementNext(dev, 0);
 	SWEET64::runPrgm(sched, tripIdx);
-	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
+	text::stringOut(dev, ull2str(nBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 
 }
 
@@ -162,7 +162,7 @@ static void JSON::outputNumber(interfaceDevice &dev, union union_64 * an, uint8_
 
 	outputElementNext(dev, 0);
 	SWEET64::copy64((union union_64 *)(&s64reg[s64reg2]), an);
-	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
+	text::stringOut(dev, ull2str(nBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 
 }
 
@@ -171,7 +171,7 @@ static void JSON::outputNumber(interfaceDevice &dev, uint32_t an, uint8_t decima
 
 	outputElementNext(dev, 0);
 	SWEET64::init64((union union_64 *)(&s64reg[s64reg2]), an);
-	text::stringOut(dev, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
+	text::stringOut(dev, ull2str(nBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 
 }
 
@@ -188,7 +188,7 @@ void doOutputJSONnumber(unsigned long an, uint8_t decimalPlaces, const char * la
 {
 
 	SWEET64::init64((union union_64 *)(&s64reg[s64reg2]), an);
-	text::stringOut(devLogOutput, ull2str(pBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
+	text::stringOut(devLogOutput, ull2str(nBuff, decimalPlaces, 0, dfOverflow9s)); // output the number part
 	text::stringOut(devLogOutput, labelStr); // output the label part
 
 }
@@ -227,14 +227,14 @@ void doOutputJSON(void) //skybolt added json output function
 	JSON::openElement(devLogOutput, JSONflagObject);
 
 	JSON::openKey(devLogOutput, JSONtitleStr, JSONflagString);
-	thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, pBuff, 4, dfOverflow9s); // reserve remaining fuel left
+	thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, nBuff, 4, dfOverflow9s); // reserve remaining fuel left
 	if (thisCalcFuncObj.value == 0) text::stringOut(devLogOutput, PSTR("fumes")); // fumes left
 	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // reserve remaining fuel left
 	text::stringOut(devLogOutput, PSTR(" remaining, "));
-	outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, pBuff, 0, dfOverflow9s); // bingo remaining fuel left
+	outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, nBuff, 0, dfOverflow9s); // bingo remaining fuel left
 	text::stringOut(devLogOutput, PSTR(" e-reserve"));
 
-	// outputTripFunctionValue(devLogOutput, instantIdx, tEngineSpeed, pBuff, 0, dfOverflow9s); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
+	// outputTripFunctionValue(devLogOutput, instantIdx, tEngineSpeed, nBuff, 0, dfOverflow9s); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
 
 	JSON::openKey(devLogOutput, JSONsubtitleStr, JSONflagString);
 	switch (subtitleCount1)
@@ -243,11 +243,11 @@ void doOutputJSON(void) //skybolt added json output function
 		case 2:
 			text::stringOut(devLogOutput, PSTR("fuel used: "));
 			text::stringOut(devLogOutput, PSTR("trip "));
-			outputTripFunctionValue(devLogOutput, currentIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // current trip fuel used
+			outputTripFunctionValue(devLogOutput, currentIdx, tFuelUsed, nBuff, 0, dfOverflow9s); // current trip fuel used
 			text::stringOut(devLogOutput, PSTR("; tank "));
-			outputTripFunctionValue(devLogOutput, tankIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // tank trip fuel used
+			outputTripFunctionValue(devLogOutput, tankIdx, tFuelUsed, nBuff, 0, dfOverflow9s); // tank trip fuel used
 			text::stringOut(devLogOutput, PSTR("; using "));
-			outputTripFunctionValue(devLogOutput, instantIdx, tFuelRate, pBuff, 0, dfOverflow9s); // current rate of fuel burn in units/time
+			outputTripFunctionValue(devLogOutput, instantIdx, tFuelRate, nBuff, 0, dfOverflow9s); // current rate of fuel burn in units/time
 
 			break;
 
@@ -255,15 +255,15 @@ void doOutputJSON(void) //skybolt added json output function
 			text::stringOut(devLogOutput, PSTR("eco stats: "));
 #if defined(trackIdleEOCdata)
 			text::stringOut(devLogOutput, PSTR("used@idle "));
-			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tFuelUsed, pBuff, 0, dfOverflow9s);
+			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tFuelUsed, nBuff, 0, dfOverflow9s);
 			text::stringOut(devLogOutput, PSTR(", fuel cut "));
-			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tDistance, pBuff, 0, dfOverflow9s);
+			outputTripFunctionValue(devLogOutput, eocIdleTankIdx, tDistance, nBuff, 0, dfOverflow9s);
 #else // defined(trackIdleEOCdata)
-			thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, pBuff, 4, dfOverflow9s); // reserve remaining fuel left
+			thisCalcFuncObj = translateCalcIdx(0, tReserveRemainingFuel, nBuff, 4, dfOverflow9s); // reserve remaining fuel left
 			if (thisCalcFuncObj.value == 0) text::stringOut(devLogOutput, PSTR("fumes")); // fumes left
 			else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer); // reserve remaining fuel left
 			text::stringOut(devLogOutput, PSTR(" remaining, "));
-			outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, pBuff, 0, dfOverflow9s); // bingo remaining fuel left
+			outputTripFunctionValue(devLogOutput, 0, tBingoRemainingFuel, nBuff, 0, dfOverflow9s); // bingo remaining fuel left
 			text::stringOut(devLogOutput, PSTR(" e-reserve"));
 #endif // defined(trackIdleEOCdata)
 
@@ -290,9 +290,9 @@ void doOutputJSON(void) //skybolt added json output function
 	JSON::openElement(devLogOutput, JSONflagObject);
 
 	JSON::openKey(devLogOutput, JSONtitleStr, JSONflagString);
-	outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistanceToEmpty, pBuff, 0, dfOverflow9s); // distance to bingo
+	outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistanceToEmpty, nBuff, 0, dfOverflow9s); // distance to bingo
 	text::stringOut(devLogOutput, PSTR(" to e, "));
-	outputTripFunctionValue(devLogOutput, tankIdx, tBingoDistanceToEmpty, pBuff, 0, dfOverflow9s); // distance to fully empty tank from bingo
+	outputTripFunctionValue(devLogOutput, tankIdx, tBingoDistanceToEmpty, nBuff, 0, dfOverflow9s); // distance to fully empty tank from bingo
 	text::stringOut(devLogOutput, PSTR(" e-reserve"));
 
 	JSON::openKey(devLogOutput, JSONsubtitleStr, JSONflagString);
@@ -301,20 +301,20 @@ void doOutputJSON(void) //skybolt added json output function
 
 		case 2:
 			//	text::stringOut(devLogOutput, PSTR("trip/tank distance: "));
-			//	outputTripFunctionValue(devLogOutput, currentIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			//	outputTripFunctionValue(devLogOutput, currentIdx, tDistance, nBuff, 0, dfOverflow9s); // current trip distance
 			//	text::stringOut(devLogOutput, PSTR("/"));
-			//	outputTripFunctionValue(devLogOutput, tankIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			//	outputTripFunctionValue(devLogOutput, tankIdx, tDistance, nBuff, 0, dfOverflow9s); // current trip distance
 
-			outputTripFunctionValue(devLogOutput, currentIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			outputTripFunctionValue(devLogOutput, currentIdx, tDistance, nBuff, 0, dfOverflow9s); // current trip distance
 			text::stringOut(devLogOutput, PSTR(" trip distance, "));
-			outputTripFunctionValue(devLogOutput, tankIdx, tDistance, pBuff, 0, dfOverflow9s); // current trip distance
+			outputTripFunctionValue(devLogOutput, tankIdx, tDistance, nBuff, 0, dfOverflow9s); // current trip distance
 			text::stringOut(devLogOutput, PSTR(" tank distance"));
 			break;
 
 		case 1:
-			outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistance, pBuff, 0, dfOverflow9s); // reserve range
+			outputTripFunctionValue(devLogOutput, tankIdx, tReserveDistance, nBuff, 0, dfOverflow9s); // reserve range
 			text::stringOut(devLogOutput, PSTR(" safe range, "));
-			outputTripFunctionValue(devLogOutput, tankIdx, tRangeDistance, pBuff, 0, dfOverflow9s); // distance to fully empty tank
+			outputTripFunctionValue(devLogOutput, tankIdx, tRangeDistance, nBuff, 0, dfOverflow9s); // distance to fully empty tank
 			text::stringOut(devLogOutput, PSTR(" dry range"));
 			break;
 
@@ -367,15 +367,15 @@ void doOutputJSON(void) //skybolt added json output function
 	{
 
 		text::stringOut(devLogOutput, PSTR("fuel economy trip/tank/inst: ")); // gal or L
-		thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // current fuel economy
+		thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // current fuel economy
 		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 		text::stringOut(devLogOutput, PSTR("/ "));
-		thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // tank fuel economy
+		thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // tank fuel economy
 		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 		text::stringOut(devLogOutput, PSTR("/ "));
-		thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // instantaneous fuel economy
+		thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // instantaneous fuel economy
 		if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 		else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 		text::stringOut(devLogOutput, PSTR(" "));
@@ -384,15 +384,15 @@ void doOutputJSON(void) //skybolt added json output function
 	}
 #else // defined(useDragRaceFunction)
 	text::stringOut(devLogOutput, PSTR("fuel economy trip/tank/inst: ")); // gal or L
-	thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // current fuel economy
+	thisCalcFuncObj = translateCalcIdx(currentIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // current fuel economy
 	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 	text::stringOut(devLogOutput, PSTR("/ "));
-	thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // tank fuel economy
+	thisCalcFuncObj = translateCalcIdx(tankIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // tank fuel economy
 	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 	text::stringOut(devLogOutput, PSTR("/ "));
-	thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, pBuff, 4, dfOverflow9s); // instantaneous fuel economy
+	thisCalcFuncObj = translateCalcIdx(instantIdx, tFuelEcon, nBuff, 4, dfOverflow9s); // instantaneous fuel economy
 	if (thisCalcFuncObj.value > 9999999) text::stringOut(devLogOutput, PSTR("infinite"));
 	else text::stringOut(devLogOutput, thisCalcFuncObj.strBuffer);
 	text::stringOut(devLogOutput, PSTR(" "));
@@ -414,34 +414,34 @@ void doOutputJSON(void) //skybolt added json output function
 			doOutputJSONnumber(targetSpeed / 2, 0, PSTR("/"));
 			doOutputJSONnumber(targetSpeed, 0, PSTR(": "));
 
-			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tAccelTestTime, pBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(half speed) time
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tAccelTestTime, nBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(half speed) time
 			text::stringOut(devLogOutput, PSTR("/"));
-			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tAccelTestTime, pBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(full speed) time
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tAccelTestTime, nBuff, 0, (dfSuppressLabel | dfOverflow9s)); // 0-(full speed) time
 			text::stringOut(devLogOutput, PSTR(", "));
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDistance, pBuff, 0, dfOverflow9s); // trap distance
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDistance, nBuff, 0, dfOverflow9s); // trap distance
 			text::stringOut(devLogOutput, PSTR(" in "));
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tAccelTestTime, pBuff, 0, dfOverflow9s); // trap time
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tAccelTestTime, nBuff, 0, dfOverflow9s); // trap time
 			text::stringOut(devLogOutput, PSTR(" @"));
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tTrapSpeed, pBuff, 0, dfOverflow9s); // trap speed
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tTrapSpeed, nBuff, 0, dfOverflow9s); // trap speed
 			text::stringOut(devLogOutput, PSTR("; "));
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tEstimatedEnginePower, pBuff, 0, dfOverflow9s); // estimated engine power
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tEstimatedEnginePower, nBuff, 0, dfOverflow9s); // estimated engine power
 			text::stringOut(devLogOutput, PSTR(" @"));
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDragSpeed, pBuff, 0, dfOverflow9s); // max speed
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tDragSpeed, nBuff, 0, dfOverflow9s); // max speed
 			break;
 
 		case 2:
 			text::stringOut(devLogOutput, PSTR("accel fuel: "));
-			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // 0-(half speed) fuel
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelUsed, nBuff, 0, dfOverflow9s); // 0-(half speed) fuel
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetSpeed / 2, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(half speed)
 
-			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // 0-(full speed) fuel
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelUsed, nBuff, 0, dfOverflow9s); // 0-(full speed) fuel
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetSpeed, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(full speed)
 
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelUsed, pBuff, 0, dfOverflow9s); // trap fuel
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelUsed, nBuff, 0, dfOverflow9s); // trap fuel
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON ", ")); // to [trap distance]
@@ -451,17 +451,17 @@ void doOutputJSON(void) //skybolt added json output function
 		case 1:
 			text::stringOut(devLogOutput, PSTR("accel fuel: "));
 
-			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // 0-(half speed) mpg
+			outputTripFunctionValue(devLogOutput, dragHalfSpeedIdx, tFuelEcon, nBuff, 0, dfOverflow9s); // 0-(half speed) mpg
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetSpeed / 2, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(half speed)
 
-			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // 0-(full speed) mpg
+			outputTripFunctionValue(devLogOutput, dragFullSpeedIdx, tFuelEcon, nBuff, 0, dfOverflow9s); // 0-(full speed) mpg
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetSpeed, 0, PSTR(" " tcOMOFF "MPH" tcOTOG "KPH" tcOON ", ")); // 0-(full speed)
 
-			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelEcon, pBuff, 0, dfOverflow9s); // trap mpg
+			outputTripFunctionValue(devLogOutput, dragDistanceIdx, tFuelEcon, nBuff, 0, dfOverflow9s); // trap mpg
 			text::stringOut(devLogOutput, PSTR(" to "));
 
 			doOutputJSONnumber(targetDistance, 2, PSTR(" " tcOMOFF "mi" tcOTOG "km" tcOON ", ")); // to [trap distance]

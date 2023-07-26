@@ -856,9 +856,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 	"idxOneHundredThousand"
 	"/idxMetricFE"
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"/idxNumerDensity"
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
 	"/idxDenomImperialGallon"
 #endif // useImperialGallon
@@ -877,9 +877,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 	"idxOneHundredMillion"
 	"/idxBCDdivisor"
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"/idxDenomArea"
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 	tcEOSCR
 
 	"idxOneBillion"
@@ -946,9 +946,9 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 
 	,100000ul						// idxOneHundredThousand
 									// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 									// idxNumerDensity - numerator to convert SAE density to metric density
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
 									// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
@@ -964,9 +964,9 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 
 	,100000000ul					// idxOneHundredMillion
 									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 									// idxDenomArea - denominator to convert square feet to square meters
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 
 	,1000000000ul					// idxOneBillion
 									// idxDenomVolume - denominator to convert US gallons to liters
