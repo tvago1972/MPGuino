@@ -127,7 +127,7 @@ static const uint16_t analogReadPageFormats[4] PROGMEM = {
 	,(analog3Idx << 8 ) |			(tAnalogChannel)
 };
 
-static void analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)

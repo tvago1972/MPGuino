@@ -19,7 +19,7 @@ static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
 	instrDone
 };
 
-static void clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)
@@ -34,7 +34,7 @@ static void clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, PSTR("Clock"));
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(pBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
 			break;
 
 		default:
@@ -44,7 +44,7 @@ static void clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
-static void clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)
@@ -52,11 +52,11 @@ static void clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 #if defined(useSoftwareClock)
-			ull2str(pBuff, vClockCycleIdx, tReadTicksToSeconds);
+			ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds);
 #endif // defined(useSoftwareClock)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), pBuff, (timer0Status & t0sShowCursor), cursorPos);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), nBuff, (timer0Status & t0sShowCursor), cursorPos);
 
 		default:
 			break;
@@ -75,24 +75,24 @@ static void clockSet::entry(void)
 static void clockSet::changeDigitUp(void)
 {
 
-	pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]++;
-	if (pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] > '9') pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '0';
+	nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]++;
+	if (nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] > '9') nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '0';
 
-	if (pBuff[2] > '5') pBuff[2] = '0'; // this will only happen if clockSetDisplayIdx == 2
-	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '0'; // this will only happen if clockSetDisplayIdx == 0 or 1
-	if (pBuff[0] > '2') pBuff[0] = '0'; // this will only happen if clockSetDisplayIdx == 0
+	if (nBuff[2] > '5') nBuff[2] = '0'; // this will only happen if clockSetDisplayIdx == 2
+	if ((nBuff[0] == '2') && (nBuff[1] > '3')) nBuff[1] = '0'; // this will only happen if clockSetDisplayIdx == 0 or 1
+	if (nBuff[0] > '2') nBuff[0] = '0'; // this will only happen if clockSetDisplayIdx == 0
 
 }
 
 static void clockSet::changeDigitDown(void)
 {
 
-	pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]--;
-	if (pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] < '0') pBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '9';
+	nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])]--;
+	if (nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] < '0') nBuff[(uint16_t)(displayCursor[(uint16_t)(clockSetDisplayIdx)])] = '9';
 
-	if (pBuff[2] > '5') pBuff[2] = '5'; // this will only happen if clockSetDisplayIdx == 2
-	if ((pBuff[0] == '2') && (pBuff[1] > '3')) pBuff[1] = '3'; // this will only happen if clockSetDisplayIdx == 0 or 1
-	if (pBuff[0] > '2') pBuff[0] = '2'; // this will only happen if clockSetDisplayIdx == 0
+	if (nBuff[2] > '5') nBuff[2] = '5'; // this will only happen if clockSetDisplayIdx == 2
+	if ((nBuff[0] == '2') && (nBuff[1] > '3')) nBuff[1] = '3'; // this will only happen if clockSetDisplayIdx == 0 or 1
+	if (nBuff[0] > '2') nBuff[0] = '2'; // this will only happen if clockSetDisplayIdx == 0
 
 }
 
@@ -102,15 +102,15 @@ static void clockSet::set(void)
 #if defined(useSoftwareClock)
 	uint8_t b;
 
-	pBuff[4] = '0'; // set seconds to zero
-	pBuff[5] = '0';
+	nBuff[4] = '0'; // set seconds to zero
+	nBuff[5] = '0';
 
-	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in pBuff into time value usable by prgmChangeSoftwareClock
+	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in nBuff into time value usable by prgmChangeSoftwareClock
 	{
 
-		b = pBuff[(uint16_t)(x)] - '0';
+		b = nBuff[(uint16_t)(x)] - '0';
 		b *= 10;
-		b += pBuff[(uint16_t)(x + 1)] - '0';
+		b += nBuff[(uint16_t)(x + 1)] - '0';
 		((union union_64 *)(&s64reg[s64reg3]))->u8[(uint16_t)(x)] = b;
 
 	}
@@ -162,7 +162,7 @@ static const uint8_t prgmCalculateRelativeInstVsTripFE[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static void statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos + 1)]);
@@ -290,7 +290,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 #if defined(useBigDigitDisplay)
 /* Big Digit Output support section */
 
-static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos)]);
@@ -362,7 +362,7 @@ static void bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
 				case bigTTEdisplayIdx:
-					outputTime(0, ull2str(pBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
+					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
 #if LCDcharWidth == 20
 					text::gotoXY(devLCD, 16, 0);
 					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
@@ -416,7 +416,7 @@ static uint8_t bigDigit::outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t cal
 
 	calcFuncObj thisCalcFuncObj;
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, nBuff, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
 
 	outputNumberString(thisCalcFuncObj.strBuffer); // output the number
 

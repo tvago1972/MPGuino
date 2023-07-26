@@ -92,7 +92,7 @@ static void accelerationTest::init(void)
 
 }
 
-static void accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)
@@ -173,7 +173,7 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (cursorPos > 1)
 			{
 
-					numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+					numberEditObj.callingDisplayIdx = workingDisplayIdx;
 					retVal = parameterEditDisplayIdx; // go to parameter edit display index
 
 			}
@@ -213,7 +213,7 @@ static void accelerationTest::triggerTest(void)
 		changeBitFlags(accelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
-		EEPROM::writeVal(pDragAutoFlagIdx, 0);
+		EEPROM::writeByte(pDragAutoFlagIdx, 0);
 
 		retVal = attTriggerForced;
 

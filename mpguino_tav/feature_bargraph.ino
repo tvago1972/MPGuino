@@ -85,7 +85,7 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static void barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	const char * labelList;
@@ -197,7 +197,7 @@ static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tri
 
 	text::stringOut(devLCD, bgSpaces, lineNumber);
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, pBuff, (LCDcharWidth / 2) - 2, 0);
+	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, nBuff, (LCDcharWidth / 2) - 2, 0);
 
 	if (thisCalcFuncObj.isValid & isValidFlag)
 	{

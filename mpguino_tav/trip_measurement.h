@@ -419,7 +419,7 @@ const uint8_t tripSelectList[] PROGMEM = {
 namespace pressureCorrect /* Chrysler returnless fuel pressure correction display section prototype */
 {
 
-	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getPressureCorrectPageFormats(uint8_t formatIdx);
 
 }
@@ -453,18 +453,17 @@ namespace tripSave /* Trip save/restore/reset display support section prototype 
 
 #define nextAllowedValue 0
 #if defined(useSavedTrips)
-static const uint8_t tsfCurrentStart =					nextAllowedValue;
+static const uint8_t displayStartTripSaveCurrent =		nextAllowedValue;
 
 static const uint8_t tsfCurrentSaveIdx =				nextAllowedValue;
 static const uint8_t tsfCurrentLoadIdx =				tsfCurrentSaveIdx + 1;
 static const uint8_t tsfCurrentResetIdx =				tsfCurrentLoadIdx + 1;
 #define nextAllowedValue tsfCurrentResetIdx + 1
 
-static const uint8_t tsfCurrentEnd =					nextAllowedValue;
-static const uint8_t tsfCurrentLen =					tsfCurrentEnd - tsfCurrentStart;
+static const uint8_t displayCountTripSaveCurrent =		nextAllowedValue - displayStartTripSaveCurrent;
 
 #endif // defined(useSavedTrips)
-static const uint8_t tsfTankStart =						nextAllowedValue;
+static const uint8_t displayStartTripSaveTank =			nextAllowedValue;
 
 #if defined(usePartialRefuel)
 static const uint8_t tsfAddPartialIdx =					nextAllowedValue;
@@ -479,8 +478,7 @@ static const uint8_t tsfTankLoadIdx =					tsfTankSaveIdx + 1;
 static const uint8_t tsfTankResetIdx =					nextAllowedValue;
 #define nextAllowedValue tsfTankResetIdx + 1
 
-static const uint8_t tsfTankEnd =						nextAllowedValue;
-static const uint8_t tsfTankLen =						tsfTankEnd - tsfTankStart;
+static const uint8_t displayCountTripSaveTank =			nextAllowedValue - displayStartTripSaveTank;
 
 static const char tripSaveMenuTitles[] PROGMEM = {
 #if defined(useSavedTrips)
@@ -489,7 +487,11 @@ static const char tripSaveMenuTitles[] PROGMEM = {
 	"Reset CURR Trip" tcEOSCR
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
+#if defined(useImperialGallon)
+	"Add " tcOMOFF "ImpGal" tcOTOG "Prtl L" tcOON "*1K" tcEOSCR
+#else // defined(useImperialGallon)
 	"Add Prtl " tcOMOFF "gal" tcOTOG "L" tcOON "*1K" tcEOSCR
+#endif // defined(useImperialGallon)
 	"Zero Partial" tcEOSCR
 #endif // defined(usePartialRefuel)
 #if defined(useSavedTrips)
@@ -502,6 +504,9 @@ static const char tripSaveMenuTitles[] PROGMEM = {
 #if defined(useSavedTrips)
 static uint8_t thisTripSlot;
 static uint8_t topScreenLevel;
+
+static const uint8_t taaModeWrite =			0;
+static const uint8_t taaModeRead =			taaModeWrite + 1;
 
 const uint8_t tripSignatureList[] PROGMEM = {
 	 pCurrTripSignatureIdx

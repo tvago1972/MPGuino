@@ -420,7 +420,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	uint8_t thisCursorPos;
 	uint8_t i;
 
-	thisCursorPos = cursorPos + thisMenuData.menuTitlesOffset;
+	thisCursorPos = cursorPos + menuTitlesOffset;
 
 	switch (cmd)
 	{
@@ -433,7 +433,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, tripSaveMenuTitles, cursorPos + thisMenuData.menuTitlesOffset);
+			text::stringOut(devLCD, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -484,7 +484,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 #if defined(usePartialRefuel)
 				case tsfAddPartialIdx:
-					numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+					numberEditObj.callingDisplayIdx = workingDisplayIdx;
 					retVal = parameterEditDisplayIdx; // go to parameter edit display index
 					break;
 
@@ -539,7 +539,7 @@ static void tripSave::goSaveTank(void)
 {
 
 	thisTripSlot = 1;
-	topScreenLevel = thisMenuData.displayIdx; // save calling display index
+	topScreenLevel = workingDisplayIdx; // save calling display index
 	cursor::moveAbsolute(tripSaveTankDisplayIdx, 0);
 
 }
@@ -548,7 +548,7 @@ static void tripSave::goSaveCurrent(void)
 {
 
 	thisTripSlot = 0;
-	topScreenLevel = thisMenuData.displayIdx; // save calling display index
+	topScreenLevel = workingDisplayIdx; // save calling display index
 	cursor::moveAbsolute(tripSaveCurrentDisplayIdx, 0);
 
 }
@@ -630,7 +630,7 @@ static void tripSupport::doResetTrip(uint8_t tripSlot)
 
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(usePartialRefuel)
-		EEPROM::writeVal(pRefuelSizeIdx, 0);
+		EEPROM::writeByte(pRefuelSizeIdx, 0); // since we're zeroing out pRefuelSizeIdx, we can use writeByte instead of writeVal
 
 #endif // defined(usePartialRefuel)
 	}
@@ -699,7 +699,7 @@ static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static void pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	switch (cmd)
