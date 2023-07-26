@@ -172,14 +172,14 @@ static const uint8_t vAccelDistanceValueIdx =		vAccelFullPeriodValueIdx + 1;
 #define nextAllowedValue vAccelDistanceValueIdx + 1
 #endif // defined(useDragRaceFunction)
 
-#ifdef useCoastDownCalculator
-static const uint8_t vCoastdownPeriodIdx =			nextAllowedValue;
-static const uint8_t vCoastdownMeasurement1Idx =	vCoastdownPeriodIdx + 1;
+#if defined(useCoastDownCalculator)
+static const uint8_t vCoastdownMeasurement1Idx =	nextAllowedValue;
 static const uint8_t vCoastdownMeasurement2Idx =	vCoastdownMeasurement1Idx + 1;
 static const uint8_t vCoastdownMeasurement3Idx =	vCoastdownMeasurement2Idx + 1;
 static const uint8_t vCoastdownMeasurement4Idx =	vCoastdownMeasurement3Idx + 1;
-#define nextAllowedValue vCoastdownMeasurement4Idx + 1
-#endif // useCoastDownCalculator
+static const uint8_t vCoastdownPeriodIdx =			vCoastdownMeasurement4Idx + 1;
+#define nextAllowedValue vCoastdownPeriodIdx + 1
+#endif // defined(useCoastDownCalculator)
 
 #if defined(useDebugTerminal)
 static const uint8_t vDebugValue1Idx =				nextAllowedValue;
@@ -287,17 +287,19 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 #if defined(useDragRaceFunction)
 	"vDragRawInstantSpeedIdx" tcEOSCR			// vss
 	"vDragInstantSpeedIdx" tcEOSCR				// vss
+	"vDragRawTrapSpeedIdx" tcEOSCR			// vss
+	"vDragTrapSpeedIdx" tcEOSCR				// vss
 	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
 	"vAccelFullPeriodValueIdx" tcEOSCR			// vss
 	"vAccelDistanceValueIdx" tcEOSCR			// vss
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"vCoastdownPeriodIdx" tcEOSCR				// timer0, vss
 	"vCoastdownMeasurement1Idx" tcEOSCR			// vss
 	"vCoastdownMeasurement2Idx" tcEOSCR			// vss
 	"vCoastdownMeasurement3Idx" tcEOSCR			// vss
 	"vCoastdownMeasurement4Idx" tcEOSCR			// vss
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 //#if defined(useDebugTerminal)
 	"vDebugValue1Idx" tcEOSCR
 	"vDebugValue2Idx" tcEOSCR
@@ -372,7 +374,7 @@ static const uint8_t metricMode =				0b00000001;
 static const uint8_t detectEEPROMchangeFlag =	0b11111100;
 static const uint8_t fuelEconOutputFlags =		0b00000011;
 
-static char pBuff[17]; // used by parameterEdit::, clockSet::, bigDigit::, barGraphSupport::, systemInfo::, data logging, function result output routines
+static char nBuff[17]; // used by clockSet::, bigDigit::, barGraphSupport::, systemInfo::, data logging, function result output routines
 
 volatile uint8_t lastPINxState;
 
@@ -433,9 +435,9 @@ const uint8_t t0sOutputLogging =		0b00001000;
 #if defined(useDragRaceFunction)
 const uint8_t t0sAccelTestFlag =		0b00000100;
 #endif // defined(useDragRaceFunction)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 const uint8_t t0sCoastdownTestFlag =	0b00000010;
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useJSONoutput)
 const uint8_t t0sOutputJSON =			0b00000001;
 #endif // defined(useJSONoutput)
@@ -492,9 +494,6 @@ const uint8_t dGoodVehicleDrive =		(dGoodEngineRun | dGoodVehicleMotion);
 const uint8_t internalOutputButton =		0b10000000;
 const uint8_t internalProcessButtonsUp =	0b01000000;
 #endif // defined(useButtonInput)
-#ifdef useCoastDownCalculator
-const uint8_t internalCancelCDT =			0b00000010;
-#endif // useCoastDownCalculator
 
 #if defined(useTimer1Interrupt)
 // these flags specifically tell the system timer1 to do something

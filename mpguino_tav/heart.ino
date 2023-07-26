@@ -11,27 +11,28 @@
 ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 {
 
-	static unsigned long lastTime;
-	static unsigned long inputTimeoutCount;
-	static unsigned long parkTimeoutCount;
-	static unsigned long activityTimeoutCount;
-	static unsigned long swapFEwithFCRcount;
-#ifdef useCoastDownCalculator
-	static unsigned long coastdownCount;
-#endif // useCoastDownCalculator
+	static uint32_t inputTimeoutCount;
+	static uint32_t parkTimeoutCount;
+	static uint32_t activityTimeoutCount;
+	static uint32_t swapFEwithFCRcount;
+#if defined(useCoastDownCalculator)
+	static uint32_t coastdownCount;
+#endif // defined(useCoastDownCalculator)
 #if defined(useBarFuelEconVsTime)
-	static unsigned long FEvTimeCount;
+	static uint32_t FEvTimeCount;
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useButtonInput)
-	static unsigned int buttonLongPressCount;
+	static uint16_t buttonLongPressCount;
 #endif // defined(useButtonInput)
-	static unsigned int cursorCount;
-	static unsigned int loopCount;
+	static uint16_t cursorCount;
+	static uint16_t loopCount;
 #if defined(useJSONoutput)
-	static unsigned int JSONtimeoutCount;
+	static uint16_t JSONtimeoutCount;
 #endif // defined(useJSONoutput)
 	static uint8_t previousActivity;
+#if defined(useButtonInput)
 	static uint8_t internalFlags;
+#endif // defined(useButtonInput)
 #if defined(useAnalogButtons)
 	static uint16_t analogSampleCount;
 #endif // defined(useAnalogButtons)
@@ -39,7 +40,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	static uint8_t TWIsampleCount;
 	static uint8_t TWIsampleState;
 #endif // defined(useTWIbuttons)
-	unsigned long thisTime;
+	uint32_t thisTime;
 
 	if (timer0Command & t0cResetTimer)
 	{
@@ -50,7 +51,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		timer0Status = 0;
 		loopCount = loopTickLength;
 		awakeFlags = 0;
+#if defined(useButtonInput)
 		internalFlags = 0;
+#endif // defined(useButtonInput)
 		mainLoopHeartBeat = 1;
 		dirty &= ~(dGoodVehicleDrive);
 		activityTimeoutCount = volatileVariables[(uint16_t)(vActivityTimeoutIdx)];
@@ -95,8 +98,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 #endif // defined(useSoftwareClock)
 	}
-
-	lastTime = thisTime; // save cycle count
 
 	if (awakeFlags & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
 	{
@@ -198,6 +199,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 				}
 
 #endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+				if (coastdownFlags & cdTestInProgress) // if coastdown test has started
+				{
+
+					coastdownFlags &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+					coastdownFlags |= (cdTestCompleteFlags); // signal that coastdown test is cancelled
+					timer0Status |= (t0sCoastdownTestFlag);
+
+				}
+
+#endif // defined(useCoastDownCalculator)
 			}
 
 		}
@@ -210,10 +222,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-#ifdef useCoastDownCalculator
-		internalFlags |= internalCancelCDT; // coastdown test will cancel if vehicle is idling
-
-#endif // useCoastDownCalculator
 	}
 
 #if defined(useBarFuelEconVsTime)
@@ -243,71 +251,50 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useBarFuelEconVsTime)
-#ifdef useCoastDownCalculator
-	if (internalFlags & internalCancelCDT)
+#if defined(useCoastDownCalculator)
+	if (coastdownFlags & cdTestTriggered) // if coastdown test has been requested
 	{
 
-		internalFlags &= ~(internalCancelCDT);
-		timer0Status |= (t0sCoastdownTestFlag);
-		if (coastdownFlags & cdtTestInProgress) // if coastdown test has started
-		{
-
-			coastdownFlags &= ~(cdtTestClearFlags); // signal that coastdown test is no longer active
-			coastdownFlags |= cdtCancelled | cdtFinished | cdSignalStateChange; // signal that coastdown test is cancelled
-
-		}
+		timer0Status |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		coastdownFlags &= ~(cdTestTriggered | cdTestSampleTaken); // clear coastdown test state
+		coastdownFlags |= (cdTestActive); // mark coastdown test as active
+		coastdownCount = volatileVariables[(uint16_t)(vCoastdownPeriodIdx)]; // reset coastdown timer
+		coastdownState = vCoastdownMeasurement1Idx; // reset coastdown state
 
 	}
-	else
+
+	if (coastdownFlags & cdTestSampleTaken)
 	{
 
-		if (coastdownFlags & cdtTestInProgress) // if coastdown test has been requested or is active
+		timer0Status |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		coastdownFlags &= ~(cdTestSampleTaken);
+		coastdownState++;
+
+		if (coastdownState < vCoastdownPeriodIdx) // if coastdown state is still valid
 		{
 
-			if (coastdownFlags & cdtTriggered) // if coastdown test has been requested
-			{
+			coastdownCount = volatileVariables[(uint16_t)(vCoastdownPeriodIdx)]; // reset coastdown timer
 
-				timer0Status |= (t0sCoastdownTestFlag);
-				coastdownFlags &= ~(cdtTriggered); // clear coastdown test state
-				coastdownFlags |= cdtActive | cdSignalStateChange; // mark coastdown test as active
-				coastdownCount = volatileVariables[(uint16_t)(vCoastdownPeriodIdx)]; // reset coastdown counter
+		}
+		else // otherwise, signal that coastdown test ended normally
+		{
 
-			}
-			else
-			{
-
-				if (coastdownCount) coastdownCount--; // if coastdown clock hasn't elapsed
-				else // perform state action
-				{
-
-					timer0Status |= (t0sCoastdownTestFlag);
-					if (coastdownFlags & cdSampleTaken)
-					{
-
-						coastdownFlags &= ~(cdSampleTaken);
-						coastdownFlags |= cdSignalStateChange; // signal coastdown test state change
-						coastdownState++; // bump up to next state, for VSS read routine
-						if (coastdownState > 2)
-						{
-
-							coastdownFlags &= ~(cdtActive); // make coastdown test no longer active
-							coastdownFlags |= cdtFinished; // signal that coastdown test finished normally
-
-						}
-						else coastdownCount = volatileVariables[(uint16_t)(vCoastdownPeriodIdx)]; // reset coastdown counter
-
-					}
-					else coastdownFlags |= cdTakeSample;
-
-				}
-
-			}
+			coastdownFlags &= ~(cdTestActive); // make coastdown test no longer active
+			coastdownFlags |= cdTestFinished; // signal that coastdown test finished normally
 
 		}
 
 	}
 
-#endif // useCoastDownCalculator
+	if (coastdownFlags & cdTestActive) // if coastdown test is active
+	{
+
+		if (coastdownCount) coastdownCount--; // if coastdown timer hasn't elapsed
+		else if ((coastdownFlags & cdTestSampleTaken) == 0) coastdownFlags |= (cdTestTakeSample); // otherwise, signal VSS handler to take a coastdown sample
+
+	}
+
+#endif // defined(useCoastDownCalculator)
 #if defined(useTWIbuttons)
 	if (TWIsampleCount)
 	{
@@ -408,7 +395,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			buttonPress |= longButtonBit; // signal that a "long" button press has been detected
-			internalFlags |= internalOutputButton;
+			internalFlags |= (internalOutputButton);
 
 		}
 
@@ -424,7 +411,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			if (thisButtonState == buttonsUp) // if it's all buttons being released
 			{
 
-				if (internalFlags & internalProcessButtonsUp) internalFlags |= internalOutputButton;
+				if (internalFlags & internalProcessButtonsUp) internalFlags |= (internalOutputButton);
 
 			}
 			else
@@ -1281,17 +1268,17 @@ static void updateVSS(unsigned long thisVSStime)
 		tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawTripIdx);
 
 #endif // defined(trackIdleEOCdata)
-#ifdef useCoastDownCalculator
-		if (coastdownFlags & (cdtActive | cdTakeSample)) // if coastdown test is active
+#if defined(useCoastDownCalculator)
+		if (coastdownFlags & cdTestTakeSample) // if coastdown test is active, and a sample is requested
 		{
 
-			coastdownFlags &= ~(cdTakeSample);
-			coastdownFlags |= cdSampleTaken;
-			volatileVariables[(uint16_t)(vCoastdownMeasurement1Idx + coastdownState)] = cycleLength;
+			coastdownFlags &= ~(cdTestTakeSample); // acknowledge sample request
+			coastdownFlags |= (cdTestSampleTaken); // signal that a sample has been taken
+			volatileVariables[(uint16_t)(coastdownState)] = cycleLength; // take sample
 
 		}
 
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #if defined(useVehicleParameters)
 		if (awakeFlags & aAwakeVehicleMoving) // if vehicle is considered to be moving
 		{

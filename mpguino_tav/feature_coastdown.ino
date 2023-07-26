@@ -1,7 +1,7 @@
 #ifdef useCoastDownCalculator
 /* Coastdown Calculator support section */
 
-static void coastdown::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t coastdown::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 
@@ -53,7 +53,7 @@ static uint8_t coastdown::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (cursorPos)
 			{
 
-					numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+					numberEditObj.callingDisplayIdx = workingDisplayIdx;
 					retVal = parameterEditDisplayIdx; // go to parameter edit display index
 
 			}
@@ -87,18 +87,18 @@ void coastdown::goDisplay(void)
 	uint8_t oldSREG;
 	uint8_t i;
 
-	if (coastdownFlags & cdtFinished) // coastdown test has finished - let's find out why
+	if (coastdownFlags & cdTestFinished) // coastdown test has finished - let's find out why
 	{
 
 		oldSREG = SREG; // save interrupt flag status
 		cli(); // disable interrupts
 
 		i = coastdownFlags; // save coastdown flag state
-		coastdownFlags &= ~(cdtTestClearFlags);
+		coastdownFlags &= ~(cdTestClearFlags);
 
 		SREG = oldSREG; // restore state of interrupt flag
 
-		if (i & cdtCancelled) // coastdown test has cancelled
+		if (i & cdTestCanceled) // coastdown test has cancelled
 		{
 
 			msgPtr = findStr(coastdownMsgs, 5); // signal that test was cancelled
@@ -135,7 +135,7 @@ void coastdown::goDisplay(void)
 
 	if (msgPtr) text::statusOut(devLCD, msgPtr);
 
-	if (coastdownFlags & cdtActive) // coastdown test is in progress - display changes accordingly
+	if (coastdownFlags & cdTestActive) // coastdown test is in progress - display changes accordingly
 	{
 
 		coastdownCharIdx &= 0x07;
@@ -154,10 +154,10 @@ void coastdown::goDisplay(void)
 		i = displayCursor[(uint16_t)(coastdownIdx)] + pCoefficientDidx;
 
 		SWEET64::runPrgm(prgmFetchParameterValue, i);
-		ull2str(pBuff, 0, tFormatToNumber);
+		ull2str(nBuff, 0, tFormatToNumber);
 
 		text::stringOut(devLCD, parmLabels, i); // print parameter name at top left
-		text::stringOut(devLCD, pBuff);
+		text::stringOut(devLCD, nBuff);
 
 	}
 
@@ -173,22 +173,20 @@ void coastdown::goTrigger(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (coastdownFlags & cdtTestInProgress) // signal that coastdown test is cancelled
+	if (coastdownFlags & cdTestInProgress) // signal that coastdown test is cancelled
 	{
 
-		coastdownFlags &= ~(cdtTestClearFlags); // signal that coastdown test is no longer active
-		coastdownFlags |= cdtCancelled | cdtFinished | cdSignalStateChange; // signal that coastdown test is cancelled
+		coastdownFlags &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+		coastdownFlags |= cdTestCanceled | cdTestFinished | cdSignalStateChange; // signal that coastdown test is cancelled
 
 	}
 	else
 	{
 
-		coastdownFlags &= ~(cdtTestClearFlags); // signal that coastdown test is no longer active
-		coastdownFlags |= cdtTriggered; // set coastdown test flags in coastdownFlags register
+		coastdownFlags &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+		coastdownFlags |= cdTestTriggered; // set coastdown test flags in coastdownFlags register
 
 	}
-
-	coastdownState = 0; // reset coastdown state
 
 	SREG = oldSREG; // restore state of interrupt flag
 

@@ -2,7 +2,7 @@
 namespace coastdown /* Coastdown Calculator support section prototype */
 {
 
-	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 
 	void goDisplay(void);
@@ -31,19 +31,34 @@ static const uint8_t coastdownTestParamList[] PROGMEM = {
 	,pCoefficientRRidx
 };
 
+#if defined(useDebugTerminal)
+const char terminalCoastdownFlagStr[] PROGMEM = {
+	"coastdownFlags: " tcEOS
+	"ACTIVE" tcOTOG "dormant" tcEOS
+	"TRIGGERED" tcOTOG "0" tcEOS
+	"CANCELLED" tcOTOG "0" tcEOS
+	"FINISHED" tcOTOG "0" tcEOS
+	"TAKESAMPLE" tcOTOG "0" tcEOS
+	"SAMPLED" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 static volatile uint8_t coastdownFlags;
 static volatile uint8_t coastdownState;
 
-static const uint8_t cdtActive =				0b10000000;
-static const uint8_t cdtTriggered =			0b01000000;
-static const uint8_t cdtCancelled =			0b00100000;
-static const uint8_t cdtFinished =				0b00010000;
-static const uint8_t cdSignalStateChange =		0b00001000;
-static const uint8_t cdTakeSample =			0b00000100;
-static const uint8_t cdSampleTaken =			0b00000010;
+static const uint8_t cdTestActive =				0b10000000;
+static const uint8_t cdTestTriggered =			0b01000000;
+static const uint8_t cdTestCanceled =			0b00100000;
+static const uint8_t cdTestFinished =			0b00010000;
+static const uint8_t cdTestTakeSample =			0b00001000;
+static const uint8_t cdTestSampleTaken =		0b00000100;
 
-static const uint8_t cdtTestInProgress =		cdtActive | cdtTriggered;
-static const uint8_t cdtTestClearFlags =		cdtTestInProgress | cdtCancelled | cdtFinished | cdSignalStateChange | cdTakeSample | cdSampleTaken;
+static const uint8_t cdTestMeasurementFlags =	cdTestTakeSample | cdTestSampleTaken;
+static const uint8_t cdTestInProgress =			cdTestActive | cdTestTriggered;
+static const uint8_t cdTestCompleteFlags =		cdTestCanceled | cdTestFinished;
+static const uint8_t cdTestClearFlags =			cdTestInProgress | cdTestMeasurementFlags | cdTestCompleteFlags;
 
 static uint8_t coastdownCharIdx;
 
