@@ -16,6 +16,30 @@ typedef struct
 
 } buttonVariablePointer;
 
+typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t); // type for display handler functions
+
+typedef struct
+{
+
+	uint8_t baseDisplayIdx;
+	uint8_t displayGroupCount;
+	uint8_t displayPageCount;
+	uint8_t displayFlags;
+	displayHandlerFunc displayHandlerPtr;
+	const buttonVariable (* buttonList);
+
+} displayData;
+
+namespace menu /* Top-down menu selector section prototype */
+{
+
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static void entry(void);
+	static void select(void);
+	static void exit(void);
+
+};
+
 namespace button /* button input support section prototype */
 {
 
@@ -24,6 +48,12 @@ namespace button /* button input support section prototype */
 #if defined(useAnalogButtons) || defined(useDebugButtonInjection)
 	static void inject(uint8_t buttonValue);
 #endif // defined(useAnalogButtons) || defined(useDebugButtonInjection)
+
+};
+
+namespace cursor /* LCD screen cursor manipulation section prototype */
+{
+
 	static void doCommand(void);
 	static void noSupport(void);
 	static void doNothing(void);
@@ -34,8 +64,78 @@ namespace button /* button input support section prototype */
 	static void shortRight(void);
 	static void longLeft(void);
 	static void longRight(void);
+#if LCDcharHeight == 4
+	static void transferDisplay(void);
+#endif // LCDcharHeight == 4
+	static void screenLevelEntry(const char * str, uint8_t newScreenLevel);
+	static void screenLevelEntry(const char * str, uint8_t strIdx, uint8_t newScreenLevel);
+	static void moveAbsolute(uint8_t positionY, uint8_t positionX);
+	static void moveRelative(uint8_t moveY, uint8_t moveX);
+	static void updateAfterMove(uint8_t displayIdxChange);
+	static void updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd);
 
 };
+
+static uint8_t workingDisplayIdx;
+static uint8_t menuTitlesOffset;
+static displayHandlerFunc menuHandlerPtr;
+static uint8_t menuIdx;
+static uint8_t thisMenuHeight;
+static uint8_t menuTop;
+static uint8_t menuLength;
+static uint8_t displayHeight;
+
+static const uint8_t dfFullScreen =			0b10000000;		// tells whether display uses entire screen or not
+static const uint8_t dfSplitScreen =		0b01000000;		// allows display to go to either top or bottom screen
+static const uint8_t dfUsesCGRAM =			0b00100000;		// tells whether display uses LCD CGRAM or not
+static const uint8_t dfUsesCGRAMfont =		0b00010000;		// tells whether display CGRAM usage is dynamically generated or a stored font
+static const uint8_t dfCGRAMfontMask =		0b00001111;		// if stored CGRAM font, tells font number
+
+static uint8_t callingDisplayIdx;
+static const uint8_t displayInitialEntryIdx =	0;								// typically, this call will fall through
+static const uint8_t displayCursorUpdateIdx =	displayInitialEntryIdx + 1;		// ...to this call, which will then will fall through
+static const uint8_t displayOutputIdx =			displayCursorUpdateIdx + 1;		// ...to this call
+
+static const uint8_t menuInitialEntryIdx =		displayOutputIdx + 1;			// if the associated menu cursor is reset upon entry
+static const uint8_t menuFirstLineOutIdx =		menuInitialEntryIdx + 1;		// displays first line for menu
+static const uint8_t menuSecondLineInitIdx =	menuFirstLineOutIdx + 1;		// if the associated menu entry has additional info, initializes info
+static const uint8_t menuSecondLineFlagIdx =	menuSecondLineInitIdx + 1;		// if the associated menu entry has additional info, returns a 1
+static const uint8_t menuSecondLineOutIdx =		menuSecondLineFlagIdx + 1;		// if the associated menu entry has additional info, displays info line
+static const uint8_t menuDoSelectionIdx =		menuSecondLineOutIdx + 1;		// performs optional defined associated action, and returns next display index
+static const uint8_t menuExitIdx =				menuDoSelectionIdx + 1;			// performs optional defined exit action, and returns next display index
+
+#if defined(useSpiffyTripLabels)
+static const uint8_t dfMainDisplay =			dfSplitScreen | dfUsesCGRAM;
+#else // defined(useSpiffyTripLabels)
+static const uint8_t dfMainDisplay =			dfSplitScreen;
+#endif // defined(useSpiffyTripLabels)
+#if defined(useStatusMeter)
+static const uint8_t dfStatusMeterDisplay =		dfSplitScreen | dfUsesCGRAM;
+#endif // defined(useStatusMeter)
+#if defined(useBigFE)
+static const uint8_t dfBigFEdisplay =			dfSplitScreen | dfUsesCGRAM | dfUsesCGRAMfont;
+#endif // defined(useBigFE)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t dfBarFEvTdisplay =			dfSplitScreen | dfUsesCGRAM;
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t dfBarFEvSdisplay =			dfSplitScreen | dfUsesCGRAM;
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBigDTE)
+static const uint8_t dfBigDTEdisplay =			dfSplitScreen | dfUsesCGRAM | dfUsesCGRAMfont;
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+static const uint8_t dfBigTTEdisplay =			dfSplitScreen | dfUsesCGRAM | dfUsesCGRAMfont;
+#endif // defined(useBigTTE)
+#if defined(useCPUreading)
+static const uint8_t dfCPUmonDisplay =			dfSplitScreen;
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
+static const uint8_t dfClockShowDisplay =		dfSplitScreen | dfUsesCGRAM | dfUsesCGRAMfont;
+#endif // defined(useClockDisplay)
+
+static uint8_t displayCursor[(uint16_t)(displayCountTotal)];
+static uint8_t menuHeight[(uint16_t)(displayCountMenu)];
 
 #if defined(useTWIbuttons)
 #if defined(useAdafruitRGBLCDshield)
@@ -299,6 +399,411 @@ const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 };
 
 #endif // defined(useAnalogMuxButtons)
+/* button input support section */
+
+static const buttonVariable bpListMenu[] PROGMEM = {
+	 {btnShortPressC,	menu::select}
+	,{btnLongPressL,	menu::exit}
+#if defined(useLCDoutput)
+	,{btnLongPressC,	cursor::doNextBright}
+#endif // defined(useLCDoutput)
+#if defined(useButtonCrossConfig)
+		,{btnShortPressU,	cursor::shortLeft}
+		,{btnShortPressD,	cursor::shortRight}
+		,{btnShortPressL,	menu::exit}
+		,{btnShortPressR,	menu::select}
+#else // defined(useButtonCrossConfig)
+		,{btnShortPressL,	cursor::shortLeft}
+		,{btnShortPressR,	cursor::shortRight}
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+static const buttonVariable bpListMainDisplay[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressR,	cursor::longRight}
+	,{btnLongPressL,	cursor::longLeft}
+#if LCDcharHeight == 4
+	,{btnLongPressC,	cursor::transferDisplay}
+#endif // LCDcharHeight == 4
+#if defined(useScreenEditor)
+	,{btnShortPressLR,	displayEdit::entry}
+#endif // defined(useScreenEditor)
+#if defined(useButtonCrossConfig)
+		,{btnShortPressD,	cursor::longRight}
+	#if defined(useLCDoutput)
+		,{btnShortPressU,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressC,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressC,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressUL,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressU,	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
+		,{btnShortPressC,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressLC,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressLCR,	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#if defined(useScreenEditor)
+static const buttonVariable bpListMainDisplayEdit[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressL,	displayEdit::cancel}
+	,{btnLongPressLR,	displayEdit::cancel}
+	,{btnLongPressC,	displayEdit::set}
+	,{btnShortPressLR,	displayEdit::set}
+	,{btnLongPressR,	displayEdit::readInitial}
+#if defined(useButtonCrossConfig)
+		,{btnShortPressU,	displayEdit::changeItemUp}
+		,{btnShortPressD,	displayEdit::changeItemDown}
+		,{btnShortPressC,	displayEdit::set}
+#else // defined(useButtonCrossConfig)
+		,{btnShortPressC,	displayEdit::changeItemUp}
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#endif // defined(useScreenEditor)
+static const buttonVariable bpListParameterEdit[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressL,	parameterEdit::cancel}
+	,{btnLongPressLR,	parameterEdit::cancel}
+	,{btnLongPressC,	parameterEdit::save}
+	,{btnShortPressLR,	parameterEdit::save}
+	,{btnLongPressR,	parameterEdit::readInitial}
+#if defined(useButtonCrossConfig)
+		,{btnShortPressUL,	parameterEdit::findLeft}
+		,{btnShortPressUR,	parameterEdit::findRight}
+		,{btnLongPressD,	parameterEdit::readMinValue}
+		,{btnLongPressU,	parameterEdit::readMaxValue}
+		,{btnShortPressU,	parameterEdit::changeDigitUp}
+		,{btnShortPressD,	parameterEdit::changeDigitDown}
+		,{btnShortPressC,	parameterEdit::save}
+#else // defined(useButtonCrossConfig)
+		,{btnShortPressLC,	parameterEdit::findLeft}
+		,{btnShortPressCR,	parameterEdit::findRight}
+		,{btnLongPressCR,	parameterEdit::readMinValue}
+		,{btnLongPressLC,	parameterEdit::readMaxValue}
+		,{btnShortPressC,	parameterEdit::changeDigitUp}
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#if defined(useBigDigitDisplay) || defined(useStatusMeter) || defined(useCPUreading) || defined(useBarGraph)
+static const buttonVariable bpListSecondaryDisplay[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressR,	cursor::longRight}
+	,{btnLongPressL,	cursor::longLeft}
+#if LCDcharHeight == 4
+	,{btnLongPressC,	cursor::transferDisplay}
+#endif // LCDcharHeight == 4
+#if defined(useButtonCrossConfig)
+		,{btnShortPressD,	cursor::longRight}
+	#if defined(useLCDoutput)
+		,{btnShortPressU,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressC,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressC,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressUL,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressU,	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
+		,{btnShortPressC,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressLC,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressLCR, 	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#endif // defined(useBigDigitDisplay) || defined(useStatusMeter) || defined(useCPUreading) || defined(useBarGraph)
+#if defined(useClockDisplay)
+static const buttonVariable bpListClockDisplay[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressR,	cursor::longRight}
+	,{btnLongPressL,	cursor::longLeft}
+	,{btnLongPressC,	clockSet::entry}
+	,{btnShortPressLR,	clockSet::entry}
+#if defined(useButtonCrossConfig)
+		,{btnShortPressD,	cursor::longRight}
+	#if defined(useLCDoutput)
+		,{btnShortPressU,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressC,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressC,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressUL,	tripSave::goSaveTank}
+		,{btnLongPressUL,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressUL,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressUR,	tripSave::goSaveCurrent}
+		,{btnLongPressUR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressUR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressU,	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
+		,{btnShortPressC,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+	#if defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	mainDisplay::goToMenu}
+	#else // defined(useExpandedMainDisplay)
+		,{btnShortPressLCR,	menu::entry}
+	#endif // defined(useExpandedMainDisplay)
+	#if defined(useEnhancedTripReset)
+		,{btnShortPressLC,	tripSave::goSaveTank}
+		,{btnLongPressLC,	tripSave::goSaveTank}
+	#else // defined(useEnhancedTripReset)
+		,{btnLongPressLC,	tripSupport::resetTank}
+	#endif // defined(useEnhancedTripReset)
+	#if defined(useSavedTrips)
+		,{btnShortPressCR,	tripSave::goSaveCurrent}
+		,{btnLongPressCR,	tripSave::goSaveCurrent}
+	#else // defined(useSavedTrips)
+		,{btnLongPressCR,	tripSupport::resetCurrent}
+	#endif // defined(useSavedTrips)
+	#if defined(useCPUreading)
+		,{btnLongPressLCR, 	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+static const buttonVariable bpListClockSet[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressL,	clockSet::cancel}
+	,{btnLongPressLR,	clockSet::cancel}
+	,{btnLongPressC,	clockSet::set}
+	,{btnShortPressLR,	clockSet::set}
+#if defined(useButtonCrossConfig)
+		,{btnShortPressU,	clockSet::changeDigitUp}
+		,{btnShortPressD,	clockSet::changeDigitDown}
+		,{btnShortPressC,	clockSet::set}
+#else // defined(useButtonCrossConfig)
+		,{btnShortPressC,	clockSet::changeDigitUp}
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#endif // defined(useClockDisplay)
+#if defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog) || defined(useDragRaceFunction) || defined(useCoastDownCalculator)
+static const buttonVariable bpListMiscViewer[] PROGMEM = {
+	 {btnShortPressR,	cursor::shortRight}
+	,{btnShortPressL,	cursor::shortLeft}
+	,{btnLongPressL,	menu::entry}
+#if defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
+		,{btnShortPressU,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+		,{btnShortPressC,	menu::entry}
+	#if defined(useCPUreading)
+		,{btnLongPressU,	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#else // defined(useButtonCrossConfig)
+	#if defined(useLCDoutput)
+		,{btnShortPressC,	cursor::doNextBright}
+	#endif // defined(useLCDoutput)
+		,{btnShortPressLCR,	menu::entry}
+	#if defined(useCPUreading)
+		,{btnLongPressLCR, 	systemInfo::showCPUloading}
+	#endif // defined(useCPUreading)
+#endif // defined(useButtonCrossConfig)
+	,{buttonsUp,		cursor::noSupport}
+};
+
+#endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog) || defined(useDragRaceFunction) || defined(useCoastDownCalculator)
+#if defined(useTestButtonValues)
+static const buttonVariable bpListButtonView[] PROGMEM = {
+	 {buttonsUp,		cursor::doNothing}
+};
+
+#endif // defined(useTestButtonValues)
+static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGMEM = {
+
+	 {baseMenuDisplayIdx,			1,					displayCountBase,				0,								baseMenu::menuHandler,				bpListMenu}
+#if defined(useExpandedMainDisplay)
+	,{mainMenuDisplayIdx,			1,					displayCountUser,				0,								mainDisplay::menuHandler,			bpListMenu}
+#endif // defined(useExpandedMainDisplay)
+	,{settingsMenuDisplayIdx,		1,					displayCountSettings,			0,								settings::menuHandler,				bpListMenu}
+
+// the following display entries are for the various EEPROM parameter settings, grouped by function
+
+	,{displaySettingsDisplayIdx,	1,					displayCountSettingsDisplay,	displayStartSettingsDisplay,	parameterEdit::menuHandler,			bpListMenu}
+	,{fuelSettingsDisplayIdx,		1,					displayCountSettingsFuel,		displayStartSettingsFuel,		parameterEdit::menuHandler,			bpListMenu}
+	,{VSSsettingsDisplayIdx,		1,					displayCountSettingsVSS,		displayStartSettingsVSS,		parameterEdit::menuHandler,			bpListMenu}
+	,{tankSettingsDisplayIdx,		1,					displayCountSettingsTank,		displayStartSettingsTank,		parameterEdit::menuHandler,			bpListMenu}
+#if defined(useChryslerMAPCorrection)
+	,{CRFICsettingsDisplayIdx,		1,					displayCountSettingsCRFIC,		displayStartSettingsCRFIC,		parameterEdit::menuHandler,			bpListMenu}
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+	,{acdSettingsDisplayIdx,		1,					displayCountSettingsVehicle,	displayStartSettingsVehicle,	parameterEdit::menuHandler,			bpListMenu}
+#endif // defined(useVehicleParameters)
+	,{timeoutSettingsDisplayIdx,	1,					displayCountSettingsTimeout,	displayStartSettingsTimeout,	parameterEdit::menuHandler,			bpListMenu}
+	,{miscSettingsDisplayIdx,		1,					displayCountSettingsMisc,		displayStartSettingsMisc,		parameterEdit::menuHandler,			bpListMenu}
+
+// the following display entries are for any otherwise unlinked menu groups
+
+#if defined(useSavedTrips)
+	,{tripSaveCurrentDisplayIdx,	1,					displayCountTripSaveCurrent,	displayStartTripSaveCurrent,	tripSave::menuHandler,				bpListMenu}
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	,{tripSaveTankDisplayIdx,		1,					displayCountTripSaveTank,		displayStartTripSaveTank,		tripSave::menuHandler,				bpListMenu}
+#endif // defined(useEnhancedTripReset)
+
+// the following display entries are for options selected via configs.h
+
+#if defined(useDragRaceFunction)
+	,{dragRaceMenuDisplayIdx,		1,					6,								0,								accelerationTest::menuHandler,		bpListMenu}
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,{coastdownMenuDisplayIdx,		1,					8,								0,								coastdown::menuHandler,				bpListMenu}
+#endif // defined(useCoastDownCalculator)
+
+// this is the end of the display entry group handled as menu
+
+#if defined(useSimulatedFIandVSS)
+	,{signalSimDisplayIdx,			1,					4,								0,								signalSim::displayHandler,			bpListMiscViewer}
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
+	,{pressureDisplayIdx,			1,					1,								0,								pressureCorrect::displayHandler,	bpListMiscViewer}
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useDebugAnalog)
+	,{analogDisplayIdx,				1,					1,								0,								analogReadViewer::displayHandler,	bpListMiscViewer}
+#endif // defined(useDebugAnalog)
+#if defined(useTestButtonValues)
+	,{buttonDisplayIdx,				1,					1,								0,								buttonView::displayHandler,			bpListMiscViewer}
+#endif // defined(useTestButtonValues)
+
+// the following display entries are for the various main displays
+
+	,{mainDisplayIdx,				displayCountUser,	displayCountMain,				dfMainDisplay,					mainDisplay::displayHandler,		bpListMainDisplay}
+#if defined(useStatusMeter)
+	,{mainDisplayIdx,				displayCountUser,	2,								dfStatusMeterDisplay,			statusBar::displayHandler,			bpListSecondaryDisplay}
+#endif // defined(useStatusMeter)
+#if defined(useBigFE)
+	,{mainDisplayIdx,				displayCountUser,	3,								dfBigFEdisplay,					bigDigit::displayHandler,			bpListSecondaryDisplay}
+#endif // defined(useBigFE)
+#if defined(useBarFuelEconVsTime)
+	,{mainDisplayIdx,				displayCountUser,	4,								dfBarFEvTdisplay,				barGraphSupport::displayHandler,	bpListSecondaryDisplay}
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	,{mainDisplayIdx,				displayCountUser,	3,								dfBarFEvSdisplay,				barGraphSupport::displayHandler,	bpListSecondaryDisplay}
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBigDTE)
+	,{mainDisplayIdx,				displayCountUser,	3,								dfBigDTEdisplay,				bigDigit::displayHandler,			bpListSecondaryDisplay}
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+	,{mainDisplayIdx,				displayCountUser,	3,								dfBigTTEdisplay,				bigDigit::displayHandler,			bpListSecondaryDisplay}
+#endif // defined(useBigTTE)
+#if defined(useCPUreading)
+	,{mainDisplayIdx,				displayCountUser,	1,								dfCPUmonDisplay,				systemInfo::displayHandler,			bpListSecondaryDisplay}
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
+	,{mainDisplayIdx,				displayCountUser,	1,								dfClockShowDisplay,				clockDisplay::displayHandler,		bpListClockDisplay}
+#endif // defined(useClockDisplay)
+
+// the following display entries are supplemental non-menu display entries for options selected via configs.h 
+
+	,{parameterEditDisplayIdx,		1,					12,								dfFullScreen,					parameterEdit::displayHandler,		bpListParameterEdit}
+#if defined(useClockDisplay)
+	,{clockSetDisplayIdx,			1,					4,								dfFullScreen,					clockSet::displayHandler,			bpListClockSet}
+#endif // defined(useClockDisplay)
+#if defined(useScreenEditor)
+	,{displayEditDisplayIdx,		1,					8,								dfSplitScreen,					displayEdit::displayHandler,		bpListMainDisplayEdit}
+#endif // defined(useScreenEditor)
+#if defined(useDragRaceFunction)
+	,{dragRaceDisplayIdx,			1,					4,								0,								accelerationTest::displayHandler,	bpListMiscViewer}
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,{coastdownDisplayIdx,			1,					4,								0,								coastdown::displayHandler,			bpListMiscViewer}
+#endif // defined(useCoastDownCalculator)
+};
+
 #if defined(useLCDoutput)
 static const char brightMsg[] PROGMEM = {
 	"Backlight = " tcEOS

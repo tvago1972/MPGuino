@@ -9,7 +9,7 @@
 
 // the below line sets the serial output speed
 //
-const unsigned long myBaudRate0 = 19200ul;	// (most Arduino boards, excluding TinkerKit! LCD module))
+const unsigned long myBaudRate0 = 38400ul;	// (most Arduino boards, excluding TinkerKit! LCD module))
 const unsigned long myBaudRate1 = 19200ul;	// (ATmega2560 board)
 const unsigned long myBaudRate2 = 19200ul;	// (ATmega2560 board)
 const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
@@ -66,7 +66,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useStatusMeter true					// displays a graphical meter for use with MPG display
 //#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
-#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
+//#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
 #define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 #define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
@@ -76,10 +76,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
 #define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 //#define useDataLoggingOutput true			// Ability to output 5 basic parameters to a data logger or SD card, once every refresh period (0.5 second)
+#define useJSONoutput true					// skybolt added to enable and call JSON out routine
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
-#define useJSONoutput true					// (inw) skybolt added to enable and call JSON out routine
 
 // performance enhancement options - all may be chosen independently of one another
 //

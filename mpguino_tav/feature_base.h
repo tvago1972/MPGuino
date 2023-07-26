@@ -37,9 +37,10 @@ static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer t
 namespace mainDisplay /* main display section prototype */
 {
 
-	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 #if defined(useExpandedMainDisplay)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
+	static void goToMenu(void);
 #endif // defined(useExpandedMainDisplay)
 	static uint16_t getMainDisplayPageFormat(uint8_t formatIdx);
 #if defined(trackIdleEOCdata)
@@ -101,22 +102,38 @@ static const char mainDisplayPageTitles[] PROGMEM = {
 
 static const uint16_t mainDisplayPageFormats[(uint16_t)(mainDisplayFormatSize)] PROGMEM = {
 	 (instantIdx << 8 ) |			(tSpeed)				// Instrument
+#if defined(useCarVoltageOutput)
+	,								(tAlternatorChannel)
+#else // defined(useCarVoltageOutput)
 	,(instantIdx << 8 ) |			(tEngineSpeed)
+#endif // defined(useCarVoltageOutput)
 	,(instantIdx << 8 ) |			(tFuelRate)
 	,(instantIdx << 8 ) |			(tFuelEcon)
 
 	,(instantIdx << 8 ) |			(tFuelEcon)				// Custom
-	,(instantIdx << 8 ) |			(tSpeed)
+#if defined(useCarVoltageOutput)
+	,								(tAlternatorChannel)
+#else // defined(useCarVoltageOutput)
+	,(instantIdx << 8 ) |			(tEngineSpeed)
+#endif // defined(useCarVoltageOutput)
 	,(instantIdx << 8 ) |			(tFuelRate)
 	,(currentIdx << 8 ) |			(tFuelEcon)
 
 	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Current
-	,(instantIdx << 8 ) |			(tSpeed)
+#if defined(useCarVoltageOutput)
+	,								(tAlternatorChannel)
+#else // defined(useCarVoltageOutput)
+	,(instantIdx << 8 ) |			(tEngineSpeed)
+#endif // defined(useCarVoltageOutput)
 	,(currentIdx << 8 ) |			(tFuelEcon)
 	,(currentIdx << 8 ) |			(tDistance)
 
 	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Tank
-	,(instantIdx << 8 ) |			(tSpeed)
+#if defined(useCarVoltageOutput)
+	,								(tAlternatorChannel)
+#else // defined(useCarVoltageOutput)
+	,(instantIdx << 8 ) |			(tEngineSpeed)
+#endif // defined(useCarVoltageOutput)
 	,(tankIdx << 8 ) |				(tFuelEcon)
 	,(tankIdx << 8 ) |				(tDistance)
 
@@ -185,7 +202,7 @@ static const uint16_t mainIdlePageFormats[4] PROGMEM = {
 namespace displayEdit /* Programmable main display page edit support section prototype */
 {
 
-	static void displayHandler(uint8_t cmd, uint8_t cursorPos);
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void cancel(void);
 	static void set(void);

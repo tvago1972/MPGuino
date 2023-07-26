@@ -274,13 +274,11 @@ static const uint8_t prgmAddToPartialRefuel[] PROGMEM = {
 };
 
 #endif // defined(usePartialRefuel)
-
 static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 {
 
 	uint8_t retVal = 0;
 	uint8_t parameterPtr = numberEditObj.parameterIdx;
-	uint8_t cp = parameterPtr - eePtrSettingsStart;
 
 	switch (cmd)
 	{
@@ -293,12 +291,15 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 			parameterEdit::findLeft();
 
 		case nesOnChange:
+#if defined(useLCDoutput)
+			if (parameterPtr == pBrightnessIdx) LCD::setBrightness((uint8_t)(str2ull(pBuff))); // adjust brightness
 #if defined(useLCDcontrast)
 			if (parameterPtr == pContrastIdx) LCD::setContrast((uint8_t)(str2ull(pBuff))); // adjust contrast dynamically
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
 			if (parameterPtr == pLCDcolorIdx) LCD::setRGBcolor((uint8_t)(str2ull(pBuff))); // adjust backlight color dynamically
 #endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
 			break;
 
 		case nesSaveParameter:
@@ -334,13 +335,36 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 	if (metricFlag & changeDisplayFlag)
 	{
 
+		if (parameterIdx == pAlternateFEidx)
+			if (EEPROM::readByte(pAlternateFEidx)) metricFlag |= (alternateFEmode);
+			else metricFlag &= ~(alternateFEmode);
+
+#if defined(useButtonInput)
+#if LCDcharHeight == 4
+		if ((parameterIdx == pSizeDisplayIdx) || (parameterIdx == pSizeBottomDisplayIdx))
+#else // LCDcharHeight == 4
+		if (parameterIdx == pSizeDisplayIdx)
+#endif // LCDcharHeight == 4
+		{
+
+			workingDisplayIdx = EEPROM::readByte(pDisplayIdx);
+			cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
+
+		}
+
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+		if (parameterIdx == pBrightnessIdx) LCD::setBrightness(EEPROM::readByte(pBrightnessIdx)); // adjust brightness
+
 #if defined(useLCDcontrast)
 		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readByte(pContrastIdx)); // adjust contrast
+
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-		if ((parameterIdx == pLCDcolorIdx) && (brightnessIdx)) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
-#endif // defined(useAdafruitRGBLCDshield)
+		if (parameterIdx == pLCDcolorIdx) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
 
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
 	}
 
 	if (metricFlag & hardInitGuinoFlag) EEPROM::initGuinoHardware();
@@ -362,7 +386,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, parmLabels, cursorPos + thisMenuData.menuTitlesOffset);
+			text::stringOut(devLCD, settingsSubMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuInitialEntryIdx:
@@ -370,7 +394,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuSecondLineInitIdx:
-			numberEditObj.parameterIdx = cursorPos + thisMenuData.menuTitlesOffset;
+			numberEditObj.parameterIdx = pgm_read_byte(&settingsParameterList[(uint16_t)(cursorPos + menuTitlesOffset)]);
 			parameterEdit::sharedFunctionCall(nesLoadInitial);
 		case menuSecondLineFlagIdx:
 			retVal = 1;
@@ -382,7 +406,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuDoSelectionIdx:
-			numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
+			numberEditObj.callingDisplayIdx = workingDisplayIdx;
 			retVal = parameterEditDisplayIdx;
 			break;
 
@@ -399,7 +423,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
-static void parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t j;
@@ -469,7 +493,7 @@ static void parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-			callDisplayHandler(numberEditObj.callingDisplayIdx, displayOutputIdx);
+			cursor::updateDisplay(numberEditObj.callingDisplayIdx, displayOutputIdx);
 
 			pBuff[(uint16_t)(cursorPos)] = c; // restore existing character
 			pBuff[10] = 0; // restore end of string
@@ -480,15 +504,6 @@ static void parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 	}
-
-}
-
-static void parameterEdit::entry(void)
-{
-
-	numberEditObj.callingDisplayIdx = thisMenuData.displayIdx;
-
-	cursor::moveAbsolute(parameterEditDisplayIdx, 255);
 
 }
 

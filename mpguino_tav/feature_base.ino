@@ -37,7 +37,11 @@ static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuExitIdx:
+#if defined(useExpandedMainDisplay)
+			retVal = displayCursor[(uint16_t)(mainMenuDisplayIdx)] + mainDisplayIdx;
+#else // defined(useExpandedMainDisplay)
 			retVal = mainDisplayIdx;
+#endif // defined(useExpandedMainDisplay)
 			break;
 
 		default:
@@ -51,7 +55,7 @@ static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 /* main display section */
 
-static void mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 #if defined(trackIdleEOCdata)
@@ -137,6 +141,14 @@ static uint8_t mainDisplay::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
+static void mainDisplay::goToMenu(void)
+{
+
+	displayCursor[(uint16_t)(mainMenuDisplayIdx)] = workingDisplayIdx - mainDisplayIdx;
+	menu::entry();
+
+}
+
 #endif // defined(useExpandedMainDisplay)
 static uint16_t mainDisplay::getMainDisplayPageFormat(uint8_t formatIdx)
 {
@@ -210,7 +222,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	x = (readingIdx & 1) * (LCDcharWidth / 2); // figure out horizontal component (0 or 8)
 	y = (readingIdx & 2) >> 1; // figure out vertical component (0 or 1)
 
-	thisCalcFuncObj = translateCalcIdx(tripFunction, pBuff, (LCDcharWidth / 2) - 2, 0);
+	thisCalcFuncObj = translateCalcIdx(tripFunction, nBuff, (LCDcharWidth / 2) - 2, 0);
 
 	text::gotoXY(devLCD, x, y);
 	if (calcBitmask) text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
@@ -276,7 +288,7 @@ static uint8_t mainDisplay::findTripIdx(uint8_t tripIdx)
 #if defined(useScreenEditor)
 /* Programmable main display screen edit support section */
 
-static void displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
+static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint8_t tripBlink;

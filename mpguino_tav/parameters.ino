@@ -12,16 +12,17 @@ static const uint8_t prgmInitEEPROM[] PROGMEM = {
 	instrLxdI, pSignatureIdx,
 
 //loop:
-	instrLdRegEinitIndexed, 0x02,						// loop through entire EEPROM space
+	instrLdRegEinitIndexed, 0x02,						// loop through parameter EEPROM space
 	instrStRegEEPROMindexed, 0x02,						// store the program stored parameter defaults into EEPROM
 	instrAddIndex, 1,
 	instrCmpIndex, eePtrSettingsEnd,
 	instrBranchIfLT, 246,
-#if defined(useEEPROMtripStorage)
-	instrLdRegByte, 0x02, 0,							// zero out current and tank trip signature bytes
-	instrStRegEEPROM, 0x02, pCurrTripSignatureIdx,
-	instrStRegEEPROM, 0x02, pTankTripSignatureIdx,
-#endif // defined(useEEPROMtripStorage)
+	instrLdRegByte, 0x02, 0,							// load a zero into register 2
+//loop2:
+	instrStRegEEPROMindexed, 0x02,						// zero the corresponding position in EEPROM
+	instrAddIndex, 1,
+	instrCmpIndex, eePtrEnd,
+	instrBranchIfLT, 248,
 	instrLdRegByte, 0x02, 1,
 	instrDone											// exit to caller
 };
@@ -361,10 +362,10 @@ static void EEPROM::initGuinoSoftware(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (readByte(pMetricModeIdx)) metricFlag |= metricMode;
+	if (readByte(pMetricModeIdx)) metricFlag |= (metricMode);
 	else metricFlag &= ~(metricMode);
 
-	if (readByte(pAlternateFEidx)) metricFlag |= alternateFEmode;
+	if (readByte(pAlternateFEidx)) metricFlag |= (alternateFEmode);
 	else metricFlag &= ~(alternateFEmode);
 
 	SWEET64::runPrgm(prgmInitMPGuino, 0); // calculate multiple MPGuino system values for use within code
@@ -400,6 +401,19 @@ static void EEPROM::initGuino(void) // initialize MPGuino base hardware and basi
 
 }
 
+static void EEPROM::writeByte(uint8_t eePtr, uint8_t value)
+{
+
+	uint64_t val;
+	union union_64 * vee = (union union_64 *) &val;
+
+	SWEET64::init64byt(vee, value);
+
+	write64(vee, eePtr);
+
+}
+
+#if defined(useScreenEditor)
 static void EEPROM::writeVal(uint8_t eePtr, uint32_t value)
 {
 
@@ -412,6 +426,7 @@ static void EEPROM::writeVal(uint8_t eePtr, uint32_t value)
 
 }
 
+#endif // defined(useScreenEditor)
 static uint8_t EEPROM::readByte(uint8_t eePtr)
 {
 
@@ -536,10 +551,12 @@ static uint16_t EEPROM::getAddress(uint8_t eePtr)
 
 	if (eePtr >= eePtrEnd) eePtr = eePtrEnd;
 
-	if (eePtr < eePtrStorageEnd) t = (uint16_t)(pgm_read_byte(&paramAddrs[eePtr]));
+	if (eePtr < eePtrStorageEnd) t = pgm_read_word(&paramAddrs[eePtr]);
 #if defined(useScreenEditor)
-	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = 2 * (eePtr - eePtrDisplayPagesStart) + eeAdrScreensStart;
+	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = eeAdrScreensStart + 2 * (eePtr - eePtrDisplayPagesStart);
 #endif // defined(useScreenEditor)
+	else if ((eePtr >= eePtrDisplayCursorStart) && (eePtr < eePtrDisplayCursorEnd)) t = eeAdrDisplayCursorStart + (eePtr - eePtrDisplayCursorStart);
+	else if ((eePtr >= eePtrMenuHeightStart) && (eePtr < eePtrMenuHeightEnd)) t = eeAdrMenuCursorStart + (eePtr - eePtrMenuHeightStart);
 	else t = eeAdrStorageEnd;
 
 	return t;
