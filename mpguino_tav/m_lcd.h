@@ -20,6 +20,7 @@ namespace LCD /* LCD hardware support section prototype */
 	static void init(void);
 	static void shutdown(void);
 	static void writeData(uint8_t value);
+	static void setBrightness(uint8_t idx);
 #if defined(useSerialLCD)
 	static void wait(uint16_t delayTickT1);
 #endif // defined(useSerialLCD)
@@ -39,7 +40,6 @@ namespace LCD /* LCD hardware support section prototype */
 	static void setRGBcolor(uint8_t idx);
 #endif // defined(useAdafruitRGBLCDshield)
 #if defined(use4BitLCD)
-	static void setBrightness(uint8_t idx);
 	static void writeCommand(uint8_t value);
 	static void writeByte(uint8_t value, uint8_t flags, uint8_t delay);
 	static void writeNybble(uint8_t value, uint8_t flags);
@@ -57,16 +57,8 @@ static volatile uint8_t LCDdata[32];
 
 #endif // defined(useBufferedLCD)
 // these flags provide flow control for the LCD::writeData character output routine
-static const uint8_t lcdCharBackwardX =	0b10000000;
-static const uint8_t lcdCharBackwardY =	0b01000000;
-static const uint8_t lcdCharForwardX =	0b00100000;
-static const uint8_t lcdCharForwardY =	0b00010000;
-static const uint8_t lcdCharZeroX =		0b00001000;
-static const uint8_t lcdCharZeroY =		0b00000100;
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;
-
-static const uint8_t lcdCharCalcXY =	(lcdCharBackwardX | lcdCharBackwardY | lcdCharForwardX | lcdCharForwardY | lcdCharZeroX | lcdCharZeroY | lcdCharGotoXY);
 
 static uint8_t LCDaddressX;
 static uint8_t LCDaddressY;
@@ -258,8 +250,6 @@ static const uint16_t delayLCD100000usTick = (uint16_t)(ceil)((double)(100000ul 
 static const uint16_t delayLCD005000usTick = (uint16_t)(ceil)((double)(5000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // serial LCD screen clear delay
 
 #endif // defined(useSerialLCD)
-static uint8_t brightnessIdx;
-
 #if defined(useBinaryLCDbrightness)
 static const uint8_t brightnessLength = 2;
 
