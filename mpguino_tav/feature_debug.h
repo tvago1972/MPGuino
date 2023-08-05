@@ -222,7 +222,6 @@ static const uint8_t tmByteReadIn =			0x80;
 static const uint8_t tmSourceReadIn =		0x40;
 static const uint8_t tmTargetReadIn =		0x20;
 static const uint8_t tmAddressReadIn =		0x10;
-
 static const uint8_t tmHexInput =			0x08;
 static const uint8_t tmDecimalInput =		0x04;
 static const uint8_t tmButtonInput =		0x02;
@@ -316,24 +315,31 @@ static void (* extraFunc)(uint8_t);
 
 static const char terminalActivityFlagStr[] PROGMEM = {
 	"activityFlags: " tcEOS
-	"EngOff" tcOTOG "running" tcEOS
-	"VehStop" tcOTOG "moving" tcEOS
-	"NoButtons" tcOTOG "pressed" tcEOS
-	"Parked" tcOTOG "notparked" tcEOS
-	"Inactive" tcOTOG "active" tcEOS
-	"FuelRate" tcOTOG "fuelecon" tcEOS
-#if defined(useInterruptBasedTWI)
-	"TWIsample" tcOTOG "twi" tcEOS
-#else // defined(useInterruptBasedTWI)
+	"EngOff" tcOTOG "0" tcEOS
+	"VehStop" tcOTOG "0" tcEOS
+	"NoButtons" tcOTOG "0" tcEOS
+	"Parked" tcOTOG "0" tcEOS
+	"Inactive" tcOTOG "0" tcEOS
+	"FuelRate" tcOTOG "0" tcEOS
+#if defined(useBluetooth)
+	"BTOut" tcOTOG "0" tcEOS
+#else // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
-#endif // defined(useInterruptBasedTWI)
+#endif // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
 };
+
+static const uint8_t peekStatusMessage =		0b10000000;
+static const uint8_t peekBluetoothInput =		0b01000000;
 
 static const char terminalPeekStr[] PROGMEM = {
 	"peek: " tcEOS
 	"ECHO" tcOTOG "0" tcEOS
+#if defined(useBluetooth)
+	"BTinp" tcOTOG "0" tcEOS
+#else // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
+#endif // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
 	"1" tcOTOG "0" tcEOS
 	"1" tcOTOG "0" tcEOS
@@ -342,6 +348,62 @@ static const char terminalPeekStr[] PROGMEM = {
 	"1" tcOTOG "0" tcEOS
 };
 
+#if defined(useSerial0Port)
+static const char serial0ControlFlagsStr[] PROGMEM = {
+	"devSerial0.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE0" tcOTOG "0" tcEOS
+	"DOR0" tcOTOG "0" tcEOS
+	"UPE0" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+static const char serial1ControlFlagsStr[] PROGMEM = {
+	"devSerial1.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE1" tcOTOG "0" tcEOS
+	"DOR1" tcOTOG "0" tcEOS
+	"UPE1" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+static const char serial2ControlFlagsStr[] PROGMEM = {
+	"devSerial2.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE2" tcOTOG "0" tcEOS
+	"DOR2" tcOTOG "0" tcEOS
+	"UPE2" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+static const char serial3ControlFlagsStr[] PROGMEM = {
+	"devSerial3.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE3" tcOTOG "0" tcEOS
+	"DOR3" tcOTOG "0" tcEOS
+	"UPE3" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial3Port)
 #endif // defined(useDebugTerminal)
 #if defined(useTestButtonValues)
 namespace buttonView /* Button input value viewer section prototype */

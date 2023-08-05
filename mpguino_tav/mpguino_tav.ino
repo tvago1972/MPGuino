@@ -16,7 +16,7 @@
 /* External connections:
 
 Legacy MPGuino hardware is defined as anything that MPGuino was originally designed to run on. This includes
-   Arduino Duemilanove, Arduino Uno, JellyBeanDriver board, meelis11 board, iDuino, and any other board based off the
+   Arduino Duemilanove, Arduino Uno, JellyBeanDriver board, meelis11 board, and any other board based off the
    original MPGuino schematic, that can be found at http://ecomodder.com/wiki/index.php/MPGuino
 
 Vehicle interface pins
@@ -36,7 +36,7 @@ Vehicle interface pins
     (if configured) Baro PF6 (ADC6), A1
     (if configured) Valt PF6 (ADC2), A2
 
-  Arduino Mega 2560
+  Arduino Mega2560
     injector sense open  PE4 (INT4), Digital 2
     injector sense close PE5 (INT5), Digital 3
     speed                PK0 (PCINT16), A8
@@ -63,7 +63,7 @@ configuration for alternator voltage input to MPGuino (via meelis11)
                              |
                              |                         R6    (JBD)
                              o-----------------------o PC2 - legacy MPGuino hardware
-                                                       PF2 - Arduino Mega 2560
+                                                       PF2 - Arduino Mega2560
 R5             R6                                      PF6 - TinkerKit! LCD module
 9.6K           27K - original meelis11                 PK9 - MPGuino Colour Touch by abbalooga
 10K            51K - MPGuino Colour Touch
@@ -81,7 +81,7 @@ sensor configuration for Chrysler MAP/baro sensor
                o               o               o
                |               |               |                       R7 (JBD)
                |               |               o----------------vvv--o PC1 - legacy MPGuino hardware
-               |               |               |                2.2k   PF1 - Arduino Mega 2560
+               |               |               |                2.2k   PF1 - Arduino Mega2560
                |               |               |                       PF5 - TinkerKit! LCD module
                o               o               o
           --------------------------------------------
@@ -107,7 +107,7 @@ sensor configuration for Chrysler MAP/baro sensor
                o               o               o
                |               |               |                       R6 (JBD)
                |               |               o----------------vvv--o PC2 - legacy MPGuino hardware
-               |               |                                2.2k   PF2 - Arduino Mega 2560
+               |               |                                2.2k   PF2 - Arduino Mega2560
                |               |                                       PF6 - TinkerKit! LCD module
                o               o
           --------------------------------------------
@@ -155,7 +155,7 @@ LCD Pins - Legacy
     Contrast   PB5, Digital 9, controlled by PWM on OC1A
     Brightness PB6, Digital 10, controlled by PWM on OC1B
 
-  Arduino Mega 2560
+  Arduino Mega2560
     DIR        PA4, Digital 26
     DB4        PA3, Digital 25
     DB5        PA2, Digital 24
@@ -169,10 +169,14 @@ LCD Pins - Parallax Serial Interface
   legacy MPGuino hardware
     RX      D1 (TXD), Digital 1
 
-  Arduino Mega 2560
+  Arduino Mega2560
     RX      E1 (TXD0), Digital 1
     - or -
     RX      D3 (TXD1), Digital 18
+    - or -
+    RX      H1 (TXD2), Digital 16
+    - or -
+    RX      J1 (TXD3), Digital 14
 
 LCD Pins - Adafruit RGB LCD Shield
   legacy MPGuino hardware
@@ -183,7 +187,7 @@ LCD Pins - Adafruit RGB LCD Shield
     SDA     PD1 (SDA), Digital 2
     SCL     PD0 (SCL), Digital 3
 
-  Arduino Mega 2560
+  Arduino Mega2560
     SCL     PD0 (SCL), Digital 21
     SDA     PD1 (SDA), Digital 20
 
@@ -209,7 +213,7 @@ Buttons - Legacy
     middle  PC4 (PCINT12), A4
     right   PC5 (PCINT13), A5
 
-  Arduino Mega 2560
+  Arduino Mega2560
     left    PK3 (PCINT19), A11
     middle  PK4 (PCINT20), A12
     right   PK5 (PCINT21), A13
@@ -231,7 +235,7 @@ Buttons - Multiplexed Analog (diagram courtesy of josemapiro)
   TinkerKit! LCD module
     left, middle, right, extra#1, extra#2 PF7 (ADC7), A0
 
-  Arduino Mega 2560
+  Arduino Mega2560
     left, middle, right, extra#1, extra#2 PF3 (ADC3), A3
 
 
@@ -246,7 +250,7 @@ Buttons - Multiplexed Analog (diagram courtesy of josemapiro)
      o---------------o---------------o---------------o---------------o--vvv--o--o 5V
                                                                      | R1 1k
                                                                      o----------o PC3 - legacy MPGuino hardware
-                                                                                  PF3 - Arduino Mega 2560
+                                                                                  PF3 - Arduino Mega2560
                                                                                   PF7 - TinkerKit! LCD module
 
 Buttons - Parallax 5-position switch (diagram based on josemapiro efforts)
@@ -257,10 +261,10 @@ Buttons - Parallax 5-position switch (diagram based on josemapiro efforts)
   TinkerKit! LCD module
     left, middle, right, extra#1, extra#2 PF7 (ADC7), A0
 
-  Arduino Mega 2560
+  Arduino Mega2560
     left, middle, right, extra#1, extra#2 PF3 (ADC3), A3
 
-                                                                                  PF3 - Arduino Mega 2560
+                                                                                  PF3 - Arduino Mega2560
                                                                                   PF7 - TinkerKit! LCD module
                                                                      o----------o PC3 - legacy MPGuino hardware
                                                                      | R1 1k
@@ -296,7 +300,7 @@ Buttons - Adafruit RGB LCD Shield
     SDA     PD1 (SDA), Digital 2
     SCL     PD0 (SCL), Digital 3
 
-  Arduino Mega 2560
+  Arduino Mega2560
     SCL     PD0 (SCL), Digital 21
     SDA     PD1 (SDA), Digital 20
 
@@ -311,7 +315,7 @@ Expansion outputs
     EXP1       PD7, Digital 6, controlled by PWM on OC4D
     EXP2       PC6, Digital 5, controlled by PWM on OC4A
 
-  Arduino Mega 2560
+  Arduino Mega2560
     EXP1       PB6, Digital 12, controlled by PWM on OC1B
     EXP2       PB4, Digital 10, controlled by PWM on OC2A
 
@@ -329,12 +333,18 @@ Logging Output / Debug Monitor I/O
     RX      D1 (TXD), Digital 1     (USART)
     TX      D0 (RXD), Digital 0
 
-  Arduino Mega 2560
+  Arduino Mega2560
     RX      E1 (TXD0), Digital 1    (USART0)
     TX      E0 (RXD0), Digital 0
     - or -
     RX      D3 (TXD1), Digital 18   (USART1)
     TX      D2 (RXD1), Digital 19
+    - or -
+    RX      H1 (TXD2), Digital 16   (USART2)
+    TX      H0 (RXD2), Digital 17
+    - or -
+    RX      J1 (TXD3), Digital 14   (USART3)
+    TX      J0 (RXD3), Digital 15
 
   TinkerKit! LCD module
     D-                              (USB)
@@ -401,7 +411,7 @@ static const char titleMPGuino[] PROGMEM = {
 };
 
 static const char dateMPGuino[] PROGMEM = {
-	"2023-JUN-29" tcEOSCR
+	"2023-JUL-31" tcEOSCR
 };
 
 static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
@@ -421,6 +431,7 @@ int main(void);
 #include "functions.h"
 #include "text.h"
 #include "feature_settings.h"
+#include "feature_bluetooth.h"
 #include "feature_datalogging.h"
 #include "feature_bignum.h"
 #include "feature_bargraph.h"
@@ -605,8 +616,7 @@ int main(void)
 #endif // defined(useDragRaceFunction)
 	sei();
 
-	timer0DelayCount = delay1500msTick; // request a set number of timer tick delays equivalent to 1.5 seconds
-	timer0Command |= (t0cDoDelay); // signal request to timer
+	delay0(delay1500msTick); // show splash screen for 1.5 seconds
 
 	initHardware(); // initialize all human interface peripherals
 
@@ -630,7 +640,7 @@ int main(void)
 	terminalState = 0;
 
 #endif // defined(outputDebugTerminalSplash)
-	delay0(0); // show splash screen for 1.5 seconds
+	doDelay0(); // show splash screen for 1.5 seconds
 
 #if defined(useButtonInput)
 #if defined(useTestButtonValues)
@@ -781,6 +791,10 @@ int main(void)
 		terminal::mainProcess();
 
 #endif // defined(useDebugTerminal)
+#if defined(useBluetooth)
+		bluetooth::mainProcess();
+
+#endif // defined(useBluetooth)
 #if defined(useButtonInput)
 		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
 		{
@@ -810,6 +824,10 @@ int main(void)
 		}
 
 #endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
+#if defined(useBluetooth)
+		bluetooth::mainOutput();
+
+#endif // defined(useBluetooth)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
 		if (timer0Status & t0sUpdateDisplay)
@@ -892,3 +910,4 @@ int main(void)
 	}
 
 }
+

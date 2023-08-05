@@ -19,6 +19,7 @@ typedef struct
 
 static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
+static uint8_t getCalcFormatIdx(uint8_t calcIdx);
 #if defined(useDebugTerminal) || defined(useJSONoutput)
 static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
@@ -117,6 +118,11 @@ static const uint8_t tLoadTrip =					tRoundOffNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
 static const uint8_t tReadTicksToSeconds =			tSaveTrip + 1;
 #define nextAllowedValue tReadTicksToSeconds + 1
+#if defined(useBluetooth)
+static const uint8_t tGetBTparameterValue =			nextAllowedValue;
+static const uint8_t tFetchMainProgramValue =		tGetBTparameterValue + 1;
+#define nextAllowedValue tFetchMainProgramValue + 1
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t tFEvTgetDistance =				nextAllowedValue;
 static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
@@ -640,7 +646,7 @@ static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrJump, tFormatToNumber							// go call prgmFormatToNumber to perform actual formatting
 };
 
-static const uint8_t prgmFormatToNumber[] PROGMEM = {
+static const uint8_t prgmFormatToNumber[] PROGMEM = {	// tFormatToNumber
 	instrTestReg, 0x02,									// test register 2
 	instrBranchIfOverflow, 13,							// if register 2 has overflow value, exit
 	instrCmpIndex, 3,									// check if valid number of decimal points were requested
@@ -664,9 +670,24 @@ static const uint8_t prgmFetchParameterValue[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static const uint8_t prgmWriteParameterValue[] PROGMEM = {
-	instrStRegEEPROMindexed, 0x02,
+#if defined(useBluetooth)
+static const uint8_t prgmGetBTparameterValue[] PROGMEM = {	// tGetBTparameterValue
+	instrLdRegEEPROMindexed, 0x02,						// load EEPROM parameter for output
+	instrCmpIndex, pMetricModeIdx,						// is this pMetricModeIdx being output
+	instrBranchIfNotE, 3,								// if not, exit
+	instrAddByteToX, 0x02, 1,							// adjust pMetricModeIdx so it is compatible with MPGuinoBlue
 	instrDone											// return to caller
+};
+
+static const uint8_t prgmWriteMainProgramValue[] PROGMEM = {
+	instrStRegMainIndexed, 0x02,
+	instrDone											// exit to caller
+};
+
+#endif // defined(useBluetooth)
+static const uint8_t prgmFetchMainProgramValue[] PROGMEM = { // tFetchMainProgramValue
+	instrLdRegMainIndexed, 0x02,
+	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchInitialParamValue[] PROGMEM = {
@@ -1050,6 +1071,10 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	,prgmLoadTrip								// tLoadTrip
 	,prgmSaveTrip								// tSaveTrip
 	,prgmReadTicksToSeconds						// tReadTicksToSeconds
+#if defined(useBluetooth)
+	,prgmGetBTparameterValue					// tGetBTparameterValue
+	,prgmFetchMainProgramValue					// tFetchMainProgramValue
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,prgmFEvTgetDistance						// tFEvTgetDistance
 	,prgmFEvTgetConsumedFuel					// tFEvTgetConsumedFuel
@@ -1173,48 +1198,48 @@ static const char calcFormatLabels[] PROGMEM = {
 
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
 static const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
-	 0			// time in HHmmSS format
-	,3			// time in milliseconds
-	,0			// engine speed
-	,0			// pulse count
+	 0				// time in HHmmSS format
+	,3				// time in milliseconds
+	,0				// engine speed
+	,0				// pulse count
 #if defined(useDragRaceFunction)
-	,1			// time in seconds
+	,1				// time in seconds
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
-	,3			// voltage
+	,3				// voltage
 #endif // defined(useAnalogRead)
 #if defined(useFuelCost)
-	,2			// fuel cost
-	,2			// fuel rate cost
+	,2				// fuel cost
+	,2				// fuel rate cost
 #endif // defined(useFuelCost)
 
-	,2			// SAE fuel quantity
-	,2			// SI fuel quantity
-	,2			// SAE fuel rate
-	,2			// SI fuel rate
-	,1			// SAE distance travelled
-	,1			// SI distance travelled
-	,1			// SAE speed
-	,1			// SI speed
+	,2				// SAE fuel quantity
+	,2				// SI fuel quantity
+	,2				// SAE fuel rate
+	,2				// SI fuel rate
+	,(2 << 4) |	1	// SAE distance travelled
+	,(2 << 4) |	1	// SI distance travelled
+	,(2 << 4) |	1	// SAE speed
+	,(2 << 4) |	1	// SI speed
 #if defined(useFuelCost)
-	,2			// SAE fuel cost per unit distance
-	,2			// SI fuel cost per unit distance
-	,1			// SAE distance per unit fuel cost
-	,1			// SI distance per unit fuel cost
+	,2				// SAE fuel cost per unit distance
+	,2				// SI fuel cost per unit distance
+	,1				// SAE distance per unit fuel cost
+	,1				// SI distance per unit fuel cost
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
-	,2			// SAE pressure
-	,2			// SI pressure
+	,2				// SAE pressure
+	,2				// SI pressure
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
-	,1			// SAE horsepower
-	,1			// SI horsepower
+	,1				// SAE horsepower
+	,1				// SI horsepower
 #endif // defined(useDragRaceFunction)
 
-	,1			// SAE fuel economy
-	,1			// SI fuel economy
-	,1			// alternate SAE fuel economy
-	,1			// alternate SI fuel economy
+	,(2 << 4) |	1	// SAE fuel economy
+	,(2 << 4) |	1	// SI fuel economy
+	,(2 << 4) |	1	// alternate SAE fuel economy
+	,(2 << 4) |	1	// alternate SI fuel economy
 };
 
 static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList

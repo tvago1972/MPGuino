@@ -41,12 +41,10 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 		thisCalcFuncObj.suppressTripLabel = ((calcIdx < dfMaxValTripFunction) ? 0 : 0x80);
 
-		calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
-		if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
-		if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+		calcFmtIdx = getCalcFormatIdx(calcIdx);
 
 		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
-		thisCalcFuncObj.decimalPlaces = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
+		thisCalcFuncObj.decimalPlaces = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]) & 0x0F; // strip off useBluetooth supplemental data
 		if (thisCalcFuncObj.suppressTripLabel) thisCalcFuncObj.tripChar = ' ';
 		else thisCalcFuncObj.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
 		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
@@ -100,9 +98,24 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 }
 
+static uint8_t getCalcFormatIdx(uint8_t calcIdx)
+{
+
+	uint8_t calcFmtIdx;
+
+	calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
+	if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
+	if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+
+	return calcFmtIdx;
+
+}
+
 #if defined(useDebugTerminal) || defined(useJSONoutput)
 static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
 {
+
+	uint8_t c;
 
 	calcFuncObj thisCalcFuncObj;
 

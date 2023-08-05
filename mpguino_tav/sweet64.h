@@ -313,7 +313,8 @@ static const uint8_t instrLxdIParamLength =			instrLxdIEEPROMoffset + 1;				// l
 static const uint8_t instrLxdIParamLengthIndexed =	instrLxdIParamLength + 1;				// load primary index register with bit length of indexed EEPROM parameter
 static const uint8_t instrSwapReg =					instrLxdIParamLengthIndexed + 1;		// swap contents of 64-bit registers X and Y
 static const uint8_t instrSubYfromX =				instrSwapReg + 1;						// subtract 64-bit register Y from 64-bit register X
-static const uint8_t instrSubMainFromX =			instrSubYfromX + 1;						// subtract main program register value from 64-bit register X
+static const uint8_t instrSubByteFromX =			instrSubYfromX + 1;						// subtract immediate byte value from 64-bit register X
+static const uint8_t instrSubMainFromX =			instrSubByteFromX + 1;					// subtract main program register value from 64-bit register X
 static const uint8_t instrAddYtoX =					instrSubMainFromX + 1;					// add 64-bit register Y to 64-bit register X
 static const uint8_t instrAdjustQuotient =			instrAddYtoX + 1;						// bumps 64-bit register 2 by 1 if last division resulted in remainder * 2 > divisor
 static const uint8_t instrAddByteToX =				instrAdjustQuotient + 1;				// add immediate byte value to 64-bit register X
@@ -440,6 +441,7 @@ static const char opcodeList[] PROGMEM = {
 	"instrJump" tcEOSCR
 	"instrSwapReg" tcEOSCR
 	"instrSubYfromX" tcEOSCR
+	"instrSubByteFromX" tcEOSCR
 	"instrSubMainFromX" tcEOSCR
 	"instrAddYtoX" tcEOSCR
 	"instrAdjustQuotient" tcEOSCR
@@ -570,6 +572,7 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,r00 | p02 | s00	// instrLxdIParamLengthIndexed
 	,r01 | p00 | s00	// instrSwapReg
 	,r04 | p00 | s00	// instrSubYfromX
+	,r06 | p01 | s00	// instrSubByteFromX
 	,r06 | p01 | s00	// instrSubMainFromX
 	,r04 | p00 | s00	// instrAddYtoX
 	,r05 | p00 | s00	// instrAdjustQuotient
@@ -687,6 +690,7 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e26				// instrLxdIParamLengthIndexed
 	,m00 | i02			// instrSwapReg
 	,m02 | i00			// instrSubYfromX
+	,m02 | i10			// instrSubByteFromX
 	,m02 | i05			// instrSubMainFromX
 	,m01 | i00			// instrAddYtoX
 	,m01 | i00			// instrAdjustQuotient

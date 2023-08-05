@@ -333,11 +333,6 @@ static const uint8_t prgmParseHexDigit[] PROGMEM = {
 	instrJump, tParseCharacterToReg						// go perform number parse
 };
 
-static const uint8_t prgmFetchMainProgramValue[] PROGMEM = {
-	instrLdRegMainIndexed, 0x02,
-	instrDone											// exit to caller
-};
-
 static const uint8_t prgmFetchConstantValue[] PROGMEM = {
 	instrLdRegConstIndexed, 0x02,
 	instrDone											// exit to caller
@@ -429,7 +424,7 @@ static const uint8_t prgmFetchTripVarValue[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmWriteMainProgramValue[] PROGMEM = {
+static const uint8_t prgmTerminalWriteMainProgramValue[] PROGMEM = {
 	instrStRegMainIndexed, 0x06,
 	instrDone											// exit to caller
 };
@@ -914,9 +909,15 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugTerminalHelp)
 					case 'S':	// toggle display status line echo to terminal
-						chr = '\\'; // reset input mode and pending command
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
 
-						if ((terminalMode & tmButtonInput) == 0) peek ^= 0x80;
+							peek = terminalByte; // save source start byte value
+							terminalMode &= ~(tmInputMask); // clear input mode processing bits
+							terminalMode |= (tmInitHex | tmSourceReadIn); // shift to hex input
+
+						}
 
 						break;
 
@@ -1144,6 +1145,32 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 #if defined(useCoastDownCalculator)
 								outputFlags(coastdownFlags, terminalCoastdownFlagStr);
 #endif // defined(useCoastDownCalculator)
+#if defined(useSerial0Port)
+
+								outputFlags(devSerial0.controlFlags, serial0ControlFlagsStr);
+								devSerial0.controlFlags &= ~(odvErrorFlags);
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+
+								outputFlags(devSerial1.controlFlags, serial1ControlFlagsStr);
+								devSerial1.controlFlags &= ~(odvErrorFlags);
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+
+								outputFlags(devSerial2.controlFlags, serial2ControlFlagsStr);
+								devSerial2.controlFlags &= ~(odvErrorFlags);
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+
+								outputFlags(devSerial3.controlFlags, serial3ControlFlagsStr);
+								devSerial3.controlFlags &= ~(odvErrorFlags);
+#endif // defined(useSerial3Port)
+#if defined(useBluetooth)
+
+								text::stringOut(devDebugTerminal, PSTR("btInputState = " tcEOS));
+								text::hexByteOut(devDebugTerminal, btInputState);
+								text::newLine(devDebugTerminal);
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsSpeed)
 
 								text::stringOut(devDebugTerminal, PSTR("FEvSpdTripIdx = " tcEOS));
@@ -1221,7 +1248,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							labelList = terminalMainProgramVarLabels;
 #endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputMainProgramValue;
-							prgmPtr = prgmWriteMainProgramValue;
+							prgmPtr = prgmTerminalWriteMainProgramValue;
 							break;
 
 						case 'O':   // list available program constants

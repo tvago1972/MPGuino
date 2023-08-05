@@ -36,6 +36,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #if defined(useAnalogButtons)
 	static uint16_t analogSampleCount;
 #endif // defined(useAnalogButtons)
+#if defined(useBluetooth)
+	static uint16_t bluetoothPeriodCount;
+#endif // defined(useBluetooth)
 #if defined(useTWIbuttons)
 	static uint8_t TWIsampleCount;
 	static uint8_t TWIsampleState;
@@ -63,6 +66,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		TWIsampleCount = TWItickLength;
 		TWIsampleState = 0;
 #endif // defined(useTWIbuttons)
+#if defined(useBluetooth)
+		bluetoothPeriodCount = loopTickLength;
+#endif // defined(useBluetooth)
 #if defined(useAnalogRead)
 		analogStatus = asHardwareReady;
 #if defined(useAnalogButtons)
@@ -457,6 +463,25 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	if (timer0Command & t0cResetBluetoothOutput)
+	{
+
+		timer0Command &= ~(t0cResetBluetoothOutput);
+		bluetoothPeriodCount = loopTickLength;
+
+	}
+
+	if (bluetoothPeriodCount) bluetoothPeriodCount--;
+	else
+	{
+
+		activityFlags |= (afBluetoothOutput);
+		bluetoothPeriodCount = loopTickLength;
+
+	}
+
+#endif // defined(useBluetooth)
 	if (loopCount) loopCount--;
 	else
 	{
@@ -1194,6 +1219,23 @@ static void ringBuffer::pushInterrupt(ringBufferVariable &bfr, uint8_t value)
 
 }
 
+static uint8_t ringBuffer::pullMain(ringBufferVariable &bfr)
+{
+
+	uint8_t value;
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	value = pull(bfr);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return value;
+
+}
+
 static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 {
 
@@ -1799,6 +1841,9 @@ static void initHardware(void)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::init();
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(useBluetooth)
+	bluetooth::init();
+#endif // defined(useBluetooth)
 #if defined(useButtonInput)
 	button::init();
 #endif // defined(useButtonInput)
@@ -1837,6 +1882,9 @@ static void doGoDeepSleep(void)
 #if defined(useButtonInput)
 	button::shutdown();
 #endif // defined(useButtonInput)
+#if defined(useBluetooth)
+	bluetooth::shutdown();
+#endif // defined(useBluetooth)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::shutdown();
 #endif // defined(__AVR_ATmega32U4__)
@@ -1915,25 +1963,27 @@ static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle
 
 }
 
+static void doDelay0(void)
+{
+
+	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+
+}
+
 static void delay0(uint16_t ms)
 {
 
 	uint8_t oldSREG;
 
-	if (ms)
-	{
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
 
-		oldSREG = SREG; // save interrupt flag status
-		cli(); // disable interrupts
+	timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
 
-		timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
-		timer0Command |= (t0cDoDelay); // signal request to timer
+	if (ms) timer0Command |= (t0cDoDelay); // signal request to timer
+	else timer0Command &= ~(t0cDoDelay);
 
-		SREG = oldSREG; // restore interrupt flag status
-
-	}
-
-	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 
