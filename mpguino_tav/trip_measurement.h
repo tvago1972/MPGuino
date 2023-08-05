@@ -344,6 +344,7 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 	static void resetCurrent(void);
 	static void resetTank(void);
 	static void doResetTrip(uint8_t tripSlot);
+	static void outputResetStatus(uint8_t tripSlot);
 #if defined(useWindowTripFilter)
 	static void resetWindowFilter(void);
 #endif // defined(useWindowTripFilter)

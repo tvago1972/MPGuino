@@ -362,7 +362,6 @@ static const char settingsParameterList[] PROGMEM = {
 const uint8_t nesLoadInitial =			0;
 const uint8_t nesLoadValue =			nesLoadInitial + 1;
 const uint8_t nesOnChange =				nesLoadValue + 1;
-const uint8_t nesSaveParameter =		nesOnChange + 1;
 
 typedef struct
 {
@@ -407,4 +406,10 @@ static const char pseStatusMessages[] PROGMEM = {
 
 static char pBuff[17]; // used by parameterEdit:: routines
 
+#if defined(usePartialRefuel)
+static const uint8_t prgmAddToPartialRefuel[] PROGMEM = {
+	instrAddEEPROMtoX, 0x02, pRefuelSizeIdx,			// add existing partial refuel size parameter to what's in the result register
+	instrDone											// return to caller
+};
 
+#endif // defined(usePartialRefuel)

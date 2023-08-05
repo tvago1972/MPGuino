@@ -9,13 +9,6 @@ typedef struct
 
 } buttonVariable;
 
-typedef struct
-{
-
-	const buttonVariable (* buttonVariableList);
-
-} buttonVariablePointer;
-
 typedef uint8_t (* displayHandlerFunc)(uint8_t, uint8_t); // type for display handler functions
 
 typedef struct

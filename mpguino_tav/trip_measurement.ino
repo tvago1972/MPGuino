@@ -490,7 +490,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 				case tsfZeroPartialIdx:
 					SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-					parameterEdit::sharedFunctionCall(nesSaveParameter);
+					parameterEdit::onEEPROMchange(prgmWriteParameterValue, numberEditObj.parameterIdx);
 					text::statusOut(devLCD, PSTR("PartialFuel RST"));
 					break;
 
@@ -513,6 +513,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useSavedTrips)
 				case tsfTankResetIdx: // tank trip reset
 					tripSupport::doResetTrip(thisTripSlot);
+					tripSupport::outputResetStatus(thisTripSlot);
 					break;
 
 				default:
@@ -603,6 +604,7 @@ static void tripSupport::resetCurrent(void)
 {
 
 	doResetTrip(0);
+	outputResetStatus(0);
 
 }
 
@@ -610,6 +612,14 @@ static void tripSupport::resetTank(void)
 {
 
 	doResetTrip(1);
+	outputResetStatus(1);
+
+}
+
+static void tripSupport::outputResetStatus(uint8_t tripSlot)
+{
+
+	text::statusOut(devLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
 
 }
 
@@ -636,8 +646,6 @@ static void tripSupport::doResetTrip(uint8_t tripSlot)
 	}
 
 #endif // defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
-	text::statusOut(devLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
-
 }
 
 #if defined(useWindowTripFilter)

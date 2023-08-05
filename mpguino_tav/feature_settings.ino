@@ -31,6 +31,11 @@ static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 /* EEPROM parameter number editor section */
 
+static const uint8_t prgmWriteParameterValue[] PROGMEM = {
+	instrStRegEEPROMindexed, 0x02,
+	instrDone											// return to caller
+};
+
 static const uint8_t prgmFetchMaximumParamValue[] PROGMEM = {
 	instrLdRegByte, 0x02, 1,							// load MSB of maximum parameter value into register 2
 	instrLxdIParamLengthIndexed,						// load parameter length into index
@@ -267,13 +272,6 @@ static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
 };
 
 #endif // useCalculatedFuelFactor
-#if defined(usePartialRefuel)
-static const uint8_t prgmAddToPartialRefuel[] PROGMEM = {
-	instrAddEEPROMtoX, 0x02, pRefuelSizeIdx,			// add existing partial refuel size parameter to what's in the result register
-	instrDone											// return to caller
-};
-
-#endif // defined(usePartialRefuel)
 static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 {
 
@@ -300,10 +298,6 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 			if (parameterPtr == pLCDcolorIdx) LCD::setRGBcolor((uint8_t)(str2ull(pBuff))); // adjust backlight color dynamically
 #endif // defined(useAdafruitRGBLCDshield)
 #endif // defined(useLCDoutput)
-			break;
-
-		case nesSaveParameter:
-			retVal = onEEPROMchange(prgmWriteParameterValue, parameterPtr);
 			break;
 
 		default:
@@ -632,7 +626,7 @@ static void parameterEdit::save(void)
 #if defined(usePartialRefuel)
 			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
-			retVal = sharedFunctionCall(nesSaveParameter); // go save parameter and do any required housekeeping
+			retVal = onEEPROMchange(prgmWriteParameterValue, numberEditObj.parameterIdx); // go save parameter and do any required housekeeping
 
 			cursor::screenLevelEntry(numberEditObj.neStatusMessage, retVal, numberEditObj.callingDisplayIdx);
 			break;

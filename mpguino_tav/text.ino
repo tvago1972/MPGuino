@@ -89,7 +89,7 @@ static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t st
 	commitStatus(dev);
 
 #if defined(useDebugTerminal)
-	if (peek & 0x80)
+	if (peek & peekStatusMessage)
 	{
 
 		stringOut(devDebugTerminal, findStr(sList, strIdx));
@@ -110,7 +110,7 @@ static void text::statusOut(interfaceDevice &dev, const char * str, const char *
 	commitStatus(dev);
 
 #if defined(useDebugTerminal)
-	if (peek & 0x80)
+	if (peek & peekStatusMessage)
 	{
 
 		stringOut(devDebugTerminal, str);
@@ -137,7 +137,7 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 	commitStatus(dev);
 
 #if defined(useDebugTerminal)
-	if (peek & 0x80)
+	if (peek & peekStatusMessage)
 	{
 
 		stringOut(devDebugTerminal, str);

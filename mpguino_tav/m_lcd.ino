@@ -10,6 +10,7 @@ static void LCD::init(void)
 	cli(); // disable interrupts
 
 	devLCD.chrOut = LCD::writeData;
+	devLCD.controlFlags |= (odvFlagEnableOutput);
 
 #if defined(useBufferedLCD)
 	ringBuffer::init(lcdBuffer, LCDdata);
