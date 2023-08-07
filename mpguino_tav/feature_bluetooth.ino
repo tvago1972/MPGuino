@@ -9,6 +9,13 @@ static const uint8_t prgmWriteBTparameterValue[] PROGMEM = {
 	instrDone											// return to caller
 };
 
+static const uint8_t prgmCheckInstantSpeed[] PROGMEM = {
+	instrLdRegTripVar, 0x02, instantIdx, rvVSSpulseIdx,	// load instant trip VSS pulse count
+	instrBranchIfZero, 3,								// if speed measurement is zero, exit to caller
+	instrLdRegByte, 0x02, 1,							// load a non-zero number
+	instrDone											// return to caller
+};
+
 static void bluetooth::init(void)
 {
 
@@ -49,11 +56,6 @@ static void bluetooth::mainProcess(void)
 	uint8_t btChar;
 	uint16_t btFormat;
 	union union_16 * btF = (union union_16 *)(&btFormat);
-	char * btNumberString;
-	uint8_t nc;
-	uint8_t oc;
-	uint8_t flg;
-	uint8_t decIdx;
 
 	do
 	{
@@ -75,6 +77,11 @@ static void bluetooth::mainProcess(void)
 					{
 
 						case 'M':	// output selected EEPROM parameter list
+							changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
+
+							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
+
+							btOutputState &= ~(btoOutputFlags); // clear all output flags
 							btOutputState |= (btoFlagSingleShotOutput);
 							btOutputListIdx = btolParameterIdx;
 							break;
@@ -106,6 +113,11 @@ static void bluetooth::mainProcess(void)
 					{
 
 						case '!':
+							changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
+
+							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
+
+							btOutputState &= ~(btoOutputFlags); // clear all output flags
 							btOutputState |= (btoFlagContinuousOutput);
 							btOutputListIdx = btolTripFunctionIdx;
 							btInputState = 1; // treat this also as a variable write, with special character substituting for '!'
@@ -126,12 +138,6 @@ static void bluetooth::mainProcess(void)
 
 						case '!':	// initialize and output selected trip functions
 						case 'M':	// process expanded command
-							changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
-
-							while (timer0Command & t0cResetBluetoothOutput);
-
-							btOutputState &= ~(btoOutputFlags);
-
 							btInputState = btChar; // save input state
 							break;
 
@@ -199,11 +205,13 @@ static void bluetooth::mainProcess(void)
 												if (btF->u8[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
 												parameterEdit::onEEPROMchange(prgmWriteBTparameterValue, btF->u8[1]);
+												changeBitFlags(timer0Command, 0, t0cInputReceived);
 												break;
 
 											case tFetchMainProgramValue:
 												str2ull(btInpBuff); // convert digit string into a number
 												SWEET64::runPrgm(prgmWriteMainProgramValue, btF->u8[1]);
+												changeBitFlags(timer0Command, 0, t0cInputReceived);
 												break;
 
 											default:
@@ -274,56 +282,16 @@ static void bluetooth::mainProcess(void)
 
 					text::charOut(devBluetooth, btChar); // output character corresponding to output format
 
-					if (activityFlags & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
+					if ((btF->u8[1] == instantIdx) && (btF->u8[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
 					{
 
-						if ((btF->u8[1] == instantIdx) && (btF->u8[0] == tFuelEcon)) btF->u8[0] = tFuelRate;
+						if (SWEET64::runPrgm(prgmCheckInstantSpeed, 0) == 0) btF->u8[0] = tFuelRate;
 
 					}
 
-					switch (btF->u8[0])
-					{
+					btChar = ((btF->u8[0] < dfMaxValDisplayCount) ? 7 : 10);
 
-						case tFetchMainProgramValue:
-						case tGetBTparameterValue:
-							nc = 3; // if parameter value, assume 3 decimal places
-							decIdx = tFormatToNumber;
-							break;
-
-						default:
-							// fetch decimal count according to trip function
-							nc = getCalcFormatIdx(btF->u8[0]);
-							nc = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(nc)]);
-							if (nc & 0xF0) nc >>= 4; // use any supplemental useBluetooth decimal count information
-							decIdx = tRoundOffNumber;
-							break;
-
-					}
-
-					SWEET64::doCalculate(btF->u8[1], btF->u8[0]); // go perform corresponding calculation
-					btNumberString = ull2str(pBuff, nc, decIdx); // go format to decimal number string
-					flg = 0;
-					oc = '9';
-					decIdx = 0;
-
-					do
-					{
-
-						nc = * btNumberString++; // fetch a digit of output string, and bump up string pointer
-
-						if ((nc == '-') && (decIdx > 2)) nc = oc; // do on-the-fly conversion of overflow string
-
-						// strip off leading zeros and leading spaces, but leave a notional zero for output if near end of string
-						if (((nc >= '1') && (nc <= '9')) || ((* btNumberString) == 0)) flg = 1;
-
-						// if a decimal point is encountered, make overflow digits 0 instead of 9
-						if ((decIdx++) == 8) oc = '0';
-
-						// if not a leading zero and not a decimal point, output character
-						if ((nc != '.') && (flg)) nc = text::charOut(devBluetooth, nc);
-
-					}
-					while (nc);
+					outputTripFunctionValue(devBluetooth, btF->u8[1], btF->u8[0], pBuff, btChar, (dfOverflow9s | dfIgnoreDecimalPoint| dfSuppressAutoRange | dfBluetoothOutput));
 
 #if defined(bluetoothSerialBuffer)
 					btOutputState |= (btoFlagFlushBuffer);

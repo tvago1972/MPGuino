@@ -24,7 +24,7 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 	if (tripIdx < tripSlotTotalCount) thisCalcFuncObj.isValid ^= (isValidTripIdx);
 
-	if (calcIdx < dfMaxValDisplayCount)
+	if (calcIdx < dfMaxValCalcCount)
 	{
 
 		thisCalcFuncObj.isValid ^= (isValidCalcIdx);
@@ -41,12 +41,26 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 		thisCalcFuncObj.suppressTripLabel = ((calcIdx < dfMaxValTripFunction) ? 0 : 0x80);
 
-		calcFmtIdx = getCalcFormatIdx(calcIdx);
+		if (calcIdx < dfMaxValDisplayCount)
+		{
+
+			calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
+			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
+			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+
+		}
+		else calcFmtIdx = calcFormatTimeInMillisecondsIdx;
 
 		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
-		thisCalcFuncObj.decimalPlaces = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]) & 0x0F; // strip off useBluetooth supplemental data
+
+		i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
+
+		if ((decimalFlag & dfBluetoothOutput) && (i & 0xF0)) thisCalcFuncObj.decimalPlaces = (i >> 4); // fetch useBluetooth supplemental data, if present
+		else thisCalcFuncObj.decimalPlaces = (i & 0x0F); // strip off useBluetooth supplemental data
+
 		if (thisCalcFuncObj.suppressTripLabel) thisCalcFuncObj.tripChar = ' ';
 		else thisCalcFuncObj.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
+
 		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
 
 	}
@@ -98,42 +112,50 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 }
 
-static uint8_t getCalcFormatIdx(uint8_t calcIdx)
-{
-
-	uint8_t calcFmtIdx;
-
-	calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
-	if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
-	if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
-
-	return calcFmtIdx;
-
-}
-
-#if defined(useDebugTerminal) || defined(useJSONoutput)
+#if defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
 static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	uint8_t c;
+	uint8_t f;
 
 	calcFuncObj thisCalcFuncObj;
 
 	// perform the required decimal formatting
 	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag);
 
-	text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
+	if (decimalFlag & dfBluetoothOutput)
+	{
 
+		f = 0;
+
+		do
+		{
+
+			c = * thisCalcFuncObj.strBuffer++;
+
+			if (((c >= '1') && (c <= '9')) || ((* thisCalcFuncObj.strBuffer) == 0)) f = 1;
+
+			if ((c != '.') && (f)) c = text::charOut(dev, c);
+
+		}
+		while (c);
+
+	}
+	else text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
+
+#if defined(useDebugTerminal) || defined(useJSONoutput)
 	if ((decimalFlag & dfSuppressLabel) == 0)
 	{
 
 		text::charOut(dev, ' ');
 		text::stringOut(dev, thisCalcFuncObj.calcFormatLabelPtr);
 
-		if (decimalFlag & dfOutputTripChar) text::charOut(dev, thisCalcFuncObj.tripChar);
-
 	}
+
+#endif // defined(useDebugTerminal) || defined(useJSONoutput)
+	if (decimalFlag & dfOutputTripChar) text::charOut(dev, thisCalcFuncObj.tripChar);
 
 }
 
-#endif // defined(useDebugTerminal) || defined(useJSONoutput)
+#endif // defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)

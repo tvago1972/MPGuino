@@ -1,3 +1,4 @@
+#if defined(useButtonInput)
 /* EEPROM parameter settings menu support section */
 
 static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
@@ -29,6 +30,7 @@ static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
+#endif // defined(useButtonInput)
 /* EEPROM parameter number editor section */
 
 static const uint8_t prgmWriteParameterValue[] PROGMEM = {
@@ -286,7 +288,9 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 
 		case nesLoadValue:
 			ull2str(pBuff, 3, tFormatToNumber);
+#if defined(useButtonInput)
 			parameterEdit::findLeft();
+#endif // defined(useButtonInput)
 
 		case nesOnChange:
 #if defined(useLCDoutput)
@@ -371,6 +375,7 @@ static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t para
 
 }
 
+#if defined(useButtonInput)
 static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -668,3 +673,4 @@ static void parameterEdit::cancel(void)
 
 }
 
+#endif // defined(useButtonInput)

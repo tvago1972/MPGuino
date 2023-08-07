@@ -19,10 +19,9 @@ typedef struct
 
 static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
 static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-static uint8_t getCalcFormatIdx(uint8_t calcIdx);
-#if defined(useDebugTerminal) || defined(useJSONoutput)
+#if defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
 static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-#endif // defined(useDebugTerminal) || defined(useJSONoutput)
+#endif // defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
 
 // calculation indexes into SWEET64 S64programList[] for display functions to either screen or logging output
 #define nextAllowedValue 0
@@ -103,6 +102,14 @@ static const uint8_t tTrapSpeed =					tDragSpeed + 1;					// acceleration test v
 
 static const uint8_t dfMaxValDisplayCount =			nextAllowedValue;				// maximum index for function indexes that return results for display
 
+#if defined(useBluetooth)
+static const uint8_t tGetBTparameterValue =			nextAllowedValue;
+static const uint8_t tFetchMainProgramValue =		tGetBTparameterValue + 1;
+#define nextAllowedValue tFetchMainProgramValue + 1
+#endif // defined(useBluetooth)
+
+static const uint8_t dfMaxValCalcCount =			nextAllowedValue;				// maximum index for function indexes that return results
+
 static const uint8_t tCalculateRemainingTank =		nextAllowedValue;				// calculate estimated remaining fuel quantity in injector open cycles
 static const uint8_t tCalculateRemainingReserve =	tCalculateRemainingTank + 1;	// calculate estimated remaining fuel reserve value in injector open cycles
 static const uint8_t tCalculateBingoFuel =			tCalculateRemainingReserve + 1;	// calculate estimated fuel bingo value in injector open cycles
@@ -118,11 +125,6 @@ static const uint8_t tLoadTrip =					tRoundOffNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
 static const uint8_t tReadTicksToSeconds =			tSaveTrip + 1;
 #define nextAllowedValue tReadTicksToSeconds + 1
-#if defined(useBluetooth)
-static const uint8_t tGetBTparameterValue =			nextAllowedValue;
-static const uint8_t tFetchMainProgramValue =		tGetBTparameterValue + 1;
-#define nextAllowedValue tFetchMainProgramValue + 1
-#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t tFEvTgetDistance =				nextAllowedValue;
 static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
@@ -208,12 +210,15 @@ static const char terminalTripFuncNames[] PROGMEM = {
 
 #endif // defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 static const uint8_t prgmEngineSpeed[] PROGMEM = {
+	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse time into register 2
+	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of injector fire events per 2 crank revolutions
+	instrLdReg, 0x21,									// move denominator to register 1
+
 	instrLdRegTripVarIndexed, 0x02, rvInjPulseIdx,		// load injector pulse count into register 2
 	instrMul2byConst, idxCycles0PerSecond,				// set up for conversion of denominator injector cycle count to time in seconds
-	instrMul2byByte, 60,								// set up for conversion of denominator injector time in seconds to time in minutes
+	instrMul2byByte, 120,								// set up for conversion of denominator injector time in seconds to time in minutes
 	instrMul2byConst, idxDecimalPoint,					// perform output decimal formatting
-	instrMul2byEEPROM, pCrankRevPerInjIdx,				// multiply by the number of crank revolutions per injector fire event
-	instrDiv2byTripVarIndexed, rvEngCycleIdx,			// divide by the injector pulse time
+	instrDiv2by1,										// perform divide
 	instrDone											// exit to caller
 };
 
@@ -1056,6 +1061,12 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	,prgmTrapSpeed								// tTrapSpeed - acceleration test vehicle speed at defined distance (SI/SAE)
 #endif // defined(useDragRaceFunction)
 
+// this is the start of the SWEET64 function list for useful functions that do not get displayed
+#if defined(useBluetooth)
+	,prgmGetBTparameterValue					// tGetBTparameterValue
+	,prgmFetchMainProgramValue					// tFetchMainProgramValue
+#endif // defined(useBluetooth)
+
 // this is the start of the internal SWEET64 index program address list
 	,prgmCalculateRemainingTank					// tCalculateRemainingTank - calculate estimated remaining fuel quantity in injector open cycles
 	,prgmCalculateRemainingReserve				// tCalculateRemainingReserve - calculate estimated remaining fuel reserve value in injector open cycles
@@ -1071,10 +1082,6 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	,prgmLoadTrip								// tLoadTrip
 	,prgmSaveTrip								// tSaveTrip
 	,prgmReadTicksToSeconds						// tReadTicksToSeconds
-#if defined(useBluetooth)
-	,prgmGetBTparameterValue					// tGetBTparameterValue
-	,prgmFetchMainProgramValue					// tFetchMainProgramValue
-#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,prgmFEvTgetDistance						// tFEvTgetDistance
 	,prgmFEvTgetConsumedFuel					// tFEvTgetConsumedFuel
@@ -1109,8 +1116,8 @@ static const uint8_t calcFormatTimeInSecondsIdx =		nextAllowedValue;						// tim
 #define nextAllowedValue calcFormatTimeInSecondsIdx + 1
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
-static const uint8_t calcFormatanalogDisplayIdx =		nextAllowedValue;						// voltage
-#define nextAllowedValue calcFormatanalogDisplayIdx + 1
+static const uint8_t calcFormatAnalogDisplayIdx =		nextAllowedValue;						// voltage
+#define nextAllowedValue calcFormatAnalogDisplayIdx + 1
 #endif // useAnalogRead
 #if defined(useFuelCost)
 static const uint8_t calcFormatFuelCostIdx =			nextAllowedValue;						// fuel cost
@@ -1466,10 +1473,10 @@ static const uint8_t calcFormatList[(uint16_t)(dfMaxValDisplayCount)] PROGMEM = 
 	,calcFormatFuelQuantityIdx					// tReserveRemainingFuel - estimated remaining reserve fuel quantity (SI/SAE)
 	,calcFormatFuelQuantityIdx					// tBingoRemainingFuel - estimated bingo fuel quantity remaining (SI/SAE)
 #if defined(useDebugAnalog)
-	,calcFormatanalogDisplayIdx					// tAnalogChannel - DC voltage
+	,calcFormatAnalogDisplayIdx					// tAnalogChannel - DC voltage
 #endif // defined(useDebugAnalog)
 #if defined(useCarVoltageOutput)
-	,calcFormatanalogDisplayIdx					// tAlternatorChannel - DC voltage
+	,calcFormatAnalogDisplayIdx					// tAlternatorChannel - DC voltage
 #endif // defined(useCarVoltageOutput)
 #if defined(useChryslerMAPCorrection)
 	,calcFormatPressureIdx						// tPressureChannel - absolute pressure (SI/SAE)

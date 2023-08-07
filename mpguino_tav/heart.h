@@ -157,9 +157,7 @@ static const uint8_t vDetectEngineOffIdx =			vDetectVehicleStopIdx + 1;		// mini
 static const uint8_t vMaximumVSSperiodIdx =			vDetectEngineOffIdx + 1;		// maximum good VSS period in timer0 cycles
 static const uint8_t vMaximumEnginePeriodIdx =		vMaximumVSSperiodIdx + 1;		// maximum good engine period in timer0 cycles
 static const uint8_t vInjectorOpenDelayIdx =		vMaximumEnginePeriodIdx + 1;	// injector settle time in timer0 cycles
-static const uint8_t vInjectorCloseDelayIdx =		vInjectorOpenDelayIdx + 1;		// injector closing settle time in timer0 cycles
-static const uint8_t vInjectorTotalDelayIdx =		vInjectorCloseDelayIdx + 1;		// injector total settle time in timer0 cycles, for injector validity check
-static const uint8_t vInjectorValidMaxWidthIdx =	vInjectorTotalDelayIdx + 1;		// maximum valid fuel injector pulse width in timer0 cycles
+static const uint8_t vInjectorValidMaxWidthIdx =	vInjectorOpenDelayIdx + 1;		// maximum valid fuel injector pulse width in timer0 cycles
 #define nextAllowedValue vInjectorValidMaxWidthIdx + 1
 #if defined(useChryslerMAPCorrection)
 static const uint8_t vInjectorCorrectionIdx =		nextAllowedValue;				// Chrysler fuel injector correction value
@@ -290,8 +288,6 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 	"vMaximumVSSperiodIdx" tcEOSCR				// vss
 	"vMaximumEnginePeriodIdx" tcEOSCR			// fi close
 	"vInjectorOpenDelayIdx" tcEOSCR				// fi close
-	"vInjectorCloseDelayIdx" tcEOSCR			// fi close
-	"vInjectorTotalDelayIdx" tcEOSCR			// fi close
 	"vInjectorValidMaxWidthIdx" tcEOSCR			// fi close
 #if defined(useChryslerMAPCorrection)
 	"vInjectorCorrectionIdx" tcEOSCR			// fi close
@@ -442,6 +438,7 @@ static const uint8_t t0cEnableAnalogButtons =	0b00000100;
 #if defined(useBluetooth)
 static const uint8_t t0cResetBluetoothOutput =	0b00000010;
 #endif // defined(useBluetooth)
+static const uint8_t t0cInputReceived =			0b00000001;
 
 // these flags specifically tell the main program to do something
 // system timer0 sets flag, main program acknowledges by clearing flag

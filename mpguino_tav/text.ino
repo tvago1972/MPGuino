@@ -412,9 +412,15 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 //
 // if no window length is specified, this routine just removes all leading spaces
 //
-// decimalFlag currently has two bits defined:
+// decimalFlag currently has three bits defined:
 // 1xxx xxxx - fill overflow string from all 9s instead of all '-' characters
-// x1xx xxxx - ignore decimal point character in window length consideration (used in useBigNumberDisplay)
+// x1xx xxxx - ignore decimal point character in window length consideration (used with useBigNumberDisplay)
+// xx1x xxxx - suppress autoranging (used with useBluetooth)
+//
+// the following bits are also defined in decimalFlag, but are used in other functions instead of ull2str below
+// xxx1 xxxx - output trip label (used in outputTripFunctionValue, with useJSONoutput and useDebugTerminal)
+// xxxx 1xxx - output trip character after number (used in outputTripFunctionValue, with useDebugTerminal)
+// xxxx x1xx - suppress leading spaces/zeros/decimal point (used in outputTripFunctionValue, with useBluetooth)
 //
 // sample debug monitor outputs:
 //
@@ -453,16 +459,22 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 
 	SWEET64::runPrgm(prgmAutoRangeNumber, windowLength - f); // fetch supportable decimal digit count for window
 	d = tmpPtr3->u8[0];
+	f = 0; // initially signal no overflow occurred
 
-	if (decimalPlaces > d) decimalPlaces = d; // if supportable digit count is less than specified, use supportable instead
+	if (decimalPlaces > d)
+	{
 
-	ull2str(strBuffer, decimalPlaces, tRoundOffNumber); // perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+		if (decimalFlag & dfSuppressAutoRange) f = 1;
+		else decimalPlaces = d; // if supportable digit count is less than specified, use supportable instead
 
-	if (strBuffer[2] == '-') f = 1; // if number overflowed
+	}
+
+	if (f == 0) ull2str(strBuffer, decimalPlaces, tRoundOffNumber); // perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+
+	if ((strBuffer[2] == '-') || (f)) f = 1; // if number overflowed
 	else
 	{
 
-		f = 0; // initially signal no overflow occurred
 		d = 0;
 
 		if (windowLength) // if there is a valid windowLength

@@ -49,12 +49,15 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVolatile, 0x02, vDetectVehicleStopIdx,	// store minimum good vehicle speed of timer0 ticks / VSS pulse
 
-	instrLdRegEEPROM, 0x02, pCrankRevPerInjIdx,			// load number of crank revolutions / injector fire event
-	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
-	instrMul2byByte, 60,								// term is now in (crank revolutions)(timer0 cycles) / (fire event)(minute)
-	instrDiv2byEEPROM, pMinGoodRPMidx,					// divide by minimum good engine speed value in crank revolutions / minute
+	instrLdRegEEPROM, 0x02, pMinGoodRPMidx,				// load minimum good engine speed value in (crank revolutions) / (minute)
+	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of (injector fire event) / (2)(crank revolutions)
+	instrLdReg, 0x21,									// move denominator (injector fire event) / (2)(minute) to register 1
+
+	instrLdRegConst, 0x02, idxCycles0PerSecond,			// load (timer0 cycles) / (second) term
+	instrMul2byByte, 120,								// term is now in (2)(timer0 cycles) / (minute)
+	instrDiv2by1,										// divide by minimum good engine speed value in (injector fire event) / (2)(minute)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// store maximum good engine period value in timer0 cycles / fire event
+	instrStRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// store maximum good engine period value in (timer0 cycles) / (injector fire event)
 	instrDiv2byConst, idxCycles0PerTick,				// perform conversion, term is now in timer0 ticks
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVolatile, 0x02, vDetectEngineOffIdx,		// store minimum good engine speed value in timer0 ticks / fire event
@@ -71,21 +74,13 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vActivityTimeoutIdx,		// store activity timeout timer ticks value
 
-	instrLdRegEEPROM, 0x02, pInjectorOpeningTimeIdx,	// fetch injector opening settle time in microseconds
+	instrLdRegEEPROM, 0x02, pInjectorSettleTimeIdx,		// fetch injector settle time in microseconds
 	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
 	instrDiv2byConst, idxMicroSecondsPerSecond,			// divide by microseconds per seconds value
-	instrStRegVolatile, 0x02, vInjectorOpenDelayIdx,	// store injector opening settle time value in cycles
-	instrLdReg, 0x23,									// save for later injector opening settle time value in register 3
-
-	instrLdRegEEPROM, 0x02, pInjectorClosingTimeIdx,	// fetch injector closing settle time in microseconds
-	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
-	instrDiv2byConst, idxMicroSecondsPerSecond,			// divide by microseconds per seconds value
-	instrStRegVolatile, 0x02, vInjectorCloseDelayIdx,	// store injector closing settle time value in cycles
-	instrAddYtoX, 0x32,									// add injector opening settle time value to total injector settle time
-	instrStRegVolatile, 0x02, vInjectorTotalDelayIdx,	// store injector total settle time value in cycles
-	instrLdReg, 0x23,									// save injector total settle time value in register 3
+	instrStRegVolatile, 0x02, vInjectorOpenDelayIdx,	// store injector settle time value in cycles
+	instrLdReg, 0x23,									// save injector settle time value in register 3
 	instrLdRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// load maximum good engine period value in timer0 cycles / fire event
-	instrSubYfromX, 0x32,								// subtract total injector settle time from maximum good engine period
+	instrSubYfromX, 0x32,								// subtract injector settle time from maximum good engine period
 	instrStRegVolatile, 0x02, vInjectorValidMaxWidthIdx,	// store maximum valid fuel injector pulse width in timer0 cycles
 
 	instrLdRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,	// fetch injector cycle time in microseconds per US gallon
@@ -555,8 +550,10 @@ static uint16_t EEPROM::getAddress(uint8_t eePtr)
 #if defined(useScreenEditor)
 	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = eeAdrScreensStart + 2 * (eePtr - eePtrDisplayPagesStart);
 #endif // defined(useScreenEditor)
+#if defined(useButtonInput)
 	else if ((eePtr >= eePtrDisplayCursorStart) && (eePtr < eePtrDisplayCursorEnd)) t = eeAdrDisplayCursorStart + (eePtr - eePtrDisplayCursorStart);
 	else if ((eePtr >= eePtrMenuHeightStart) && (eePtr < eePtrMenuHeightEnd)) t = eeAdrMenuCursorStart + (eePtr - eePtrMenuHeightStart);
+#endif // defined(useButtonInput)
 	else t = eeAdrStorageEnd;
 
 	return t;

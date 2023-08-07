@@ -1,3 +1,4 @@
+#if defined(useButtonInput)
 typedef uint16_t (* pageFunc)(uint8_t); // type for display page format function pointers
 
 namespace baseMenu /* basic top-down menu section prototype */
@@ -225,3 +226,4 @@ static const char deFormatNoChange[] PROGMEM = "Disp Unchanged";
 static const char deFormatSaved[] PROGMEM = "Disp Changed";
 
 #endif // defined(useScreenEditor)
+#endif // defined(useButtonInput)

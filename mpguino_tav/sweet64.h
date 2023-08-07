@@ -200,7 +200,7 @@ matrix_c - coastdown coefficient matrix (what we are trying to solve for)
 
 for useFuelParamCalculator -
 
-(fillup amount)(pMicroSecondsPerGallonIdx) + (injector open count)(pInjectorOpeningTimeIdx) = (raw injector open time)
+(fillup amount)(pMicroSecondsPerGallonIdx) + (injector open count)(pInjectorSettleTimeIdx) = (raw injector open time)
 
          fillup amount - user provided
    injector open count - measured by MPGuino
@@ -216,7 +216,7 @@ matrix_e
 
 matrix_c - fuel injector coefficient matrix (what we are trying to solve for)
     [ pMicroSecondsPerGallonIdx
-	  pInjectorOpeningTimeIdx ]
+	  pInjectorSettleTimeIdx ]
 
 for both cases -
 

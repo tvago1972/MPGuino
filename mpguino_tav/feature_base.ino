@@ -1,3 +1,4 @@
+#if defined(useButtonInput)
 /* basic top-down menu section */
 
 static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
@@ -418,3 +419,4 @@ static void displayEdit::changeItem(uint8_t changeDir)
 }
 
 #endif // defined(useScreenEditor)
+#endif // defined(useButtonInput)

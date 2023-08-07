@@ -28,10 +28,10 @@ MT                - reset tank trip (and partial, if configured) and save to EEP
 !                 - initialize and output selected trip functions
 RdddddddddddK     - store pPulsesPerDistanceIdx value to EEPROM
 SdddddddddddK     - store pMicroSecondsPerGallonIdx value to EEPROM
-TdddddddddddK     - store pCrankRevPerInjIdx value to EEPROM
+TdddddddddddK     - store pInjPer2CrankRevIdx value to EEPROM
 UdddddddddddK     - store pMetricModeIdx value to EEPROM
 VdddddddddddK     - store pTankSizeIdx value to EEPROM
-WdddddddddddK     - store pInjectorOpeningTimeIdx value to EEPROM
+WdddddddddddK     - store pInjectorSettleTimeIdx value to EEPROM
 XdddddddddddK     - store pVSSpauseIdx value to EEPROM
 YdddddddddddK     - store pInjEdgeTriggerIdx value to EEPROM
 ZdddddddddddK     - store pVoltageOffset value to EEPROM
@@ -58,10 +58,10 @@ output set from MM command
 --------------------------
 Rddddddddddd      - pPulsesPerDistanceIdx
 Sddddddddddd      - pMicroSecondsPerGallonIdx
-Tddddddddddd      - pCrankRevPerInjIdx
+Tddddddddddd      - pInjPer2CrankRevIdx
 Uddddddddddd      - pMetricModeIdx
 Vddddddddddd      - pTankSizeIdx
-Wddddddddddd      - pInjectorOpeningTimeIdx
+Wddddddddddd      - pInjectorSettleTimeIdx
 Xddddddddddd      - pVSSpauseIdx
 Yddddddddddd      - pInjEdgeTriggerIdx
 Zddddddddddd      - pVoltageOffset
@@ -81,7 +81,7 @@ static const uint8_t btoFlagContinuousOutput =	0b00100000;
 static const uint8_t btoFlagDelay =				0b00010000;
 static const uint8_t btoFlagFlushBuffer =		0b00001000;
 
-static const uint8_t btoOutputFlags =			(btoFlagActiveOutput | btoFlagSingleShotOutput | btoFlagContinuousOutput);
+static const uint8_t btoOutputFlags =			(btoFlagActiveOutput | btoFlagSingleShotOutput | btoFlagContinuousOutput | btoFlagDelay | btoFlagFlushBuffer);
 static const uint8_t btoOutputEnabledFlags =	(btoFlagSingleShotOutput | btoFlagContinuousOutput);
 static const uint8_t btoOutputActiveFlags =		(btoFlagActiveOutput | btoFlagDelay | btoFlagFlushBuffer);
 
@@ -120,10 +120,10 @@ static const bluetoothFunction btFunctionList[] PROGMEM = {
 #endif // defined(usePartialRefuel)
 	,{'R',	((pPulsesPerDistanceIdx << 8 ) |		(tGetBTparameterValue))}
 	,{'S',	((pMicroSecondsPerGallonIdx << 8 ) |	(tGetBTparameterValue))}
-	,{'T',	((pCrankRevPerInjIdx << 8 ) |			(tGetBTparameterValue))}
+	,{'T',	((pInjPer2CrankRevIdx << 8 ) |			(tGetBTparameterValue))}
 	,{'U',	((pMetricModeIdx << 8 ) |				(tGetBTparameterValue))}
 	,{'V',	((pTankSizeIdx << 8 ) |					(tGetBTparameterValue))}
-	,{'W',	((pInjectorOpeningTimeIdx << 8 ) |		(tGetBTparameterValue))}
+	,{'W',	((pInjectorSettleTimeIdx << 8 ) |		(tGetBTparameterValue))}
 	,{'X',	((pVSSpauseIdx << 8 ) |					(tGetBTparameterValue))}
 	,{'Y',	((pInjEdgeTriggerIdx << 8 ) |			(tGetBTparameterValue))}
 #if defined(useCarVoltageOutput)

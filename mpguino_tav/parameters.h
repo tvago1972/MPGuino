@@ -21,6 +21,7 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 
 };
 
+#if defined(useButtonInput)
 static const uint8_t displayCountMain = 9			// count of base number of data displays
 #if defined(trackIdleEOCdata)
 	+ 3												// count of Idle/EOC tracking data displays
@@ -171,6 +172,7 @@ static const uint8_t displayEditDisplayIdx =		nextAllowedValue;
 
 static const char displayCountTotal =				nextAllowedValue;
 
+#endif // defined(useButtonInput)
 static const uint8_t guinosig =		0b10110111;
 
 // start of remarkably long EEPROM stored settings section
@@ -182,9 +184,8 @@ static const uint8_t pSizeMetricMode =					1;
 static const uint8_t pSizeAlternateFE =					1;
 static const uint8_t pSizeMicroSecondsPerGallon =		32;
 static const uint8_t pSizeInjEdgeTrigger =				1;
-static const uint8_t pSizeInjectorOpeningTime =			16;
-static const uint8_t pSizeInjectorClosingTime =			16;
-static const uint8_t pSizeCrankRevPerInj =				8;
+static const uint8_t pSizeInjectorSettleTime =			16;
+static const uint8_t pSizeInjPer2CrankRev =				8;
 static const uint8_t pSizeMinGoodRPM =					16;
 static const uint8_t pSizePulsesPerDistance =			18;
 static const uint8_t pSizeVSSpause =					8;
@@ -196,10 +197,12 @@ static const uint8_t pSizeEOCtimeout =					8;
 static const uint8_t pSizeButtonTimeout =				8;
 static const uint8_t pSizeParkTimeout =					8;
 static const uint8_t pSizeActivityTimeout =				8;
-static const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
-static const uint8_t pSizeWakeupResetCurrentOnMove =	1;
 static const uint8_t pSizeScratchpad =					32;
 
+#if defined(useButtonInput)
+static const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
+static const uint8_t pSizeWakeupResetCurrentOnMove =	1;
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 #if defined(useBinaryLCDbrightness)
 static const uint8_t pSizeBrightness =					1;
@@ -330,10 +333,9 @@ static const uint16_t pAddressMetricMode =					pAddressSignature + byteSize(pSiz
 static const uint16_t pAddressAlternateFE =					pAddressMetricMode + byteSize(pSizeMetricMode);
 static const uint16_t pAddressMicroSecondsPerGallon =		pAddressAlternateFE + byteSize(pSizeAlternateFE);;
 static const uint16_t pAddressInjEdgeTrigger =				pAddressMicroSecondsPerGallon + byteSize(pSizeMicroSecondsPerGallon);
-static const uint16_t pAddressInjectorOpeningTime =			pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
-static const uint16_t pAddressInjectorClosingTime =			pAddressInjectorOpeningTime + byteSize(pSizeInjectorOpeningTime);
-static const uint16_t pAddressCrankRevPerInj =				pAddressInjectorClosingTime + byteSize(pSizeInjectorClosingTime);
-static const uint16_t pAddressMinGoodRPM =					pAddressCrankRevPerInj + byteSize(pSizeCrankRevPerInj);
+static const uint16_t pAddressInjectorSettleTime =			pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
+static const uint16_t pAddressInjPer2CrankRev =				pAddressInjectorSettleTime + byteSize(pSizeInjectorSettleTime);
+static const uint16_t pAddressMinGoodRPM =					pAddressInjPer2CrankRev + byteSize(pSizeInjPer2CrankRev);
 static const uint16_t pAddressPulsesPerDistance =			pAddressMinGoodRPM + byteSize(pSizeMinGoodRPM);
 static const uint16_t pAddressVSSpause =					pAddressPulsesPerDistance + byteSize(pSizePulsesPerDistance);
 static const uint16_t pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVSSpause);
@@ -344,11 +346,14 @@ static const uint16_t pAddressEOCtimeout =					pAddressIdleTimeout + byteSize(pS
 static const uint16_t pAddressButtonTimeout =				pAddressEOCtimeout + byteSize(pSizeEOCtimeout);
 static const uint16_t pAddressParkTimeout =					pAddressButtonTimeout + byteSize(pSizeButtonTimeout);
 static const uint16_t pAddressActivityTimeout =				pAddressParkTimeout + byteSize(pSizeParkTimeout);
-static const uint16_t pAddressWakeupResetCurrentOnEngine =	pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
-static const uint16_t pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
-static const uint16_t pAddressScratchpad =					pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove);
+static const uint16_t pAddressScratchpad =					pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
 #define nextAllowedValue pAddressScratchpad + byteSize(pSizeScratchpad)
 
+#if defined(useButtonInput)
+static const uint16_t pAddressWakeupResetCurrentOnEngine =	nextAllowedValue;
+static const uint16_t pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
+#define nextAllowedValue pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove)
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 static const uint16_t pAddressBrightness =					nextAllowedValue;
 #define nextAllowedValue pAddressBrightness + byteSize(pSizeBrightness)
@@ -514,10 +519,9 @@ static const uint8_t pMetricModeIdx =					pSignatureIdx + 1;
 static const uint8_t pAlternateFEidx =					pMetricModeIdx + 1;
 static const uint8_t pMicroSecondsPerGallonIdx =		pAlternateFEidx + 1;
 static const uint8_t pInjEdgeTriggerIdx =				pMicroSecondsPerGallonIdx + 1;
-static const uint8_t pInjectorOpeningTimeIdx =			pInjEdgeTriggerIdx + 1;
-static const uint8_t pInjectorClosingTimeIdx =			pInjectorOpeningTimeIdx + 1;
-static const uint8_t pCrankRevPerInjIdx =				pInjectorClosingTimeIdx + 1;
-static const uint8_t pMinGoodRPMidx =					pCrankRevPerInjIdx + 1;
+static const uint8_t pInjectorSettleTimeIdx =			pInjEdgeTriggerIdx + 1;
+static const uint8_t pInjPer2CrankRevIdx =				pInjectorSettleTimeIdx + 1;
+static const uint8_t pMinGoodRPMidx =					pInjPer2CrankRevIdx + 1;
 static const uint8_t pPulsesPerDistanceIdx =			pMinGoodRPMidx + 1;
 static const uint8_t pVSSpauseIdx =						pPulsesPerDistanceIdx + 1;
 static const uint8_t pMinGoodSpeedidx =					pVSSpauseIdx + 1;
@@ -528,11 +532,14 @@ static const uint8_t pEOCtimeoutIdx =					pIdleTimeoutIdx + 1;
 static const uint8_t pButtonTimeoutIdx =				pEOCtimeoutIdx + 1;
 static const uint8_t pParkTimeoutIdx =					pButtonTimeoutIdx + 1;
 static const uint8_t pActivityTimeoutIdx =				pParkTimeoutIdx + 1;
-static const uint8_t pWakeupResetCurrentOnEngineIdx =	pActivityTimeoutIdx + 1;
-static const uint8_t pWakeupResetCurrentOnMoveIdx =		pWakeupResetCurrentOnEngineIdx + 1;
-static const uint8_t pScratchpadIdx =					pWakeupResetCurrentOnMoveIdx + 1;
+static const uint8_t pScratchpadIdx =					pActivityTimeoutIdx + 1;
 #define nextAllowedValue pScratchpadIdx + 1
 
+#if defined(useButtonInput)
+static const uint8_t pWakeupResetCurrentOnEngineIdx =	nextAllowedValue;
+static const uint8_t pWakeupResetCurrentOnMoveIdx =		pWakeupResetCurrentOnEngineIdx + 1;
+#define nextAllowedValue pWakeupResetCurrentOnMoveIdx + 1
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 static const uint8_t pBrightnessIdx =					nextAllowedValue;
 #define nextAllowedValue pBrightnessIdx + 1
@@ -712,9 +719,8 @@ static const char terminalParameterNames[] PROGMEM = {
 	"pAlternateFEidx" tcEOSCR
 	"pMicroSecondsPerGallonIdx" tcEOSCR
 	"pInjEdgeTriggerIdx" tcEOSCR
-	"pInjectorOpeningTimeIdx" tcEOSCR
-	"pInjectorClosingTimeIdx" tcEOSCR
-	"pCrankRevPerInjIdx" tcEOSCR
+	"pInjectorSettleTimeIdx" tcEOSCR
+	"pInjPer2CrankRevIdx" tcEOSCR
 	"pMinGoodRPMidx" tcEOSCR
 	"pPulsesPerDistanceIdx" tcEOSCR
 	"pVSSpauseIdx" tcEOSCR
@@ -726,9 +732,11 @@ static const char terminalParameterNames[] PROGMEM = {
 	"pButtonTimeoutIdx" tcEOSCR
 	"pParkTimeoutIdx" tcEOSCR
 	"pActivityTimeoutIdx" tcEOSCR
+	"pScratchpadIdx" tcEOSCR
+#if defined(useButtonInput)
 	"pWakeupResetCurrentOnEngineIdx" tcEOSCR
 	"pWakeupResetCurrentOnMoveIdx" tcEOSCR
-	"pScratchpadIdx" tcEOSCR
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 	"pBrightnessIdx" tcEOSCR
 #if defined(useLCDcontrast)
@@ -1048,9 +1056,8 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	,(pSizeAlternateFE & 0x07) | pfChangeDisplay								// 0 - MPG or L/100km, 1 - G/100mile or km/L
 	,(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino				// Microseconds per US gallon
 	,(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,(pSizeInjectorOpeningTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Opening Delay Time (us)
-	,(pSizeInjectorClosingTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Closing Delay Time (us)
-	,(pSizeCrankRevPerInj & 0x07) | pfSoftwareInitMPGuino						// Crankshaft Revolutions per Fuel Injector Event
+	,(pSizeInjectorSettleTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Opening Delay Time (us)
+	,(pSizeInjPer2CrankRev & 0x07) | pfSoftwareInitMPGuino					// Crankshaft Revolutions per Fuel Injector Event
 	,(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino							// Minimum Engine Speed For Engine On (RPM)
 	,(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino					// VSS Pulses (per mile or per km)
 	,(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino								// VSS Pause Debounce Count (ms)
@@ -1062,9 +1069,11 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	,(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino						// Button Press Activity Timeout (s)
 	,(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino							// Vehicle Parked (engine off, no movement) Timeout (s)
 	,(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino						// Activity (engine off, no movement, no button press) Timeout (s)
+	,(pSizeScratchpad & 0x07)													// Scratchpad Memory
+#if defined(useButtonInput)
 	,(pSizeWakeupResetCurrentOnEngine & 0x07)									// Enable current trip reset upon wakeup due to engine running
 	,(pSizeWakeupResetCurrentOnMove & 0x07)										// Enable current trip reset upon wakeup due to vehicle movement
-	,(pSizeScratchpad & 0x07)													// Scratchpad Memory
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 	,(pSizeBrightness & 0x07) | pfChangeDisplay									// LCD Brightness
 #if defined(useLCDcontrast)
@@ -1188,9 +1197,8 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	,pAddressAlternateFE				// 0 - MPG or L/100km, 1 - G/100mile or km/L
 	,pAddressMicroSecondsPerGallon		// Microseconds per US gallon
 	,pAddressInjEdgeTrigger				// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,pAddressInjectorOpeningTime		// Fuel Injector Opening Delay Time (us)
-	,pAddressInjectorClosingTime		// Fuel Injector Closing Delay Time (us)
-	,pAddressCrankRevPerInj				// Crankshaft Revolutions per Fuel Injector Event
+	,pAddressInjectorSettleTime			// Fuel Injector Opening Delay Time (us)
+	,pAddressInjPer2CrankRev			// Fuel Injector Event Count for every 2 Crankshaft Revolutions
 	,pAddressMinGoodRPM					// Minimum Engine Speed For Engine On (RPM)
 	,pAddressPulsesPerDistance			// VSS Pulses (per mile or per km)
 	,pAddressVSSpause					// VSS Pause Debounce Count (ms)
@@ -1202,9 +1210,11 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	,pAddressButtonTimeout				// Button Press Activity Timeout (s)
 	,pAddressParkTimeout				// Vehicle Parked (engine off, no movement) Timeout (s)
 	,pAddressActivityTimeout			// Activity (engine off, no movement, no button press) Timeout (s)
+	,pAddressScratchpad					// Scratchpad Memory
+#if defined(useButtonInput)
 	,pAddressWakeupResetCurrentOnEngine	// Enable current trip reset upon wakeup due to engine running
 	,pAddressWakeupResetCurrentOnMove	// Enable current trip reset upon wakeup due to vehicle movement
-	,pAddressScratchpad					// Scratchpad Memory
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 	,pAddressBrightness					// LCD Brightness
 #if defined(useLCDcontrast)
@@ -1331,8 +1341,7 @@ static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
 	,133262651			// Microseconds per US gallon
 	,0					// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
 	,550				// Fuel Injector Response Delay Time (us)
-	,2000				// Fuel Injector Closing Delay Time (us)
-	,2					// Crankshaft Revolutions per Fuel Injector Event
+	,1					// Fuel Injector Event Count for every 2 Crankshaft Revolutions
 	,40					// Minimum Engine Speed For Engine On (RPM)
 	,10000				// VSS Pulses (per mile or per km)
 	,0					// VSS Pause Debounce Count (ms)
@@ -1344,10 +1353,12 @@ static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
 	,5					// Button Press Activity Timeout (s)
 	,5					// Vehicle Parked (engine off, no movement) Timeout (s)
 	,120				// Activity (engine off, no movement, no button press) Timeout (s)
-	,1					// Enable current trip reset upon wakeup due to engine running
-	,0					// Enable current trip reset upon wakeup due to button press
 	,0					// Scratchpad Memory
 
+#if defined(useButtonInput)
+	,1					// Enable current trip reset upon wakeup due to engine running
+	,0					// Enable current trip reset upon wakeup due to button press
+#endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 #if defined(useBinaryLCDbrightness)
 	,1					// LCD Brightness

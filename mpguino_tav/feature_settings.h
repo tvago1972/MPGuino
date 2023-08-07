@@ -1,3 +1,4 @@
+#if defined(useButtonInput)
 namespace settings /* EEPROM parameter settings menu support section prototype */
 {
 
@@ -52,7 +53,7 @@ static const uint8_t displayCountSettingsDisplay = 2
 #endif // defined(useBarFuelEconVsSpeed)
 ;
 
-static const uint8_t displayCountSettingsFuel = 6
+static const uint8_t displayCountSettingsFuel = 5
 #if defined(useFuelPressure)
 	+ 1
 #endif // defined(useFuelPressure)
@@ -165,7 +166,6 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 	"Microsec/USgal" tcEOSCR
 	"InjTrg 0-Dn 1-Up" tcEOSCR
 	"Inj Delay (us)" tcEOSCR
-	"InjCloseDly (us)" tcEOSCR
 	"Revs/Inj Pulse" tcEOSCR
 	"Min good RPM" tcEOSCR
 
@@ -289,9 +289,8 @@ static const char settingsParameterList[] PROGMEM = {
 #endif // useCalculatedFuelFactor
 	,pMicroSecondsPerGallonIdx
 	,pInjEdgeTriggerIdx
-	,pInjectorOpeningTimeIdx
-	,pInjectorClosingTimeIdx
-	,pCrankRevPerInjIdx
+	,pInjectorSettleTimeIdx
+	,pInjPer2CrankRevIdx
 	,pMinGoodRPMidx
 
 // vehicle speed sensor settings
@@ -359,6 +358,7 @@ static const char settingsParameterList[] PROGMEM = {
 	,pScratchpadIdx
 };
 
+#endif // defined(useButtonInput)
 const uint8_t nesLoadInitial =			0;
 const uint8_t nesLoadValue =			nesLoadInitial + 1;
 const uint8_t nesOnChange =				nesLoadValue + 1;
@@ -378,6 +378,8 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 {
 
 	static uint8_t sharedFunctionCall(uint8_t cmd);
+	static uint8_t onEEPROMchange(const uint8_t * sched, uint8_t parameterIdx);
+#if defined(useButtonInput)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void findLeft(void);
@@ -390,10 +392,11 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 	static void changeDigit(uint8_t dir);
 	static void save(void);
 	static void cancel(void);
-	static uint8_t onEEPROMchange(const uint8_t * sched, uint8_t parameterIdx);
+#endif // defined(useButtonInput)
 
 };
 
+#if defined(useButtonInput)
 static const char numberEditSaveCanx[] PROGMEM = {
 	" OK XX"
 };
@@ -404,7 +407,8 @@ static const char pseStatusMessages[] PROGMEM = {
 	"Param Reverted" tcEOS
 };
 
-static char pBuff[17]; // used by parameterEdit:: routines
+#endif // defined(useButtonInput)
+static char pBuff[17]; // used by parameterEdit::, bluetooth:: routines
 
 #if defined(usePartialRefuel)
 static const uint8_t prgmAddToPartialRefuel[] PROGMEM = {

@@ -531,6 +531,16 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
+	if (timer0Command & t0cInputReceived)
+	{
+
+		timer0Command &= ~(t0cInputReceived);
+		awakeFlags |= (aAwakeOnInput);
+		inputTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
+		activityFlags &= ~(afUserInputFlag | afActivityTimeoutFlag);
+
+	}
+
 	if (awakeFlags & aAwakeOnInput)
 	{
 
@@ -993,7 +1003,7 @@ ISR( INT1_vect )
 		{
 
 			// calculate good maximum fuel injector open time for injector pulse width sanity check
-			goodInjectorPulseLength = engineRotationPeriod - volatileVariables[(uint16_t)(vInjectorTotalDelayIdx)];
+			goodInjectorPulseLength = engineRotationPeriod - volatileVariables[(uint16_t)(vInjectorOpenDelayIdx)];
 
 			if (thisInjectorPulseLength > goodInjectorPulseLength) dirty &= ~(dGoodInjectorRead); // if measured pulse is larger than largest good pulse, signal that last injector read may be bad
 			else dirty |= (dGoodInjectorRead); // signal that last injector read is good

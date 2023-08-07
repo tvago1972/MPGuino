@@ -430,13 +430,13 @@ int main(void);
 #include "m_tft.h"
 #include "functions.h"
 #include "text.h"
-#include "feature_settings.h"
 #include "feature_bluetooth.h"
+#include "feature_outputpin.h"
+#include "feature_debug.h"
+#include "feature_settings.h"
 #include "feature_datalogging.h"
 #include "feature_bignum.h"
 #include "feature_bargraph.h"
-#include "feature_outputpin.h"
-#include "feature_debug.h"
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 #include "feature_base.h"
@@ -624,10 +624,12 @@ int main(void)
 	i = tripSave::doAutoAction(taaModeRead);
 
 #endif // defined(useSavedTrips)
+#if defined(useLCDoutput)
 	text::gotoXY(devLCD, 0, 0);
 	text::stringOut(devLCD, titleMPGuino);
 	text::stringOut(devLCD, dateMPGuino);
 
+#endif // defined(useLCDoutput)
 #if defined(outputLoggingSplash)
 	text::stringOut(devLogOutput, titleMPGuino);
 	text::stringOut(devLogOutput, dateMPGuino);
@@ -662,8 +664,10 @@ int main(void)
 #endif // defined(useTestButtonValues)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
+#if defined(useLCDoutput)
 	if (i) text::statusOut(devLCD, PSTR("AutoRestore Done"));
 
+#endif // defined(useLCDoutput)
 #endif // defined(useSavedTrips)
 #if defined(useCPUreading)
 	mainStart = systemInfo::cycles0();
@@ -720,7 +724,9 @@ int main(void)
 #if defined(useTFToutput)
 				TFT::init(); // re-initialize TFT device
 #endif // defined(useTFToutput)
+#if defined(useButtonInput)
 				cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
+#endif // defined(useButtonInput)
 
 			}
 
@@ -731,8 +737,11 @@ int main(void)
 
 			changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
 
-			if (((activityFlags & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent(); // if engine start is detected
+#if defined(useButtonInput)
+			// if engine start is detected
+			if (((activityFlags & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
 
+#endif // defined(useButtonInput)
 		}
 
 		if (activityChangeFlags & afVehicleStoppedFlag)
@@ -740,9 +749,11 @@ int main(void)
 
 			changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
 
+#if defined(useButtonInput)
 			// if vehicle movement is detected
 			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
+#endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
 			// if vehicle is stopped
 			if ((activityFlags & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
@@ -779,7 +790,10 @@ int main(void)
 
 #endif // defined(useWindowTripFilter)
 #if defined(useSavedTrips)
-				if (tripSave::doAutoAction(taaModeWrite)) text::statusOut(devLCD, PSTR("AutoSave Done"));
+				i = tripSave::doAutoAction(taaModeWrite);
+#if defined(useLCDoutput)
+				if (i) text::statusOut(devLCD, PSTR("AutoSave Done"));
+#endif // defined(useLCDoutput)
 
 #endif // defined(useSavedTrips)
 			}
@@ -880,7 +894,9 @@ int main(void)
 				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
 				case 0: // engine running and vehicle in motion
 				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
+#if defined(useButtonInput)
 					cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
+#endif // defined(useButtonInput)
 					break;
 
 				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
@@ -894,7 +910,9 @@ int main(void)
 					break;
 
 				default: // handle unexpected cases
+#if defined(useLCDoutput)
 					text::hexByteOut(devLCD, i);
+#endif // defined(useLCDoutput)
 					break;
 
 			}

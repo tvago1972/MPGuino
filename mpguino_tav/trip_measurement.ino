@@ -412,7 +412,33 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 
 }
 
+static void tripSupport::doResetTrip(uint8_t tripSlot)
+{
+
+	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot)]));
+#if defined(trackIdleEOCdata)
+	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot + 2)]));
+#endif // defined(trackIdleEOCdata)
+
+#if defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
+	if (tripSlot)
+	{
+
+#if defined(useBarFuelEconVsSpeed)
+		bgFEvsSsupport::reset();
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(usePartialRefuel)
+		EEPROM::writeByte(pRefuelSizeIdx, 0); // since we're zeroing out pRefuelSizeIdx, we can use writeByte instead of writeVal
+
+#endif // defined(usePartialRefuel)
+	}
+
+#endif // defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
+}
+
 #if defined(useEnhancedTripReset)
+#if defined(useButtonInput)
 static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -554,6 +580,7 @@ static void tripSave::goSaveCurrent(void)
 
 }
 
+#endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 static uint8_t tripSave::doAutoAction(uint8_t taaMode)
 {
@@ -600,6 +627,7 @@ static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 
 #endif // defined(useSavedTrips)
 #endif // defined(useEnhancedTripReset)
+#if defined(useButtonInput)
 static void tripSupport::resetCurrent(void)
 {
 
@@ -623,31 +651,7 @@ static void tripSupport::outputResetStatus(uint8_t tripSlot)
 
 }
 
-static void tripSupport::doResetTrip(uint8_t tripSlot)
-{
-
-	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot)]));
-#if defined(trackIdleEOCdata)
-	tripVar::reset(pgm_read_byte(&tripSelectList[(uint16_t)(tripSlot + 2)]));
-#endif // defined(trackIdleEOCdata)
-
-#if defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
-	if (tripSlot)
-	{
-
-#if defined(useBarFuelEconVsSpeed)
-		bgFEvsSsupport::reset();
-
-#endif // defined(useBarFuelEconVsSpeed)
-#if defined(usePartialRefuel)
-		EEPROM::writeByte(pRefuelSizeIdx, 0); // since we're zeroing out pRefuelSizeIdx, we can use writeByte instead of writeVal
-
-#endif // defined(usePartialRefuel)
-	}
-
-#endif // defined(useBarFuelEconVsSpeed) || defined(usePartialRefuel)
-}
-
+#endif // defined(useButtonInput)
 #if defined(useWindowTripFilter)
 static void tripSupport::resetWindowFilter(void)
 {

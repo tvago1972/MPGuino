@@ -341,10 +341,12 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 	static void init(void);
 	static void idleProcess(void);
 	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
+	static void doResetTrip(uint8_t tripSlot);
+#if defined(useButtonInput)
 	static void resetCurrent(void);
 	static void resetTank(void);
-	static void doResetTrip(uint8_t tripSlot);
 	static void outputResetStatus(uint8_t tripSlot);
+#endif // defined(useButtonInput)
 #if defined(useWindowTripFilter)
 	static void resetWindowFilter(void);
 #endif // defined(useWindowTripFilter)
@@ -441,9 +443,11 @@ static const uint16_t pressureCorrectPageFormats[4] PROGMEM = {
 namespace tripSave /* Trip save/restore/reset display support section prototype */
 {
 
+#if defined(useButtonInput)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static void goSaveCurrent(void);
 	static void goSaveTank(void);
+#endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 	static uint8_t doReadTrip(uint8_t tripSlot);
 	static uint8_t doWriteTrip(uint8_t tripSlot);

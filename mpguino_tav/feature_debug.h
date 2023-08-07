@@ -29,8 +29,10 @@ extern char *__brkval;
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
 {
 
+#if defined(useButtonInput)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
+#endif // defined(useButtonInput)
 	static void configurePorts(void);
 	static void idleProcessFuel(void);
 	static void idleProcessVSS(void);
@@ -49,6 +51,7 @@ static const uint8_t debugFIreadyFlags =		debugFIPready | debugInjectorFlag;
 static const unsigned long debugVSSresetLength = (unsigned long)(ceil)((2ul * F_CPU) / (2ul * 255ul)) - 1; // 2 sec
 static const unsigned long debugFIPresetLength = (unsigned long)(ceil)((4ul * F_CPU) / (3ul * 2ul * 255ul)) - 1; // 4/3 sec
 
+#if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
 	 (instantIdx << 8 ) |		(tInjectorTotalTime) 		// Debug
 	,(instantIdx << 8 ) |		(tVSStotalTime)
@@ -63,6 +66,7 @@ static const char debugScreenFuncNames[] PROGMEM = {
 	"FI ON   VSS OFF" tcEOS
 };
 
+#endif // defined(useButtonInput)
 static const uint16_t debugVSSvalues[] PROGMEM = {
  65535
 ,2258
@@ -334,7 +338,7 @@ static const uint8_t peekBluetoothInput =		0b01000000;
 
 static const char terminalPeekStr[] PROGMEM = {
 	"peek: " tcEOS
-	"ECHO" tcOTOG "0" tcEOS
+	"STATUS" tcOTOG "0" tcEOS
 #if defined(useBluetooth)
 	"BTinp" tcOTOG "0" tcEOS
 #else // defined(useBluetooth)

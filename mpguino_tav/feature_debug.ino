@@ -506,7 +506,7 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 {
 
-	outputTripFunctionValue(devDebugTerminal, terminalIdx, lineNumber, termNumberBuff, decWindow, dfOutputTripChar);
+	outputTripFunctionValue(devDebugTerminal, terminalIdx, lineNumber, termNumberBuff, decWindow, (dfOutputLabel | dfOutputTripChar));
 
 }
 
@@ -743,6 +743,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 					case 0x0D:
 						text::charOut(devDebugTerminal, 0x0D);
+						changeBitFlags(timer0Command, 0, t0cInputReceived);
 						terminalState++;
 						break;
 
@@ -1445,6 +1446,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugTerminal)
 #if defined(useSimulatedFIandVSS)
+#if defined(useButtonInput)
 static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -1500,6 +1502,7 @@ static uint16_t signalSim::getSignalSimPageFormats(uint8_t formatIdx)
 
 }
 
+#endif // defined(useButtonInput)
 static void signalSim::configurePorts(void)
 {
 

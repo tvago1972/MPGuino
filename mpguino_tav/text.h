@@ -36,8 +36,11 @@ static const char overFlow9Str[] PROGMEM = "9999999999";
 
 static const uint8_t dfOverflow9s =			0b10000000;
 static const uint8_t dfIgnoreDecimalPoint =	0b01000000;
-static const uint8_t dfSuppressLabel =		0b00100000;
-static const uint8_t dfOutputTripChar =		0b00010000;
+static const uint8_t dfSuppressAutoRange =	0b00100000;
+
+static const uint8_t dfOutputLabel =		0b00010000;
+static const uint8_t dfOutputTripChar =		0b00001000;
+static const uint8_t dfBluetoothOutput =	0b00000100;
 
 static const uint8_t prgmMultiplyBy100[] PROGMEM = {
 	instrMul2byByte, 100,								// multiply result by 100
