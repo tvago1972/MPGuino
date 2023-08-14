@@ -430,7 +430,7 @@ static const char titleMPGuino[] PROGMEM = {
 };
 
 static const char dateMPGuino[] PROGMEM = {
-	"2023-JUL-31" tcEOSCR
+	"2023-AUG-14" tcEOSCR
 };
 
 static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
