@@ -193,11 +193,14 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpFEvsSpeedQuantumIdx,		// store speed quantum in (VSS pulses)(* 1000) / (second)
 
 #endif // defined(useBarFuelEconVsSpeed)
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 	instrLdRegByte, 0x02, 0,
 	instrStRegMain, 0x02, mpMainLoopAccumulatorIdx,		// initialize the cpu utilization stopwatch timer values
 	instrStRegMain, 0x02, mpIdleAccumulatorIdx,
+
+#endif	// defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
+	instrLdRegByte, 0x02, 0,
 	instrStRegVolatile, 0x02, vInterruptAccumulatorIdx,
 	instrStRegMain, 0x02, mpDebugAccMainLoopIdx,
 	instrStRegMain, 0x02, mpDebugAccIdleIdx,
@@ -211,7 +214,6 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpDebugCountS64divIdx,
 #endif // defined(useDebugCPUreading)
 
-#endif	// defined(useCPUreading)
 #if defined(useDragRaceFunction)
 	instrLdRegEEPROM, 0x02, pDragSpeedIdx,				// load acceleration test full speed parameter in (distance)(* 1000) / (hour)
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulse)(* 1000) / (hour)

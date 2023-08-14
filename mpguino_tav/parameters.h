@@ -714,327 +714,327 @@ static const uint8_t eePtrEnd =							nextAllowedValue;
 /* labels for parameters definitions above */
 
 static const char terminalParameterNames[] PROGMEM = {
-	"pSignatureIdx" tcEOSCR
-	"pMetricModeIdx" tcEOSCR
-	"pAlternateFEidx" tcEOSCR
-	"pMicroSecondsPerGallonIdx" tcEOSCR
-	"pInjEdgeTriggerIdx" tcEOSCR
-	"pInjectorSettleTimeIdx" tcEOSCR
-	"pInjPer2CrankRevIdx" tcEOSCR
-	"pMinGoodRPMidx" tcEOSCR
-	"pPulsesPerDistanceIdx" tcEOSCR
-	"pVSSpauseIdx" tcEOSCR
-	"pMinGoodSpeedidx" tcEOSCR
-	"pTankSizeIdx" tcEOSCR
-	"pTankBingoSizeIdx" tcEOSCR
-	"pIdleTimeoutIdx" tcEOSCR
-	"pEOCtimeoutIdx" tcEOSCR
-	"pButtonTimeoutIdx" tcEOSCR
-	"pParkTimeoutIdx" tcEOSCR
-	"pActivityTimeoutIdx" tcEOSCR
-	"pScratchpadIdx" tcEOSCR
+	"pSignatureIdx" tcEOS
+	"pMetricModeIdx" tcEOS
+	"pAlternateFEidx" tcEOS
+	"pMicroSecondsPerGallonIdx" tcEOS
+	"pInjEdgeTriggerIdx" tcEOS
+	"pInjectorSettleTimeIdx" tcEOS
+	"pInjPer2CrankRevIdx" tcEOS
+	"pMinGoodRPMidx" tcEOS
+	"pPulsesPerDistanceIdx" tcEOS
+	"pVSSpauseIdx" tcEOS
+	"pMinGoodSpeedidx" tcEOS
+	"pTankSizeIdx" tcEOS
+	"pTankBingoSizeIdx" tcEOS
+	"pIdleTimeoutIdx" tcEOS
+	"pEOCtimeoutIdx" tcEOS
+	"pButtonTimeoutIdx" tcEOS
+	"pParkTimeoutIdx" tcEOS
+	"pActivityTimeoutIdx" tcEOS
+	"pScratchpadIdx" tcEOS
 #if defined(useButtonInput)
-	"pWakeupResetCurrentOnEngineIdx" tcEOSCR
-	"pWakeupResetCurrentOnMoveIdx" tcEOSCR
+	"pWakeupResetCurrentOnEngineIdx" tcEOS
+	"pWakeupResetCurrentOnMoveIdx" tcEOS
 #endif // defined(useButtonInput)
 #if defined(useLCDoutput)
-	"pBrightnessIdx" tcEOSCR
+	"pBrightnessIdx" tcEOS
 #if defined(useLCDcontrast)
-	"pContrastIdx" tcEOSCR
+	"pContrastIdx" tcEOS
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-	"pLCDcolorIdx" tcEOSCR
+	"pLCDcolorIdx" tcEOS
 #endif // defined(useAdafruitRGBLCDshield)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	"pCostPerQuantity" tcEOSCR
+	"pCostPerQuantity" tcEOS
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	"pOutputPin1Mode" tcEOSCR
-	"pOutputPin2Mode" tcEOSCR
+	"pOutputPin1Mode" tcEOS
+	"pOutputPin2Mode" tcEOS
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-	"pVoltageOffset" tcEOSCR
+	"pVoltageOffset" tcEOS
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-	"pSerialDataLoggingIdx" tcEOSCR
+	"pSerialDataLoggingIdx" tcEOS
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-	"pJSONoutputIdx" tcEOSCR
+	"pJSONoutputIdx" tcEOS
 #endif // defined(useJSONoutput)
 #if defined(useBarFuelEconVsTime)
-	"pFEvsTimeIdx" tcEOSCR
+	"pFEvsTimeIdx" tcEOS
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	"pBarLowSpeedCutoffIdx" tcEOSCR
-	"pBarSpeedQuantumIdx" tcEOSCR
+	"pBarLowSpeedCutoffIdx" tcEOS
+	"pBarSpeedQuantumIdx" tcEOS
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	"pSysFuelPressureIdx" tcEOSCR
+	"pSysFuelPressureIdx" tcEOS
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	"pRefFuelPressureIdx" tcEOSCR
-	"pInjectorCountIdx" tcEOSCR
-	"pInjectorSizeIdx" tcEOSCR
+	"pRefFuelPressureIdx" tcEOS
+	"pInjectorCountIdx" tcEOS
+	"pInjectorSizeIdx" tcEOS
 #endif // useCalculatedFuelFactor
 #if defined(useChryslerMAPCorrection)
-	"pMAPsensorFloorIdx" tcEOSCR
-	"pMAPsensorCeilingIdx" tcEOSCR
-	"pMAPsensorRangeIdx" tcEOSCR
-	"pMAPsensorOffsetIdx" tcEOSCR
+	"pMAPsensorFloorIdx" tcEOS
+	"pMAPsensorCeilingIdx" tcEOS
+	"pMAPsensorRangeIdx" tcEOS
+	"pMAPsensorOffsetIdx" tcEOS
 #if defined(useChryslerBaroSensor)
-	"pBaroSensorFloorIdx" tcEOSCR
-	"pBaroSensorCeilingIdx" tcEOSCR
-	"pBaroSensorRangeIdx" tcEOSCR
-	"pBaroSensorOffsetIdx" tcEOSCR
+	"pBaroSensorFloorIdx" tcEOS
+	"pBaroSensorCeilingIdx" tcEOS
+	"pBaroSensorRangeIdx" tcEOS
+	"pBaroSensorOffsetIdx" tcEOS
 #else // defined(useChryslerBaroSensor)
-	"pBarometricPressureIdx" tcEOSCR
+	"pBarometricPressureIdx" tcEOS
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	"pVehicleMassIdx" tcEOSCR
+	"pVehicleMassIdx" tcEOS
 #if defined(useCoastDownCalculator)
-	"pVehicleFrontalAreaIdx" tcEOSCR
-	"pLocustDensityIdx" tcEOSCR
-	"pCoefficientDidx" tcEOSCR
-	"pCoefficientVidx" tcEOSCR
-	"pCoefficientRRidx" tcEOSCR
-	"pCoastdownSamplePeriodIdx" tcEOSCR
+	"pVehicleFrontalAreaIdx" tcEOS
+	"pLocustDensityIdx" tcEOS
+	"pCoefficientDidx" tcEOS
+	"pCoefficientVidx" tcEOS
+	"pCoefficientRRidx" tcEOS
+	"pCoastdownSamplePeriodIdx" tcEOS
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	"pDragSpeedIdx" tcEOSCR
-	"pDragDistanceIdx" tcEOSCR
-	"pDragAutoFlagIdx" tcEOSCR
+	"pDragSpeedIdx" tcEOS
+	"pDragDistanceIdx" tcEOS
+	"pDragAutoFlagIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #if defined(useSavedTrips)
-	"pAutoSaveActiveIdx" tcEOSCR
+	"pAutoSaveActiveIdx" tcEOS
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
-	"pRefuelSizeIdx" tcEOSCR
+	"pRefuelSizeIdx" tcEOS
 #endif // defined(usePartialRefuel)
 
 #if defined(useButtonInput)
-	"pDisplayIdx" tcEOSCR
+	"pDisplayIdx" tcEOS
 #if LCDcharHeight == 4
-	"pBottomDisplayIdx" tcEOSCR
-	"pBottomCursorIdx" tcEOSCR
+	"pBottomDisplayIdx" tcEOS
+	"pBottomCursorIdx" tcEOS
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 #if defined(useEEPROMtripStorage)
 #if defined(usePartialRefuel)
-	"pRefuelSaveSizeIdx" tcEOSCR
+	"pRefuelSaveSizeIdx" tcEOS
 #endif // defined(usePartialRefuel)
-	"pCurrTripSignatureIdx" tcEOSCR
-	"pTankTripSignatureIdx" tcEOSCR
-	"pCurrTripVSSpulseIdx" tcEOSCR
-	"pCurrTripVSScycleIdx" tcEOSCR
-	"pCurrTripInjPulseIdx" tcEOSCR
-	"pCurrTripInjCycleIdx" tcEOSCR
-	"pCurrTripEngCycleIdx" tcEOSCR
-	"pTankTripVSSpulseIdx" tcEOSCR
-	"pTankTripVSScycleIdx" tcEOSCR
-	"pTankTripInjPulseIdx" tcEOSCR
-	"pTankTripInjCycleIdx" tcEOSCR
-	"pTankTripEngCycleIdx" tcEOSCR
+	"pCurrTripSignatureIdx" tcEOS
+	"pTankTripSignatureIdx" tcEOS
+	"pCurrTripVSSpulseIdx" tcEOS
+	"pCurrTripVSScycleIdx" tcEOS
+	"pCurrTripInjPulseIdx" tcEOS
+	"pCurrTripInjCycleIdx" tcEOS
+	"pCurrTripEngCycleIdx" tcEOS
+	"pTankTripVSSpulseIdx" tcEOS
+	"pTankTripVSScycleIdx" tcEOS
+	"pTankTripInjPulseIdx" tcEOS
+	"pTankTripInjCycleIdx" tcEOS
+	"pTankTripEngCycleIdx" tcEOS
 #if defined(trackIdleEOCdata)
-	"pCurrIEOCvssPulseIdx" tcEOSCR
-	"pCurrIEOCvssCycleIdx" tcEOSCR
-	"pCurrIEOCinjPulseIdx" tcEOSCR
-	"pCurrIEOCinjCycleIdx" tcEOSCR
-	"pCurrIEOCengCycleIdx" tcEOSCR
-	"pTankIEOCvssPulseIdx" tcEOSCR
-	"pTankIEOCvssCycleIdx" tcEOSCR
-	"pTankIEOCinjPulseIdx" tcEOSCR
-	"pTankIEOCinjCycleIdx" tcEOSCR
-	"pTankIEOCengCycleIdx" tcEOSCR
+	"pCurrIEOCvssPulseIdx" tcEOS
+	"pCurrIEOCvssCycleIdx" tcEOS
+	"pCurrIEOCinjPulseIdx" tcEOS
+	"pCurrIEOCinjCycleIdx" tcEOS
+	"pCurrIEOCengCycleIdx" tcEOS
+	"pTankIEOCvssPulseIdx" tcEOS
+	"pTankIEOCvssCycleIdx" tcEOS
+	"pTankIEOCinjPulseIdx" tcEOS
+	"pTankIEOCinjCycleIdx" tcEOS
+	"pTankIEOCengCycleIdx" tcEOS
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 #if defined(useScreenEditor)
-	"P00F00" tcEOSCR
-	"P00F01" tcEOSCR
-	"P00F02" tcEOSCR
-	"P00F03" tcEOSCR
+	"P00F00" tcEOS
+	"P00F01" tcEOS
+	"P00F02" tcEOS
+	"P00F03" tcEOS
 
-	"P01F00" tcEOSCR
-	"P01F01" tcEOSCR
-	"P01F02" tcEOSCR
-	"P01F03" tcEOSCR
+	"P01F00" tcEOS
+	"P01F01" tcEOS
+	"P01F02" tcEOS
+	"P01F03" tcEOS
 
-	"P02F00" tcEOSCR
-	"P02F01" tcEOSCR
-	"P02F02" tcEOSCR
-	"P02F03" tcEOSCR
+	"P02F00" tcEOS
+	"P02F01" tcEOS
+	"P02F02" tcEOS
+	"P02F03" tcEOS
 
-	"P03F00" tcEOSCR
-	"P03F01" tcEOSCR
-	"P03F02" tcEOSCR
-	"P03F03" tcEOSCR
+	"P03F00" tcEOS
+	"P03F01" tcEOS
+	"P03F02" tcEOS
+	"P03F03" tcEOS
 
-	"P04F00" tcEOSCR
-	"P04F01" tcEOSCR
-	"P04F02" tcEOSCR
-	"P04F03" tcEOSCR
+	"P04F00" tcEOS
+	"P04F01" tcEOS
+	"P04F02" tcEOS
+	"P04F03" tcEOS
 
-	"P05F00" tcEOSCR
-	"P05F01" tcEOSCR
-	"P05F02" tcEOSCR
-	"P05F03" tcEOSCR
-
-#if defined(trackIdleEOCdata)
-	"P06F00" tcEOSCR
-	"P06F01" tcEOSCR
-	"P06F02" tcEOSCR
-	"P06F03" tcEOSCR
-
-#endif // defined(trackIdleEOCdata)
-	"P07F00" tcEOSCR
-	"P07F01" tcEOSCR
-	"P07F02" tcEOSCR
-	"P07F03" tcEOSCR
-
-	"P08F00" tcEOSCR
-	"P08F01" tcEOSCR
-	"P08F02" tcEOSCR
-	"P08F03" tcEOSCR
+	"P05F00" tcEOS
+	"P05F01" tcEOS
+	"P05F02" tcEOS
+	"P05F03" tcEOS
 
 #if defined(trackIdleEOCdata)
-	"P09F00" tcEOSCR
-	"P09F01" tcEOSCR
-	"P09F02" tcEOSCR
-	"P09F03" tcEOSCR
-
-	"P10F00" tcEOSCR
-	"P10F01" tcEOSCR
-	"P10F02" tcEOSCR
-	"P10F03" tcEOSCR
+	"P06F00" tcEOS
+	"P06F01" tcEOS
+	"P06F02" tcEOS
+	"P06F03" tcEOS
 
 #endif // defined(trackIdleEOCdata)
-	"P11F00" tcEOSCR
-	"P11F01" tcEOSCR
-	"P11F02" tcEOSCR
-	"P11F03" tcEOSCR
+	"P07F00" tcEOS
+	"P07F01" tcEOS
+	"P07F02" tcEOS
+	"P07F03" tcEOS
+
+	"P08F00" tcEOS
+	"P08F01" tcEOS
+	"P08F02" tcEOS
+	"P08F03" tcEOS
+
+#if defined(trackIdleEOCdata)
+	"P09F00" tcEOS
+	"P09F01" tcEOS
+	"P09F02" tcEOS
+	"P09F03" tcEOS
+
+	"P10F00" tcEOS
+	"P10F01" tcEOS
+	"P10F02" tcEOS
+	"P10F03" tcEOS
+
+#endif // defined(trackIdleEOCdata)
+	"P11F00" tcEOS
+	"P11F01" tcEOS
+	"P11F02" tcEOS
+	"P11F03" tcEOS
 
 #endif // defined(useScreenEditor)
 
 #if defined(useButtonInput)
-	"baseMenuDisplayIdx" tcEOSCR
+	"baseMenuDisplayIdx" tcEOS
 #if defined(useExpandedMainDisplay)
-	"mainMenuDisplayIdx" tcEOSCR
+	"mainMenuDisplayIdx" tcEOS
 #endif // defined(useExpandedMainDisplay)
-	"settingsMenuDisplayIdx" tcEOSCR
+	"settingsMenuDisplayIdx" tcEOS
 
-	"displaySettingsDisplayIdx" tcEOSCR
-	"fuelSettingsDisplayIdx" tcEOSCR
-	"VSSsettingsDisplayIdx" tcEOSCR
-	"tankSettingsDisplayIdx" tcEOSCR
+	"displaySettingsDisplayIdx" tcEOS
+	"fuelSettingsDisplayIdx" tcEOS
+	"VSSsettingsDisplayIdx" tcEOS
+	"tankSettingsDisplayIdx" tcEOS
 #if defined(useChryslerMAPCorrection)
-	"CRFICsettingsDisplayIdx" tcEOSCR
+	"CRFICsettingsDisplayIdx" tcEOS
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	"acdSettingsDisplayIdx" tcEOSCR
+	"acdSettingsDisplayIdx" tcEOS
 #endif // defined(useVehicleParameters)
-	"timeoutSettingsDisplayIdx" tcEOSCR
-	"miscSettingsDisplayIdx" tcEOSCR
+	"timeoutSettingsDisplayIdx" tcEOS
+	"miscSettingsDisplayIdx" tcEOS
 
 #if defined(useSavedTrips)
-	"tripSaveCurrentDisplayIdx" tcEOSCR
+	"tripSaveCurrentDisplayIdx" tcEOS
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
-	"tripSaveTankDisplayIdx" tcEOSCR
+	"tripSaveTankDisplayIdx" tcEOS
 #endif // defined(useEnhancedTripReset)
 
 #if defined(useDragRaceFunction)
-	"dragRaceMenuDisplayIdx" tcEOSCR
+	"dragRaceMenuDisplayIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-	"coastdownMenuDisplayIdx" tcEOSCR
+	"coastdownMenuDisplayIdx" tcEOS
 #endif // defined(useCoastDownCalculator)
 #if defined(useSimulatedFIandVSS)
-	"signalSimDisplayIdx" tcEOSCR
+	"signalSimDisplayIdx" tcEOS
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useChryslerMAPCorrection)
-	"pressureDisplayIdx" tcEOSCR
+	"pressureDisplayIdx" tcEOS
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDebugAnalog)
-	"analogDisplayIdx" tcEOSCR
+	"analogDisplayIdx" tcEOS
 #endif // defined(useDebugAnalog)
 #if defined(useTestButtonValues)
-	"buttonDisplayIdx" tcEOSCR
+	"buttonDisplayIdx" tcEOS
 #endif // defined(useTestButtonValues)
 
-	"mainDisplayIdx" tcEOSCR
+	"mainDisplayIdx" tcEOS
 #if defined(useStatusMeter)
-	"statusMeterDisplayIdx" tcEOSCR
+	"statusMeterDisplayIdx" tcEOS
 #endif // defined(useStatusMeter)
 #if defined(useBigFE)
-	"bigFEdisplayIdx" tcEOSCR
+	"bigFEdisplayIdx" tcEOS
 #endif // defined(useBigFE)
 #if defined(useBarFuelEconVsTime)
-	"barFEvTdisplayIdx" tcEOSCR
+	"barFEvTdisplayIdx" tcEOS
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	"barFEvSdisplayIdx" tcEOSCR
+	"barFEvSdisplayIdx" tcEOS
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBigDTE)
-	"bigDTEdisplayIdx" tcEOSCR
+	"bigDTEdisplayIdx" tcEOS
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
-	"bigTTEdisplayIdx" tcEOSCR
+	"bigTTEdisplayIdx" tcEOS
 #endif // defined(useBigTTE)
 #if defined(useCPUreading)
-	"CPUmonDisplayIdx" tcEOSCR
+	"CPUmonDisplayIdx" tcEOS
 #endif // defined(useCPUreading)
 #if defined(useClockDisplay)
-	"clockShowDisplayIdx" tcEOSCR
+	"clockShowDisplayIdx" tcEOS
 #endif // defined(useClockDisplay)
 
-	"parameterEditDisplayIdx" tcEOSCR
+	"parameterEditDisplayIdx" tcEOS
 #if defined(useClockDisplay)
-	"clockSetDisplayIdx" tcEOSCR
+	"clockSetDisplayIdx" tcEOS
 #endif // defined(useClockDisplay)
 #if defined(useScreenEditor)
-	"displayEditDisplayIdx" tcEOSCR
+	"displayEditDisplayIdx" tcEOS
 #endif // defined(useScreenEditor)
 #if defined(useDragRaceFunction)
-	"dragRaceDisplayIdx" tcEOSCR
+	"dragRaceDisplayIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-	"coastdownDisplayIdx" tcEOSCR
+	"coastdownDisplayIdx" tcEOS
 #endif // defined(useCoastDownCalculator)
 
-	"topMenuIdx" tcEOSCR
+	"topMenuIdx" tcEOS
 
 #if defined(useExpandedMainDisplay)
-	"mainMenuIdx" tcEOSCR
+	"mainMenuIdx" tcEOS
 
 #endif // defined(useExpandedMainDisplay)
-	"settingsMenuIdx" tcEOSCR
+	"settingsMenuIdx" tcEOS
 
-	"displaySettingMenuIdx" tcEOSCR
-	"fuelSettingMenuIdx" tcEOSCR
-	"VSSsettingMenuIdx" tcEOSCR
-	"tankSettingMenuIdx" tcEOSCR
+	"displaySettingMenuIdx" tcEOS
+	"fuelSettingMenuIdx" tcEOS
+	"VSSsettingMenuIdx" tcEOS
+	"tankSettingMenuIdx" tcEOS
 #if defined(useChryslerMAPCorrection)
-	"CRFICsettingMenuIdx" tcEOSCR
+	"CRFICsettingMenuIdx" tcEOS
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	"acdSettingMenuIdx" tcEOSCR
+	"acdSettingMenuIdx" tcEOS
 #endif // defined(useVehicleParameters)
-	"timeoutSettingMenuIdx" tcEOSCR
-	"miscSettingMenuIdx" tcEOSCR
+	"timeoutSettingMenuIdx" tcEOS
+	"miscSettingMenuIdx" tcEOS
 
 #if defined(useSavedTrips)
-	"tripSaveCurrentMenuIdx" tcEOSCR
+	"tripSaveCurrentMenuIdx" tcEOS
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
-	"tripSaveTankMenuIdx" tcEOSCR
+	"tripSaveTankMenuIdx" tcEOS
 #endif // defined(useEnhancedTripReset)
 #if defined(useDragRaceFunction)
-	"accelTestMenuIdx" tcEOSCR
+	"accelTestMenuIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-	"coastdownTestMenuIdx" tcEOSCR
+	"coastdownTestMenuIdx" tcEOS
 #endif // defined(useCoastDownCalculator)
 #endif // defined(useButtonInput)
 };

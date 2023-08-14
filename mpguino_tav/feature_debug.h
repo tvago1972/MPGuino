@@ -1,30 +1,32 @@
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 namespace systemInfo /* CPU loading and RAM availability support section prototype */
 {
 
 	static void idleProcess(void);
+#if defined(useCPUreading)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
 	static void showCPUloading(void);
-	static uint16_t getAvailableRAMsize(void);
-	static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
-	static uint32_t cycles0(void);
+#endif // defined(useCPUreading)
 
 };
 
 static uint32_t mainStart;
 static uint32_t idleTimerLength;
+
+#if defined(useCPUreading)
+extern char __bss_end;
+extern char *__brkval;
+
+#endif // defined(useCPUreading)
 #if defined(useDebugCPUreading)
 static uint8_t monitorState;
 static uint32_t idleProcessTimerLength;
 static uint32_t displayTimerLength;
 static uint32_t SWEET64timerLength;
+
 #endif // defined(useDebugCPUreading)
-
-extern char __bss_end;
-extern char *__brkval;
-
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useSimulatedFIandVSS)
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
 {
@@ -308,14 +310,20 @@ static uint8_t decPlace;
 static uint8_t decWindow;
 static uint8_t decMode;
 
-static char termNumberBuff[17];
-
 static char terminalBuff[tBuffLength];
 
 static const char * labelList;
 static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
+
+static const char terminalPrimarySeparator[] PROGMEM = {
+	": " tcEOS
+};
+
+static const char terminalSecondarySeparator[] PROGMEM = {
+	" - " tcEOS
+};
 
 static const char terminalActivityFlagStr[] PROGMEM = {
 	"activityFlags: " tcEOS
