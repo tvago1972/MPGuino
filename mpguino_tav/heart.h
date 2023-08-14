@@ -1,22 +1,27 @@
 #if defined(__AVR_ATmega32U4__)
 #ifndef PRTIM4
 #define PRTIM4 4
-
 #endif // PRTIM4
 #endif // defined(__AVR_ATmega32U4__)
+namespace heart /* core MPGuino system support section prototype */
+{
 
-static void updateVSS(unsigned long thisVSStime);
-static void initCore(void);
-static void initHardware(void);
+	static void updateVSS(uint32_t thisVSStime);
+	static void initCore(void);
+	static void initHardware(void);
 #ifdef useDeepSleep
-static void doGoDeepSleep(void);
+	static void doGoDeepSleep(void);
 #endif // useDeepSleep
-static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
-static void doDelay0(void);
-static void delay0(uint16_t ms);
-static void delayS(uint16_t ms);
-static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
-static void performSleepMode(uint8_t sleepMode);
+	static uint32_t findCycle0Length(uint32_t lastCycle, uint32_t thisCycle);
+	static uint32_t findCycle0Length(uint32_t lastCycle);
+	static uint32_t cycles0(void);
+	static void doDelay0(uint8_t delay0Channel);
+	static uint8_t delay0(uint16_t ms);
+	static void delayS(uint16_t ms);
+	static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
+	static void performSleepMode(uint8_t sleepMode);
+
+};
 
 #if defined(useBuffering)
 typedef struct
@@ -118,6 +123,7 @@ static const unsigned int cursorDelayTick = (unsigned int)(ceil)((double)(t0Cycl
 static const unsigned int swapFEwithFCRdelay = (unsigned int)(ceil)((double)(3ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 3 second delay
 static const unsigned int holdDelay = (unsigned int)(ceil)((double)(2ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 2 second delay
 static const unsigned int delay1500msTick = (unsigned int)(ceil)((double)(15ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.5 second delay
+static const unsigned int delay0002msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 500ul)) - 1; // 2 millisecond delay
 static const unsigned int delay0005msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 200ul)) - 1; // 5 millisecond delay
 static const unsigned int delay0020msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 50ul)) - 1; // 20 millisecond delay
 static const unsigned int delay0100msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
@@ -192,14 +198,6 @@ static const uint8_t vCoastdownPeriodIdx =			vCoastdownMeasurement4Idx + 1;
 #define nextAllowedValue vCoastdownPeriodIdx + 1
 #endif // defined(useCoastDownCalculator)
 
-#if defined(useDebugTerminal)
-static const uint8_t vDebugValue1Idx =				nextAllowedValue;
-static const uint8_t vDebugValue2Idx =				vDebugValue1Idx + 1;
-static const uint8_t vDebugValue3Idx =				vDebugValue2Idx + 1;
-static const uint8_t vDebugValue4Idx =				vDebugValue3Idx + 1;
-#define nextAllowedValue vDebugValue4Idx + 1
-#endif // defined(useDebugTerminal)
-
 static const uint8_t vVariableMaxIdx =				nextAllowedValue;
 
 // main program variable array index values - these should NEVER be referenced inside an interrupt service routine
@@ -238,11 +236,16 @@ static const uint8_t mpFEvsSpeedQuantumIdx =		mpFEvsSpeedMinThresholdIdx + 1;		/
 
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading)
-static const uint8_t mpMainLoopAccumulatorIdx =		nextAllowedValue;					// main loop stopwatch direct measurement
-static const uint8_t mpIdleAccumulatorIdx =			mpMainLoopAccumulatorIdx + 1;		// stopwatch direct measurement of time that processor actually did jack and shit
-static const uint8_t mpAvailableRAMidx =			mpIdleAccumulatorIdx + 1;			// amount of remaining free RAM
+static const uint8_t mpAvailableRAMidx =			nextAllowedValue;					// amount of remaining free RAM
 #define nextAllowedValue mpAvailableRAMidx + 1
 
+#endif // defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+static const uint8_t mpMainLoopAccumulatorIdx =		nextAllowedValue;					// main loop stopwatch direct measurement
+static const uint8_t mpIdleAccumulatorIdx =			mpMainLoopAccumulatorIdx + 1;		// stopwatch direct measurement of time that processor actually did jack and shit
+#define nextAllowedValue mpIdleAccumulatorIdx + 1
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
 static const uint8_t mpDebugAccMainLoopIdx =		nextAllowedValue;					// copy of main loop stopwatch direct measurement
 static const uint8_t mpDebugAccIdleIdx =			mpDebugAccMainLoopIdx + 1;			// copy of stopwatch direct measurement of time that processor actually did jack and shit
@@ -262,7 +265,6 @@ static const uint8_t mpDebugCountS64sqrtIdx =		mpDebugAccS64sqrtIdx + 1;			// iS
 #endif // defined(useIsqrt)
 
 #endif // defined(useDebugCPUreading)
-#endif // defined(useCPUreading)
 #if defined(useBluetooth)
 static const uint8_t mpBluetoothMainValue =			nextAllowedValue;					// default string value after '!' read-in character
 #define nextAllowedValue mpBluetoothMainValue + 1
@@ -273,103 +275,99 @@ static const uint8_t mpVariableMaxIdx =				nextAllowedValue;
 #if defined(useDebugTerminalLabels)
 static const char terminalVolatileVarLabels[] PROGMEM = {
 #if defined(useCPUreading)
-	"vSystemCycleIdx" tcEOSCR					// timer0
+	"vSystemCycleIdx" tcEOS						// timer0
 #endif // defined(useCPUreading)
 #if defined(useSoftwareClock)
-	"vClockCycleIdx" tcEOSCR					// timer0
+	"vClockCycleIdx" tcEOS						// timer0
 #endif // defined(useSoftwareClock)
-	"vVehicleStopTimeoutIdx" tcEOSCR			// timer0
-	"vEngineOffTimeoutIdx" tcEOSCR				// timer0
-	"vButtonTimeoutIdx" tcEOSCR					// timer0
-	"vParkTimeoutIdx" tcEOSCR					// timer0
-	"vActivityTimeoutIdx" tcEOSCR				// timer0
-	"vDetectVehicleStopIdx" tcEOSCR				// vss
-	"vDetectEngineOffIdx" tcEOSCR				// fi open
-	"vMaximumVSSperiodIdx" tcEOSCR				// vss
-	"vMaximumEnginePeriodIdx" tcEOSCR			// fi close
-	"vInjectorOpenDelayIdx" tcEOSCR				// fi close
-	"vInjectorValidMaxWidthIdx" tcEOSCR			// fi close
+	"vVehicleStopTimeoutIdx" tcEOS				// timer0
+	"vEngineOffTimeoutIdx" tcEOS				// timer0
+	"vButtonTimeoutIdx" tcEOS					// timer0
+	"vParkTimeoutIdx" tcEOS						// timer0
+	"vActivityTimeoutIdx" tcEOS					// timer0
+	"vDetectVehicleStopIdx" tcEOS				// vss
+	"vDetectEngineOffIdx" tcEOS					// fi open
+	"vMaximumVSSperiodIdx" tcEOS				// vss
+	"vMaximumEnginePeriodIdx" tcEOS				// fi close
+	"vInjectorOpenDelayIdx" tcEOS				// fi close
+	"vInjectorValidMaxWidthIdx" tcEOS			// fi close
 #if defined(useChryslerMAPCorrection)
-	"vInjectorCorrectionIdx" tcEOSCR			// fi close
+	"vInjectorCorrectionIdx" tcEOS				// fi close
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useBarFuelEconVsTime)
-	"vFEvsTimePeriodTimeoutIdx" tcEOSCR			// timer0
+	"vFEvsTimePeriodTimeoutIdx" tcEOS			// timer0
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useDebugCPUreading)
-	"vInterruptAccumulatorIdx" tcEOSCR			// all interrupts
+	"vInterruptAccumulatorIdx" tcEOS			// all interrupts
 #endif // defined(useDebugCPUreading)
 #if defined(useDragRaceFunction)
-	"vDragRawInstantSpeedIdx" tcEOSCR			// vss
-	"vDragInstantSpeedIdx" tcEOSCR				// vss
-	"vDragRawTrapSpeedIdx" tcEOSCR				// vss
-	"vDragTrapSpeedIdx" tcEOSCR					// vss
-	"vAccelHalfPeriodValueIdx" tcEOSCR			// vss
-	"vAccelFullPeriodValueIdx" tcEOSCR			// vss
-	"vAccelDistanceValueIdx" tcEOSCR			// vss
+	"vDragRawInstantSpeedIdx" tcEOS				// vss
+	"vDragInstantSpeedIdx" tcEOS				// vss
+	"vDragRawTrapSpeedIdx" tcEOS				// vss
+	"vDragTrapSpeedIdx" tcEOS					// vss
+	"vAccelHalfPeriodValueIdx" tcEOS			// vss
+	"vAccelFullPeriodValueIdx" tcEOS			// vss
+	"vAccelDistanceValueIdx" tcEOS				// vss
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-	"vCoastdownPeriodIdx" tcEOSCR				// timer0, vss
-	"vCoastdownMeasurement1Idx" tcEOSCR			// vss
-	"vCoastdownMeasurement2Idx" tcEOSCR			// vss
-	"vCoastdownMeasurement3Idx" tcEOSCR			// vss
-	"vCoastdownMeasurement4Idx" tcEOSCR			// vss
+	"vCoastdownPeriodIdx" tcEOS					// timer0, vss
+	"vCoastdownMeasurement1Idx" tcEOS			// vss
+	"vCoastdownMeasurement2Idx" tcEOS			// vss
+	"vCoastdownMeasurement3Idx" tcEOS			// vss
+	"vCoastdownMeasurement4Idx" tcEOS			// vss
 #endif // defined(useCoastDownCalculator)
-//#if defined(useDebugTerminal)
-	"vDebugValue1Idx" tcEOSCR
-	"vDebugValue2Idx" tcEOSCR
-	"vDebugValue3Idx" tcEOSCR
-	"vDebugValue4Idx" tcEOSCR
-//#endif // defined(useDebugTerminal)
 };
 
 static const char terminalMainProgramVarLabels[] PROGMEM = {
-	"mpCyclesPerVolumeIdx" tcEOSCR				// main program only
-	"mpTankSizeIdx" tcEOSCR						// main program only
-	"mpBingoTankSizeIdx" tcEOSCR				// main program only
+	"mpCyclesPerVolumeIdx" tcEOS				// main program only
+	"mpTankSizeIdx" tcEOS						// main program only
+	"mpBingoTankSizeIdx" tcEOS					// main program only
 #if defined(usePartialRefuel)
-	"mpPartialRefuelTankSize" tcEOSCR			// main program only
+	"mpPartialRefuelTankSize" tcEOS				// main program only
 #endif // defined(usePartialRefuel)
 #if defined(useChryslerMAPCorrection)
-	"mpMAPpressureIdx" tcEOSCR					// main program only
-	"mpBaroPressureIdx" tcEOSCR					// main program only
-	"mpFuelPressureIdx" tcEOSCR					// main program only
-	"mpInjPressureIdx" tcEOSCR					// main program only
-	"mpAnalogMAPfloorIdx" tcEOSCR				// main program only
-	"mpAnalogMAPnumerIdx" tcEOSCR				// main program only
-	"mpAnalogMAPdenomIdx" tcEOSCR				// main program only
+	"mpMAPpressureIdx" tcEOS					// main program only
+	"mpBaroPressureIdx" tcEOS					// main program only
+	"mpFuelPressureIdx" tcEOS					// main program only
+	"mpInjPressureIdx" tcEOS					// main program only
+	"mpAnalogMAPfloorIdx" tcEOS					// main program only
+	"mpAnalogMAPnumerIdx" tcEOS					// main program only
+	"mpAnalogMAPdenomIdx" tcEOS					// main program only
 #if defined(useChryslerBaroSensor)
-	"mpAnalogBaroFloorIdx" tcEOSCR				// main program only
-	"mpAnalogBaroNumerIdx" tcEOSCR				// main program only
-	"mpAnalogBaroDenomIdx" tcEOSCR				// main program only
+	"mpAnalogBaroFloorIdx" tcEOS				// main program only
+	"mpAnalogBaroNumerIdx" tcEOS				// main program only
+	"mpAnalogBaroDenomIdx" tcEOS				// main program only
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useBarFuelEconVsSpeed)
-	"mpFEvsSpeedMinThresholdIdx" tcEOSCR		// main program only
-	"mpFEvsSpeedQuantumIdx" tcEOSCR				// main program only
+	"mpFEvsSpeedMinThresholdIdx" tcEOS			// main program only
+	"mpFEvsSpeedQuantumIdx" tcEOS				// main program only
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading)
-	"mpMainLoopAccumulatorIdx" tcEOSCR			// main program only
-	"mpIdleAccumulatorIdx" tcEOSCR				// main program only
-	"mpAvailableRAMidx" tcEOSCR					// main program only
+	"mpAvailableRAMidx" tcEOS					// main program only
+#endif // defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	"mpMainLoopAccumulatorIdx" tcEOS			// main program only
+	"mpIdleAccumulatorIdx" tcEOS				// main program only
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
-	"mpDebugAccMainLoopIdx" tcEOSCR				// main program only
-	"mpDebugAccIdleIdx" tcEOSCR					// main program only
-	"mpDebugAccIdleProcessIdx" tcEOSCR			// main program only
-	"mpDebugAccInterruptIdx" tcEOSCR			// main program only
-	"mpDebugAccDisplayIdx" tcEOSCR				// main program only
-	"mpDebugAccSWEET64idx" tcEOSCR				// main program only
-	"mpDebugAccS64multIdx" tcEOSCR				// main program only
-	"mpDebugCountS64multIdx" tcEOSCR			// main program only
-	"mpDebugAccS64divIdx" tcEOSCR				// main program only
-	"mpDebugCountS64divIdx" tcEOSCR				// main program only
+	"mpDebugAccMainLoopIdx" tcEOS				// main program only
+	"mpDebugAccIdleIdx" tcEOS					// main program only
+	"mpDebugAccIdleProcessIdx" tcEOS			// main program only
+	"mpDebugAccInterruptIdx" tcEOS				// main program only
+	"mpDebugAccDisplayIdx" tcEOS				// main program only
+	"mpDebugAccSWEET64idx" tcEOS				// main program only
+	"mpDebugAccS64multIdx" tcEOS				// main program only
+	"mpDebugCountS64multIdx" tcEOS				// main program only
+	"mpDebugAccS64divIdx" tcEOS					// main program only
+	"mpDebugCountS64divIdx" tcEOS				// main program only
 #if defined(useIsqrt)
-	"mpDebugAccS64sqrtIdx" tcEOSCR				// main program only
-	"mpDebugCountS64sqrtIdx" tcEOSCR			// main program only
+	"mpDebugAccS64sqrtIdx" tcEOS				// main program only
+	"mpDebugCountS64sqrtIdx" tcEOS				// main program only
 #endif // defined(useIsqrt)
 #endif // defined(useDebugCPUreading)
-#endif // defined(useCPUreading)
 #if defined(useBluetooth)
-	"mpBluetoothMainValue" tcEOSCR				// main program only
+	"mpBluetoothMainValue" tcEOS				// main program only
 #endif // defined(useBluetooth)
 };
 
@@ -391,8 +389,6 @@ static const uint8_t metricMode =				0b00000001;
 static const uint8_t detectEEPROMchangeFlag =	0b11111100;
 static const uint8_t fuelEconOutputFlags =		0b00000011;
 
-static char nBuff[17]; // used by clockSet::, bigDigit::, barGraphSupport::, systemInfo::, data logging, function result output routines
-
 volatile uint8_t lastPINxState;
 
 volatile uint8_t VSScount; // for VSS debouncing
@@ -411,34 +407,35 @@ volatile uint8_t mainLoopHeartBeat;
 
 volatile unsigned long timer0_overflow_count;
 
-volatile unsigned int watchdogInjectorCount;
-volatile unsigned int watchdogVSSCount;
-volatile unsigned int timer0DelayCount;
-volatile unsigned int displayPauseCount;
+volatile uint16_t watchdogInjectorCount;
+volatile uint16_t watchdogVSSCount;
 #if defined(useLegacyButtons)
-volatile unsigned int buttonDebounceCount;
+volatile uint16_t buttonDebounceCount;
 #endif // defined(useLegacyButtons)
+
+// these definitions provide for 8 separate delay counters based on timer0
+volatile uint8_t timer0DelayFlags;
+volatile uint8_t timer0DisplayDelayFlags;
+volatile uint16_t timer0DelayCount[8];
 
 // these flags specifically tell the system timer0 to do something
 // main program sets flag, system timer0 acknowledges by clearing flag
 volatile uint8_t timer0Command;
 
 static const uint8_t t0cResetTimer =			0b10000000;
-static const uint8_t t0cDoDelay =				0b01000000;
-static const uint8_t t0cDisplayDelay =			0b00100000;
+static const uint8_t t0cInputReceived =			0b01000000;
 #if defined(useButtonInput)
-static const uint8_t t0cProcessButton =			0b00010000;
+static const uint8_t t0cProcessButton =			0b00100000;
 #endif // defined(useButtonInput)
 #if defined(useBarFuelEconVsTime)
-static const uint8_t t0cResetFEvTime =			0b00001000;
+static const uint8_t t0cResetFEvTime =			0b00010000;
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useAnalogButtons)
-static const uint8_t t0cEnableAnalogButtons =	0b00000100;
+static const uint8_t t0cEnableAnalogButtons =	0b00001000;
 #endif // defined(useAnalogButtons)
 #if defined(useBluetooth)
-static const uint8_t t0cResetBluetoothOutput =	0b00000010;
+static const uint8_t t0cResetBluetoothOutput =	0b00000100;
 #endif // defined(useBluetooth)
-static const uint8_t t0cInputReceived =			0b00000001;
 
 // these flags specifically tell the main program to do something
 // system timer0 sets flag, main program acknowledges by clearing flag

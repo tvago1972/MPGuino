@@ -46,7 +46,7 @@ static void button::init(void)
 
 #endif // defined(useTWIbuttons)
 #if defined(useAnalogButtons)
-	changeBitFlags(timer0Command, 0, t0cEnableAnalogButtons); // enable analog button sampling
+	heart::changeBitFlags(timer0Command, 0, t0cEnableAnalogButtons); // enable analog button sampling
 
 #endif // defined(useAnalogButtons)
 }
@@ -59,7 +59,7 @@ static void button::shutdown(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useAnalogButtons)
-	changeBitFlags(timer0Command, t0cEnableAnalogButtons, 0); // disable analog button sampling
+	heart::changeBitFlags(timer0Command, t0cEnableAnalogButtons, 0); // disable analog button sampling
 
 #endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)

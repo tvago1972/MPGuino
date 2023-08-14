@@ -133,7 +133,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 #endif // defined(useDebugCPUreading)
 
 #if defined(useDebugCPUreading)
-	s64Start = systemInfo::cycles0();
+	s64Start = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
 	SWEET64processorFlags = 0;
@@ -518,11 +518,11 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 #if defined(useIsqrt)
 				case i28:	// integer square root
 #if defined(useDebugCPUreading)
-					mathStart = systemInfo::cycles0(); // record starting time
+					mathStart = heart::cycles0(); // record starting time
 #endif // defined(useDebugCPUreading)
 					regX->ul[0] = iSqrt(regX->ul[0]);
 #if defined(useDebugCPUreading)
-					mainProgramVariables[(uint16_t)(mpDebugAccS64sqrtIdx)] += systemInfo::findCycleLength(mathStart, systemInfo::cycles0());
+					mainProgramVariables[(uint16_t)(mpDebugAccS64sqrtIdx)] += heart::findCycle0Length(mathStart);
 					mainProgramVariables[(uint16_t)(mpDebugCountS64sqrtIdx)]++;
 #endif // defined(useDebugCPUreading)
 					break;
@@ -618,7 +618,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 				case m05:	// multiply		r2 = r2 * r5
 #if defined(useDebugCPUreading)
-					mathStart = systemInfo::cycles0(); // record starting time
+					mathStart = heart::cycles0(); // record starting time
 #endif // defined(useDebugCPUreading)
 #if defined(useSWEET64mult)
 					prgmStack[(unsigned int)(spnt++)] = sched;
@@ -632,14 +632,14 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					mult64();
 #endif // defined(useSWEET64mult)
 #if defined(useDebugCPUreading)
-					mainProgramVariables[(uint16_t)(mpDebugAccS64multIdx)] += systemInfo::findCycleLength(mathStart, systemInfo::cycles0());
+					mainProgramVariables[(uint16_t)(mpDebugAccS64multIdx)] += heart::findCycle0Length(mathStart);
 					mainProgramVariables[(uint16_t)(mpDebugCountS64multIdx)]++;
 #endif // defined(useDebugCPUreading)
 					break;
 
 				case m06:	// divide		r2 = r2 / r5 rmdr r1 and qadj r5
 #if defined(useDebugCPUreading)
-					mathStart = systemInfo::cycles0(); // record starting time
+					mathStart = heart::cycles0(); // record starting time
 #endif // defined(useDebugCPUreading)
 #if defined(useSWEET64div)
 					prgmStack[(unsigned int)(spnt++)] = sched;
@@ -653,7 +653,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 					div64();
 #endif // defined(useSWEET64div)
 #if defined(useDebugCPUreading)
-					mainProgramVariables[(uint16_t)(mpDebugAccS64divIdx)] += systemInfo::findCycleLength(mathStart, systemInfo::cycles0());
+					mainProgramVariables[(uint16_t)(mpDebugAccS64divIdx)] += heart::findCycle0Length(mathStart);
 					mainProgramVariables[(uint16_t)(mpDebugCountS64divIdx)]++;
 #endif // defined(useDebugCPUreading)
 					break;
@@ -878,7 +878,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	while (loopFlag);
 
 #if defined(useDebugCPUreading)
-	SWEET64timerLength += systemInfo::findCycleLength(s64Start, systemInfo::cycles0());
+	SWEET64timerLength += heart::findCycle0Length(s64Start);
 
 #endif // defined(useDebugCPUreading)
 	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg2)]))->ul[0];

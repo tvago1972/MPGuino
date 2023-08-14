@@ -12,10 +12,10 @@ static void LCD::init(void)
 	devLCD.chrOut = LCD::writeData;
 	devLCD.controlFlags |= (odvFlagEnableOutput);
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::init(lcdBuffer, LCDdata);
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 	lcdDelayCount = 0; // reset LCD delay count
 	timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
 
@@ -127,10 +127,10 @@ static void LCD::init(void)
 	// ready to use normal LCD output function now!
 	writeCommand(lcdFunctionSet | lcdFSnumberOfLines); // 4-bit interface, 2 display lines, 5x8 font
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(use4BitLCD)
 #if defined(useLCDgraphics)
 	for (uint8_t x = 0; x < 64; x++) CGRAMbuffer[(uint16_t)(x)] = cgramFlagDirty;
@@ -144,10 +144,10 @@ static void LCD::init(void)
 	writeData(0x16); // display control - turn on display, no cursor, no blink
 	writeData(0x0C); // clear display, set cursor position to zero
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD screen to clear
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(LCDserialBuffer)
 	ringBuffer::flush(LCDserialBuffer); // clear the LCD buffer to force the LCD screen to clear
 
@@ -158,9 +158,9 @@ static void LCD::shutdown(void)
 {
 
 	setBrightness(0); // turn off LCD brightness
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD brightness to turn off
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(useLCDcontrast)
 	setContrast(255); // turn off LCD contrast
 #endif // defined(useLCDcontrast)
@@ -176,10 +176,10 @@ static void LCD::shutdown(void)
 	writeCommand(lcdDisplayControl); // turn off LCD display
 
 #if defined(usePort4BitLCD)
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(__AVR_ATmega32U4__)
 #if defined(useTinkerkitLCDmodule)
 	// disable LCD pins
@@ -547,9 +547,9 @@ static void LCD::writeData(uint8_t value)
 
 		case 0x0D: // carriage return with clreol
 #if defined(blankScreenOnMessage)
-			if ((timer0Command & t0cDisplayDelay) == 0)
+			if (timer0DisplayDelayFlags == 0)
 #else // defined(blankScreenOnMessage)
-			if (((timer0Command & t0cDisplayDelay) == 0) || (LCDaddressY))
+			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
 			{
 
@@ -632,9 +632,9 @@ static void LCD::writeData(uint8_t value)
 		case 0x00 ... 0x07: // print defined CGRAM characters 0 through 7
 		case 0x20 ... 0x7F: // print normal characters
 #if defined(blankScreenOnMessage)
-			if ((timer0Command & t0cDisplayDelay) == 0)
+			if (timer0DisplayDelayFlags == 0)
 #else // defined(blankScreenOnMessage)
-			if (((timer0Command & t0cDisplayDelay) == 0) || (LCDaddressY))
+			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
 			{
 
@@ -723,9 +723,9 @@ static void LCD::writeByte(uint8_t value, uint8_t flags, uint8_t delay)
 static void LCD::writeNybble(uint8_t value, uint8_t flags)
 {
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::push(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
-#else // defined(useBufferedLCD)
+#else // defined(useLCDbufferedOutput)
 #if defined(usePort4BitLCD)
 	uint8_t oldSREG;
 
@@ -769,9 +769,9 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 
 	}
 #endif // defined(useTWI4BitLCD)
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 
-	changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
+	heart::changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
 
 }
 

@@ -846,17 +846,17 @@ const uint8_t idxMaxConstant =				nextAllowedValue;
 #if defined(useDebugTerminalLabels)
 static const char terminalConstIdxNames[] PROGMEM = {
 	"idxTen"
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundred"
-	tcEOSCR
+	tcEOS
 
 	"idxOneThousand"
 	"/idxDecimalPoint"
-	tcEOSCR
+	tcEOS
 
 	"idxTenThousand"
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundredThousand"
 	"/idxMetricFE"
@@ -866,67 +866,67 @@ static const char terminalConstIdxNames[] PROGMEM = {
 #ifdef useImperialGallon
 	"/idxDenomImperialGallon"
 #endif // useImperialGallon
-	tcEOSCR
+	tcEOS
 
 	"idxOneMillion"
 	"/idxMicroSecondsPerSecond"
 	"/idxDenomDistance"
-	tcEOSCR
+	tcEOS
 
 	"idxTenMillion"
 #if defined(usePressure)
 	"/idxDenomPressure"
 #endif // defined(usePressure)
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundredMillion"
 	"/idxBCDdivisor"
 #if defined(useCoastDownCalculator)
 	"/idxDenomArea"
 #endif // defined(useCoastDownCalculator)
-	tcEOSCR
+	tcEOS
 
 	"idxOneBillion"
 	"/idxDenomVolume"
 #if defined(useVehicleParameters)
 	"/idxNumerMass"
 #endif // defined(useVehicleParameters)
-	tcEOSCR
+	tcEOS
 
-	"idxCycles0PerSecond" tcEOSCR
-	"idxCycles0PerTick" tcEOSCR
-	"idxTicksPerSecond" tcEOSCR
-	"idxNumerDistance" tcEOSCR
-	"idxNumerVolume" tcEOSCR
-	"idxSecondsPerHour" tcEOSCR
+	"idxCycles0PerSecond" tcEOS
+	"idxCycles0PerTick" tcEOS
+	"idxTicksPerSecond" tcEOS
+	"idxNumerDistance" tcEOS
+	"idxNumerVolume" tcEOS
+	"idxSecondsPerHour" tcEOS
 #if defined(useClockDisplay)
-	"idxSecondsPerDay" tcEOSCR
+	"idxSecondsPerDay" tcEOS
 #endif // defined(useClockDisplay)
 #if defined(usePressure)
-	"idxNumerPressure" tcEOSCR
-	"idxCorrectionFactor" tcEOSCR
-	"idxCorrectionFactor2" tcEOSCR
+	"idxNumerPressure" tcEOS
+	"idxCorrectionFactor" tcEOS
+	"idxCorrectionFactor2" tcEOS
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
-	"idxNumerVoltage" tcEOSCR
-	"idxDenomVoltage" tcEOSCR
+	"idxNumerVoltage" tcEOS
+	"idxDenomVoltage" tcEOS
 #endif // defined(useAnalogRead)
 #if defined(useCarVoltageOutput)
-	"idxResistanceR5" tcEOSCR
-	"idxResistanceR6" tcEOSCR
+	"idxResistanceR5" tcEOS
+	"idxResistanceR6" tcEOS
 #endif // defined(useCarVoltageOutput)
 #if defined(useVehicleParameters)
-	"idxDenomMass" tcEOSCR
+	"idxDenomMass" tcEOS
 #if defined(useCoastDownCalculator)
-	"idxNumerArea" tcEOSCR
-	"idxDenomDensity" tcEOSCR
+	"idxNumerArea" tcEOS
+	"idxDenomDensity" tcEOS
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	"idxPowerFactor" tcEOSCR
+	"idxPowerFactor" tcEOS
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
-	"idxNumerImperialGallon" tcEOSCR
+	"idxNumerImperialGallon" tcEOS
 #endif // useImperialGallon
 };
 

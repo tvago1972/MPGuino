@@ -24,11 +24,11 @@ const uint8_t rvMeasuredCount = 5;
 
 #if defined(useDebugTerminalLabels)
 static const char terminalTripVarLabels[] PROGMEM = {
-	"rvVSSpulseIdx" tcEOSCR
-	"rvVSScycleIdx" tcEOSCR
-	"rvInjPulseIdx" tcEOSCR
-	"rvInjCycleIdx" tcEOSCR
-	"rvEngCycleIdx" tcEOSCR
+	"rvVSSpulseIdx" tcEOS
+	"rvVSScycleIdx" tcEOS
+	"rvInjPulseIdx" tcEOS
+	"rvInjCycleIdx" tcEOS
+	"rvEngCycleIdx" tcEOS
 };
 
 #endif // defined(useDebugTerminalLabels)
@@ -204,7 +204,8 @@ static const uint8_t tripFormatDragDistanceIdx =	tripFormatDragFullSpeedIdx + 1;
 static const uint8_t tripFormatIdxCount =			nextAllowedValue;
 
 static const uint8_t tripFormatReverseList[] PROGMEM = {
-	 instantIdx
+	 255						// there should hopefully never be a trip index with this value
+	,instantIdx
 	,currentIdx
 	,tankIdx
 #if defined(trackIdleEOCdata)
@@ -238,7 +239,9 @@ static const char tripFormatReverseNames[] PROGMEM = {
 #if defined(useSpiffyTripLabels)
 // display variable trip labels
 static const uint8_t tripFormatLabelCGRAM[][4] PROGMEM = {
-	 {0b00000000, 0b00000111, 0b00000010, 0b00000111} // I
+	 {0b00000000, 0b00000000, 0b00000000, 0b00000000} // blank
+
+	,{0b00000000, 0b00000111, 0b00000010, 0b00000111} // I
  	,{0b00000000, 0b00000011, 0b00000100, 0b00000011} // C
 	,{0b00000000, 0b00000111, 0b00000010, 0b00000010} // T
 #if defined(trackIdleEOCdata)
@@ -263,73 +266,73 @@ volatile uint64_t collectedEngCycleCount[(uint16_t)(tripSlotFullCount)];
 
 #if defined(useDebugTerminal)
 static const char terminalTripVarNames[] PROGMEM = {
-	"raw0tripIdx" tcEOSCR
-	"raw1tripIdx" tcEOSCR
-	"instantIdx" tcEOSCR
-	"currentIdx" tcEOSCR
-	"tankIdx" tcEOSCR
+	"raw0tripIdx" tcEOS
+	"raw1tripIdx" tcEOS
+	"instantIdx" tcEOS
+	"currentIdx" tcEOS
+	"tankIdx" tcEOS
 #if defined(trackIdleEOCdata)
-	"raw0eocIdleTripIdx" tcEOSCR
-	"raw1eocIdleTripIdx" tcEOSCR
-	"eocIdleInstantIdx" tcEOSCR
-	"eocIdleCurrentIdx" tcEOSCR
-	"eocIdleTankIdx" tcEOSCR
+	"raw0eocIdleTripIdx" tcEOS
+	"raw1eocIdleTripIdx" tcEOS
+	"eocIdleInstantIdx" tcEOS
+	"eocIdleCurrentIdx" tcEOS
+	"eocIdleTankIdx" tcEOS
 #endif // defined(trackIdleEOCdata)
-	"terminalIdx" tcEOSCR
+	"terminalIdx" tcEOS
 #if defined(useDragRaceFunction)
-	"dragRawHalfSpeedIdx" tcEOSCR
-	"dragRawFullSpeedIdx" tcEOSCR
-	"dragRawDistanceIdx" tcEOSCR
-	"dragHalfSpeedIdx" tcEOSCR
-	"dragFullSpeedIdx" tcEOSCR
-	"dragDistanceIdx" tcEOSCR
+	"dragRawHalfSpeedIdx" tcEOS
+	"dragRawFullSpeedIdx" tcEOS
+	"dragRawDistanceIdx" tcEOS
+	"dragHalfSpeedIdx" tcEOS
+	"dragFullSpeedIdx" tcEOS
+	"dragDistanceIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #if defined(useWindowTripFilter)
-	"windowTripFilterIdx[00]" tcEOSCR
-	"windowTripFilterIdx[01]" tcEOSCR
-	"windowTripFilterIdx[02]" tcEOSCR
-	"windowTripFilterIdx[03]" tcEOSCR
+	"windowTripFilterIdx[00]" tcEOS
+	"windowTripFilterIdx[01]" tcEOS
+	"windowTripFilterIdx[02]" tcEOS
+	"windowTripFilterIdx[03]" tcEOS
 #endif // defined(useWindowTripFilter)
 #if defined(useBarFuelEconVsTime)
-	"FEvsTimeIdx[00]" tcEOSCR
-	"FEvsTimeIdx[01]" tcEOSCR
-	"FEvsTimeIdx[02]" tcEOSCR
-	"FEvsTimeIdx[03]" tcEOSCR
-	"FEvsTimeIdx[04]" tcEOSCR
-	"FEvsTimeIdx[05]" tcEOSCR
-	"FEvsTimeIdx[06]" tcEOSCR
-	"FEvsTimeIdx[07]" tcEOSCR
-	"FEvsTimeIdx[08]" tcEOSCR
-	"FEvsTimeIdx[09]" tcEOSCR
-	"FEvsTimeIdx[10]" tcEOSCR
-	"FEvsTimeIdx[11]" tcEOSCR
-	"FEvsTimeIdx[12]" tcEOSCR
-	"FEvsTimeIdx[13]" tcEOSCR
-	"FEvsTimeIdx[14]" tcEOSCR
+	"FEvsTimeIdx[00]" tcEOS
+	"FEvsTimeIdx[01]" tcEOS
+	"FEvsTimeIdx[02]" tcEOS
+	"FEvsTimeIdx[03]" tcEOS
+	"FEvsTimeIdx[04]" tcEOS
+	"FEvsTimeIdx[05]" tcEOS
+	"FEvsTimeIdx[06]" tcEOS
+	"FEvsTimeIdx[07]" tcEOS
+	"FEvsTimeIdx[08]" tcEOS
+	"FEvsTimeIdx[09]" tcEOS
+	"FEvsTimeIdx[10]" tcEOS
+	"FEvsTimeIdx[11]" tcEOS
+	"FEvsTimeIdx[12]" tcEOS
+	"FEvsTimeIdx[13]" tcEOS
+	"FEvsTimeIdx[14]" tcEOS
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	"FEvsSpeedIdx[00]" tcEOSCR
-	"FEvsSpeedIdx[01]" tcEOSCR
-	"FEvsSpeedIdx[02]" tcEOSCR
-	"FEvsSpeedIdx[03]" tcEOSCR
-	"FEvsSpeedIdx[04]" tcEOSCR
-	"FEvsSpeedIdx[05]" tcEOSCR
-	"FEvsSpeedIdx[06]" tcEOSCR
-	"FEvsSpeedIdx[07]" tcEOSCR
-	"FEvsSpeedIdx[08]" tcEOSCR
-	"FEvsSpeedIdx[09]" tcEOSCR
-	"FEvsSpeedIdx[10]" tcEOSCR
-	"FEvsSpeedIdx[11]" tcEOSCR
-	"FEvsSpeedIdx[12]" tcEOSCR
-	"FEvsSpeedIdx[13]" tcEOSCR
-	"FEvsSpeedIdx[14]" tcEOSCR
+	"FEvsSpeedIdx[00]" tcEOS
+	"FEvsSpeedIdx[01]" tcEOS
+	"FEvsSpeedIdx[02]" tcEOS
+	"FEvsSpeedIdx[03]" tcEOS
+	"FEvsSpeedIdx[04]" tcEOS
+	"FEvsSpeedIdx[05]" tcEOS
+	"FEvsSpeedIdx[06]" tcEOS
+	"FEvsSpeedIdx[07]" tcEOS
+	"FEvsSpeedIdx[08]" tcEOS
+	"FEvsSpeedIdx[09]" tcEOS
+	"FEvsSpeedIdx[10]" tcEOS
+	"FEvsSpeedIdx[11]" tcEOS
+	"FEvsSpeedIdx[12]" tcEOS
+	"FEvsSpeedIdx[13]" tcEOS
+	"FEvsSpeedIdx[14]" tcEOS
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useEEPROMtripStorage)
-	"EEPROMcurrentIdx" tcEOSCR
-	"EEPROMtankIdx" tcEOSCR
+	"EEPROMcurrentIdx" tcEOS
+	"EEPROMtankIdx" tcEOS
 #if defined(trackIdleEOCdata)
-	"EEPROMeocIdleCurrentIdx" tcEOSCR
-	"EEPROMeocIdleTankIdx" tcEOSCR
+	"EEPROMeocIdleCurrentIdx" tcEOS
+	"EEPROMeocIdleTankIdx" tcEOS
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 };

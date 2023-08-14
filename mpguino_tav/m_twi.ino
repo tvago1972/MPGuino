@@ -209,7 +209,7 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	else
 	{
 
-		changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
+		heart::changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
 		return 1; // signal buffer overflow
 
 	}
@@ -258,7 +258,7 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 static void TWI::disableISRactivity(void)
 {
 
-	changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
+	heart::changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
 	while (twiStatusFlags & twiBlockMainProgram) idleProcess(); // wait for any in-progress in-interrupt TWI activity to finish
 
 }
@@ -266,7 +266,7 @@ static void TWI::disableISRactivity(void)
 static void TWI::enableISRactivity(void)
 {
 
-	changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
+	heart::changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
 
 }
 

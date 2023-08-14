@@ -50,6 +50,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		timer0Command &= ~(t0cResetTimer);
 		timer0_overflow_count = 0; // initialize timer 0 overflow counter
+		timer0DelayFlags = 0;
+		timer0DisplayDelayFlags = 0;
 		thisTime = TCNT0;
 		timer0Status = 0;
 		loopCount = loopTickLength;
@@ -157,7 +159,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		VSScount--; // bump down the VSS count
-		if (VSScount == 0) updateVSS(thisTime); // if count has reached zero, go update VSS
+		if (VSScount == 0) heart::updateVSS(thisTime); // if count has reached zero, go update VSS
 
 	}
 
@@ -441,7 +443,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		internalFlags &= ~(internalOutputButton);
 		internalFlags &= ~(internalProcessButtonsUp);
 		awakeFlags |= (aAwakeOnInput); // set awake status on button pressed
-		timer0Command &= ~(t0cDisplayDelay); // shut off display change delay
+		timer0DelayFlags &= ~(timer0DisplayDelayFlags); // reset all display delays in progress
+		timer0DisplayDelayFlags = 0;
 		if (activityFlags & afActivityTimeoutFlag) timer0Status |= (t0sUpdateDisplay); // simply update the display if MPGuino was asleep
 		else timer0Status |= (t0sReadButton | t0sShowCursor | t0sUpdateDisplay); // otherwise, force cursor show bit, and signal that keypress was detected
 		buttonLongPressCount = 0; // reset button long-press timer
@@ -509,25 +512,163 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0Command & t0cDisplayDelay) // if display change delay is in effect
+	if (timer0DelayFlags & 0x01)
 	{
 
-		if (displayPauseCount) displayPauseCount--; // update pause counter
+		if (timer0DelayCount[0]) timer0DelayCount[0]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0Command &= ~(t0cDisplayDelay); // otherwise, signal that display change delay is over
-			timer0Status |= (t0sUpdateDisplay); // tell main program to update the display
+			timer0DelayFlags &= ~(0x01); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x01) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x01); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
 
 		}
 
 	}
 
-	if (timer0Command & t0cDoDelay) // if main program has requested a delay
+	if (timer0DelayFlags & 0x02)
 	{
 
-		if (timer0DelayCount) timer0DelayCount--; // bump timer delay value down by one tick
-		else timer0Command &= ~(t0cDoDelay); // signal to main program that delay timer has completed main program request
+		if (timer0DelayCount[1]) timer0DelayCount[1]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x02); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x02) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x02); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x04)
+	{
+
+		if (timer0DelayCount[2]) timer0DelayCount[2]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x04); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x04) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x04); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x08)
+	{
+
+		if (timer0DelayCount[3]) timer0DelayCount[3]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x08); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x08) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x08); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x10)
+	{
+
+		if (timer0DelayCount[4]) timer0DelayCount[4]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x10); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x10) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x10); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x20)
+	{
+
+		if (timer0DelayCount[5]) timer0DelayCount[5]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x20); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x20) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x20); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x40)
+	{
+
+		if (timer0DelayCount[6]) timer0DelayCount[6]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x40); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x40) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x40); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
+
+	}
+
+	if (timer0DelayFlags & 0x80)
+	{
+
+		if (timer0DelayCount[7]) timer0DelayCount[7]--; // bump timer delay value down by one tick
+		else
+		{
+
+			timer0DelayFlags &= ~(0x80); // signal to main program that delay timer has completed main program request
+			if (timer0DisplayDelayFlags & 0x80) // if this was a display delay
+			{
+
+				timer0DisplayDelayFlags &= ~(0x80); // clear display delay flag
+				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+
+			}
+
+		}
 
 	}
 
@@ -661,13 +802,13 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 				debugVSScount = debugVSStickLength;
 #if defined(__AVR_ATmega32U4__)
-				PORTB ^= (1 << PINB7); // generate VSS pin interrupt
+				PORTB ^= (1 << PORTB7); // generate VSS pin interrupt
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-				PORTK ^= (1 << PINK0); // generate VSS pin interrupt
+				PORTK ^= (1 << PORTK0); // generate VSS pin interrupt
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-				PORTC ^= (1 << PINC0); // generate VSS pin interrupt
+				PORTC ^= (1 << PORTC0); // generate VSS pin interrupt
 #endif // defined(__AVR_ATmega328P__)
 
 			}
@@ -759,7 +900,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	{
 
 		if (lcdDelayCount) lcdDelayCount--;
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 		else
 		{
 
@@ -831,10 +972,10 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 		}
 
-#else // defined(useBufferedLCD)
+#else // defined(useLCDbufferedOutput)
 		else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 	}
 
 #endif // defined(useLCDoutput)
@@ -896,7 +1037,7 @@ ISR( INT0_vect )
 
 	thisInjectorOpenStart = timer0_overflow_count + (unsigned long)(a);
 
-	if (dirty & dGoodEngineRotationOpen) thisEnginePeriodOpen = findCycleLength(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
+	if (dirty & dGoodEngineRotationOpen) thisEnginePeriodOpen = heart::findCycle0Length(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
 	else thisEnginePeriodOpen = 0;
 
 #if defined(useChryslerMAPCorrection)
@@ -954,7 +1095,7 @@ ISR( INT1_vect )
 
 	thisInjectorCloseStart = timer0_overflow_count + (unsigned long)(a);
 
-	if (dirty & dGoodEngineRotationClose) thisEnginePeriodClose = findCycleLength(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
+	if (dirty & dGoodEngineRotationClose) thisEnginePeriodClose = heart::findCycle0Length(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
 	else thisEnginePeriodClose = 0;
 
 	if (dirty & dInjectorReadInProgress) // if there was a fuel injector open pulse detected, there's now a fuel injector pulse width to be measured
@@ -991,7 +1132,7 @@ ISR( INT1_vect )
 		}
 
 		// calculate fuel injector pulse length
-		thisInjectorPulseLength = findCycleLength(thisInjectorOpenStart, thisInjectorCloseStart) - volatileVariables[(uint16_t)(vInjectorOpenDelayIdx)]; // strip off injector open delay time
+		thisInjectorPulseLength = heart::findCycle0Length(thisInjectorOpenStart, thisInjectorCloseStart) - volatileVariables[(uint16_t)(vInjectorOpenDelayIdx)]; // strip off injector open delay time
 
 		// if this pulse is larger than the maximum good pulse that could happen at the minimum valid engine speed, reject it
 		// 1 - pulse could be narrower than vInjectorOpenDelayIdx
@@ -1157,7 +1298,7 @@ ISR( PCINT1_vect )
 	{
 
 		if (VSSpause) VSScount = VSSpause; // if there is a VSS debounce count defined, set VSS debounce count and let system timer handle the debouncing
-		else updateVSS(thisTime); // otherwise, go process VSS pulse
+		else heart::updateVSS(thisTime); // otherwise, go process VSS pulse
 
 	}
 
@@ -1275,7 +1416,9 @@ static void ringBuffer::flush(ringBufferVariable &bfr)
 }
 
 #endif // defined(useBuffering)
-static void updateVSS(unsigned long thisVSStime)
+/* core MPGuino system support section */
+
+static void heart::updateVSS(uint32_t thisVSStime)
 {
 
 	static uint32_t lastVSStime;
@@ -1292,7 +1435,7 @@ static void updateVSS(unsigned long thisVSStime)
 		dirty |= (dGoodVSSRead); // mark valid VSS pulse measurement
 		awakeFlags |= (aAwakeOnVSS); // MPGuino is awake on valid VSS pulse measurement
 
-		cycleLength = findCycleLength(lastVSStime, thisVSStime); // calculate VSS pulse length
+		cycleLength = heart::findCycle0Length(lastVSStime, thisVSStime); // calculate VSS pulse length
 
 		if (cycleLength < volatileVariables[(uint16_t)(vMaximumVSSperiodIdx)]) // if VSS period is less than that for minimum good vehicle speed
 		{
@@ -1439,7 +1582,7 @@ static void updateVSS(unsigned long thisVSStime)
 
 }
 
-static void initCore(void)
+static void heart::initCore(void)
 {
 
 	uint8_t oldSREG;
@@ -1579,7 +1722,7 @@ static void initCore(void)
 
 }
 
-static void initHardware(void)
+static void heart::initHardware(void)
 {
 
 	uint8_t oldSREG;
@@ -1848,6 +1991,9 @@ static void initHardware(void)
 #if defined(useSerial3Port)
 	serial3::init();
 #endif // defined(useSerial3Port)
+#if defined(useHardwareSPI)
+	spi::init();
+#endif // defined(useHardwareSPI)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::init();
 #endif // defined(__AVR_ATmega32U4__)
@@ -1872,8 +2018,8 @@ static void initHardware(void)
 
 }
 
-#ifdef useDeepSleep // Deep Sleep support section
-static void doGoDeepSleep(void)
+#ifdef useDeepSleep
+static void heart::doGoDeepSleep(void)
 {
 
 #if defined(useOutputPins)
@@ -1882,7 +2028,7 @@ static void doGoDeepSleep(void)
 #if defined(useActivityLED)
 	activityLED::shutdown();
 #endif // defined(useActivityLED)
-	changeBitFlags(timer0Command, t0cDisplayDelay, 0); // cancel any display delays in progress
+	heart::changeBitFlags(timer0DelayFlags, 0xFF, 0); // cancel any timer0 delays in progress
 #if defined(useTFToutput)
 	TFT::shutdown(); // shut down the TFT display
 #endif // defined(useTFToutput)
@@ -1898,6 +2044,9 @@ static void doGoDeepSleep(void)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::shutdown();
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(useHardwareSPI)
+	spi::shutdown();
+#endif // defined(useHardwareSPI)
 #if defined(useSerial3Port)
 	serial3::shutdown();
 #endif // defined(useSerial3Port)
@@ -1963,7 +2112,7 @@ static void doGoDeepSleep(void)
 }
 
 #endif // useDeepSleep
-static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle) // this is only to be meant to be used with interrupt handlers
+static uint32_t heart::findCycle0Length(uint32_t lastCycle, uint32_t thisCycle) // this is only to be meant to be used with interrupt handlers
 {
 
 	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
@@ -1973,14 +2122,83 @@ static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle
 
 }
 
-static void doDelay0(void)
+static uint32_t heart::findCycle0Length(uint32_t lastCycle) // this is only to be meant to be used with the main program
 {
 
-	while (timer0Command & t0cDoDelay) idleProcess(); // wait for delay timeout
+	uint32_t thisCycle;
+
+	thisCycle = cycles0();
+
+	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
+	else thisCycle = thisCycle - lastCycle;
+
+	return thisCycle;
 
 }
 
-static void delay0(uint16_t ms)
+static uint32_t heart::cycles0(void)
+{
+
+	uint8_t oldSREG;
+	uint32_t t;
+	uint16_t a;
+
+	oldSREG = SREG; // save state of interrupt flag
+	cli(); // disable interrupts
+
+	a = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) a = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+
+	t = timer0_overflow_count + (uint32_t)(a);
+
+	SREG = oldSREG; // restore state of interrupt flag
+
+	return t;
+
+}
+
+static void heart::doDelay0(uint8_t delay0Channel)
+{
+
+	while (timer0DelayFlags & delay0Channel) idleProcess(); // wait for delay timeout
+
+}
+
+static uint8_t heart::delay0(uint16_t ms)
+{
+
+	uint8_t oldSREG;
+	uint8_t delay0Channel;
+	uint8_t i;
+
+	while (timer0DelayFlags == 0xFF) idleProcess(); // wait for an available timer0 channel to become available
+
+	delay0Channel = 0x01;
+	i = 0;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	while (timer0DelayFlags & delay0Channel)
+	{
+
+		i++;
+		delay0Channel <<= 1;
+
+	}
+
+	timer0DelayCount[(uint16_t)(i)] = ms; // request a set number of timer tick delays per millisecond
+
+	if (ms) timer0DelayFlags |= (delay0Channel); // signal request to timer
+	else timer0DelayFlags &= ~(delay0Channel);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return delay0Channel;
+
+}
+
+static void heart::delayS(uint16_t ms)
 {
 
 	uint8_t oldSREG;
@@ -1988,29 +2206,12 @@ static void delay0(uint16_t ms)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	timer0DelayCount = ms; // request a set number of timer tick delays per millisecond
-
-	if (ms) timer0Command |= (t0cDoDelay); // signal request to timer
-	else timer0Command &= ~(t0cDoDelay);
+	timer0DelayFlags &= ~(timer0DisplayDelayFlags); // turn off all active display delays in progress
+	timer0DisplayDelayFlags = 0;
 
 	SREG = oldSREG; // restore interrupt flag status
 
-}
-
-static void delayS(uint16_t ms)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	displayPauseCount = ms; // request a set number of timer tick delays per millisecond
-
-	if (ms) timer0Command |= (t0cDisplayDelay); // if display delay requested, make it active
-	else timer0Command &= ~(t0cDisplayDelay); // otherwise, cancel display delay
-
-	SREG = oldSREG; // restore interrupt flag status
+	if (ms) heart::changeBitFlags(timer0DisplayDelayFlags, 0, delay0(ms));
 
 }
 
@@ -2019,7 +2220,7 @@ static void delayS(uint16_t ms)
 //    be treated as atomic (!) because only one side or the other is supposed to change said variables
 // however, status flag registers are obviously an exception, and status flag changes are common
 //    enough to warrant an explicit function definition
-static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR)
+static void heart::changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR)
 {
 
 	uint8_t oldSREG;
@@ -2033,7 +2234,7 @@ static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint
 
 }
 
-static void performSleepMode(uint8_t sleepMode)
+static void heart::performSleepMode(uint8_t sleepMode)
 {
 
 	set_sleep_mode(sleepMode); // set for specified sleep mode
