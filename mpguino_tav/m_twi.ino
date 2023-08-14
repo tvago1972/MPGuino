@@ -3,13 +3,13 @@ ISR( TWI_vect )
 {
 
 	uint8_t twiStatus;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint8_t a;
 	uint8_t b;
 	uint16_t c;
 
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	twiStatus = TW_STATUS;
 
@@ -41,7 +41,7 @@ ISR( TWI_vect )
 			break;
 
 		case TW_MR_DATA_ACK: // data received, ACK sent
-			twiDataBuffer[(unsigned int)(twiDataBufferIdx++)] = TWDR; // put byte into buffer
+			twiDataBuffer[(uint16_t)(twiDataBufferIdx++)] = TWDR; // put byte into buffer
 		case TW_MR_SLA_ACK:  // address sent, ACK received
 			if(twiDataBufferIdx < twiDataBufferLen) TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK if more bytes are expected
 			else TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE)); // otherwise, send NEGATIVE ACK
@@ -94,7 +94,7 @@ ISR( TWI_vect )
 
 	}
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 	if (b < a) c = 256 - a + b; // an overflow occurred
@@ -102,7 +102,7 @@ ISR( TWI_vect )
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 static void TWI::init(void) // this can be in either main program or interrupt context
@@ -202,14 +202,14 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	if(twiDataBufferLen < twiDataBufferSize)
 	{
 
-		twiDataBuffer[(unsigned int)(twiDataBufferLen++)] = data;
+		twiDataBuffer[(uint16_t)(twiDataBufferLen++)] = data;
 		return 0;
 
 	}
 	else
 	{
 
-		changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
+		heart::changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
 		return 1; // signal buffer overflow
 
 	}
@@ -258,7 +258,7 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 static void TWI::disableISRactivity(void)
 {
 
-	changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
+	heart::changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
 	while (twiStatusFlags & twiBlockMainProgram) idleProcess(); // wait for any in-progress in-interrupt TWI activity to finish
 
 }
@@ -266,7 +266,7 @@ static void TWI::disableISRactivity(void)
 static void TWI::enableISRactivity(void)
 {
 
-	changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
+	heart::changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
 
 }
 

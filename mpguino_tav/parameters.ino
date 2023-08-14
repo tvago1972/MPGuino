@@ -12,16 +12,17 @@ static const uint8_t prgmInitEEPROM[] PROGMEM = {
 	instrLxdI, pSignatureIdx,
 
 //loop:
-	instrLdRegEinitIndexed, 0x02,						// loop through entire EEPROM space
+	instrLdRegEinitIndexed, 0x02,						// loop through parameter EEPROM space
 	instrStRegEEPROMindexed, 0x02,						// store the program stored parameter defaults into EEPROM
 	instrAddIndex, 1,
 	instrCmpIndex, eePtrSettingsEnd,
 	instrBranchIfLT, 246,
-#ifdef useEEPROMtripStorage
-	instrLdRegByte, 0x02, 0,							// zero out current and tank trip signature bytes
-	instrStRegEEPROM, 0x02, pCurrTripSignatureIdx,
-	instrStRegEEPROM, 0x02, pTankTripSignatureIdx,
-#endif // useEEPROMtripStorage
+	instrLdRegByte, 0x02, 0,							// load a zero into register 2
+//loop2:
+	instrStRegEEPROMindexed, 0x02,						// zero the corresponding position in EEPROM
+	instrAddIndex, 1,
+	instrCmpIndex, eePtrEnd,
+	instrBranchIfLT, 248,
 	instrLdRegByte, 0x02, 1,
 	instrDone											// exit to caller
 };
@@ -48,12 +49,15 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVolatile, 0x02, vDetectVehicleStopIdx,	// store minimum good vehicle speed of timer0 ticks / VSS pulse
 
-	instrLdRegEEPROM, 0x02, pCrankRevPerInjIdx,			// load number of crank revolutions / injector fire event
-	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
-	instrMul2byByte, 60,								// term is now in (crank revolutions)(timer0 cycles) / (fire event)(minute)
-	instrDiv2byEEPROM, pMinGoodRPMidx,					// divide by minimum good engine speed value in crank revolutions / minute
+	instrLdRegEEPROM, 0x02, pMinGoodRPMidx,				// load minimum good engine speed value in (crank revolutions) / (minute)
+	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of (injector fire event) / (2)(crank revolutions)
+	instrLdReg, 0x21,									// move denominator (injector fire event) / (2)(minute) to register 1
+
+	instrLdRegConst, 0x02, idxCycles0PerSecond,			// load (timer0 cycles) / (second) term
+	instrMul2byByte, 120,								// term is now in (2)(timer0 cycles) / (minute)
+	instrDiv2by1,										// divide by minimum good engine speed value in (injector fire event) / (2)(minute)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// store maximum good engine period value in timer0 cycles / fire event
+	instrStRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// store maximum good engine period value in (timer0 cycles) / (injector fire event)
 	instrDiv2byConst, idxCycles0PerTick,				// perform conversion, term is now in timer0 ticks
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVolatile, 0x02, vDetectEngineOffIdx,		// store minimum good engine speed value in timer0 ticks / fire event
@@ -70,21 +74,13 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vActivityTimeoutIdx,		// store activity timeout timer ticks value
 
-	instrLdRegEEPROM, 0x02, pInjectorOpeningTimeIdx,	// fetch injector opening settle time in microseconds
+	instrLdRegEEPROM, 0x02, pInjectorSettleTimeIdx,		// fetch injector settle time in microseconds
 	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
 	instrDiv2byConst, idxMicroSecondsPerSecond,			// divide by microseconds per seconds value
-	instrStRegVolatile, 0x02, vInjectorOpenDelayIdx,	// store injector opening settle time value in cycles
-	instrLdReg, 0x23,									// save for later injector opening settle time value in register 3
-
-	instrLdRegEEPROM, 0x02, pInjectorClosingTimeIdx,	// fetch injector closing settle time in microseconds
-	instrMul2byConst, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
-	instrDiv2byConst, idxMicroSecondsPerSecond,			// divide by microseconds per seconds value
-	instrStRegVolatile, 0x02, vInjectorCloseDelayIdx,	// store injector closing settle time value in cycles
-	instrAddYtoX, 0x32,									// add injector opening settle time value to total injector settle time
-	instrStRegVolatile, 0x02, vInjectorTotalDelayIdx,	// store injector total settle time value in cycles
-	instrLdReg, 0x23,									// save injector total settle time value in register 3
+	instrStRegVolatile, 0x02, vInjectorOpenDelayIdx,	// store injector settle time value in cycles
+	instrLdReg, 0x23,									// save injector settle time value in register 3
 	instrLdRegVolatile, 0x02, vMaximumEnginePeriodIdx,	// load maximum good engine period value in timer0 cycles / fire event
-	instrSubYfromX, 0x32,								// subtract total injector settle time from maximum good engine period
+	instrSubYfromX, 0x32,								// subtract injector settle time from maximum good engine period
 	instrStRegVolatile, 0x02, vInjectorValidMaxWidthIdx,	// store maximum valid fuel injector pulse width in timer0 cycles
 
 	instrLdRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,	// fetch injector cycle time in microseconds per US gallon
@@ -120,26 +116,21 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpBingoTankSizeIdx,			// save bingo tank size in cycles
 
-#ifdef usePartialRefuel
+#if defined(usePartialRefuel)
 	instrLdRegEEPROM, 0x02, pRefuelSizeIdx,				// fetch partial refuel tank size in unit volume
 	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume value to get tank size in cycles * formatting factor
 	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get partial refuel tank size in cycles
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpPartialRefuelTankSize,		// save partial refuel tank size in cycles
 
-#endif	// usePartialRefuel
-#ifdef useDragRaceFunction
-	instrLdRegByte, 0x02, 0,							// zero out accel test top speed and estimated engine power
-	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,
-
-#endif	// useDragRaceFunction
-#ifdef useCoastDownCalculator
+#endif // defined(usePartialRefuel)
+#if defined(useCoastDownCalculator)
 	instrLdRegEEPROM, 0x02, pCoastdownSamplePeriodIdx,	// coastdown timer ticks value
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vCoastdownPeriodIdx,		// store coastdown timeout timer ticks value
 
-#endif	// useCoastDownCalculator
-#ifdef useChryslerMAPCorrection
+#endif	// defined(useCoastDownCalculator)
+#if defined(useChryslerMAPCorrection)
 	instrLdRegEEPROM, 0x02, pMAPsensorFloorIdx,			// convert pressure sensor voltage floor to equivalent ADC floor value
 	instrMul2byConst, idxNumerVoltage,
 	instrDiv2byConst, idxDenomVoltage,
@@ -155,7 +146,7 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrMul2byConst, idxDenomVoltage,					// calculate pressure sensor ADC step slope numerator
 	instrStRegMain, 0x02, mpAnalogMAPnumerIdx,			// store it in volatile variable storage
 
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	instrLdRegEEPROM, 0x02, pBaroSensorFloorIdx,		// convert pressure sensor voltage floor to equivalent ADC floor value
 	instrMul2byConst, idxNumerVoltage,
 	instrDiv2byConst, idxDenomVoltage,
@@ -170,25 +161,25 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrLdRegConst, 0x02, idxDenomVoltage,				// calculate pressure sensor ADC step slope numerator
 	instrMul2byEEPROM, pBaroSensorRangeIdx,
 	instrStRegMain, 0x02, mpAnalogBaroNumerIdx,			// store it in volatile variable storage
-#else	// useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 
 	instrLdRegEEPROM, 0x02, pBarometricPressureIdx,		// fetch reference barometric pressure value in psig * 1000
 	instrStRegMain, 0x02, mpBaroPressureIdx,			// store it in volatile variable storage
-#endif	// useChryslerBaroSensor
+#endif // defined(useChryslerBaroSensor)
 	instrLdRegEEPROM, 0x02, pSysFuelPressureIdx,		// fetch base fuel pressure value in psig * 1000
 	instrStRegMain, 0x02, mpFuelPressureIdx,			// save base fuel pressure value in psig * 1000
 
 	instrLdRegConst, 0x02, idxCorrectionFactor,
 	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 
-#endif	// useChryslerMAPCorrection
-#ifdef useBarFuelEconVsTime
+#endif	// defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsTime)
 	instrLdRegEEPROM, 0x02, pFEvsTimeIdx,				// load fuel econ vs time period stored parameter
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vFEvsTimePeriodTimeoutIdx,	// store fuel econ vs time period timer ticks value
 
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
 	instrLdRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,		// obtain low-speed cutoff parameter in (distance)(* 1000) / (hour)
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulses)(* 1000) / (hour)
 	instrDiv2byConst, idxSecondsPerHour,				// term is now (VSS pulses)(* 1000) / (second)
@@ -201,12 +192,15 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegMain, 0x02, mpFEvsSpeedQuantumIdx,		// store speed quantum in (VSS pulses)(* 1000) / (second)
 
-#endif // useBarFuelEconVsSpeed
-#ifdef useCPUreading
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 	instrLdRegByte, 0x02, 0,
 	instrStRegMain, 0x02, mpMainLoopAccumulatorIdx,		// initialize the cpu utilization stopwatch timer values
 	instrStRegMain, 0x02, mpIdleAccumulatorIdx,
-#ifdef useDebugCPUreading
+
+#endif	// defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useDebugCPUreading)
+	instrLdRegByte, 0x02, 0,
 	instrStRegVolatile, 0x02, vInterruptAccumulatorIdx,
 	instrStRegMain, 0x02, mpDebugAccMainLoopIdx,
 	instrStRegMain, 0x02, mpDebugAccIdleIdx,
@@ -218,9 +212,29 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrStRegMain, 0x02, mpDebugCountS64multIdx,
 	instrStRegMain, 0x02, mpDebugAccS64divIdx,
 	instrStRegMain, 0x02, mpDebugCountS64divIdx,
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
-#endif	// useCPUreading
+#if defined(useDragRaceFunction)
+	instrLdRegEEPROM, 0x02, pDragSpeedIdx,				// load acceleration test full speed parameter in (distance)(* 1000) / (hour)
+	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulse)(* 1000) / (hour)
+	instrLdReg, 0x21,									// save denominator term for later
+	instrLdRegConst, 0x02, idxSecondsPerHour,			// fetch (second) / (hour) constant
+	instrMul2byConst, idxCycles0PerSecond,				// term is now (timer0 cycles) / (hour) term
+	instrMul2byConst, idxDecimalPoint,					// term is now (timer0 cycles)(* 1000) / (hour)
+	instrMul2byByte, 2,									// term is now (timer0 cycles)(* 2000) / (hour)
+	instrDiv2by1,										// perform conversion, term is now in (timer0 cycles)(* 2) / (VSS pulse)
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelHalfPeriodValueIdx,	// save it to accel test half-speed period tripwire variable
+	instrDiv2byByte, 2,									// term is now (timer0 cycles) / (VSS pulse)
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelFullPeriodValueIdx,	// save it to accel test full-speed period tripwire variable
+	instrLdRegEEPROM, 0x02, pPulsesPerDistanceIdx,		// fetch drag function distance parameter value in VSS pulses
+	instrMul2byEEPROM, pDragDistanceIdx,				// multiply by drag function distance parameter value in unit distance
+	instrDiv2byConst, idxDecimalPoint,					// get rid of decimal formatting factor
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegVolatile, 0x02, vAccelDistanceValueIdx,	// save it to accel test distanct tripwire variable
+
+#endif // defined(useDragRaceFunction)
 	instrDone											// exit to caller
 };
 
@@ -330,7 +344,7 @@ static void EEPROM::initGuinoHardware(void)
 	// set ADC timer frequency to 1/128 of system timer
 	ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
 
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 	VSSpause = readByte(pVSSpauseIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
@@ -345,24 +359,24 @@ static void EEPROM::initGuinoSoftware(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (readByte(pMetricModeIdx)) metricFlag |= metricMode;
+	if (readByte(pMetricModeIdx)) metricFlag |= (metricMode);
 	else metricFlag &= ~(metricMode);
 
-	if (readByte(pAlternateFEidx)) metricFlag |= alternateFEmode;
+	if (readByte(pAlternateFEidx)) metricFlag |= (alternateFEmode);
 	else metricFlag &= ~(alternateFEmode);
 
 	SWEET64::runPrgm(prgmInitMPGuino, 0); // calculate multiple MPGuino system values for use within code
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 	timer0Command |= (t0cResetFEvTime); // reset fuel economy vs time bargraph mechanism
 
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 	SREG = oldSREG; // restore interrupt flag status
 
-#ifdef useBarFuelEconVsSpeed
+#if defined(useBarFuelEconVsSpeed)
 	bgFEvsSsupport::reset();
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useWindowTripFilter)
 	tripSupport::resetWindowFilter();
 
@@ -384,6 +398,19 @@ static void EEPROM::initGuino(void) // initialize MPGuino base hardware and basi
 
 }
 
+static void EEPROM::writeByte(uint8_t eePtr, uint8_t value)
+{
+
+	uint64_t val;
+	union union_64 * vee = (union union_64 *) &val;
+
+	SWEET64::init64byt(vee, value);
+
+	write64(vee, eePtr);
+
+}
+
+#if defined(useScreenEditor)
 static void EEPROM::writeVal(uint8_t eePtr, uint32_t value)
 {
 
@@ -396,6 +423,7 @@ static void EEPROM::writeVal(uint8_t eePtr, uint32_t value)
 
 }
 
+#endif // defined(useScreenEditor)
 static uint8_t EEPROM::readByte(uint8_t eePtr)
 {
 
@@ -520,10 +548,14 @@ static uint16_t EEPROM::getAddress(uint8_t eePtr)
 
 	if (eePtr >= eePtrEnd) eePtr = eePtrEnd;
 
-	if (eePtr < eePtrStorageEnd) t = (uint16_t)(pgm_read_byte(&paramAddrs[eePtr]));
+	if (eePtr < eePtrStorageEnd) t = pgm_read_word(&paramAddrs[eePtr]);
 #if defined(useScreenEditor)
-	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = 2 * (eePtr - eePtrDisplayPagesStart) + eeAdrScreensStart;
+	else if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) t = eeAdrScreensStart + 2 * (eePtr - eePtrDisplayPagesStart);
 #endif // defined(useScreenEditor)
+#if defined(useButtonInput)
+	else if ((eePtr >= eePtrDisplayCursorStart) && (eePtr < eePtrDisplayCursorEnd)) t = eeAdrDisplayCursorStart + (eePtr - eePtrDisplayCursorStart);
+	else if ((eePtr >= eePtrMenuHeightStart) && (eePtr < eePtrMenuHeightEnd)) t = eeAdrMenuCursorStart + (eePtr - eePtrMenuHeightStart);
+#endif // defined(useButtonInput)
 	else t = eeAdrStorageEnd;
 
 	return t;

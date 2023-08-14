@@ -1,34 +1,20 @@
-#ifdef useCPUreading
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 /* CPU loading and RAM availability support section */
-
-static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
-	instrLdRegMain, 0x02, mpMainLoopAccumulatorIdx,
-	instrSubMainFromX, 0x02, mpIdleAccumulatorIdx,
-	instrMul2byByte, 100,
-	instrMul2byConst, idxDecimalPoint,
-	instrDiv2byMain, mpMainLoopAccumulatorIdx,
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmOutputAvailableRAM[] PROGMEM = {
-	instrLdRegMain, 0x02, mpAvailableRAMidx,
-	instrMul2byConst, idxDecimalPoint,
-	instrDone											// exit to caller
-};
 
 static void systemInfo::idleProcess(void)
 {
 
+#if defined(useDebugCPUreading)
 	uint8_t oldSREG;
 
-#ifdef useCPUreading
-	mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = systemInfo::findCycleLength(mainStart, systemInfo::cycles0());
+#endif // defined(useDebugCPUreading)
+	mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = heart::findCycle0Length(mainStart);
 	mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)] = idleTimerLength;
 
-	mainStart = systemInfo::cycles0();
+	mainStart = heart::cycles0();
 	idleTimerLength = 0;
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	switch (monitorState)
 	{
 
@@ -70,16 +56,29 @@ static void systemInfo::idleProcess(void)
 
 	}
 
-#endif // useDebugCPUreading
-#endif // useCPUreading
-
+#endif // defined(useDebugCPUreading)
 }
 
-static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
+#if defined(useCPUreading)
+static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
+	instrLdRegMain, 0x02, mpMainLoopAccumulatorIdx,
+	instrSubMainFromX, 0x02, mpIdleAccumulatorIdx,
+	instrMul2byByte, 100,
+	instrMul2byConst, idxDecimalPoint,
+	instrDiv2byMain, mpMainLoopAccumulatorIdx,
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmOutputAvailableRAM[] PROGMEM = {
+	instrLdRegMain, 0x02, mpAvailableRAMidx,
+	instrMul2byConst, idxDecimalPoint,
+	instrDone											// exit to caller
+};
+
+static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
 	uint16_t availableRAMptr;
-	uint8_t retVal = 0;
 
 	if((unsigned int)__brkval == 0) availableRAMptr = ((unsigned int)&availableRAMptr) - ((unsigned int)&__bss_end);
 	else availableRAMptr = ((unsigned int)&availableRAMptr) - ((unsigned int)__brkval);
@@ -87,29 +86,32 @@ static uint8_t systemInfo::displayHandler (uint8_t cmd, uint8_t cursorPos)
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx: // display max cpu utilization and RAM
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx: // display max cpu utilization and RAM
 			showCPUload();
+#if LCDcharWidth == 20
+			text::stringOut(devLCD, PSTR("     T"));
+#else // LCDcharWidth == 20
 			text::stringOut(devLCD, PSTR(" T"));
-			text::stringOut(devLCD, ull2str(mBuff1, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
+#endif // LCDcharWidth == 20
+			text::stringOut(devLCD, ull2str(nBuff, vSystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(devLCD, 0, 1);
+#if LCDcharWidth == 20
+			text::stringOut(devLCD, PSTR("  FREE RAM: "));
+#else // LCDcharWidth == 20
 			text::stringOut(devLCD, PSTR("FREE RAM: "));
+#endif // LCDcharWidth == 20
 			mainProgramVariables[(uint16_t)(mpAvailableRAMidx)] = availableRAMptr;
 			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
-			text::stringOut(devLCD, ull2str(mBuff1, 0, 6, 0));
+			text::stringOut(devLCD, ull2str(nBuff, 0, (LCDcharWidth / 2) - 2, 0));
 			break;
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -118,10 +120,10 @@ static void systemInfo::showCPUload(void)
 
 	text::stringOut(devLCD, PSTR("C%"));
 	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
-	text::stringOut(devLCD, ull2str(mBuff1, 2, 6, 0));
-#ifdef useDebugCPUreading
+	text::stringOut(devLCD, ull2str(nBuff, 2, 6, 0));
+#if defined(useDebugCPUreading)
 	monitorState = 1;
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 }
 
@@ -130,48 +132,12 @@ static void systemInfo::showCPUloading(void)
 
 	text::initStatus(devLCD);
 	showCPUload();
-	text::charOut(devLCD, 0x0D);
-	delayS(holdDelay);
+	text::commitStatus(devLCD);
 
 }
 
-static uint16_t systemInfo::getAvailableRAMsize(void)
-{
-
-}
-
-static uint32_t systemInfo::findCycleLength(unsigned long lastCycle, unsigned long thisCycle)
-{
-
-	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
-	else thisCycle = thisCycle - lastCycle;
-
-	return thisCycle;
-
-}
-
-static uint32_t systemInfo::cycles0(void)
-{
-
-	uint8_t oldSREG;
-	unsigned long t;
-	unsigned int a;
-
-	oldSREG = SREG; // save state of interrupt flag
-	cli(); // disable interrupts
-
-	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) a = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
-
-	t = timer0_overflow_count + (unsigned long)(a);
-
-	SREG = oldSREG; // restore state of interrupt flag
-
-	return t;
-
-}
-
-#endif // useCPUreading
+#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useActivityLED)
 /* Activity status LED support section */
 
@@ -179,20 +145,20 @@ static void activityLED::init(void)
 {
 
 #if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
+#if defined(useTinkerkitLCDmodule)
 //	DDRB |= (1 << DDB0); // turn on digital output for RX LED
 	DDRC |= (1 << DDC7); // turn on digital output for LED L
 //	DDRD |= (1 << DDD5); // turn on digital output for TX LED
-#else // useTinkerkitLCDmodule
+#else // defined(useTinkerkitLCDmodule)
 // insert any other ATmega32U4 port information for initializing status LEDs here
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 	DDRB |= (1 << DDB7); // turn on digital output for LED L
-#else // useArduinoMega2560
+#else // defined(useArduinoMega2560)
 // insert any other ATmega2560 port information for initializing status LEDs here
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 	DDRB |= (1 << DDB5); // turn on digital output for LED L
@@ -208,20 +174,20 @@ static void activityLED::shutdown(void)
 	output(0); // turn off status LED
 
 #if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
+#if defined(useTinkerkitLCDmodule)
 //	DDRB &= ~(1 << DDB0); // turn off digital output for RX LED
 	DDRC &= ~(1 << DDC7); // turn off digital output for LED L
 //	DDRD &= ~(1 << DDD5); // turn off digital output for TX LED
-#else // useTinkerkitLCDmodule
+#else // defined(useTinkerkitLCDmodule)
 // insert any other ATmega32U4 port information for turning off status LEDs here
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 	DDRB &= ~(1 << DDB7); // turn off digital output for LED L
-#else // useArduinoMega2560
+#else // defined(useArduinoMega2560)
 // insert any other ATmega2560 port information for turning off status LEDs here
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 	DDRB &= ~(1 << DDB5); // turn off digital output for LED L
@@ -236,20 +202,20 @@ static void activityLED::output(uint8_t val)
 	{
 
 #if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
+#if defined(useTinkerkitLCDmodule)
 //		PORTB &= ~(1 << PORTB0); // active low RX
 		PORTC |= (1 << PORTC7); // active high L
 //		PORTD &= ~(1 << PORTD5); // active low TX
-#else // useTinkerkitLCDmodule
+#else // defined(useTinkerkitLCDmodule)
 // insert any other ATmega32U4 port information for turning on status LEDs here
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 		PORTB |= (1 << PORTB7); // active high L
-#else // useArduinoMega2560
+#else // defined(useArduinoMega2560)
 // insert any other ATmega2560 port information for turning on status LEDs here
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 		PORTB |= (1 << PORTB5); // active high L
@@ -260,20 +226,20 @@ static void activityLED::output(uint8_t val)
 	{
 
 #if defined(__AVR_ATmega32U4__)
-#ifdef useTinkerkitLCDmodule
+#if defined(useTinkerkitLCDmodule)
 //		PORTB |= (1 << PORTB0); // active low RX
 		PORTC &= ~(1 << PORTC7); // active high L
 //		PORTD |= (1 << PORTD5); // active low TX
-#else // useTinkerkitLCDmodule
+#else // defined(useTinkerkitLCDmodule)
 // insert any other ATmega32U4 port information for turning off status LEDs here
-#endif // useTinkerkitLCDmodule
+#endif // defined(useTinkerkitLCDmodule)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 		PORTB &= ~(1 << PORTB7); // active high L
-#else // useArduinoMega2560
+#else // defined(useArduinoMega2560)
 // insert any other ATmega2560 port information for turning off status LEDs here
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 		PORTB &= ~(1 << PORTB5); // active high L
@@ -284,37 +250,32 @@ static void activityLED::output(uint8_t val)
 }
 
 #endif // defined(useActivityLED)
-#ifdef useTestButtonValues
+#if defined(useTestButtonValues)
 /* Button input value viewer section */
 
 static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
-
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-		case menuOutputDisplayIdx:
-#ifdef useAnalogButtons
-			text::hexWordOut(devLCD, (uint16_t)(analogValue[(unsigned int)(analogButtonChannelIdx)]));
-#endif // useAnalogButtons
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+		case displayOutputIdx:
+#if defined(useAnalogButtons)
+			text::hexWordOut(devLCD, (uint16_t)(analogValue[(uint16_t)(analogButtonChannelIdx)]));
+#endif // defined(useAnalogButtons)
 			text::newLine(devLCD);
 			text::hexByteOut(devLCD, thisButtonState);
 			text::hexByteOut(devLCD, lastButtonState);
-#ifdef useTestAnalogButtonIdx
+#if defined(useTestAnalogButtonIdx)
 			text::stringOut(devLCD, PSTR(" pins, "));
 			text::hexByteOut(devLCD, thisButtonIdx);
 			text::stringOut(devLCD, PSTR(" idx"));
-#else // useTestAnalogButtonIdx
+#else // defined(useTestAnalogButtonIdx)
 			text::stringOut(devLCD, PSTR(" pins"));
 			text::newLine(devLCD);
-#endif // useTestAnalogButtonIdx
+#endif // defined(useTestAnalogButtonIdx)
 			break;
 
 		default:
@@ -322,12 +283,10 @@ static uint8_t buttonView::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	}
 
-	return retVal;
-
 }
 
-#endif // useTestButtonValues
-#ifdef useDebugTerminal
+#endif // defined(useTestButtonValues)
+#if defined(useDebugTerminal)
 /* debug terminal section */
 
 static const uint8_t prgmParseDecimalDigit[] PROGMEM = {
@@ -340,11 +299,6 @@ static const uint8_t prgmParseHexDigit[] PROGMEM = {
 	instrLdReg, 0x62,									// load terminal register into main register
 	instrMul2byByte, 16,								// multiply by 16
 	instrJump, tParseCharacterToReg						// go perform number parse
-};
-
-static const uint8_t prgmFetchMainProgramValue[] PROGMEM = {
-	instrLdRegMainIndexed, 0x02,
-	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchConstantValue[] PROGMEM = {
@@ -438,7 +392,7 @@ static const uint8_t prgmFetchTripVarValue[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmWriteMainProgramValue[] PROGMEM = {
+static const uint8_t prgmTerminalWriteMainProgramValue[] PROGMEM = {
 	instrStRegMainIndexed, 0x06,
 	instrDone											// exit to caller
 };
@@ -454,7 +408,7 @@ static const uint8_t prgmWriteTripMeasurementValue[] PROGMEM = {
 };
 
 #if defined(useDebugButtonInjection)
-#ifdef useLegacyButtons
+#if defined(useLegacyButtons)
 static const uint8_t terminalButtonCount = 6;
 
 static const char terminalButtonChars[] PROGMEM = {
@@ -470,7 +424,7 @@ static const uint8_t terminalButtonValues[] PROGMEM = {
 	,btnLongPressR
 };
 
-#else // useLegacyButtons
+#else // defined(useLegacyButtons)
 static const uint8_t terminalButtonCount = 10;
 
 static const char terminalButtonChars[] PROGMEM = {
@@ -490,7 +444,7 @@ static const uint8_t terminalButtonValues[] PROGMEM = {
 	,btnLongPressD
 };
 
-#endif // useLegacyButtons
+#endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
 static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 {
@@ -505,9 +459,7 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 	for (uint8_t x = 1; x < 9; x++)
 	{
 
-		text::setModeOnCondition(devDebugTerminal, (flagRegister & bitMask), odvFlagEnableOutput);
-		text::stringOut(devDebugTerminal, flagStr, x);
-		text::setModeOnCondition(devDebugTerminal, 1, odvFlagEnableOutput);
+		text::stringOutIf(devDebugTerminal, (flagRegister & bitMask), flagStr, x);
 
 		if (x == 8) c = 0x0D;
 		else c = 0x20;
@@ -522,14 +474,8 @@ static void terminal::outputFlags(uint8_t flagRegister, const char * flagStr)
 static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 {
 
-	calcFuncObj thisCalcFuncObj;
-
-	// perform the required decimal formatting
-	thisCalcFuncObj = translateCalcIdx(terminalIdx, lineNumber, termNumberBuff, decWindow, 0);
-
-	text::stringOut(devDebugTerminal, thisCalcFuncObj.strBuffer); // output the number
-	text::charOut(devDebugTerminal, ' ');
-	text::stringOut(devDebugTerminal, terminalFormats, thisCalcFuncObj.calcFmtIdx);
+	text::tripFunctionOut(devDebugTerminal, terminalIdx, lineNumber, decWindow, dfOutputLabel);
+	text::charOut(devDebugTerminal, mainCalcFuncVar.tripChar);
 
 }
 
@@ -537,7 +483,7 @@ static void terminal::outputConstantValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchConstantValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 
 }
 
@@ -545,16 +491,20 @@ static void terminal::outputParameterValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 
 }
 
 static void terminal::outputParameterExtra(uint8_t lineNumber)
 {
 
+	uint8_t i;
+
+	i = EEPROM::getLength(lineNumber);
+
 	text::hexByteOut(devDebugTerminal, EEPROM::getParameterFlags(lineNumber));
 	text::charOut(devDebugTerminal, '-');
-	text::hexByteOut(devDebugTerminal, EEPROM::getLength(lineNumber));
+	text::hexByteOut(devDebugTerminal, i);
 	text::charOut(devDebugTerminal, '-');
 	text::hexWordOut(devDebugTerminal, EEPROM::getAddress(lineNumber));
 	if (lineNumber < eePtrSettingsEnd)
@@ -562,32 +512,26 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 
 		text::stringOut(devDebugTerminal, PSTR(" (orig "));
 		SWEET64::runPrgm(prgmFetchInitialParamValue, lineNumber);
-		text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+		text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 		text::stringOut(devDebugTerminal, PSTR(")"));
 
 	}
-#if defined(useEEPROMtripStorage)
-	else if (lineNumber < eePtrSavedTripsEnd)
+	else if (lineNumber < eePtrEnd)
 	{
+
+		if (i & 0x07) i += 0x08;
+		i >>= 3;
 
 		text::charOut(devDebugTerminal, ' ');
 		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-		text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
+
+		for (uint8_t x = 7; x < 8; x--)
+			if (x < i) text::hexByteOut(devDebugTerminal, ((union union_64 *)(&s64reg[(uint16_t)(s64reg2)]))->u8[(uint16_t)(x)]);
+			else text::stringOut(devDebugTerminal, PSTR("  "));
+
 		text::charOut(devDebugTerminal, ' ');
 
 	}
-#endif // defined(useEEPROMtripStorage)
-#if defined(useScreenEditor)
-	else if (lineNumber < eePtrDisplayPagesEnd)
-	{
-
-		text::charOut(devDebugTerminal, ' ');
-		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-		text::hexLWordOut(devDebugTerminal, &s64reg[s64reg2]);
-		text::charOut(devDebugTerminal, ' ');
-
-	}
-#endif // defined(useScreenEditor)
 
 }
 
@@ -595,7 +539,7 @@ static void terminal::outputVolatileValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchVolatileValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 
 }
 
@@ -603,7 +547,7 @@ static void terminal::outputMainProgramValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchMainProgramValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 
 }
 
@@ -611,7 +555,7 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, 0, tFormatToNumber));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, 0, tFormatToNumber));
 
 }
 
@@ -647,7 +591,7 @@ static void terminal::outputDecimalExtra(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchDecimalValue, lineNumber);
-	text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
+	text::stringOut(devDebugTerminal, ull2str(nBuff, decPlace, decWindow, decMode));
 
 }
 
@@ -666,6 +610,7 @@ static void terminal::mainProcess(void)
 
 	uint8_t i;
 	uint8_t j;
+	const char * separatorPtr;
 	uint8_t oldSREG;
 
 /*
@@ -706,6 +651,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
            I - inject button press
                 short (l, c, r, u, d)
                  long (L, C, R, U, D)
+           S - toggles display status line echo to terminal
            ? - displays this help
 
 	numbers or button presses are separated by spaces
@@ -745,7 +691,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			terminalMode = tmInitHex;
 			terminalAddress = 0;
 		case 1:		// get line
-			i = devDebugTerminal.chrIn();
+			i = text::charIn(devDebugTerminal);
 
 			if (i)
 			{
@@ -767,6 +713,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 					case 0x0D:
 						text::charOut(devDebugTerminal, 0x0D);
+						heart::changeBitFlags(timer0Command, 0, t0cInputReceived);
 						terminalState++;
 						break;
 
@@ -775,9 +722,9 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 						terminalState = 0;
 						break;
 
-#ifdef useSWEET64trace
+#if defined(useSWEET64trace)
 					case 0x0C:
-#endif // useSWEET64trace
+#endif // defined(useSWEET64trace)
 					case 0x20 ... 0x7E:
 						if (inpIdx == tBuffLength)
 						{
@@ -919,12 +866,32 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #if defined(useDebugTerminalHelp)
 					case '?':   // display help
-						terminalCmd = chr;
-						terminalLine = 0; // initialize terminal output line
-						terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
+
+							terminalCmd = chr;
+							terminalLine = 0; // initialize terminal output line
+							terminalState = 12; // this command WILL print a lot of different lines, so handle this command one iteration at a time
+
+						}
+
 						break;
 
 #endif // defined(useDebugTerminalHelp)
+					case 'S':	// toggle display status line echo to terminal
+						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
+						else
+						{
+
+							peek = terminalByte; // save source start byte value
+							terminalMode &= ~(tmInputMask); // clear input mode processing bits
+							terminalMode |= (tmInitHex | tmSourceReadIn); // shift to hex input
+
+						}
+
+						break;
+
 					case '.':	// specify source address
 						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
 						else
@@ -991,12 +958,12 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 						break;
 
-#ifdef useSWEET64trace
+#if defined(useSWEET64trace)
 					case 0x0C:
 						chr = '\\'; // reset input mode and pending command
 						break;
 
-#endif // useSWEET64trace
+#endif // defined(useSWEET64trace)
 					case 'L':   // list available trip functions from terminalIdx
 						if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 					case 'O':	// list available program constants
@@ -1064,10 +1031,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 									SREG = oldSREG; // restore interrupt flag status
 
-									text::stringOut(devDebugTerminal, PSTR("transferred "));
 									text::stringOut(devDebugTerminal, terminalTripVarNames, terminalByte);
-									text::stringOut(devDebugTerminal, PSTR(" to "));
+									text::stringOut(devDebugTerminal, PSTR(" -> "));
 									text::stringOut(devDebugTerminal, terminalTripVarNames, terminalTarget);
+									text::newLine(devDebugTerminal);
 
 									chr = '\\'; // reset input mode and pending command
 
@@ -1111,10 +1078,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugButtonInjection)
 							case 'P':   // enter a stored parameter value
-								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0))
 								{
 
-									parameterEdit::onEEPROMchange(prgmPtr, terminalAddress++);
+									parameterEdit::onEEPROMchange(prgmTerminalWriteParameterValue, terminalAddress++);
 									terminalMode &= ~(tmInputMask); // clear input mode processing bits
 									terminalMode |= (tmDecimalInput); // shift to reading a new decimal value
 
@@ -1127,7 +1094,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 							case 'M':   // enter a main program variable value
 							case 'T':   // enter a trip variable measurement value
 							case 'V':   // enter a volatile variable value
-								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0) && (prgmPtr))
+								if ((terminalMode & tmAddressReadIn) && (terminalMode & tmByteReadIn) && ((terminalMode & tmSourceReadIn) == 0))
 								{
 
 									SWEET64::runPrgm(prgmPtr, terminalAddress++);
@@ -1141,7 +1108,53 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								break;
 
 							case 0:
-								terminal::outputFlags(activityFlags, terminalActivityFlagStr);
+								outputFlags(activityFlags, terminalActivityFlagStr);
+								outputFlags(peek, terminalPeekStr);
+
+#if defined(useDragRaceFunction)
+								outputFlags(accelerationFlags, terminalAccelerationFlagStr);
+
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+								outputFlags(coastdownFlags, terminalCoastdownFlagStr);
+
+#endif // defined(useCoastDownCalculator)
+#if defined(useSerial0Port)
+								outputFlags(devSerial0.controlFlags, serial0ControlFlagsStr);
+								devSerial0.controlFlags &= ~(odvErrorFlags);
+
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+								outputFlags(devSerial1.controlFlags, serial1ControlFlagsStr);
+								devSerial1.controlFlags &= ~(odvErrorFlags);
+
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+								outputFlags(devSerial2.controlFlags, serial2ControlFlagsStr);
+								devSerial2.controlFlags &= ~(odvErrorFlags);
+
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+								outputFlags(devSerial3.controlFlags, serial3ControlFlagsStr);
+								devSerial3.controlFlags &= ~(odvErrorFlags);
+
+#endif // defined(useSerial3Port)
+#if defined(useBluetooth)
+								text::stringOut(devDebugTerminal, PSTR("btInputState = " tcEOS));
+								text::hexByteOut(devDebugTerminal, btInputState);
+								text::newLine(devDebugTerminal);
+
+#endif // defined(useBluetooth)
+#if defined(useBarFuelEconVsSpeed)
+								text::stringOut(devDebugTerminal, PSTR("FEvSpdTripIdx = " tcEOS));
+								text::hexByteOut(devDebugTerminal, FEvSpdTripIdx);
+								text::newLine(devDebugTerminal);
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useDebugCPUreading)
+								monitorState = 1; // set up to perform interrupt handler execution time measurement
+
+#endif // defined(useDebugCPUreading)
 							case '+':	// add
 							case '-':	// subtract
 							case '*':	// multiply
@@ -1154,7 +1167,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 								SWEET64::runPrgm(prgmFetchResultValue, 0);
 								text::charOut(devDebugTerminal, '=');
-								text::stringOut(devDebugTerminal, ull2str(termNumberBuff, decPlace, decWindow, decMode));
+								text::stringOut(devDebugTerminal, ull2str(nBuff, decPlace, decWindow, decMode));
 								text::stringOut(devDebugTerminal, PSTR(" (0x"));
 								text::hexLWordOut(devDebugTerminal, &s64reg[s64reg7]);
 								text::stringOut(devDebugTerminal, PSTR(")" tcCR));
@@ -1201,51 +1214,48 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 						case 'L':   // list available trip functions from terminalIdx
 							maxLine = dfMaxValDisplayCount;
-#if (useDebugTerminalLabels) || (useSWEET64trace)
+#if defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 							labelList = terminalTripFuncNames;
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 							primaryFunc = terminal::outputTripFunctionValue;
 							break;
 
 						case 'M':   // list available main program variables
 							maxLine = mpVariableMaxIdx;
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 							labelList = terminalMainProgramVarLabels;
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputMainProgramValue;
-							prgmPtr = prgmWriteMainProgramValue;
+							prgmPtr = prgmTerminalWriteMainProgramValue;
 							break;
 
 						case 'O':   // list available program constants
 							maxLine = idxMaxConstant;
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 							labelList = terminalConstIdxNames;
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputConstantValue;
 							break;
 
 						case 'P':   // list available stored parameters
 							maxLine = eePtrEnd;
-#ifdef useDebugTerminalLabels
-							labelList = parmLabels;
-#endif // useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
+							labelList = terminalParameterNames;
+#endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputParameterValue;
 							extraFunc = terminal::outputParameterExtra;
-							prgmPtr = prgmTerminalWriteParameterValue;
 							break;
 
 						case 'R':	// list available trip variables
 							maxLine = tripSlotTotalCount;
-#ifdef useDebugTerminalLabels
 							labelList = terminalTripVarNames;
-#endif // useDebugTerminalLabels
 							break;
 
 						case 'T':   // list available trip variable measurements
 							maxLine = rvMeasuredCount;
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 							labelList = terminalTripVarLabels;
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputTripVarMeasuredValue;
 							extraFunc = terminal::outputTripVarMeasuredExtra;
 							prgmPtr = prgmWriteTripMeasurementValue;
@@ -1260,9 +1270,9 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 						case 'V':   // list available volatile variables
 							maxLine = vVariableMaxIdx;
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 							labelList = terminalVolatileVarLabels;
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 							primaryFunc = terminal::outputVolatileValue;
 							prgmPtr = prgmWriteVolatileValue;
 							break;
@@ -1377,24 +1387,33 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 #endif // defined(useDebugButtonInjection)
 		case 32:	// output list of selected items
+			separatorPtr = terminalPrimarySeparator;
 			text::hexByteOut(devDebugTerminal, terminalLine);
-			text::stringOut(devDebugTerminal, PSTR(": "));
 			if (primaryFunc)
 			{
 
+				text::stringOut(devDebugTerminal, separatorPtr);
+				separatorPtr = terminalSecondarySeparator;
 				primaryFunc(terminalLine);
-				text::stringOut(devDebugTerminal, PSTR(" - "));
 
 			}
 			if (extraFunc)
 			{
 
+				text::stringOut(devDebugTerminal, separatorPtr);
+				separatorPtr = terminalSecondarySeparator;
 				extraFunc(terminalLine);
-				text::stringOut(devDebugTerminal, PSTR(" - "));
 
 			}
-			if (labelList) text::stringOut(devDebugTerminal, labelList, terminalLine);
-			else text::newLine(devDebugTerminal);
+			if (labelList)
+			{
+
+				text::stringOut(devDebugTerminal, separatorPtr);
+				separatorPtr = terminalSecondarySeparator;
+				text::stringOut(devDebugTerminal, labelList, terminalLine);
+
+			}
+			text::newLine(devDebugTerminal);
 
 			terminalLine++;
 
@@ -1409,62 +1428,54 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 }
 
-#endif // useDebugTerminal
-#ifdef useSimulatedFIandVSS
+#endif // defined(useDebugTerminal)
+#if defined(useSimulatedFIandVSS)
+#if defined(useButtonInput)
 static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
+	uint8_t i;
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, debugScreenFuncNames, cursorPos); // briefly display screen name
-			retVal = (debugFlags & debugEnableFlags);
+			i = (debugFlags & debugEnableFlags);
 			switch (cursorPos)
 			{
 
 				case 0:
-					changeBitFlags(debugFlags, 0, (debugInjectorFlag | debugVSSflag));
+					heart::changeBitFlags(debugFlags, 0, (debugInjectorFlag | debugVSSflag));
 					break;
 
 				case 1:
-					changeBitFlags(debugFlags, debugInjectorFlag, debugVSSflag);
+					heart::changeBitFlags(debugFlags, debugInjectorFlag, debugVSSflag);
 					break;
 
 				case 2:
-					changeBitFlags(debugFlags, (debugInjectorFlag | debugVSSflag), 0);
+					heart::changeBitFlags(debugFlags, (debugInjectorFlag | debugVSSflag), 0);
 					break;
 
 				case 3:
-					changeBitFlags(debugFlags, debugVSSflag, debugInjectorFlag);
+					heart::changeBitFlags(debugFlags, debugVSSflag, debugInjectorFlag);
 					break;
 
 				default:
 					break;
 
 			}
-			if ((debugFlags & debugEnableFlags) ^ retVal) configurePorts();
+			if ((debugFlags & debugEnableFlags) ^ i) configurePorts();
 
-		case menuOutputDisplayIdx:
-#if defined(useSpiffyTripLabels)
-			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
+		case displayOutputIdx:
 			mainDisplay::outputPage(getSignalSimPageFormats, 0, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 
@@ -1475,6 +1486,7 @@ static uint16_t signalSim::getSignalSimPageFormats(uint8_t formatIdx)
 
 }
 
+#endif // defined(useButtonInput)
 static void signalSim::configurePorts(void)
 {
 
@@ -1594,20 +1606,20 @@ static void signalSim::idleProcessFuel(void)
 	{
 
 		case 0:
-			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPidx)]);
-			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPidx)]);
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(debugFIPidx)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(debugFIPidx)]);
 			debugFIPWgoodTickLength = debugFIPtickLength - 63;
-			changeBitFlags(debugFlags, 0, debugFIPready);
+			heart::changeBitFlags(debugFlags, 0, debugFIPready);
 			break;
 
 		case 1:
 			break;
 
 		case 2:
-			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
-			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(unsigned int)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(debugFIPlength - debugFIPidx - 1)]);
+			debugFIPWreadTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(debugFIPlength - debugFIPidx - 1)]);
 			debugFIPWgoodTickLength = debugFIPtickLength - 63;
-			changeBitFlags(debugFlags, 0, debugFIPready);
+			heart::changeBitFlags(debugFlags, 0, debugFIPready);
 			break;
 
 		case 3:
@@ -1640,16 +1652,16 @@ static void signalSim::idleProcessVSS(void)
 	{
 
 		case 0:
-			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSidx)]);
-			changeBitFlags(debugFlags, 0, debugVSSready);
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(uint16_t)(debugVSSidx)]);
+			heart::changeBitFlags(debugFlags, 0, debugVSSready);
 			break;
 
 		case 1:
 			break;
 
 		case 2:
-			debugVSStickLength = pgm_read_word(&debugVSSvalues[(unsigned int)(debugVSSlength - debugVSSidx - 1)]);
-			changeBitFlags(debugFlags, 0, debugVSSready);
+			debugVSStickLength = pgm_read_word(&debugVSSvalues[(uint16_t)(debugVSSlength - debugVSSidx - 1)]);
+			heart::changeBitFlags(debugFlags, 0, debugVSSready);
 			break;
 
 		case 3:
@@ -1662,4 +1674,4 @@ static void signalSim::idleProcessVSS(void)
 
 }
 
-#endif // useSimulatedFIandVSS
+#endif // defined(useSimulatedFIandVSS)

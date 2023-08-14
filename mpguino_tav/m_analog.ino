@@ -18,13 +18,13 @@ ISR( ADC_vect )
 	uint8_t analogChannelIdx;
 	uint8_t analogChannelMask;
 	uint8_t flag;
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	uint8_t a;
 	uint8_t b;
 	uint16_t c;
 
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 
 	rawValue->u8[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
 	rawValue->u8[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
@@ -74,7 +74,7 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogValue[(unsigned int)(analogValueIdx)] = rawRead; // save the value just read in
+		analogValue[(uint16_t)(analogValueIdx)] = rawRead; // save the value just read in
 		analogStatus |= (analogBitmask); // signal to main program that an analog channel was read in
 		if (analogCommand & acSampleChannelActive)
 		{
@@ -91,7 +91,7 @@ ISR( ADC_vect )
 	if (flag)
 	{
 
-		ADMUX = pgm_read_byte(&analogChannelValue[(unsigned int)(analogChannelIdx)]); // select next analog channel to read
+		ADMUX = pgm_read_byte(&analogChannelValue[(uint16_t)(analogChannelIdx)]); // select next analog channel to read
 		ADCSRA |= ((1 << ADSC) | (1 << ADIF) | (1 << ADIE)); // start ADC read, enable interrupt, and clear interrupt flag
 
 	}
@@ -105,7 +105,7 @@ ISR( ADC_vect )
 
 	}
 
-#ifdef useDebugCPUreading
+#if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 	if (b < a) c = 256 - a + b; // an overflow occurred
@@ -113,7 +113,7 @@ ISR( ADC_vect )
 
 	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
 
-#endif // useDebugCPUreading
+#endif // defined(useDebugCPUreading)
 }
 
 #endif // defined(useAnalogRead)
@@ -121,41 +121,30 @@ ISR( ADC_vect )
  /* ADC voltage display section */
 
 static const uint16_t analogReadPageFormats[4] PROGMEM = {
-	 (analog0Idx << 8 ) |	(0x80 | tAnalogChannel)	// Voltages
-	,(analog1Idx << 8 ) |	(0x80 | tAnalogChannel)
-	,(analog2Idx << 8 ) |	(0x80 | tAnalogChannel)
-	,(analog3Idx << 8 ) |	(0x80 | tAnalogChannel)
+	 (analog0Idx << 8 ) |			(tAnalogChannel)	// Voltages
+	,(analog1Idx << 8 ) |			(tAnalogChannel)
+	,(analog2Idx << 8 ) |			(tAnalogChannel)
+	,(analog3Idx << 8 ) |			(tAnalogChannel)
 };
 
 static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t retVal = 0;
-
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
+			text::statusOut(devLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
 
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
-			text::statusOut(devLCD, analogReadScreenFuncNames, cursorPos); // briefly display screen name
-
-		case menuOutputDisplayIdx:
-#if defined(useSpiffyTripLabels)
-			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0, msTripBitPattern);
-#else // defined(useSpiffyTripLabels)
+		case displayOutputIdx:
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);
-#endif // defined(useSpiffyTripLabels)
 			break;
 
 		default:
 			break;
 
 	}
-
-	return retVal;
 
 }
 

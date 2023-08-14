@@ -9,7 +9,10 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 #if defined(useScreenEditor)
 	static uint16_t readWord(uint8_t eePtr);
 #endif // defined(useScreenEditor)
+	static void writeByte(uint8_t eePtr, uint8_t value);
+#if defined(useScreenEditor)
 	static void writeVal(uint8_t eePtr, uint32_t value);
+#endif // defined(useScreenEditor)
 	static void read64(union union_64 * an, uint8_t parameterIdx);
 	static void write64(union union_64 * an, uint8_t parameterIdx);
 	static uint16_t getAddress(uint8_t eePtr);
@@ -18,835 +21,1025 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 
 };
 
-const uint8_t guinosig =		0b10110111;
+#if defined(useButtonInput)
+static const uint8_t displayCountMain = 9			// count of base number of data displays
+#if defined(trackIdleEOCdata)
+	+ 3												// count of Idle/EOC tracking data displays
+#endif // defined(trackIdleEOCdata)
+;
+static const uint8_t mainDisplayFormatSize = displayCountMain * 4;
+
+// the following display index defines are for the main MPGuino displays
+
+#define nextAllowedValue 0
+static const uint8_t baseMenuDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue baseMenuDisplayIdx + 1
+#if defined(useExpandedMainDisplay)
+static const uint8_t mainMenuDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue mainMenuDisplayIdx + 1
+#endif // defined(useExpandedMainDisplay)
+static const uint8_t settingsMenuDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue settingsMenuDisplayIdx + 1
+
+// the following display index defines are for the various EEPROM parameter settings, grouped by function
+
+static const uint8_t displaySettingsDisplayIdx =	nextAllowedValue;
+static const uint8_t fuelSettingsDisplayIdx =		displaySettingsDisplayIdx + 1;
+static const uint8_t VSSsettingsDisplayIdx =		fuelSettingsDisplayIdx + 1;
+static const uint8_t tankSettingsDisplayIdx =		VSSsettingsDisplayIdx + 1;
+#define nextAllowedValue tankSettingsDisplayIdx + 1
+#if defined(useChryslerMAPCorrection)
+static const uint8_t CRFICsettingsDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue CRFICsettingsDisplayIdx + 1
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+static const uint8_t acdSettingsDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue acdSettingsDisplayIdx + 1
+#endif // defined(useVehicleParameters)
+static const uint8_t timeoutSettingsDisplayIdx =	nextAllowedValue;
+static const uint8_t miscSettingsDisplayIdx =		timeoutSettingsDisplayIdx + 1;
+#define nextAllowedValue miscSettingsDisplayIdx + 1
+
+static const uint8_t displayCountSettings =			nextAllowedValue - displaySettingsDisplayIdx;
+
+// the following display index defines are for any otherwise unlinked menu groups
+
+#if defined(useSavedTrips)
+static const uint8_t tripSaveCurrentDisplayIdx =	nextAllowedValue;
+#define nextAllowedValue tripSaveCurrentDisplayIdx + 1
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+static const uint8_t tripSaveTankDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue tripSaveTankDisplayIdx + 1
+#endif // defined(useEnhancedTripReset)
+
+// the following display index defines are for options selected via configs.h
+
+static const uint8_t optionalDisplayIdxStart =		nextAllowedValue;
+
+#if defined(useDragRaceFunction)
+static const uint8_t dragRaceMenuDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue dragRaceMenuDisplayIdx + 1
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+static const uint8_t coastdownMenuDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue coastdownMenuDisplayIdx + 1
+#endif // defined(useCoastDownCalculator)
+
+static const uint8_t displayCountMenu =				nextAllowedValue - baseMenuDisplayIdx;
+
+#if defined(useSimulatedFIandVSS)
+static const uint8_t signalSimDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue signalSimDisplayIdx + 1
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
+static const uint8_t pressureDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue pressureDisplayIdx + 1
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useDebugAnalog)
+static const uint8_t analogDisplayIdx =				nextAllowedValue;
+#define nextAllowedValue analogDisplayIdx + 1
+#endif // defined(useDebugAnalog)
+#if defined(useTestButtonValues)
+static const uint8_t buttonDisplayIdx =				nextAllowedValue;
+#define nextAllowedValue buttonDisplayIdx + 1
+#endif // defined(useTestButtonValues)
+
+static const uint8_t displayCountBase =				nextAllowedValue + 2 - optionalDisplayIdxStart;
+
+// the following display index defines are for the various main displays
+
+static const uint8_t mainDisplayIdx =				nextAllowedValue;
+#define nextAllowedValue mainDisplayIdx + 1
+#if defined(useStatusMeter)
+static const uint8_t statusMeterDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue statusMeterDisplayIdx + 1
+#endif // defined(useStatusMeter)
+#if defined(useBigFE)
+static const uint8_t bigFEdisplayIdx =				nextAllowedValue;
+#define nextAllowedValue bigFEdisplayIdx + 1
+#endif // defined(useBigFE)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t barFEvTdisplayIdx =			nextAllowedValue;
+#define nextAllowedValue barFEvTdisplayIdx + 1
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t barFEvSdisplayIdx =			nextAllowedValue;
+#define nextAllowedValue barFEvSdisplayIdx + 1
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBigDTE)
+static const uint8_t bigDTEdisplayIdx =				nextAllowedValue;
+#define nextAllowedValue bigDTEdisplayIdx + 1
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+static const uint8_t bigTTEdisplayIdx =				nextAllowedValue;
+#define nextAllowedValue bigTTEdisplayIdx + 1
+#endif // defined(useBigTTE)
+#if defined(useCPUreading)
+static const uint8_t CPUmonDisplayIdx =				nextAllowedValue;
+#define nextAllowedValue CPUmonDisplayIdx + 1
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
+static const uint8_t clockShowDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue clockShowDisplayIdx + 1
+#endif // defined(useClockDisplay)
+
+static const uint8_t displayCountUser =				nextAllowedValue - mainDisplayIdx;	// this variable is used to figure out how many menu levels the user display section has
+
+// the following display index defines are supplemental non-menu display index defines for options selected via configs.h 
+
+#if defined(useDragRaceFunction)
+static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue dragRaceDisplayIdx + 1
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+static const uint8_t coastdownDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue coastdownDisplayIdx + 1
+#endif // defined(useCoastDownCalculator)
+
+static const uint8_t displayMaxSavableIdx =			nextAllowedValue;
+
+static const uint8_t parameterEditDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue parameterEditDisplayIdx + 1
+#if defined(useClockDisplay)
+static const uint8_t clockSetDisplayIdx =			nextAllowedValue;
+#define nextAllowedValue clockSetDisplayIdx + 1
+#endif // defined(useClockDisplay)
+#if defined(useScreenEditor)
+static const uint8_t displayEditDisplayIdx =		nextAllowedValue;
+#define nextAllowedValue displayEditDisplayIdx + 1
+#endif // defined(useScreenEditor)
+
+static const char displayCountTotal =				nextAllowedValue;
+
+#endif // defined(useButtonInput)
+static const uint8_t guinosig =		0b10110111;
 
 // start of remarkably long EEPROM stored settings section
 
 /* parameter sizes in bits */
 
-const uint8_t pSizeSignature =				24;
+static const uint8_t pSizeSignature =					32;
+static const uint8_t pSizeMetricMode =					1;
+static const uint8_t pSizeAlternateFE =					1;
+static const uint8_t pSizeMicroSecondsPerGallon =		32;
+static const uint8_t pSizeInjEdgeTrigger =				1;
+static const uint8_t pSizeInjectorSettleTime =			16;
+static const uint8_t pSizeInjPer2CrankRev =				8;
+static const uint8_t pSizeMinGoodRPM =					16;
+static const uint8_t pSizePulsesPerDistance =			18;
+static const uint8_t pSizeVSSpause =					8;
+static const uint8_t pSizeMinGoodSpeed =				16;
+static const uint8_t pSizeTankSize =					24;
+static const uint8_t pSizeTankBingoSize =				pSizeTankSize;
+static const uint8_t pSizeIdleTimeout =					8;
+static const uint8_t pSizeEOCtimeout =					8;
+static const uint8_t pSizeButtonTimeout =				8;
+static const uint8_t pSizeParkTimeout =					8;
+static const uint8_t pSizeActivityTimeout =				8;
+static const uint8_t pSizeScratchpad =					32;
 
-// display settings
-
+#if defined(useButtonInput)
+static const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
+static const uint8_t pSizeWakeupResetCurrentOnMove =	1;
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+#if defined(useBinaryLCDbrightness)
+static const uint8_t pSizeBrightness =					1;
+#else // defined(useBinaryLCDbrightness)
+static const uint8_t pSizeBrightness =					2;
+#endif // defined(useBinaryLCDbrightness)
 #if defined(useLCDcontrast)
-const uint8_t pSizeContrast =				1;
+static const uint8_t pSizeContrast =					1;
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
-const uint8_t pSizeLCDcolor =				3;
-#endif // useAdafruitRGBLCDshield
-const uint8_t pSizeMetricMode =				1;
-const uint8_t pSizeAlternateFE =			1;
-#ifdef useFuelCost
-const uint8_t pSizeFuelUnitCost =			24;
-#endif // useFuelCost
+#if defined(useAdafruitRGBLCDshield)
+static const uint8_t pSizeLCDcolor =					3;
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
+static const uint8_t pSizeFuelUnitCost =				24;
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pSizeOutputPin1Mode =			3;
-const uint8_t pSizeOutputPin2Mode =			3;
+static const uint8_t pSizeOutputPin1Mode =				3;
+static const uint8_t pSizeOutputPin2Mode =				3;
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
-const uint8_t pSizeVoltageOffset =			12;
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
-const uint8_t pSizeSerialDataLogging =		1;
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-const uint8_t pSizeFEvsTime =				16;
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-const uint8_t pSizeBarLowSpeedCutoff =		24;
-const uint8_t pSizeBarSpeedQuantumIdx =		24;
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#if defined(useCarVoltageOutput)
+static const uint8_t pSizeVoltageOffset =				12;
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
+static const uint8_t pSizeSerialDataLogging =			1;
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const uint8_t pSizeJSONoutput =					1;
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t pSizeFEvsTime =					16;
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t pSizeBarLowSpeedCutoff =			24;
+static const uint8_t pSizeBarSpeedQuantumIdx =			24;
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-const uint8_t pSizeSysFuelPressure =		32;
+static const uint8_t pSizeSysFuelPressure =				32;
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const uint8_t pSizeRefFuelPressure =		32;
-const uint8_t pSizeInjectorCount =			8;
-const uint8_t pSizeInjectorSize =			20;
+static const uint8_t pSizeRefFuelPressure =				32;
+static const uint8_t pSizeInjectorCount =				8;
+static const uint8_t pSizeInjectorSize =				20;
 #endif // useCalculatedFuelFactor
-const uint8_t pSizeMicroSecondsPerGallon =	32;
-const uint8_t pSizeInjEdgeTrigger =			1;
-const uint8_t pSizeInjectorOpeningTime =	16;
-const uint8_t pSizeInjectorClosingTime =	16;
-const uint8_t pSizeCrankRevPerInj =			8;
-const uint8_t pSizeMinGoodRPM =				16;
+#if defined(useChryslerMAPCorrection)
+static const uint8_t pSizeMAPsensorFloor =				16;
+static const uint8_t pSizeMAPsensorCeiling =			16;
+static const uint8_t pSizeMAPsensorRange =				32;
+static const uint8_t pSizeMAPsensorOffset =				32;
+#if defined(useChryslerBaroSensor)
+static const uint8_t pSizeBaroSensorFloor =				16;
+static const uint8_t pSizeBaroSensorCeiling =			16;
+static const uint8_t pSizeBaroSensorRange =				32;
+static const uint8_t pSizeBaroSensorOffset =			32;
+#else // defined(useChryslerBaroSensor)
+static const uint8_t pSizeBarometricPressure =			32;
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+static const uint8_t pSizeVehicleMass =					16;
+#if defined(useCoastDownCalculator)
+static const uint8_t pSizeVehicleFrontalArea =			16;
+static const uint8_t pSizeLocustDensity =				16;
+static const uint8_t pSizeCoefficientD =				16;
+static const uint8_t pSizeCoefficientV =				16;
+static const uint8_t pSizeCoefficientRR =				16;
+static const uint8_t pSizeCoastdownSamplePeriod =		8;
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+static const uint8_t pSizeDragSpeed =					24;
+static const uint8_t pSizeDragDistance =				16;
+static const uint8_t pSizeDragAutoFlag =				1;
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
+static const uint8_t pSizeAutoSaveActive =				1;
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+static const uint8_t pSizeRefuelSize =					pSizeTankSize;
+#endif // defined(usePartialRefuel)
 
-// vehicle speed sensor settings
-
-const uint8_t pSizePulsesPerDistance =		18;
-const uint8_t pSizeVSSpause =				8;
-const uint8_t pSizeMinGoodSpeed =			16;
-const uint8_t pSizeTankSize =				24;
-const uint8_t pSizeTankBingoSize =			pSizeTankSize;
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
-const uint8_t pSizeMAPsensorFloor =			16;
-const uint8_t pSizeMAPsensorCeiling =		16;
-const uint8_t pSizeMAPsensorRange =			32;
-const uint8_t pSizeMAPsensorOffset =		32;
-#ifdef useChryslerBaroSensor
-const uint8_t pSizeBaroSensorFloor =		16;
-const uint8_t pSizeBaroSensorCeiling =		16;
-const uint8_t pSizeBaroSensorRange =		32;
-const uint8_t pSizeBaroSensorOffset =		32;
-#else // useChryslerBaroSensor
-const uint8_t pSizeBarometricPressure =		32;
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
-const uint8_t pSizeVehicleMass =			16;
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-const uint8_t pSizeVehicleFrontalArea =		16;
-const uint8_t pSizeLocustDensity =			16;
-const uint8_t pSizeCoefficientD =			16;
-const uint8_t pSizeCoefficientV =			16;
-const uint8_t pSizeCoefficientRR =			16;
-const uint8_t pSizeCoastdownSamplePeriod =	8;
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const uint8_t pSizeDragSpeed =				24;
-const uint8_t pSizeDragDistance =			16;
-const uint8_t pSizeDragAutoFlag =			1;
-#endif // useDragRaceFunction
-
-// timeout settings
-
-const uint8_t pSizeIdleTimeout =			8;
-const uint8_t pSizeEOCtimeout =				8;
-const uint8_t pSizeButtonTimeout =			8;
-const uint8_t pSizeParkTimeout =			8;
-const uint8_t pSizeActivityTimeout =		8;
-const uint8_t pSizeWakeupResetCurrentOnEngine =	1;
-const uint8_t pSizeWakeupResetCurrentOnMove =	1;
-#ifdef useSavedTrips
-const uint8_t pSizeAutoSaveActive =			1;
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-const uint8_t pSizeScratchpad =				32;
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
-const uint8_t pSizeRefuelSize =				pSizeTankSize;
-#ifdef useEEPROMtripStorage
-const uint8_t pSizeRefuelSaveSizeIdx =		pSizeTankSize;
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
-
-#ifdef useEEPROMtripStorage
-const uint8_t pSizeCurrTripSignatureIdx =	8;
-const uint8_t pSizeTankTripSignatureIdx =	8;
-const uint8_t pSizeCurrTripVSSpulseIdx =	32;
-const uint8_t pSizeCurrTripVSScycleIdx =	64;
-const uint8_t pSizeCurrTripInjPulseIdx =	32;
-const uint8_t pSizeCurrTripInjCycleIdx =	64;
-const uint8_t pSizeCurrTripEngCycleIdx =	64;
-const uint8_t pSizeTankTripVSSpulseIdx =	32;
-const uint8_t pSizeTankTripVSScycleIdx =	64;
-const uint8_t pSizeTankTripInjPulseIdx =	32;
-const uint8_t pSizeTankTripInjCycleIdx =	64;
-const uint8_t pSizeTankTripEngCycleIdx =	64;
+#if defined(useButtonInput)
+static const uint8_t pSizeDisplayIdx =					8;
+#if LCDcharHeight == 4
+static const uint8_t pSizeBottomDisplayIdx =			8;
+static const uint8_t pSizeBottomCursorIdx =				8;
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
+#if defined(useEEPROMtripStorage)
+#if defined(usePartialRefuel)
+static const uint8_t pSizeRefuelSaveSizeIdx =			pSizeTankSize;
+#endif // defined(usePartialRefuel)
+static const uint8_t pSizeCurrTripSignatureIdx =		8;
+static const uint8_t pSizeTankTripSignatureIdx =		8;
+static const uint8_t pSizeCurrTripVSSpulseIdx =			32;
+static const uint8_t pSizeCurrTripVSScycleIdx =			64;
+static const uint8_t pSizeCurrTripInjPulseIdx =			32;
+static const uint8_t pSizeCurrTripInjCycleIdx =			64;
+static const uint8_t pSizeCurrTripEngCycleIdx =			64;
+static const uint8_t pSizeTankTripVSSpulseIdx =			32;
+static const uint8_t pSizeTankTripVSScycleIdx =			64;
+static const uint8_t pSizeTankTripInjPulseIdx =			32;
+static const uint8_t pSizeTankTripInjCycleIdx =			64;
+static const uint8_t pSizeTankTripEngCycleIdx =			64;
 #if defined(trackIdleEOCdata)
-const uint8_t pSizeCurrIEOCvssPulseIdx =	32;
-const uint8_t pSizeCurrIEOCvssCycleIdx =	64;
-const uint8_t pSizeCurrIEOCinjPulseIdx =	32;
-const uint8_t pSizeCurrIEOCinjCycleIdx =	64;
-const uint8_t pSizeCurrIEOCengCycleIdx =	64;
-const uint8_t pSizeTankIEOCvssPulseIdx =	32;
-const uint8_t pSizeTankIEOCvssCycleIdx =	64;
-const uint8_t pSizeTankIEOCinjPulseIdx =	32;
-const uint8_t pSizeTankIEOCinjCycleIdx =	64;
-const uint8_t pSizeTankIEOCengCycleIdx =	64;
+static const uint8_t pSizeCurrIEOCvssPulseIdx =			32;
+static const uint8_t pSizeCurrIEOCvssCycleIdx =			64;
+static const uint8_t pSizeCurrIEOCinjPulseIdx =			32;
+static const uint8_t pSizeCurrIEOCinjCycleIdx =			64;
+static const uint8_t pSizeCurrIEOCengCycleIdx =			64;
+static const uint8_t pSizeTankIEOCvssPulseIdx =			32;
+static const uint8_t pSizeTankIEOCvssCycleIdx =			64;
+static const uint8_t pSizeTankIEOCinjPulseIdx =			32;
+static const uint8_t pSizeTankIEOCinjCycleIdx =			64;
+static const uint8_t pSizeTankIEOCengCycleIdx =			64;
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 
 #define byteSize(bitLength) ((((bitLength & 0x07) != 0)? 1 : 0) + (bitLength / 8))
 
 /* parameter addresses from sizes defined above */
 
-const uint8_t eeAdrSignature = 0;
+static const uint16_t eeAdrSignature = 0;
 
 #define nextAllowedValue eeAdrSignature
-const unsigned int pAddressSignature =					nextAllowedValue;
-#define nextAllowedValue pAddressSignature + byteSize(pSizeSignature)
+static const uint16_t pAddressSignature =					nextAllowedValue;
+static const uint16_t pAddressMetricMode =					pAddressSignature + byteSize(pSizeSignature);
+static const uint16_t pAddressAlternateFE =					pAddressMetricMode + byteSize(pSizeMetricMode);
+static const uint16_t pAddressMicroSecondsPerGallon =		pAddressAlternateFE + byteSize(pSizeAlternateFE);;
+static const uint16_t pAddressInjEdgeTrigger =				pAddressMicroSecondsPerGallon + byteSize(pSizeMicroSecondsPerGallon);
+static const uint16_t pAddressInjectorSettleTime =			pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
+static const uint16_t pAddressInjPer2CrankRev =				pAddressInjectorSettleTime + byteSize(pSizeInjectorSettleTime);
+static const uint16_t pAddressMinGoodRPM =					pAddressInjPer2CrankRev + byteSize(pSizeInjPer2CrankRev);
+static const uint16_t pAddressPulsesPerDistance =			pAddressMinGoodRPM + byteSize(pSizeMinGoodRPM);
+static const uint16_t pAddressVSSpause =					pAddressPulsesPerDistance + byteSize(pSizePulsesPerDistance);
+static const uint16_t pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVSSpause);
+static const uint16_t pAddressTankSize =					pAddressMinGoodSpeed + byteSize(pSizeMinGoodSpeed);
+static const uint16_t pAddressTankBingoSize =				pAddressTankSize + byteSize(pSizeTankSize);
+static const uint16_t pAddressIdleTimeout =					pAddressTankBingoSize + byteSize(pSizeTankBingoSize);
+static const uint16_t pAddressEOCtimeout =					pAddressIdleTimeout + byteSize(pSizeIdleTimeout);
+static const uint16_t pAddressButtonTimeout =				pAddressEOCtimeout + byteSize(pSizeEOCtimeout);
+static const uint16_t pAddressParkTimeout =					pAddressButtonTimeout + byteSize(pSizeButtonTimeout);
+static const uint16_t pAddressActivityTimeout =				pAddressParkTimeout + byteSize(pSizeParkTimeout);
+static const uint16_t pAddressScratchpad =					pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
+#define nextAllowedValue pAddressScratchpad + byteSize(pSizeScratchpad)
 
-// display settings
-
+#if defined(useButtonInput)
+static const uint16_t pAddressWakeupResetCurrentOnEngine =	nextAllowedValue;
+static const uint16_t pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
+#define nextAllowedValue pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove)
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+static const uint16_t pAddressBrightness =					nextAllowedValue;
+#define nextAllowedValue pAddressBrightness + byteSize(pSizeBrightness)
 #if defined(useLCDcontrast)
-const unsigned int pAddressContrast =					nextAllowedValue;
+static const uint16_t pAddressContrast =					nextAllowedValue;
 #define nextAllowedValue pAddressContrast + byteSize(pSizeContrast)
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
-const unsigned int pAddressLCDcolor =					nextAllowedValue;
+#if defined(useAdafruitRGBLCDshield)
+static const uint16_t pAddressLCDcolor =					nextAllowedValue;
 #define nextAllowedValue pAddressLCDcolor + byteSize(pSizeLCDcolor)
-#endif // useAdafruitRGBLCDshield
-const unsigned int pAddressMetricMode =					nextAllowedValue;
-const unsigned int pAddressAlternateFE =				pAddressMetricMode + byteSize(pSizeMetricMode);
-#define nextAllowedValue pAddressAlternateFE + byteSize(pSizeAlternateFE)
-#ifdef useFuelCost
-const unsigned int pAddressFuelUnitCost =				nextAllowedValue;
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
+static const uint16_t pAddressFuelUnitCost =				nextAllowedValue;
 #define nextAllowedValue pAddressFuelUnitCost + byteSize(pSizeFuelUnitCost)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pAddressOutputPin1Mode =					nextAllowedValue;
-const uint8_t pAddressOutputPin2Mode =					pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
+static const uint16_t pAddressOutputPin1Mode =				nextAllowedValue;
+static const uint16_t pAddressOutputPin2Mode =				pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
 #define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
-const unsigned int pAddressVoltageOffset =				nextAllowedValue;
+#if defined(useCarVoltageOutput)
+static const uint16_t pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
-const unsigned int pAddressSerialDataLogging =			nextAllowedValue;
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
+static const uint16_t pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-const unsigned int pAddressFEvsTime =					nextAllowedValue;
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const uint16_t pAddressJSONoutput =					nextAllowedValue;
+#define nextAllowedValue pAddressJSONoutput + byteSize(pSizeJSONoutput)
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+static const uint16_t pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-const unsigned int pAddressBarLowSpeedCutoff =			nextAllowedValue;
-const unsigned int pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+static const uint16_t pAddressBarLowSpeedCutoff =			nextAllowedValue;
+static const uint16_t pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
 #define nextAllowedValue pAddressBarSpeedQuantumIdx + byteSize(pSizeBarSpeedQuantumIdx)
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-const unsigned int pAddressSysFuelPressure =			nextAllowedValue;
+static const uint16_t pAddressSysFuelPressure =				nextAllowedValue;
 #define nextAllowedValue pAddressSysFuelPressure + byteSize(pSizeSysFuelPressure)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const unsigned int pAddressRefFuelPressure =			nextAllowedValue;
-const unsigned int pAddressInjectorCount =				pAddressRefFuelPressure + byteSize(pSizeRefFuelPressure);
-const unsigned int pAddressInjectorSize =				pAddressInjectorCount + byteSize(pSizeInjectorCount);
+static const uint16_t pAddressRefFuelPressure =				nextAllowedValue;
+static const uint16_t pAddressInjectorCount =				pAddressRefFuelPressure + byteSize(pSizeRefFuelPressure);
+static const uint16_t pAddressInjectorSize =				pAddressInjectorCount + byteSize(pSizeInjectorCount);
 #define nextAllowedValue pAddressInjectorSize + byteSize(pSizeInjectorSize)
 #endif // useCalculatedFuelFactor
-const unsigned int pAddressMicroSecondsPerGallon =		nextAllowedValue;
-const unsigned int pAddressInjEdgeTrigger =				pAddressMicroSecondsPerGallon + byteSize(pSizeMicroSecondsPerGallon);
-const unsigned int pAddressInjectorOpeningTime =		pAddressInjEdgeTrigger + byteSize(pSizeInjEdgeTrigger);
-const unsigned int pAddressInjectorClosingTime =		pAddressInjectorOpeningTime + byteSize(pSizeInjectorOpeningTime);
-const unsigned int pAddressCrankRevPerInj =				pAddressInjectorClosingTime + byteSize(pSizeInjectorClosingTime);
-const unsigned int pAddressMinGoodRPM =					pAddressCrankRevPerInj + byteSize(pSizeCrankRevPerInj);
-#define nextAllowedValue pAddressMinGoodRPM + byteSize(pSizeMinGoodRPM)
-
-// vehicle speed sensor settings
-
-const unsigned int pAddressPulsesPerDistance =			nextAllowedValue;
-const unsigned int pAddressVSSpause =					pAddressPulsesPerDistance + byteSize(pSizePulsesPerDistance);
-const unsigned int pAddressMinGoodSpeed =				pAddressVSSpause + byteSize(pSizeVSSpause);
-#define nextAllowedValue pAddressMinGoodSpeed + byteSize(pSizeMinGoodSpeed)
-
-// fuel tank size settings
-
-const unsigned int pAddressTankSize =					nextAllowedValue;
-const unsigned int pAddressTankBingoSize =				pAddressTankSize + byteSize(pSizeTankSize);
-#define nextAllowedValue pAddressTankBingoSize + byteSize(pSizeTankBingoSize)
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
-const unsigned int pAddressMAPsensorFloor =				nextAllowedValue;
-const unsigned int pAddressMAPsensorCeiling =			pAddressMAPsensorFloor + byteSize(pSizeMAPsensorFloor);
-const unsigned int pAddressMAPsensorRange =				pAddressMAPsensorCeiling + byteSize(pSizeMAPsensorCeiling);
-const unsigned int pAddressMAPsensorOffset =			pAddressMAPsensorRange + byteSize(pSizeMAPsensorRange);
+#if defined(useChryslerMAPCorrection)
+static const uint16_t pAddressMAPsensorFloor =				nextAllowedValue;
+static const uint16_t pAddressMAPsensorCeiling =			pAddressMAPsensorFloor + byteSize(pSizeMAPsensorFloor);
+static const uint16_t pAddressMAPsensorRange =				pAddressMAPsensorCeiling + byteSize(pSizeMAPsensorCeiling);
+static const uint16_t pAddressMAPsensorOffset =				pAddressMAPsensorRange + byteSize(pSizeMAPsensorRange);
 #define nextAllowedValue pAddressMAPsensorOffset + byteSize(pSizeMAPsensorOffset)
-#ifdef useChryslerBaroSensor
-const unsigned int pAddressBaroSensorFloor =			nextAllowedValue;
-const unsigned int pAddressBaroSensorCeiling =			pAddressBaroSensorFloor + byteSize(pSizeBaroSensorFloor);
-const unsigned int pAddressBaroSensorRange =			pAddressBaroSensorCeiling + byteSize(pSizeBaroSensorCeiling);
-const unsigned int pAddressBaroSensorOffset =			pAddressBaroSensorRange + byteSize(pSizeBaroSensorRange);
+#if defined(useChryslerBaroSensor)
+static const uint16_t pAddressBaroSensorFloor =				nextAllowedValue;
+static const uint16_t pAddressBaroSensorCeiling =			pAddressBaroSensorFloor + byteSize(pSizeBaroSensorFloor);
+static const uint16_t pAddressBaroSensorRange =				pAddressBaroSensorCeiling + byteSize(pSizeBaroSensorCeiling);
+static const uint16_t pAddressBaroSensorOffset =			pAddressBaroSensorRange + byteSize(pSizeBaroSensorRange);
 #define nextAllowedValue pAddressBaroSensorOffset + byteSize(pSizeBaroSensorOffset)
-#else // useChryslerBaroSensor
-const unsigned int pAddressBarometricPressure =			nextAllowedValue;
+#else // defined(useChryslerBaroSensor)
+static const uint16_t pAddressBarometricPressure =			nextAllowedValue;
 #define nextAllowedValue pAddressBarometricPressure + byteSize(pSizeBarometricPressure)
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
-const unsigned int pAddressVehicleMass =				nextAllowedValue;
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+static const uint16_t pAddressVehicleMass =					nextAllowedValue;
 #define nextAllowedValue pAddressVehicleMass + byteSize(pSizeVehicleMass)
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-const unsigned int pAddressVehicleFrontalArea =			nextAllowedValue;
-const unsigned int pAddressLocustDensity =				pAddressVehicleFrontalArea + byteSize(pSizeVehicleFrontalArea);
-const unsigned int pAddressCoefficientD =				pAddressLocustDensity + byteSize(pSizeLocustDensity);
-const unsigned int pAddressCoefficientV =				pAddressCoefficientD + byteSize(pSizeCoefficientD);
-const unsigned int pAddressCoefficientRR =				pAddressCoefficientV + byteSize(pSizeCoefficientV);
-const unsigned int pAddressCoastdownSamplePeriod =		pAddressCoefficientRR + byteSize(pSizeCoefficientRR);
+#if defined(useCoastDownCalculator)
+static const uint16_t pAddressVehicleFrontalArea =			nextAllowedValue;
+static const uint16_t pAddressLocustDensity =				pAddressVehicleFrontalArea + byteSize(pSizeVehicleFrontalArea);
+static const uint16_t pAddressCoefficientD =				pAddressLocustDensity + byteSize(pSizeLocustDensity);
+static const uint16_t pAddressCoefficientV =				pAddressCoefficientD + byteSize(pSizeCoefficientD);
+static const uint16_t pAddressCoefficientRR =				pAddressCoefficientV + byteSize(pSizeCoefficientV);
+static const uint16_t pAddressCoastdownSamplePeriod =		pAddressCoefficientRR + byteSize(pSizeCoefficientRR);
 #define nextAllowedValue pAddressCoastdownSamplePeriod + byteSize(pSizeCoastdownSamplePeriod)
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const unsigned int pAddressDragSpeed =					nextAllowedValue;
-const unsigned int pAddressDragDistance =				pAddressDragSpeed + byteSize(pSizeDragSpeed);
-const unsigned int pAddressDragAutoFlag =				pAddressDragDistance + byteSize(pSizeDragDistance);
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+static const uint16_t pAddressDragSpeed =					nextAllowedValue;
+static const uint16_t pAddressDragDistance =				pAddressDragSpeed + byteSize(pSizeDragSpeed);
+static const uint16_t pAddressDragAutoFlag =				pAddressDragDistance + byteSize(pSizeDragDistance);
 #define nextAllowedValue pAddressDragAutoFlag + byteSize(pSizeDragAutoFlag)
-#endif // useDragRaceFunction
-
-// timeout settings
-
-const unsigned int pAddressIdleTimeout =				nextAllowedValue;
-const unsigned int pAddressEOCtimeout =					pAddressIdleTimeout + byteSize(pSizeIdleTimeout);
-const unsigned int pAddressButtonTimeout =				pAddressEOCtimeout + byteSize(pSizeEOCtimeout);
-const unsigned int pAddressParkTimeout =				pAddressButtonTimeout + byteSize(pSizeButtonTimeout);
-const unsigned int pAddressActivityTimeout =			pAddressParkTimeout + byteSize(pSizeParkTimeout);
-const unsigned int pAddressWakeupResetCurrentOnEngine =	pAddressActivityTimeout + byteSize(pSizeActivityTimeout);
-const unsigned int pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);
-#define nextAllowedValue pAddressWakeupResetCurrentOnMove + byteSize(pSizeWakeupResetCurrentOnMove)
-#ifdef useSavedTrips
-const unsigned int pAddressAutoSaveActive =				nextAllowedValue;
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
+static const uint16_t pAddressAutoSaveActive =				nextAllowedValue;
 #define nextAllowedValue pAddressAutoSaveActive + byteSize(pSizeAutoSaveActive)
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-const unsigned int pAddressScratchpad =					nextAllowedValue;
-#define nextAllowedValue pAddressScratchpad + byteSize(pSizeScratchpad)
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
-const unsigned int pAddressRefuelSize =					nextAllowedValue;
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+static const uint16_t pAddressRefuelSize =					nextAllowedValue;
 #define nextAllowedValue pAddressRefuelSize + byteSize(pSizeRefuelSize)
-#ifdef useEEPROMtripStorage
-const uint8_t pAddressRefuelSaveSizeIdx =				nextAllowedValue;
-#define nextAllowedValue pAddressRefuelSaveSizeIdx + byteSize(pSizeRefuelSaveSizeIdx)
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
-#ifdef useEEPROMtripStorage
-const uint8_t pAddressCurrTripSignatureIdx =			nextAllowedValue;
-const uint8_t pAddressTankTripSignatureIdx =			pAddressCurrTripSignatureIdx + byteSize(pSizeCurrTripSignatureIdx);
-const uint8_t pAddressCurrTripVSSpulseIdx =				pAddressTankTripSignatureIdx + byteSize(pSizeTankTripSignatureIdx);
-const uint8_t pAddressCurrTripVSScycleIdx =				pAddressCurrTripVSSpulseIdx + byteSize(pSizeCurrTripVSSpulseIdx);
-const uint8_t pAddressCurrTripInjPulseIdx =				pAddressCurrTripVSScycleIdx + byteSize(pSizeCurrTripVSScycleIdx);
-const uint8_t pAddressCurrTripInjCycleIdx =				pAddressCurrTripInjPulseIdx + byteSize(pSizeCurrTripInjPulseIdx);
-const uint8_t pAddressCurrTripEngCycleIdx =				pAddressCurrTripInjCycleIdx + byteSize(pSizeCurrTripInjCycleIdx);
-const uint8_t pAddressTankTripVSSpulseIdx =				pAddressCurrTripEngCycleIdx + byteSize(pSizeCurrTripEngCycleIdx);
-const uint8_t pAddressTankTripVSScycleIdx =				pAddressTankTripVSSpulseIdx + byteSize(pSizeTankTripVSSpulseIdx);
-const uint8_t pAddressTankTripInjPulseIdx =				pAddressTankTripVSScycleIdx + byteSize(pSizeTankTripVSScycleIdx);
-const uint8_t pAddressTankTripInjCycleIdx =				pAddressTankTripInjPulseIdx + byteSize(pSizeTankTripInjPulseIdx);
-const uint8_t pAddressTankTripEngCycleIdx =				pAddressTankTripInjCycleIdx + byteSize(pSizeTankTripInjCycleIdx);
+#if defined(useButtonInput)
+static const uint16_t pAddressDisplayIdx =					nextAllowedValue;
+#define nextAllowedValue pAddressDisplayIdx + byteSize(pSizeDisplayIdx)
+#if LCDcharHeight == 4
+static const uint16_t pAddressBottomDisplayIdx =			nextAllowedValue;
+static const uint16_t pAddressBottomCursorIdx =				pAddressBottomDisplayIdx + byteSize(pSizeBottomDisplayIdx);
+#define nextAllowedValue pAddressBottomCursorIdx + byteSize(pSizeBottomCursorIdx)
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
+#if defined(useEEPROMtripStorage)
+#if defined(usePartialRefuel)
+static const uint16_t pAddressRefuelSaveSizeIdx =			nextAllowedValue;
+#define nextAllowedValue pAddressRefuelSaveSizeIdx + byteSize(pSizeRefuelSaveSizeIdx)
+#endif // defined(usePartialRefuel)
+static const uint16_t pAddressCurrTripSignatureIdx =		nextAllowedValue;
+static const uint16_t pAddressTankTripSignatureIdx =		pAddressCurrTripSignatureIdx + byteSize(pSizeCurrTripSignatureIdx);
+static const uint16_t pAddressCurrTripVSSpulseIdx =			pAddressTankTripSignatureIdx + byteSize(pSizeTankTripSignatureIdx);
+static const uint16_t pAddressCurrTripVSScycleIdx =			pAddressCurrTripVSSpulseIdx + byteSize(pSizeCurrTripVSSpulseIdx);
+static const uint16_t pAddressCurrTripInjPulseIdx =			pAddressCurrTripVSScycleIdx + byteSize(pSizeCurrTripVSScycleIdx);
+static const uint16_t pAddressCurrTripInjCycleIdx =			pAddressCurrTripInjPulseIdx + byteSize(pSizeCurrTripInjPulseIdx);
+static const uint16_t pAddressCurrTripEngCycleIdx =			pAddressCurrTripInjCycleIdx + byteSize(pSizeCurrTripInjCycleIdx);
+static const uint16_t pAddressTankTripVSSpulseIdx =			pAddressCurrTripEngCycleIdx + byteSize(pSizeCurrTripEngCycleIdx);
+static const uint16_t pAddressTankTripVSScycleIdx =			pAddressTankTripVSSpulseIdx + byteSize(pSizeTankTripVSSpulseIdx);
+static const uint16_t pAddressTankTripInjPulseIdx =			pAddressTankTripVSScycleIdx + byteSize(pSizeTankTripVSScycleIdx);
+static const uint16_t pAddressTankTripInjCycleIdx =			pAddressTankTripInjPulseIdx + byteSize(pSizeTankTripInjPulseIdx);
+static const uint16_t pAddressTankTripEngCycleIdx =			pAddressTankTripInjCycleIdx + byteSize(pSizeTankTripInjCycleIdx);
 #define nextAllowedValue pAddressTankTripEngCycleIdx + byteSize(pSizeTankTripEngCycleIdx)
 #if defined(trackIdleEOCdata)
-const uint8_t pAddressCurrIEOCvssPulseIdx =				nextAllowedValue;
-const uint8_t pAddressCurrIEOCvssCycleIdx =				pAddressCurrIEOCvssPulseIdx + byteSize(pSizeCurrIEOCvssPulseIdx);
-const uint8_t pAddressCurrIEOCinjPulseIdx =				pAddressCurrIEOCvssCycleIdx + byteSize(pSizeCurrIEOCvssCycleIdx);
-const uint8_t pAddressCurrIEOCinjCycleIdx =				pAddressCurrIEOCinjPulseIdx + byteSize(pSizeCurrIEOCinjPulseIdx);
-const uint8_t pAddressCurrIEOCengCycleIdx =				pAddressCurrIEOCinjCycleIdx + byteSize(pSizeCurrIEOCinjCycleIdx);
-const uint8_t pAddressTankIEOCvssPulseIdx =				pAddressCurrIEOCengCycleIdx + byteSize(pSizeCurrIEOCengCycleIdx);
-const uint8_t pAddressTankIEOCvssCycleIdx =				pAddressTankIEOCvssPulseIdx + byteSize(pSizeTankIEOCvssPulseIdx);
-const uint8_t pAddressTankIEOCinjPulseIdx =				pAddressTankIEOCvssCycleIdx + byteSize(pSizeTankIEOCvssCycleIdx);
-const uint8_t pAddressTankIEOCinjCycleIdx =				pAddressTankIEOCinjPulseIdx + byteSize(pSizeTankIEOCinjPulseIdx);
-const uint8_t pAddressTankIEOCengCycleIdx =				pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
+static const uint16_t pAddressCurrIEOCvssPulseIdx =			nextAllowedValue;
+static const uint16_t pAddressCurrIEOCvssCycleIdx =			pAddressCurrIEOCvssPulseIdx + byteSize(pSizeCurrIEOCvssPulseIdx);
+static const uint16_t pAddressCurrIEOCinjPulseIdx =			pAddressCurrIEOCvssCycleIdx + byteSize(pSizeCurrIEOCvssCycleIdx);
+static const uint16_t pAddressCurrIEOCinjCycleIdx =			pAddressCurrIEOCinjPulseIdx + byteSize(pSizeCurrIEOCinjPulseIdx);
+static const uint16_t pAddressCurrIEOCengCycleIdx =			pAddressCurrIEOCinjCycleIdx + byteSize(pSizeCurrIEOCinjCycleIdx);
+static const uint16_t pAddressTankIEOCvssPulseIdx =			pAddressCurrIEOCengCycleIdx + byteSize(pSizeCurrIEOCengCycleIdx);
+static const uint16_t pAddressTankIEOCvssCycleIdx =			pAddressTankIEOCvssPulseIdx + byteSize(pSizeTankIEOCvssPulseIdx);
+static const uint16_t pAddressTankIEOCinjPulseIdx =			pAddressTankIEOCvssCycleIdx + byteSize(pSizeTankIEOCvssCycleIdx);
+static const uint16_t pAddressTankIEOCinjCycleIdx =			pAddressTankIEOCinjPulseIdx + byteSize(pSizeTankIEOCinjPulseIdx);
+static const uint16_t pAddressTankIEOCengCycleIdx =			pAddressTankIEOCinjCycleIdx + byteSize(pSizeTankIEOCinjCycleIdx);
 #define nextAllowedValue pAddressTankIEOCengCycleIdx + byteSize(pSizeTankIEOCengCycleIdx)
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 
-const unsigned int eeAdrSettingsEnd =					nextAllowedValue;
+static const uint16_t eeAdrSettingsEnd =					nextAllowedValue;
 
 #if defined(useScreenEditor)
-const unsigned int eeAdrScreensStart =					nextAllowedValue;
-const unsigned int eeAdrScreensEnd =					eeAdrScreensStart + 2 * mainDisplayFormatSize;
+static const uint16_t eeAdrScreensStart =					nextAllowedValue;
+static const uint16_t eeAdrScreensEnd =						eeAdrScreensStart + 2 * mainDisplayFormatSize;
 #define nextAllowedValue eeAdrScreensEnd
 
 #endif // defined(useScreenEditor)
-const unsigned int eeAdrStorageEnd =					nextAllowedValue;
+#if defined(useButtonInput)
+static const uint16_t eeAdrDisplayCursorStart =				nextAllowedValue;
+static const uint16_t eeAdrDisplayCursorEnd =				eeAdrDisplayCursorStart + displayCountTotal;
+static const uint16_t eeAdrMenuCursorStart =				eeAdrDisplayCursorEnd;
+static const uint16_t eeAdrMenuCursorEnd =					eeAdrMenuCursorStart + displayCountMenu;
+#define nextAllowedValue eeAdrMenuCursorEnd
+#endif // defined(useButtonInput)
+
+static const unsigned int eeAdrStorageEnd =					nextAllowedValue;
+
+/* parameter indexes */
 
 #define nextAllowedValue 0
-const uint8_t pSignatureIdx =			nextAllowedValue;
-#define nextAllowedValue pSignatureIdx + 1
+static const uint8_t pSignatureIdx =					nextAllowedValue;
+static const uint8_t pMetricModeIdx =					pSignatureIdx + 1;
+static const uint8_t pAlternateFEidx =					pMetricModeIdx + 1;
+static const uint8_t pMicroSecondsPerGallonIdx =		pAlternateFEidx + 1;
+static const uint8_t pInjEdgeTriggerIdx =				pMicroSecondsPerGallonIdx + 1;
+static const uint8_t pInjectorSettleTimeIdx =			pInjEdgeTriggerIdx + 1;
+static const uint8_t pInjPer2CrankRevIdx =				pInjectorSettleTimeIdx + 1;
+static const uint8_t pMinGoodRPMidx =					pInjPer2CrankRevIdx + 1;
+static const uint8_t pPulsesPerDistanceIdx =			pMinGoodRPMidx + 1;
+static const uint8_t pVSSpauseIdx =						pPulsesPerDistanceIdx + 1;
+static const uint8_t pMinGoodSpeedidx =					pVSSpauseIdx + 1;
+static const uint8_t pTankSizeIdx =						pMinGoodSpeedidx + 1;
+static const uint8_t pTankBingoSizeIdx =				pTankSizeIdx + 1;
+static const uint8_t pIdleTimeoutIdx =					pTankBingoSizeIdx + 1;
+static const uint8_t pEOCtimeoutIdx =					pIdleTimeoutIdx + 1;
+static const uint8_t pButtonTimeoutIdx =				pEOCtimeoutIdx + 1;
+static const uint8_t pParkTimeoutIdx =					pButtonTimeoutIdx + 1;
+static const uint8_t pActivityTimeoutIdx =				pParkTimeoutIdx + 1;
+static const uint8_t pScratchpadIdx =					pActivityTimeoutIdx + 1;
+#define nextAllowedValue pScratchpadIdx + 1
 
-/* parameter indexes corresponding to sizes and addresses defined above */
-
-// this is the start of all EEPROM parameters that show up in the general settings screen
-
-const uint8_t eePtrSettingsStart =			nextAllowedValue;
-
-// display settings
-
-const uint8_t eePtrSettingsDispStart =		nextAllowedValue;
-
+#if defined(useButtonInput)
+static const uint8_t pWakeupResetCurrentOnEngineIdx =	nextAllowedValue;
+static const uint8_t pWakeupResetCurrentOnMoveIdx =		pWakeupResetCurrentOnEngineIdx + 1;
+#define nextAllowedValue pWakeupResetCurrentOnMoveIdx + 1
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+static const uint8_t pBrightnessIdx =					nextAllowedValue;
+#define nextAllowedValue pBrightnessIdx + 1
 #if defined(useLCDcontrast)
-const uint8_t pContrastIdx =				nextAllowedValue;
+static const uint8_t pContrastIdx =						nextAllowedValue;
 #define nextAllowedValue pContrastIdx + 1
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
-const uint8_t pLCDcolorIdx =				nextAllowedValue;
+#if defined(useAdafruitRGBLCDshield)
+static const uint8_t pLCDcolorIdx =						nextAllowedValue;
 #define nextAllowedValue pLCDcolorIdx + 1
-#endif // useAdafruitRGBLCDshield
-const uint8_t pMetricModeIdx =				nextAllowedValue;
-const uint8_t pAlternateFEidx =				pMetricModeIdx + 1;
-#define nextAllowedValue pAlternateFEidx + 1
-#ifdef useFuelCost
-const uint8_t pCostPerQuantity =			nextAllowedValue;
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
+static const uint8_t pCostPerQuantity =					nextAllowedValue;
 #define nextAllowedValue pCostPerQuantity + 1
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
-const uint8_t pOutputPin1Mode =				nextAllowedValue;
-const uint8_t pOutputPin2Mode =				pOutputPin1Mode + 1;
+static const uint8_t pOutputPin1Mode =					nextAllowedValue;
+static const uint8_t pOutputPin2Mode =					pOutputPin1Mode + 1;
 #define nextAllowedValue pOutputPin2Mode + 1
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
-const uint8_t pVoltageOffset =				nextAllowedValue;
+#if defined(useCarVoltageOutput)
+static const uint8_t pVoltageOffset =					nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
-const uint8_t pSerialDataLoggingIdx =		nextAllowedValue;
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
+static const uint8_t pSerialDataLoggingIdx =			nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-const uint8_t pFEvsTimeIdx =				nextAllowedValue;
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+static const uint8_t pJSONoutputIdx =					nextAllowedValue;
+#define nextAllowedValue pJSONoutputIdx + 1
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-const uint8_t pBarLowSpeedCutoffIdx =		nextAllowedValue;
-const uint8_t pBarSpeedQuantumIdx =			pBarLowSpeedCutoffIdx + 1;
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t pBarLowSpeedCutoffIdx =			nextAllowedValue;
+static const uint8_t pBarSpeedQuantumIdx =				pBarLowSpeedCutoffIdx + 1;
 #define nextAllowedValue pBarSpeedQuantumIdx + 1
-#endif // useBarFuelEconVsSpeed
-
-const uint8_t eePtrSettingsDispEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsDispLen =		eePtrSettingsDispEnd - eePtrSettingsDispStart;
-
-// fuel injection settings
-
-const uint8_t eePtrSettingsInjStart =		nextAllowedValue;
-
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-const uint8_t pSysFuelPressureIdx =			nextAllowedValue;
+static const uint8_t pSysFuelPressureIdx =				nextAllowedValue;
 #define nextAllowedValue pSysFuelPressureIdx + 1
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-const uint8_t pRefFuelPressureIdx =			nextAllowedValue;
-const uint8_t pInjectorCountIdx =			pRefFuelPressureIdx + 1;
-const uint8_t pInjectorSizeIdx =			pInjectorCountIdx + 1;
+static const uint8_t pRefFuelPressureIdx =				nextAllowedValue;
+static const uint8_t pInjectorCountIdx =				pRefFuelPressureIdx + 1;
+static const uint8_t pInjectorSizeIdx =					pInjectorCountIdx + 1;
 #define nextAllowedValue pInjectorSizeIdx + 1
 #endif // useCalculatedFuelFactor
-const uint8_t pMicroSecondsPerGallonIdx =	nextAllowedValue;
-const uint8_t pInjEdgeTriggerIdx =			pMicroSecondsPerGallonIdx + 1;
-const uint8_t pInjectorOpeningTimeIdx =		pInjEdgeTriggerIdx + 1;
-const uint8_t pInjectorClosingTimeIdx =		pInjectorOpeningTimeIdx + 1;
-const uint8_t pCrankRevPerInjIdx =			pInjectorClosingTimeIdx + 1;
-const uint8_t pMinGoodRPMidx =				pCrankRevPerInjIdx + 1;
-#define nextAllowedValue pMinGoodRPMidx + 1
-
-const uint8_t eePtrSettingsInjEnd =			nextAllowedValue;
-const uint8_t eePtrSettingsInjLen =			eePtrSettingsInjEnd - eePtrSettingsInjStart;
-
-// vehicle speed sensor settings
-
-const uint8_t eePtrSettingsVSSstart =		nextAllowedValue;
-
-const uint8_t pPulsesPerDistanceIdx =		nextAllowedValue;
-const uint8_t pVSSpauseIdx =				pPulsesPerDistanceIdx + 1;
-const uint8_t pMinGoodSpeedidx =			pVSSpauseIdx + 1;
-#define nextAllowedValue pMinGoodSpeedidx + 1
-
-const uint8_t eePtrSettingsVSSend =			nextAllowedValue;
-const uint8_t eePtrSettingsVSSlen =			eePtrSettingsVSSend - eePtrSettingsVSSstart;
-
-// fuel tank size settings
-
-const uint8_t eePtrSettingsTankStart =		nextAllowedValue;
-
-const uint8_t pTankSizeIdx =				nextAllowedValue;
-const uint8_t pTankBingoSizeIdx =			pTankSizeIdx + 1;
-#define nextAllowedValue pTankBingoSizeIdx + 1
-
-const uint8_t eePtrSettingsTankEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsTankLen =		eePtrSettingsTankEnd - eePtrSettingsTankStart;
-#ifdef useChryslerMAPCorrection
-
-// chrysler settings
-
-const uint8_t eePtrSettingsCRFICstart =		nextAllowedValue;
-
-const uint8_t pMAPsensorFloorIdx =			nextAllowedValue;
-const uint8_t pMAPsensorCeilingIdx =		pMAPsensorFloorIdx + 1;
-const uint8_t pMAPsensorRangeIdx =			pMAPsensorCeilingIdx + 1;
-const uint8_t pMAPsensorOffsetIdx =			pMAPsensorRangeIdx + 1;
+#if defined(useChryslerMAPCorrection)
+static const uint8_t pMAPsensorFloorIdx =				nextAllowedValue;
+static const uint8_t pMAPsensorCeilingIdx =				pMAPsensorFloorIdx + 1;
+static const uint8_t pMAPsensorRangeIdx =				pMAPsensorCeilingIdx + 1;
+static const uint8_t pMAPsensorOffsetIdx =				pMAPsensorRangeIdx + 1;
 #define nextAllowedValue pMAPsensorOffsetIdx + 1
-#ifdef useChryslerBaroSensor
-const uint8_t pBaroSensorFloorIdx =			nextAllowedValue;
-const uint8_t pBaroSensorCeilingIdx =		pBaroSensorFloorIdx + 1;
-const uint8_t pBaroSensorRangeIdx =			pBaroSensorCeilingIdx + 1;
-const uint8_t pBaroSensorOffsetIdx =		pBaroSensorRangeIdx + 1;
+#if defined(useChryslerBaroSensor)
+static const uint8_t pBaroSensorFloorIdx =				nextAllowedValue;
+static const uint8_t pBaroSensorCeilingIdx =			pBaroSensorFloorIdx + 1;
+static const uint8_t pBaroSensorRangeIdx =				pBaroSensorCeilingIdx + 1;
+static const uint8_t pBaroSensorOffsetIdx =				pBaroSensorRangeIdx + 1;
 #define nextAllowedValue pBaroSensorOffsetIdx + 1
-#else // useChryslerBaroSensor
-const uint8_t pBarometricPressureIdx =		nextAllowedValue;
+#else // defined(useChryslerBaroSensor)
+static const uint8_t pBarometricPressureIdx =			nextAllowedValue;
 #define nextAllowedValue pBarometricPressureIdx + 1
-#endif // useChryslerBaroSensor
-
-const uint8_t eePtrSettingsCRFICend =		nextAllowedValue;
-const uint8_t eePtrSettingsCRFIClen =		eePtrSettingsCRFICend - eePtrSettingsCRFICstart;
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-const uint8_t eePtrSettingsACDstart =		nextAllowedValue;
-
-#ifdef useVehicleMass
-const uint8_t pVehicleMassIdx =				nextAllowedValue;
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+static const uint8_t pVehicleMassIdx =					nextAllowedValue;
 #define nextAllowedValue pVehicleMassIdx + 1
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-const uint8_t pVehicleFrontalAreaIdx =		nextAllowedValue;
-const uint8_t pLocustDensityIdx =			pVehicleFrontalAreaIdx + 1;
-const uint8_t pCoefficientDidx =			pLocustDensityIdx + 1;
-const uint8_t pCoefficientVidx =			pCoefficientDidx + 1;
-const uint8_t pCoefficientRRidx =			pCoefficientVidx + 1;
-const uint8_t pCoastdownSamplePeriodIdx =	pCoefficientRRidx + 1;
+#if defined(useCoastDownCalculator)
+static const uint8_t pVehicleFrontalAreaIdx =			nextAllowedValue;
+static const uint8_t pLocustDensityIdx =				pVehicleFrontalAreaIdx + 1;
+static const uint8_t pCoefficientDidx =					pLocustDensityIdx + 1;
+static const uint8_t pCoefficientVidx =					pCoefficientDidx + 1;
+static const uint8_t pCoefficientRRidx =				pCoefficientVidx + 1;
+static const uint8_t pCoastdownSamplePeriodIdx =		pCoefficientRRidx + 1;
 #define nextAllowedValue pCoastdownSamplePeriodIdx + 1
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-const uint8_t pDragSpeedIdx =				nextAllowedValue;
-const uint8_t pDragDistanceIdx =			pDragSpeedIdx + 1;
-const uint8_t pDragAutoFlagIdx =			pDragDistanceIdx + 1;
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+static const uint8_t pDragSpeedIdx =					nextAllowedValue;
+static const uint8_t pDragDistanceIdx =					pDragSpeedIdx + 1;
+static const uint8_t pDragAutoFlagIdx =					pDragDistanceIdx + 1;
 #define nextAllowedValue pDragAutoFlagIdx + 1
-#endif // useDragRaceFunction
-
-const uint8_t eePtrSettingsACDend =			nextAllowedValue;
-const uint8_t eePtrSettingsACDlen =			eePtrSettingsACDend - eePtrSettingsACDstart;
-
-// timeout settings
-
-const uint8_t eePtrSettingsTimeoutStart =	nextAllowedValue;
-
-const uint8_t pIdleTimeoutIdx =				nextAllowedValue;
-const uint8_t pEOCtimeoutIdx =				pIdleTimeoutIdx + 1;
-const uint8_t pButtonTimeoutIdx =			pEOCtimeoutIdx + 1;
-const uint8_t pParkTimeoutIdx =				pButtonTimeoutIdx + 1;
-const uint8_t pActivityTimeoutIdx =			pParkTimeoutIdx + 1;
-const uint8_t pWakeupResetCurrentOnEngineIdx =	pActivityTimeoutIdx + 1;
-const uint8_t pWakeupResetCurrentOnMoveIdx =	pWakeupResetCurrentOnEngineIdx + 1;
-#define nextAllowedValue pWakeupResetCurrentOnMoveIdx + 1
-#ifdef useSavedTrips
-const uint8_t pAutoSaveActiveIdx =			nextAllowedValue;
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
+static const uint8_t pAutoSaveActiveIdx =				nextAllowedValue;
 #define nextAllowedValue pAutoSaveActiveIdx + 1
-#endif // useSavedTrips
-
-const uint8_t eePtrSettingsTimeoutEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsTimeoutLen =		eePtrSettingsTimeoutEnd - eePtrSettingsTimeoutStart;
-
-// miscellaneous settings
-
-const uint8_t eePtrSettingsMiscStart =		nextAllowedValue;
-
-const uint8_t pScratchpadIdx =				nextAllowedValue;
-#define nextAllowedValue pScratchpadIdx + 1
-
-const uint8_t eePtrSettingsMiscEnd =		nextAllowedValue;
-const uint8_t eePtrSettingsMiscLen =		eePtrSettingsMiscEnd - eePtrSettingsMiscStart;
-
-const uint8_t eePtrSettingsVisibleEnd =	nextAllowedValue;
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
-const uint8_t pRefuelSizeIdx =				nextAllowedValue;
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+static const uint8_t pRefuelSizeIdx =					nextAllowedValue;
 #define nextAllowedValue pRefuelSizeIdx + 1
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
+#if defined(useButtonInput)
+static const uint8_t pDisplayIdx =						nextAllowedValue;
+#define nextAllowedValue pDisplayIdx + 1
+#if LCDcharHeight == 4
+static const uint8_t pBottomDisplayIdx =				nextAllowedValue;
+#define nextAllowedValue pBottomDisplayIdx + 1
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
 
-const uint8_t eePtrSettingsEnd =			nextAllowedValue;
+static const uint8_t eePtrSettingsEnd =					nextAllowedValue;
 
-#ifdef useEEPROMtripStorage
-const uint8_t eePtrSavedTripsStart = 		nextAllowedValue;
+#if defined(useButtonInput)
+#if LCDcharHeight == 4
+static const uint8_t pBottomCursorIdx =					nextAllowedValue;
+#define nextAllowedValue pBottomCursorIdx + 1
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
 
-#ifdef usePartialRefuel
-const uint8_t pRefuelSaveSizeIdx =			nextAllowedValue;
+#if defined(useEEPROMtripStorage)
+static const uint8_t eePtrSavedTripsStart = 			nextAllowedValue;
+
+#if defined(usePartialRefuel)
+static const uint8_t pRefuelSaveSizeIdx =				nextAllowedValue;
 #define nextAllowedValue pRefuelSaveSizeIdx + 1
-#endif // usePartialRefuel
-const uint8_t pCurrTripSignatureIdx =		nextAllowedValue;
-const uint8_t pTankTripSignatureIdx =		pCurrTripSignatureIdx + 1;
-const uint8_t pCurrTripVSSpulseIdx =		pTankTripSignatureIdx + 1;
-const uint8_t pCurrTripVSScycleIdx =		pCurrTripVSSpulseIdx + 1;
-const uint8_t pCurrTripInjPulseIdx =		pCurrTripVSScycleIdx + 1;
-const uint8_t pCurrTripInjCycleIdx =		pCurrTripInjPulseIdx + 1;
-const uint8_t pCurrTripEngCycleIdx =		pCurrTripInjCycleIdx + 1;
-const uint8_t pTankTripVSSpulseIdx =		pCurrTripEngCycleIdx + 1;
-const uint8_t pTankTripVSScycleIdx =		pTankTripVSSpulseIdx + 1;
-const uint8_t pTankTripInjPulseIdx =		pTankTripVSScycleIdx + 1;
-const uint8_t pTankTripInjCycleIdx =		pTankTripInjPulseIdx + 1;
-const uint8_t pTankTripEngCycleIdx =		pTankTripInjCycleIdx + 1;
+#endif // defined(usePartialRefuel)
+static const uint8_t pCurrTripSignatureIdx =			nextAllowedValue;
+static const uint8_t pTankTripSignatureIdx =			pCurrTripSignatureIdx + 1;
+static const uint8_t pCurrTripVSSpulseIdx =				pTankTripSignatureIdx + 1;
+static const uint8_t pCurrTripVSScycleIdx =				pCurrTripVSSpulseIdx + 1;
+static const uint8_t pCurrTripInjPulseIdx =				pCurrTripVSScycleIdx + 1;
+static const uint8_t pCurrTripInjCycleIdx =				pCurrTripInjPulseIdx + 1;
+static const uint8_t pCurrTripEngCycleIdx =				pCurrTripInjCycleIdx + 1;
+static const uint8_t pTankTripVSSpulseIdx =				pCurrTripEngCycleIdx + 1;
+static const uint8_t pTankTripVSScycleIdx =				pTankTripVSSpulseIdx + 1;
+static const uint8_t pTankTripInjPulseIdx =				pTankTripVSScycleIdx + 1;
+static const uint8_t pTankTripInjCycleIdx =				pTankTripInjPulseIdx + 1;
+static const uint8_t pTankTripEngCycleIdx =				pTankTripInjCycleIdx + 1;
 #define nextAllowedValue pTankTripEngCycleIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t pCurrIEOCvssPulseIdx =		nextAllowedValue;
-const uint8_t pCurrIEOCvssCycleIdx =		pCurrIEOCvssPulseIdx + 1;
-const uint8_t pCurrIEOCinjPulseIdx =		pCurrIEOCvssCycleIdx + 1;
-const uint8_t pCurrIEOCinjCycleIdx =		pCurrIEOCinjPulseIdx + 1;
-const uint8_t pCurrIEOCengCycleIdx =		pCurrIEOCinjCycleIdx + 1;
-const uint8_t pTankIEOCvssPulseIdx =		pCurrIEOCengCycleIdx + 1;
-const uint8_t pTankIEOCvssCycleIdx =		pTankIEOCvssPulseIdx + 1;
-const uint8_t pTankIEOCinjPulseIdx =		pTankIEOCvssCycleIdx + 1;
-const uint8_t pTankIEOCinjCycleIdx =		pTankIEOCinjPulseIdx + 1;
-const uint8_t pTankIEOCengCycleIdx =		pTankIEOCinjCycleIdx + 1;
+static const uint8_t pCurrIEOCvssPulseIdx =				nextAllowedValue;
+static const uint8_t pCurrIEOCvssCycleIdx =				pCurrIEOCvssPulseIdx + 1;
+static const uint8_t pCurrIEOCinjPulseIdx =				pCurrIEOCvssCycleIdx + 1;
+static const uint8_t pCurrIEOCinjCycleIdx =				pCurrIEOCinjPulseIdx + 1;
+static const uint8_t pCurrIEOCengCycleIdx =				pCurrIEOCinjCycleIdx + 1;
+static const uint8_t pTankIEOCvssPulseIdx =				pCurrIEOCengCycleIdx + 1;
+static const uint8_t pTankIEOCvssCycleIdx =				pTankIEOCvssPulseIdx + 1;
+static const uint8_t pTankIEOCinjPulseIdx =				pTankIEOCvssCycleIdx + 1;
+static const uint8_t pTankIEOCinjCycleIdx =				pTankIEOCinjPulseIdx + 1;
+static const uint8_t pTankIEOCengCycleIdx =				pTankIEOCinjCycleIdx + 1;
 #define nextAllowedValue pTankIEOCengCycleIdx + 1
 #endif // defined(trackIdleEOCdata)
 
-const uint8_t eePtrSavedTripsEnd = 			nextAllowedValue;
-const uint8_t eePtrSavedTripsLen = 			eePtrSavedTripsEnd - eePtrSavedTripsStart;
+static const uint8_t eePtrSavedTripsEnd = 				nextAllowedValue;
+static const uint8_t eePtrSavedTripsLen = 				eePtrSavedTripsEnd - eePtrSavedTripsStart;
 
-#endif // useEEPROMtripStorage
-const uint8_t eePtrStorageEnd =				nextAllowedValue;
+#endif // defined(useEEPROMtripStorage)
+static const uint8_t eePtrStorageEnd =					nextAllowedValue;
 
 #if defined(useScreenEditor)
-const uint8_t eePtrDisplayPagesStart =		nextAllowedValue;
-const uint8_t eePtrDisplayPagesEnd =		eePtrDisplayPagesStart + mainDisplayFormatSize;
+static const uint8_t eePtrDisplayPagesStart =			nextAllowedValue;
+static const uint8_t eePtrDisplayPagesEnd =				eePtrDisplayPagesStart + mainDisplayFormatSize;
 #define nextAllowedValue eePtrDisplayPagesEnd
 
 #endif // defined(useScreenEditor)
-const uint8_t eePtrEnd =					nextAllowedValue;
+#if defined(useButtonInput)
+static const uint16_t eePtrDisplayCursorStart =			nextAllowedValue;
+static const uint16_t eePtrDisplayCursorEnd =			eePtrDisplayCursorStart + displayCountTotal;
+static const uint16_t eePtrMenuHeightStart =			eePtrDisplayCursorEnd;
+static const uint16_t eePtrMenuHeightEnd =				eePtrMenuHeightStart + displayCountMenu;
+#define nextAllowedValue eePtrMenuHeightEnd
+#endif // defined(useButtonInput)
 
+static const uint8_t eePtrEnd =							nextAllowedValue;
+
+#if defined(useDebugTerminalLabels)
 /* labels for parameters definitions above */
 
-const char parmLabels[] PROGMEM = {
-	"MPGuinoSig" tcEOSCR
-
-// display settings
-
+static const char terminalParameterNames[] PROGMEM = {
+	"pSignatureIdx" tcEOS
+	"pMetricModeIdx" tcEOS
+	"pAlternateFEidx" tcEOS
+	"pMicroSecondsPerGallonIdx" tcEOS
+	"pInjEdgeTriggerIdx" tcEOS
+	"pInjectorSettleTimeIdx" tcEOS
+	"pInjPer2CrankRevIdx" tcEOS
+	"pMinGoodRPMidx" tcEOS
+	"pPulsesPerDistanceIdx" tcEOS
+	"pVSSpauseIdx" tcEOS
+	"pMinGoodSpeedidx" tcEOS
+	"pTankSizeIdx" tcEOS
+	"pTankBingoSizeIdx" tcEOS
+	"pIdleTimeoutIdx" tcEOS
+	"pEOCtimeoutIdx" tcEOS
+	"pButtonTimeoutIdx" tcEOS
+	"pParkTimeoutIdx" tcEOS
+	"pActivityTimeoutIdx" tcEOS
+	"pScratchpadIdx" tcEOS
+#if defined(useButtonInput)
+	"pWakeupResetCurrentOnEngineIdx" tcEOS
+	"pWakeupResetCurrentOnMoveIdx" tcEOS
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+	"pBrightnessIdx" tcEOS
 #if defined(useLCDcontrast)
-	"Contrast" tcEOSCR
+	"pContrastIdx" tcEOS
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
-	"LCD BG Color" tcEOSCR
-#endif // useAdafruitRGBLCDshield
-	"Metric 1-Yes" tcEOSCR
-	"AltFEformat 1-Y" tcEOSCR
-#ifdef useFuelCost
-#ifdef useImperialGallon
-	"Price*1000/" tcOMOFF "ImpGa" tcOTOG "L" tcOON tcEOSCR
-#else  // useImperialGallon
-	"Price*1000/" tcOMOFF "USgal" tcOTOG tcOON tcEOSCR
-#endif // useImperialGallon
-#endif // useFuelCost
+#if defined(useAdafruitRGBLCDshield)
+	"pLCDcolorIdx" tcEOS
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
+	"pCostPerQuantity" tcEOS
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	"OutPtPin 1 Mode" tcEOSCR
-	"OutPtPin 2 Mode" tcEOSCR
+	"pOutputPin1Mode" tcEOS
+	"pOutputPin2Mode" tcEOS
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
-	"V(diode)*1000" tcEOSCR
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
-	"DLogSerial 1-Yes" tcEOSCR
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-	"FE/Time Period s" tcEOSCR
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-	"bgLower*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
-	"bgSize*1000 " tcOMOFF "MPH" tcOTOG "kph" tcOON tcEOSCR
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#if defined(useCarVoltageOutput)
+	"pVoltageOffset" tcEOS
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
+	"pSerialDataLoggingIdx" tcEOS
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	"pJSONoutputIdx" tcEOS
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+	"pFEvsTimeIdx" tcEOS
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	"pBarLowSpeedCutoffIdx" tcEOS
+	"pBarSpeedQuantumIdx" tcEOS
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	"P(Fuel) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
+	"pSysFuelPressureIdx" tcEOS
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	"P(Ref) " tcOMOFF "psig*1K" tcOTOG "Pa" tcOON tcEOSCR
-	"Injector Count" tcEOSCR
-	"InjSiz cc/min*1K" tcEOSCR
+	"pRefFuelPressureIdx" tcEOS
+	"pInjectorCountIdx" tcEOS
+	"pInjectorSizeIdx" tcEOS
 #endif // useCalculatedFuelFactor
-	"Microsec/USgal" tcEOSCR
-	"InjTrg 0-Dn 1-Up" tcEOSCR
-	"Inj Delay (us)" tcEOSCR
-	"InjCloseDly (us)" tcEOSCR
-	"Revs/Inj Pulse" tcEOSCR
-	"Min good RPM" tcEOSCR
+#if defined(useChryslerMAPCorrection)
+	"pMAPsensorFloorIdx" tcEOS
+	"pMAPsensorCeilingIdx" tcEOS
+	"pMAPsensorRangeIdx" tcEOS
+	"pMAPsensorOffsetIdx" tcEOS
+#if defined(useChryslerBaroSensor)
+	"pBaroSensorFloorIdx" tcEOS
+	"pBaroSensorCeilingIdx" tcEOS
+	"pBaroSensorRangeIdx" tcEOS
+	"pBaroSensorOffsetIdx" tcEOS
+#else // defined(useChryslerBaroSensor)
+	"pBarometricPressureIdx" tcEOS
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+	"pVehicleMassIdx" tcEOS
+#if defined(useCoastDownCalculator)
+	"pVehicleFrontalAreaIdx" tcEOS
+	"pLocustDensityIdx" tcEOS
+	"pCoefficientDidx" tcEOS
+	"pCoefficientVidx" tcEOS
+	"pCoefficientRRidx" tcEOS
+	"pCoastdownSamplePeriodIdx" tcEOS
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	"pDragSpeedIdx" tcEOS
+	"pDragDistanceIdx" tcEOS
+	"pDragAutoFlagIdx" tcEOS
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
+	"pAutoSaveActiveIdx" tcEOS
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+	"pRefuelSizeIdx" tcEOS
+#endif // defined(usePartialRefuel)
 
-// vehicle speed sensor settings
-
-	"VSS Pulses/" tcOMOFF "Mile" tcOTOG "km" tcOON tcEOSCR
-	"VSS Delay (ms)" tcEOSCR
-	"Min Speed " tcOMOFF "MPH" tcOTOG "KPH" tcOON "*1K " tcEOSCR
-
-// fuel tank size settings
-
-#ifdef useImperialGallon
-	"Tank*1000 " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-	"Bingo*1000 " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-#else // useImperialGallon
-	"Tank*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-	"Bingo*1000 " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-#endif // useImperialGallon
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
-	"MAPfloor (mV)" tcEOSCR
-	"MAPceiling (mV)" tcEOSCR
-	"MAPrng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-	"MAPofst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#ifdef useChryslerBaroSensor
-	"BaroFloor (mV)" tcEOSCR
-	"BaroCeiling (mV)" tcEOSCR
-	"BaroRng " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-	"BaroOfst " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#else // useChryslerBaroSensor
-	"BaroPrs " tcOMOFF "psi*1000" tcOTOG "Pa" tcOON tcEOSCR
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
-	tcOMOFF "Weight" tcOTOG "Mass" tcOON " (" tcOMOFF "lbs" tcOTOG "kg" tcOON ")" tcEOSCR
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	"FrArea*1000 " tcOMOFF "ft" tcOTOG "m" tcOON "^2" tcEOSCR
-	"rho*1000 " tcOMOFF "lb/yd" tcOTOG "kg/m" tcOON "^3" tcEOSCR
-	"C(d) * 1000" tcEOSCR
-	"C(v) * 1000" tcEOSCR
-	"C(rr) * 1000" tcEOSCR
-	"Cd SamplePd (s)" tcEOSCR
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-	"DragSpd " tcOMOFF "MPH" tcOTOG "kph" tcOON "*1000" tcEOSCR
-	"DragDist " tcOMOFF "mi" tcOTOG "km" tcOON "*1000" tcEOSCR
-	"DragAutoTrigger" tcEOSCR
-#endif // useDragRaceFunction
-
-// timeout settings
-
-	"Idle Timeout (s)" tcEOSCR
-	"EOC Timeout (s)" tcEOSCR
-	"BtnPress T/O (s)" tcEOSCR
-	"Park Timeout (s)" tcEOSCR
-	"OFF Timeout (s)" tcEOSCR
-	"WakeEngRst CURR" tcEOSCR
-	"WakeVSSRst CURR" tcEOSCR
-#ifdef useSavedTrips
-	"AutoSaveTrip 1-Y" tcEOSCR
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-	"Scratchpad(odo?)" tcEOSCR
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
-#ifdef useImperialGallon
-	"Refill*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-#ifdef useEEPROMtripStorage
-	"RefillSave*1K " tcOMOFF "ImpGal" tcOTOG "L" tcOON tcEOSCR
-#endif // useEEPROMtripStorage
-#else // useImperialGallon
-	"Refill*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-#ifdef useEEPROMtripStorage
-	"RefillSave*1K " tcOMOFF "USgal" tcOTOG "L" tcOON tcEOSCR
-#endif // useEEPROMtripStorage
-#endif // useImperialGallon
-#endif // usePartialRefuel
-#ifdef useDebugTerminalLabels
-#ifdef useEEPROMtripStorage
-	"CurrTripSig" tcEOSCR
-	"TankTripSig" tcEOSCR
-	"CurrVSSpulse" tcEOSCR
-	"CurrVSScycle" tcEOSCR
-	"CurrInjPulse" tcEOSCR
-	"CurrInjCycle" tcEOSCR
-	"CurrEngCycle" tcEOSCR
-	"TankVSSpulse" tcEOSCR
-	"TankVSScycle" tcEOSCR
-	"TankInjPulse" tcEOSCR
-	"TankInjCycle" tcEOSCR
-	"TankEngCycle" tcEOSCR
+#if defined(useButtonInput)
+	"pDisplayIdx" tcEOS
+#if LCDcharHeight == 4
+	"pBottomDisplayIdx" tcEOS
+	"pBottomCursorIdx" tcEOS
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
+#if defined(useEEPROMtripStorage)
+#if defined(usePartialRefuel)
+	"pRefuelSaveSizeIdx" tcEOS
+#endif // defined(usePartialRefuel)
+	"pCurrTripSignatureIdx" tcEOS
+	"pTankTripSignatureIdx" tcEOS
+	"pCurrTripVSSpulseIdx" tcEOS
+	"pCurrTripVSScycleIdx" tcEOS
+	"pCurrTripInjPulseIdx" tcEOS
+	"pCurrTripInjCycleIdx" tcEOS
+	"pCurrTripEngCycleIdx" tcEOS
+	"pTankTripVSSpulseIdx" tcEOS
+	"pTankTripVSScycleIdx" tcEOS
+	"pTankTripInjPulseIdx" tcEOS
+	"pTankTripInjCycleIdx" tcEOS
+	"pTankTripEngCycleIdx" tcEOS
 #if defined(trackIdleEOCdata)
-	"CurrIEOCvssPulse" tcEOSCR
-	"CurrIEOCvssCycle" tcEOSCR
-	"CurrIEOCinjPulse" tcEOSCR
-	"CurrIEOCinjCycle" tcEOSCR
-	"CurrIEOCengCycle" tcEOSCR
-	"TankIEOCvssPulse" tcEOSCR
-	"TankIEOCvssCycle" tcEOSCR
-	"TankIEOCinjPulse" tcEOSCR
-	"TankIEOCinjCycle" tcEOSCR
-	"TankIEOCengCycle" tcEOSCR
+	"pCurrIEOCvssPulseIdx" tcEOS
+	"pCurrIEOCvssCycleIdx" tcEOS
+	"pCurrIEOCinjPulseIdx" tcEOS
+	"pCurrIEOCinjCycleIdx" tcEOS
+	"pCurrIEOCengCycleIdx" tcEOS
+	"pTankIEOCvssPulseIdx" tcEOS
+	"pTankIEOCvssCycleIdx" tcEOS
+	"pTankIEOCinjPulseIdx" tcEOS
+	"pTankIEOCinjCycleIdx" tcEOS
+	"pTankIEOCengCycleIdx" tcEOS
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 #if defined(useScreenEditor)
-	"P00F00" tcEOSCR
-	"P00F01" tcEOSCR
-	"P00F02" tcEOSCR
-	"P00F03" tcEOSCR
+	"P00F00" tcEOS
+	"P00F01" tcEOS
+	"P00F02" tcEOS
+	"P00F03" tcEOS
 
-	"P01F00" tcEOSCR
-	"P01F01" tcEOSCR
-	"P01F02" tcEOSCR
-	"P01F03" tcEOSCR
+	"P01F00" tcEOS
+	"P01F01" tcEOS
+	"P01F02" tcEOS
+	"P01F03" tcEOS
 
-	"P02F00" tcEOSCR
-	"P02F01" tcEOSCR
-	"P02F02" tcEOSCR
-	"P02F03" tcEOSCR
+	"P02F00" tcEOS
+	"P02F01" tcEOS
+	"P02F02" tcEOS
+	"P02F03" tcEOS
 
-	"P03F00" tcEOSCR
-	"P03F01" tcEOSCR
-	"P03F02" tcEOSCR
-	"P03F03" tcEOSCR
+	"P03F00" tcEOS
+	"P03F01" tcEOS
+	"P03F02" tcEOS
+	"P03F03" tcEOS
 
-	"P04F00" tcEOSCR
-	"P04F01" tcEOSCR
-	"P04F02" tcEOSCR
-	"P04F03" tcEOSCR
+	"P04F00" tcEOS
+	"P04F01" tcEOS
+	"P04F02" tcEOS
+	"P04F03" tcEOS
 
-	"P05F00" tcEOSCR
-	"P05F01" tcEOSCR
-	"P05F02" tcEOSCR
-	"P05F03" tcEOSCR
-
-#if defined(trackIdleEOCdata)
-	"P06F00" tcEOSCR
-	"P06F01" tcEOSCR
-	"P06F02" tcEOSCR
-	"P06F03" tcEOSCR
-
-#endif // defined(trackIdleEOCdata)
-	"P07F00" tcEOSCR
-	"P07F01" tcEOSCR
-	"P07F02" tcEOSCR
-	"P07F03" tcEOSCR
-
-	"P08F00" tcEOSCR
-	"P08F01" tcEOSCR
-	"P08F02" tcEOSCR
-	"P08F03" tcEOSCR
+	"P05F00" tcEOS
+	"P05F01" tcEOS
+	"P05F02" tcEOS
+	"P05F03" tcEOS
 
 #if defined(trackIdleEOCdata)
-	"P09F00" tcEOSCR
-	"P09F01" tcEOSCR
-	"P09F02" tcEOSCR
-	"P09F03" tcEOSCR
-
-	"P10F00" tcEOSCR
-	"P10F01" tcEOSCR
-	"P10F02" tcEOSCR
-	"P10F03" tcEOSCR
+	"P06F00" tcEOS
+	"P06F01" tcEOS
+	"P06F02" tcEOS
+	"P06F03" tcEOS
 
 #endif // defined(trackIdleEOCdata)
-	"P11F00" tcEOSCR
-	"P11F01" tcEOSCR
-	"P11F02" tcEOSCR
-	"P11F03" tcEOSCR
+	"P07F00" tcEOS
+	"P07F01" tcEOS
+	"P07F02" tcEOS
+	"P07F03" tcEOS
+
+	"P08F00" tcEOS
+	"P08F01" tcEOS
+	"P08F02" tcEOS
+	"P08F03" tcEOS
+
+#if defined(trackIdleEOCdata)
+	"P09F00" tcEOS
+	"P09F01" tcEOS
+	"P09F02" tcEOS
+	"P09F03" tcEOS
+
+	"P10F00" tcEOS
+	"P10F01" tcEOS
+	"P10F02" tcEOS
+	"P10F03" tcEOS
+
+#endif // defined(trackIdleEOCdata)
+	"P11F00" tcEOS
+	"P11F01" tcEOS
+	"P11F02" tcEOS
+	"P11F03" tcEOS
 
 #endif // defined(useScreenEditor)
-#endif // useDebugTerminalLabels
+
+#if defined(useButtonInput)
+	"baseMenuDisplayIdx" tcEOS
+#if defined(useExpandedMainDisplay)
+	"mainMenuDisplayIdx" tcEOS
+#endif // defined(useExpandedMainDisplay)
+	"settingsMenuDisplayIdx" tcEOS
+
+	"displaySettingsDisplayIdx" tcEOS
+	"fuelSettingsDisplayIdx" tcEOS
+	"VSSsettingsDisplayIdx" tcEOS
+	"tankSettingsDisplayIdx" tcEOS
+#if defined(useChryslerMAPCorrection)
+	"CRFICsettingsDisplayIdx" tcEOS
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+	"acdSettingsDisplayIdx" tcEOS
+#endif // defined(useVehicleParameters)
+	"timeoutSettingsDisplayIdx" tcEOS
+	"miscSettingsDisplayIdx" tcEOS
+
+#if defined(useSavedTrips)
+	"tripSaveCurrentDisplayIdx" tcEOS
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	"tripSaveTankDisplayIdx" tcEOS
+#endif // defined(useEnhancedTripReset)
+
+#if defined(useDragRaceFunction)
+	"dragRaceMenuDisplayIdx" tcEOS
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	"coastdownMenuDisplayIdx" tcEOS
+#endif // defined(useCoastDownCalculator)
+#if defined(useSimulatedFIandVSS)
+	"signalSimDisplayIdx" tcEOS
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection)
+	"pressureDisplayIdx" tcEOS
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useDebugAnalog)
+	"analogDisplayIdx" tcEOS
+#endif // defined(useDebugAnalog)
+#if defined(useTestButtonValues)
+	"buttonDisplayIdx" tcEOS
+#endif // defined(useTestButtonValues)
+
+	"mainDisplayIdx" tcEOS
+#if defined(useStatusMeter)
+	"statusMeterDisplayIdx" tcEOS
+#endif // defined(useStatusMeter)
+#if defined(useBigFE)
+	"bigFEdisplayIdx" tcEOS
+#endif // defined(useBigFE)
+#if defined(useBarFuelEconVsTime)
+	"barFEvTdisplayIdx" tcEOS
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	"barFEvSdisplayIdx" tcEOS
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBigDTE)
+	"bigDTEdisplayIdx" tcEOS
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+	"bigTTEdisplayIdx" tcEOS
+#endif // defined(useBigTTE)
+#if defined(useCPUreading)
+	"CPUmonDisplayIdx" tcEOS
+#endif // defined(useCPUreading)
+#if defined(useClockDisplay)
+	"clockShowDisplayIdx" tcEOS
+#endif // defined(useClockDisplay)
+
+	"parameterEditDisplayIdx" tcEOS
+#if defined(useClockDisplay)
+	"clockSetDisplayIdx" tcEOS
+#endif // defined(useClockDisplay)
+#if defined(useScreenEditor)
+	"displayEditDisplayIdx" tcEOS
+#endif // defined(useScreenEditor)
+#if defined(useDragRaceFunction)
+	"dragRaceDisplayIdx" tcEOS
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	"coastdownDisplayIdx" tcEOS
+#endif // defined(useCoastDownCalculator)
+
+	"topMenuIdx" tcEOS
+
+#if defined(useExpandedMainDisplay)
+	"mainMenuIdx" tcEOS
+
+#endif // defined(useExpandedMainDisplay)
+	"settingsMenuIdx" tcEOS
+
+	"displaySettingMenuIdx" tcEOS
+	"fuelSettingMenuIdx" tcEOS
+	"VSSsettingMenuIdx" tcEOS
+	"tankSettingMenuIdx" tcEOS
+#if defined(useChryslerMAPCorrection)
+	"CRFICsettingMenuIdx" tcEOS
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+	"acdSettingMenuIdx" tcEOS
+#endif // defined(useVehicleParameters)
+	"timeoutSettingMenuIdx" tcEOS
+	"miscSettingMenuIdx" tcEOS
+
+#if defined(useSavedTrips)
+	"tripSaveCurrentMenuIdx" tcEOS
+#endif // defined(useSavedTrips)
+#if defined(useEnhancedTripReset)
+	"tripSaveTankMenuIdx" tcEOS
+#endif // defined(useEnhancedTripReset)
+#if defined(useDragRaceFunction)
+	"accelTestMenuIdx" tcEOS
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	"coastdownTestMenuIdx" tcEOS
+#endif // defined(useCoastDownCalculator)
+#endif // defined(useButtonInput)
 };
 
+#endif // defined(useDebugTerminalLabels)
 // 0byyy0 0000 - MPGuino parameter action needed that is critical to measurements of fuel injection, VSS, timeouts, and the like
 // 0b0000 0xxx - fractional part of parameter size in bits
 
@@ -857,42 +1050,62 @@ static const uint8_t pfDoMetricModeConversion =	pfHardwareInitMPGuino + 32;
 static const uint8_t pfChangeDisplay =			pfDoMetricModeConversion + 32;
 static const uint8_t pfCalculateFuelParams =	pfChangeDisplay + 32;
 
-const uint8_t paramsLength[] PROGMEM = {
+static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	 (pSizeSignature & 0x07) | pfHardwareInitMPGuino							// EEPROM MPGuino signature long word
-
-// display settings
-
+	,(pSizeMetricMode & 0x07) | pfDoMetricModeConversion						// Display Mode (0 - US Display, 1 - Metric Display)
+	,(pSizeAlternateFE & 0x07) | pfChangeDisplay								// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	,(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino				// Microseconds per US gallon
+	,(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	,(pSizeInjectorSettleTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Opening Delay Time (us)
+	,(pSizeInjPer2CrankRev & 0x07) | pfSoftwareInitMPGuino					// Crankshaft Revolutions per Fuel Injector Event
+	,(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino							// Minimum Engine Speed For Engine On (RPM)
+	,(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino					// VSS Pulses (per mile or per km)
+	,(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino								// VSS Pause Debounce Count (ms)
+	,(pSizeMinGoodSpeed & 0x07) | pfSoftwareInitMPGuino							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	,(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino								// Tank Capacity * 1000 (gal or L)
+	,(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
+	,(pSizeIdleTimeout & 0x07) | pfSoftwareInitMPGuino							// Engine Idle Timeout (s)
+	,(pSizeEOCtimeout & 0x07) | pfSoftwareInitMPGuino							// Engine-Off Coasting Timeout (s)
+	,(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino						// Button Press Activity Timeout (s)
+	,(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino							// Vehicle Parked (engine off, no movement) Timeout (s)
+	,(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino						// Activity (engine off, no movement, no button press) Timeout (s)
+	,(pSizeScratchpad & 0x07)													// Scratchpad Memory
+#if defined(useButtonInput)
+	,(pSizeWakeupResetCurrentOnEngine & 0x07)									// Enable current trip reset upon wakeup due to engine running
+	,(pSizeWakeupResetCurrentOnMove & 0x07)										// Enable current trip reset upon wakeup due to vehicle movement
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+	,(pSizeBrightness & 0x07) | pfChangeDisplay									// LCD Brightness
 #if defined(useLCDcontrast)
 	,(pSizeContrast & 0x07) | pfChangeDisplay									// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	,(pSizeLCDcolor & 0x07) | pfChangeDisplay									// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
-	,(pSizeMetricMode & 0x07) | pfDoMetricModeConversion						// Display Mode (0 - US Display, 1 - Metric Display)
-	,(pSizeAlternateFE & 0x07) | pfSoftwareInitMPGuino							// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
 	,(pSizeFuelUnitCost & 0x07)													// Price per unit volume of fuel
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	,(pSizeOutputPin1Mode & 0x07)												// Output Pin 1 mode
 	,(pSizeOutputPin2Mode & 0x07)												// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,(pSizeVoltageOffset & 0x07)												// diode offset from V(alternator)
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
 	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,(pSizeJSONoutput & 0x07)													// JSON output Enable
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
 	,(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph lower speed
 	,(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
 	,(pSizeSysFuelPressure & 0x07) | pfSoftwareInitMPGuino						// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
@@ -901,90 +1114,56 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeInjectorCount & 0x07) | pfCalculateFuelParams						// Fuel Injector Count
 	,(pSizeInjectorSize & 0x07) | pfCalculateFuelParams							// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
-	,(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino				// Microseconds per US gallon
-	,(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,(pSizeInjectorOpeningTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Opening Delay Time (us)
-	,(pSizeInjectorClosingTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Closing Delay Time (us)
-	,(pSizeCrankRevPerInj & 0x07) | pfSoftwareInitMPGuino						// Crankshaft Revolutions per Fuel Injector Event
-	,(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino							// Minimum Engine Speed For Engine On (RPM)
-
-// vehicle speed sensor settings
-
-	,(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino					// VSS Pulses (per mile or per km)
-	,(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino								// VSS Pause Debounce Count (ms)
-	,(pSizeMinGoodSpeed & 0x07) | pfSoftwareInitMPGuino							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-
-// fuel tank size settings
-
-	,(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino								// Tank Capacity * 1000 (gal or L)
-	,(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
+#if defined(useChryslerMAPCorrection)
 	,(pSizeMAPsensorFloor & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Floor * 1000 (V)
 	,(pSizeMAPsensorCeiling & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Ceiling * 1000 (V)
 	,(pSizeMAPsensorRange & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Range (Pa or * 1000 psig)
 	,(pSizeMAPsensorOffset & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	,(pSizeBaroSensorFloor & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Floor * 1000 (V)
 	,(pSizeBaroSensorCeiling & 0x07) | pfSoftwareInitMPGuino					// Barometric Sensor Ceiling * 1000 (V)
 	,(pSizeBaroSensorRange & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Range (Pa or * 1000 psig)
 	,(pSizeBaroSensorOffset & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	,(pSizeBarometricPressure & 0x07) | pfSoftwareInitMPGuino					// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
 	,(pSizeVehicleMass & 0x07)													// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,(pSizeVehicleFrontalArea & 0x07)											// Vehicle Frontal Area * 1000 (ft^2 or m^2)
 	,(pSizeLocustDensity & 0x07)												// Air density (lb/yd^3 or kg/m^3)
 	,(pSizeCoefficientD & 0x07)													// Vehicle C(d) * 1000
 	,(pSizeCoefficientV & 0x07)													// Vehicle C(v) * 1000
 	,(pSizeCoefficientRR & 0x07)												// Vehicle C(rr) * 1000
 	,(pSizeCoastdownSamplePeriod & 0x07)										// Sample Period in seconds
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
 	,(pSizeDragSpeed & 0x07)													// Drag speed cutoff (MPH or kph) * 1000
 	,(pSizeDragDistance & 0x07)													// Drag distance cutoff (miles or km) * 1000
 	,(pSizeDragAutoFlag & 0x07)													// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
-
-// timeout settings
-
-	,(pSizeIdleTimeout & 0x07) | pfSoftwareInitMPGuino							// Engine Idle Timeout (s)
-	,(pSizeEOCtimeout & 0x07) | pfSoftwareInitMPGuino							// Engine-Off Coasting Timeout (s)
-	,(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino						// Button Press Activity Timeout (s)
-	,(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino							// Vehicle Parked (engine off, no movement) Timeout (s)
-	,(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino						// Activity (engine off, no movement, no button press) Timeout (s)
-	,(pSizeWakeupResetCurrentOnEngine & 0x07)									// Enable current trip reset upon wakeup due to engine running
-	,(pSizeWakeupResetCurrentOnMove & 0x07)										// Enable current trip reset upon wakeup due to vehicle movement
-#ifdef useSavedTrips
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
 	,(pSizeAutoSaveActive & 0x07)												// Autosave Active Trip Data Enable
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-	,(pSizeScratchpad & 0x07)													// Scratchpad Memory
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
 	,(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino							// Partial Refuel amount * 1000 (gal or L)
-#ifdef useEEPROMtripStorage
-	,(pSizeRefuelSaveSizeIdx & 0x07)											// Partial Refuel save amount * 1000 (gal or L)
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
 
-#ifdef useEEPROMtripStorage
+#if defined(useButtonInput)
+	,(pSizeDisplayIdx & 0x07) | pfChangeDisplay									// current display index
+#if LCDcharHeight == 4
+	,(pSizeBottomDisplayIdx & 0x07) | pfChangeDisplay							// bottom display index
+	,(pSizeBottomCursorIdx & 0x07)												// bottom display cursor position
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
+#if defined(useEEPROMtripStorage)
+#if defined(usePartialRefuel)
+	,(pSizeRefuelSaveSizeIdx & 0x07)											// Partial Refuel save amount * 1000 (gal or L)
+#endif // defined(usePartialRefuel)
 	,(pSizeCurrTripSignatureIdx & 0x07)											// Current Trip signature byte
 	,(pSizeTankTripSignatureIdx & 0x07)											// Tank Trip signature byte
-
 	,(pSizeCurrTripVSSpulseIdx & 0x07)											// Current Trip VSS pulse count storage
 	,(pSizeCurrTripVSScycleIdx & 0x07)											// Current Trip VSS cycle accumulator storage
 	,(pSizeCurrTripInjPulseIdx & 0x07)											// Current Trip injector pulse count storage
@@ -1007,203 +1186,215 @@ const uint8_t paramsLength[] PROGMEM = {
 	,(pSizeTankIEOCinjCycleIdx & 0x07)											// Tank Idle/EOC Trip injector open cycle accumulator storage
 	,(pSizeTankIEOCengCycleIdx & 0x07)											// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 };
 
 /* parameter EEPROM addresses for parameter definitions above */
 
-const uint8_t paramAddrs[] PROGMEM = {
-	(uint8_t)(pAddressSignature)					// EEPROM signature long word for MPGuino
-
-// display settings
-
+static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
+	 pAddressSignature					// EEPROM signature long word for MPGuino
+	,pAddressMetricMode					// Display Mode (0 - US Display, 1 - Metric Display)
+	,pAddressAlternateFE				// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	,pAddressMicroSecondsPerGallon		// Microseconds per US gallon
+	,pAddressInjEdgeTrigger				// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	,pAddressInjectorSettleTime			// Fuel Injector Opening Delay Time (us)
+	,pAddressInjPer2CrankRev			// Fuel Injector Event Count for every 2 Crankshaft Revolutions
+	,pAddressMinGoodRPM					// Minimum Engine Speed For Engine On (RPM)
+	,pAddressPulsesPerDistance			// VSS Pulses (per mile or per km)
+	,pAddressVSSpause					// VSS Pause Debounce Count (ms)
+	,pAddressMinGoodSpeed				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	,pAddressTankSize					// Tank Capacity * 1000 (gal or L)
+	,pAddressTankBingoSize				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
+	,pAddressIdleTimeout				// Engine Idle Timeout (s)
+	,pAddressEOCtimeout					// Engine-Off Coasting Timeout (s)
+	,pAddressButtonTimeout				// Button Press Activity Timeout (s)
+	,pAddressParkTimeout				// Vehicle Parked (engine off, no movement) Timeout (s)
+	,pAddressActivityTimeout			// Activity (engine off, no movement, no button press) Timeout (s)
+	,pAddressScratchpad					// Scratchpad Memory
+#if defined(useButtonInput)
+	,pAddressWakeupResetCurrentOnEngine	// Enable current trip reset upon wakeup due to engine running
+	,pAddressWakeupResetCurrentOnMove	// Enable current trip reset upon wakeup due to vehicle movement
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+	,pAddressBrightness					// LCD Brightness
 #if defined(useLCDcontrast)
-	,(uint8_t)(pAddressContrast)					// LCD Contrast
+	,pAddressContrast					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
-	,(uint8_t)(pAddressLCDcolor)					// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
-	,(uint8_t)(pAddressMetricMode)					// Display Mode (0 - US Display, 1 - Metric Display)
-	,(uint8_t)(pAddressAlternateFE)					// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
-	,(uint8_t)(pAddressFuelUnitCost)				// Price per unit volume of fuel
-#endif // useFuelCost
+#if defined(useAdafruitRGBLCDshield)
+	,pAddressLCDcolor					// LCD Backlight color
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
+	,pAddressFuelUnitCost				// Price per unit volume of fuel
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	,(uint8_t)(pAddressOutputPin1Mode)				// Output Pin 1 mode
-	,(uint8_t)(pAddressOutputPin2Mode)				// Output Pin 2 mode
+	,pAddressOutputPin1Mode				// Output Pin 1 mode
+	,pAddressOutputPin2Mode				// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
-	,(uint8_t)(pAddressVoltageOffset)				// diode offset from V(alternator)
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
-	,(uint8_t)(pAddressSerialDataLogging)			// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-	,(uint8_t)(pAddressFEvsTime)					// Period Of FE over Time Bar Graph Bar (s)
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
-	,(uint8_t)(pAddressBarLowSpeedCutoff)			// FE vs Speed Bargraph lower speed
-	,(uint8_t)(pAddressBarSpeedQuantumIdx)			// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#if defined(useCarVoltageOutput)
+	,pAddressVoltageOffset				// diode offset from V(alternator)
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
+	,pAddressSerialDataLogging			// Serial Data Logging Enable
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,pAddressJSONoutput					// JSON output Enable
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+	,pAddressFEvsTime					// Period Of FE over Time Bar Graph Bar (s)
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	,pAddressBarLowSpeedCutoff			// FE vs Speed Bargraph lower speed
+	,pAddressBarSpeedQuantumIdx			// FE vs Speed Bargraph speed bar size
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	,(uint8_t)(pAddressSysFuelPressure)				// Fuel System Pressure (Pa or * 1000 psig)
+	,pAddressSysFuelPressure			// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	,(uint8_t)(pAddressRefFuelPressure)				// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
-	,(uint8_t)(pAddressInjectorCount)				// Fuel Injector Count
-	,(uint8_t)(pAddressInjectorSize)				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
+	,pAddressRefFuelPressure			// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
+	,pAddressInjectorCount				// Fuel Injector Count
+	,pAddressInjectorSize				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
-	,(uint8_t)(pAddressMicroSecondsPerGallon)		// Microseconds per US gallon
-	,(uint8_t)(pAddressInjEdgeTrigger)				// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,(uint8_t)(pAddressInjectorOpeningTime)			// Fuel Injector Opening Delay Time (us)
-	,(uint8_t)(pAddressInjectorClosingTime)			// Fuel Injector Closing Delay Time (us)
-	,(uint8_t)(pAddressCrankRevPerInj)				// Crankshaft Revolutions per Fuel Injector Event
-	,(uint8_t)(pAddressMinGoodRPM)					// Minimum Engine Speed For Engine On (RPM)
+#if defined(useChryslerMAPCorrection)
+	,pAddressMAPsensorFloor				// MAP Sensor Floor * 1000 (V)
+	,pAddressMAPsensorCeiling			// MAP Sensor Ceiling * 1000 (V)
+	,pAddressMAPsensorRange				// MAP Sensor Range (Pa or * 1000 psig)
+	,pAddressMAPsensorOffset			// MAP Sensor Offset (Pa or * 1000 psia)
+#if defined(useChryslerBaroSensor)
+	,pAddressBaroSensorFloor			// Barometric Sensor Floor * 1000 (V)
+	,pAddressBaroSensorCeiling			// Barometric Sensor Ceiling * 1000 (V)
+	,pAddressBaroSensorRange			// Barometric Sensor Range (Pa or * 1000 psig)
+	,pAddressBaroSensorOffset			// Barometric Sensor Offset (Pa or * 1000 psia)
+#else // defined(useChryslerBaroSensor)
+	,pAddressBarometricPressure			// Reference Barometric Pressure
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
+	,pAddressVehicleMass				// Vehicle Weight/Mass (lbs or kg)
+#if defined(useCoastDownCalculator)
+	,pAddressVehicleFrontalArea			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
+	,pAddressLocustDensity				// Air density (lb/yd^3 or kg/m^3)
+	,pAddressCoefficientD				// Vehicle C(d) * 1000
+	,pAddressCoefficientV				// Vehicle C(v) * 1000
+	,pAddressCoefficientRR				// Vehicle C(rr) * 1000
+	,pAddressCoastdownSamplePeriod		// Sample Period in seconds
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	,pAddressDragSpeed					// Drag speed cutoff (MPH or kph) * 1000
+	,pAddressDragDistance				// Drag distance cutoff (miles or km) * 1000
+	,pAddressDragAutoFlag				// Drag automatic retrigger on vehicle stop
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
+	,pAddressAutoSaveActive				// Autosave Active Trip Data Enable
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
+	,pAddressRefuelSize					// Partial Refuel amount * 1000 (gal or L)
+#endif // defined(usePartialRefuel)
 
-// vehicle speed sensor settings
-
-	,(uint8_t)(pAddressPulsesPerDistance)			// VSS Pulses (per mile or per km)
-	,(uint8_t)(pAddressVSSpause)					// VSS Pause Debounce Count (ms)
-	,(uint8_t)(pAddressMinGoodSpeed)				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-
-// fuel tank size settings
-
-	,(uint8_t)(pAddressTankSize)					// Tank Capacity * 1000 (gal or L)
-	,(uint8_t)(pAddressTankBingoSize)				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
-	,(uint8_t)(pAddressMAPsensorFloor)				// MAP Sensor Floor * 1000 (V)
-	,(uint8_t)(pAddressMAPsensorCeiling)			// MAP Sensor Ceiling * 1000 (V)
-	,(uint8_t)(pAddressMAPsensorRange)				// MAP Sensor Range (Pa or * 1000 psig)
-	,(uint8_t)(pAddressMAPsensorOffset)				// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
-	,(uint8_t)(pAddressBaroSensorFloor)				// Barometric Sensor Floor * 1000 (V)
-	,(uint8_t)(pAddressBaroSensorCeiling)			// Barometric Sensor Ceiling * 1000 (V)
-	,(uint8_t)(pAddressBaroSensorRange)				// Barometric Sensor Range (Pa or * 1000 psig)
-	,(uint8_t)(pAddressBaroSensorOffset)			// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
-	,(uint8_t)(pAddressBarometricPressure)			// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
-	,(uint8_t)(pAddressVehicleMass)					// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	,(uint8_t)(pAddressVehicleFrontalArea)			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
-	,(uint8_t)(pAddressLocustDensity)				// Air density (lb/yd^3 or kg/m^3)
-	,(uint8_t)(pAddressCoefficientD)				// Vehicle C(d) * 1000
-	,(uint8_t)(pAddressCoefficientV)				// Vehicle C(v) * 1000
-	,(uint8_t)(pAddressCoefficientRR)				// Vehicle C(rr) * 1000
-	,(uint8_t)(pAddressCoastdownSamplePeriod)		// Sample Period in seconds
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
-	,(uint8_t)(pAddressDragSpeed)					// Drag speed cutoff (MPH or kph) * 1000
-	,(uint8_t)(pAddressDragDistance)				// Drag distance cutoff (miles or km) * 1000
-	,(uint8_t)(pAddressDragAutoFlag)				// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
-
-// timeout settings
-
-	,(uint8_t)(pAddressIdleTimeout)					// Engine Idle Timeout (s)
-	,(uint8_t)(pAddressEOCtimeout)					// Engine-Off Coasting Timeout (s)
-	,(uint8_t)(pAddressButtonTimeout)				// Button Press Activity Timeout (s)
-	,(uint8_t)(pAddressParkTimeout)					// Vehicle Parked (engine off, no movement) Timeout (s)
-	,(uint8_t)(pAddressActivityTimeout)				// Activity (engine off, no movement, no button press) Timeout (s)
-	,(uint8_t)(pAddressWakeupResetCurrentOnEngine)	// Enable current trip reset upon wakeup due to engine running
-	,(uint8_t)(pAddressWakeupResetCurrentOnMove)	// Enable current trip reset upon wakeup due to vehicle movement
-#ifdef useSavedTrips
-	,(uint8_t)(pAddressAutoSaveActive)				// Autosave Active Trip Data Enable
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-	,(uint8_t)(pAddressScratchpad)					// Scratchpad Memory
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
-	,(uint8_t)(pAddressRefuelSize)					// Partial Refuel amount * 1000 (gal or L)
-#ifdef useEEPROMtripStorage
-	,(uint8_t)(pAddressRefuelSaveSizeIdx)			// Partial Refuel save amount * 1000 (gal or L)
-#endif // useEEPROMtripStorage
-#endif // usePartialRefuel
-#ifdef useEEPROMtripStorage
-	,(uint8_t)(pAddressCurrTripSignatureIdx)		// Current Trip signature byte
-	,(uint8_t)(pAddressTankTripSignatureIdx)		// Tank Trip signature byte
-
-	,(uint8_t)(pAddressCurrTripVSSpulseIdx)			// Current Trip VSS pulse count storage
-	,(uint8_t)(pAddressCurrTripVSScycleIdx)			// Current Trip VSS cycle accumulator storage
-	,(uint8_t)(pAddressCurrTripInjPulseIdx)			// Current Trip injector pulse count storage
-	,(uint8_t)(pAddressCurrTripInjCycleIdx)			// Current Trip injector open cycle accumulator storage
-	,(uint8_t)(pAddressCurrTripEngCycleIdx)			// Current Trip engine revolution cycle accumulator storage
-	,(uint8_t)(pAddressTankTripVSSpulseIdx)			// Tank Trip VSS pulse count storage
-	,(uint8_t)(pAddressTankTripVSScycleIdx)			// Tank Trip VSS cycle accumulator storage
-	,(uint8_t)(pAddressTankTripInjPulseIdx)			// Tank Trip injector pulse count storage
-	,(uint8_t)(pAddressTankTripInjCycleIdx)			// Tank Trip injector open cycle accumulator storage
-	,(uint8_t)(pAddressTankTripEngCycleIdx)			// Tank Trip engine revolution cycle accumulator storage
+#if defined(useButtonInput)
+	,pAddressDisplayIdx					// current display index
+#if LCDcharHeight == 4
+	,pAddressBottomDisplayIdx			// bottom display index
+	,pAddressBottomCursorIdx			// bottom display cursor position
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
+#if defined(useEEPROMtripStorage)
+#if defined(usePartialRefuel)
+	,pAddressRefuelSaveSizeIdx			// Partial Refuel save amount * 1000 (gal or L)
+#endif // defined(usePartialRefuel)
+	,pAddressCurrTripSignatureIdx		// Current Trip signature byte
+	,pAddressTankTripSignatureIdx		// Tank Trip signature byte
+	,pAddressCurrTripVSSpulseIdx		// Current Trip VSS pulse count storage
+	,pAddressCurrTripVSScycleIdx		// Current Trip VSS cycle accumulator storage
+	,pAddressCurrTripInjPulseIdx		// Current Trip injector pulse count storage
+	,pAddressCurrTripInjCycleIdx		// Current Trip injector open cycle accumulator storage
+	,pAddressCurrTripEngCycleIdx		// Current Trip engine revolution cycle accumulator storage
+	,pAddressTankTripVSSpulseIdx		// Tank Trip VSS pulse count storage
+	,pAddressTankTripVSScycleIdx		// Tank Trip VSS cycle accumulator storage
+	,pAddressTankTripInjPulseIdx		// Tank Trip injector pulse count storage
+	,pAddressTankTripInjCycleIdx		// Tank Trip injector open cycle accumulator storage
+	,pAddressTankTripEngCycleIdx		// Tank Trip engine revolution cycle accumulator storage
 #if defined(trackIdleEOCdata)
-	,(uint8_t)(pAddressCurrIEOCvssPulseIdx)			// Current Idle/EOC Trip VSS pulse count storage
-	,(uint8_t)(pAddressCurrIEOCvssCycleIdx)			// Current Idle/EOC Trip VSS cycle accumulator storage
-	,(uint8_t)(pAddressCurrIEOCinjPulseIdx)			// Current Idle/EOC Trip injector pulse count storage
-	,(uint8_t)(pAddressCurrIEOCinjCycleIdx)			// Current Idle/EOC Trip injector open cycle accumulator storage
-	,(uint8_t)(pAddressCurrIEOCengCycleIdx)			// Current Idle/EOC Trip engine revolution cycle accumulator storage
-	,(uint8_t)(pAddressTankIEOCvssPulseIdx)			// Tank Idle/EOC Trip VSS pulse count storage
-	,(uint8_t)(pAddressTankIEOCvssCycleIdx)			// Tank Idle/EOC Trip VSS cycle accumulator storage
-	,(uint8_t)(pAddressTankIEOCinjPulseIdx)			// Tank Idle/EOC Trip injector pulse count storage
-	,(uint8_t)(pAddressTankIEOCinjCycleIdx)			// Tank Idle/EOC Trip injector open cycle accumulator storage
-	,(uint8_t)(pAddressTankIEOCengCycleIdx)			// Tank Idle/EOC Trip engine revolution cycle accumulator storage
+	,pAddressCurrIEOCvssPulseIdx		// Current Idle/EOC Trip VSS pulse count storage
+	,pAddressCurrIEOCvssCycleIdx		// Current Idle/EOC Trip VSS cycle accumulator storage
+	,pAddressCurrIEOCinjPulseIdx		// Current Idle/EOC Trip injector pulse count storage
+	,pAddressCurrIEOCinjCycleIdx		// Current Idle/EOC Trip injector open cycle accumulator storage
+	,pAddressCurrIEOCengCycleIdx		// Current Idle/EOC Trip engine revolution cycle accumulator storage
+	,pAddressTankIEOCvssPulseIdx		// Tank Idle/EOC Trip VSS pulse count storage
+	,pAddressTankIEOCvssCycleIdx		// Tank Idle/EOC Trip VSS cycle accumulator storage
+	,pAddressTankIEOCinjPulseIdx		// Tank Idle/EOC Trip injector pulse count storage
+	,pAddressTankIEOCinjCycleIdx		// Tank Idle/EOC Trip injector open cycle accumulator storage
+	,pAddressTankIEOCengCycleIdx		// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
-#endif // useEEPROMtripStorage
+#endif // defined(useEEPROMtripStorage)
 };
 
 /* parameter values for parameter definitions above */
 
-const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 16) + ((uint32_t)(eePtrEnd) << 8) + (uint32_t)(eeAdrSettingsEnd);
+static const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 24) + ((uint32_t)(eePtrEnd) << 16) + (uint32_t)(eeAdrSettingsEnd);
 
-const uint32_t params[] PROGMEM = {
+static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
 	 newEEPROMsignature	// EEPROM MPGuino signature long word
+	,0					// Display Mode (0 - US Display, 1 - Metric Display)
+	,0					// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	,133262651			// Microseconds per US gallon
+	,0					// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	,550				// Fuel Injector Response Delay Time (us)
+	,1					// Fuel Injector Event Count for every 2 Crankshaft Revolutions
+	,40					// Minimum Engine Speed For Engine On (RPM)
+	,10000				// VSS Pulses (per mile or per km)
+	,0					// VSS Pause Debounce Count (ms)
+	,300				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	,18000				// Tank Capacity * 1000 (gal or L)
+	,2200				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
+	,15					// Engine Idle Timeout (s)
+	,2					// Engine-Off Coasting Timeout (s)
+	,5					// Button Press Activity Timeout (s)
+	,5					// Vehicle Parked (engine off, no movement) Timeout (s)
+	,120				// Activity (engine off, no movement, no button press) Timeout (s)
+	,0					// Scratchpad Memory
 
-// display settings
-
+#if defined(useButtonInput)
+	,1					// Enable current trip reset upon wakeup due to engine running
+	,0					// Enable current trip reset upon wakeup due to button press
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+#if defined(useBinaryLCDbrightness)
+	,1					// LCD Brightness
+#else // defined(useBinaryLCDbrightness)
+	,2					// LCD Brightness
+#endif // defined(useBinaryLCDbrightness)
 #if defined(useLCDcontrast)
 	,55					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#ifdef useAdafruitRGBLCDshield
+#if defined(useAdafruitRGBLCDshield)
 	,3					// LCD Backlight color
-#endif // useAdafruitRGBLCDshield
-	,0					// Display Mode (0 - US Display, 1 - Metric Display)
-	,0					// 0 - MPG or L/100km, 1 - G/100mile or km/L
-#ifdef useFuelCost
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+#if defined(useFuelCost)
 	,2710259			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
-#endif // useFuelCost
+#endif // defined(useFuelCost)
 #if defined(useOutputPins)
 	,0					// Output pin 1 mode
 	,0					// Output pin 2 mode
 #endif // defined(useOutputPins)
-#ifdef useCarVoltageOutput
+#if defined(useCarVoltageOutput)
 	,700				// diode offset from V(alternator) (via meelis11)
-#endif // useCarVoltageOutput
-#ifdef useDataLoggingOutput
+#endif // defined(useCarVoltageOutput)
+#if defined(useDataLoggingOutput)
 	,1					// Serial Data Logging Enable
-#endif // useDataLoggingOutput
-#ifdef useBarFuelEconVsTime
-	,5					// Length Of BarGraph Bar (s)
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
+#endif // defined(useDataLoggingOutput)
+#if defined(useJSONoutput)
+	,1					// JSON output Enable
+#endif // defined(useJSONoutput)
+#if defined(useBarFuelEconVsTime)
+	,60					// Length Of BarGraph Bar (s)
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
 	,25000				// FE vs Speed Bargraph lower speed
 	,5000				// FE vs Speed Bargraph speed bar size
-#endif // useBarFuelEconVsSpeed
-
-// fuel injection settings
-
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
 	,43500				// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
@@ -1212,82 +1403,48 @@ const uint32_t params[] PROGMEM = {
 	,6					// Fuel Injector Count
 	,246000				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
-	,133262651			// Microseconds per US gallon
-	,0					// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,550				// Fuel Injector Response Delay Time (us)
-	,2000				// Fuel Injector Closing Delay Time (us)
-	,2					// Crankshaft Revolutions per Fuel Injector Event
-	,40					// Minimum Engine Speed For Engine On (RPM)
-
-// vehicle speed sensor settings
-
-	,10000				// VSS Pulses (per mile or per km)
-	,0					// VSS Pause Debounce Count (ms)
-	,300				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-
-// fuel tank size settings
-
-	,18000				// Tank Capacity * 1000 (gal or L)
-	,2200				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-#ifdef useChryslerMAPCorrection
-
-// Chrysler settings
-
+#if defined(useChryslerMAPCorrection)
 	,500				// MAP Sensor Floor * 1000 (V)
 	,4000				// MAP Sensor Ceiling * 1000 (V)
 	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
 	,551				// MAP Sensor Offset (Pa or * 1000 psia)
-#ifdef useChryslerBaroSensor
+#if defined(useChryslerBaroSensor)
 	,500				// Barometric Sensor Floor * 1000 (V)
 	,4000				// Barometric Sensor Ceiling * 1000 (V)
 	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
 	,551				// Barometric Sensor Offset (Pa or * 1000 psia)
-#else // useChryslerBaroSensor
+#else // defined(useChryslerBaroSensor)
 	,14696				// Reference Barometric Pressure
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-
-// drag race / coastdown calc settings
-
-#ifdef useVehicleMass
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useVehicleParameters)
 	,4000				// Vehicle Weight/Mass (lbs or kg)
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,25400				// Vehicle Frontal Area (ft^2 or m^2)
 	,2065				// Air density (lb/yd^3 or kg/m^3)
 	,346				// C(d)
 	,1					// C(v)
 	,8					// C(rr)
 	,3					// Sample Period in seconds
-#endif // useCoastDownCalculator
-#ifdef useDragRaceFunction
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
 	,60000				// Drag speed cutoff (MPH or kph) * 1000
 	,250				// Drag distance cutoff (miles or km) * 1000
 	,0					// Drag automatic retrigger on vehicle stop
-#endif // useDragRaceFunction
-
-// timeout settings
-
-	,15					// Engine Idle Timeout (s)
-	,2					// Engine-Off Coasting Timeout (s)
-	,5					// Button Press Activity Timeout (s)
-	,5					// Vehicle Parked (engine off, no movement) Timeout (s)
-	,120				// Activity (engine off, no movement, no button press) Timeout (s)
-	,1					// Enable current trip reset upon wakeup due to engine running
-	,0					// Enable current trip reset upon wakeup due to button press
-#ifdef useSavedTrips
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#if defined(useSavedTrips)
 	,1					// Autosave Active Trip Data Enable
-#endif // useSavedTrips
-
-// miscellaneous settings
-
-	,0					// Scratchpad Memory
-
-// settings inaccessible from the menu
-
-#ifdef usePartialRefuel
+#endif // defined(useSavedTrips)
+#if defined(usePartialRefuel)
 	,0					// Partial Refuel amount * 1000 (gal or L)
-#endif // usePartialRefuel
+#endif // defined(usePartialRefuel)
+#if defined(useButtonInput)
+	,mainDisplayIdx
+#if LCDcharHeight == 4
+	,mainDisplayIdx
+#endif // LCDcharHeight == 4
+#endif // defined(useButtonInput)
 };
 
 // end of remarkably long EEPROM stored settings section

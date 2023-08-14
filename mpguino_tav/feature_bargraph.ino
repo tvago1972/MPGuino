@@ -1,10 +1,92 @@
-#ifdef useBarGraph
+#if defined(useBarGraph)
+#if defined(useBarFuelEconVsSpeed)
+/* fuel economy over speed histograph support section */
+
+static void bgFEvsSsupport::reset(void)
+{
+
+	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
+
+	FEvSpdTripIdx = 255;
+
+}
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBarFuelEconVsTime)
+/* fuel economy over time histograph support section */
+
+static uint8_t bgFEvsTsupport::getFEvTperiodIdx(void)
+{
+
+	uint8_t oldSREG;
+	uint8_t retVal;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	retVal = FEvTperiodIdx;
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return retVal;
+
+}
+
+#endif // defined(useBarFuelEconVsTime)
 /* Bar Graph support section */
+
+static const uint8_t prgmGenerateHistographData[] PROGMEM = {
+	instrLdJumpReg,										// save jump register value of input function
+	instrLxdI, bgDataSize,
+	instrLdRegByte, 0x03, 0,
+
+//loop:
+	instrAddIndex, 255,									// decrement index
+	instrCallImplied,									// go call input function
+	instrBranchIfE, 10,									// if function result is zero, go skip
+	instrTestReg, 0x03,									// test currently saved high value
+	instrBranchIfE, 4,									// if high value is zero, go save what the input function returned
+	instrCmpXtoY, 0x23,									// otherwise, compare current value to high value
+	instrBranchIfLTorE,	2,								// if not higher, skip
+
+//cont0:
+	instrLdReg, 0x23,									// save high value
+
+//cont1:
+	instrTestIndex,
+	instrBranchIfNotE, 238,
+	instrLdReg, 0x32,									// load high value
+	instrDiv2byByte, 100,								// divide by normalization value
+	instrLdReg, 0x23,									// save high value
+
+//loop2:
+	instrTestReg, 0x03,									// is high value zero
+	instrBranchIfE, 42,									// if so, just store a zero - can't divide by zero
+	instrCallImplied,									// go call input function
+	instrBranchIfNotE, 12,								// if function result is not zero, go skip
+	instrBranchIfOverflow, 5,
+	instrLdRegByte, 0x02, 0,							// load zero value into main register
+	instrSkip, 9,
+
+//ovfl:
+	instrLdRegByte, 0x02, 255,							// load overflow value into main register
+	instrSkip, 4,
+
+//cont2:
+	instrLdReg, 0x31,									// recall high value
+	instrDiv2by1,										// go normalize value
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+
+//cont3:
+	instrStRegBGdataIndexed, 0x02,						// save normalized value
+	instrAddIndex, 1,									// bump index up
+	instrCmpIndex, bgDataSize,							// processed through all of fuel econ vs time trip variable bank?
+	instrBranchIfLT, 225,								// if not, loop back
+	instrDone											// return to caller
+};
 
 static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
-
-	uint8_t retVal = 0;
 
 	const char * labelList;
 
@@ -19,10 +101,10 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	uint8_t i;
 
-	switch (menuLevel)
+	switch (callingDisplayIdx)
 	{
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 		case barFEvTdisplayIdx:
 			labelList = barFEvTfuncNames;
 
@@ -34,11 +116,11 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			line0CalcIdx = line1CalcIdx;
 			line0TripIdx = currentIdx;
 
-			line1TripIdx = FEvTperiodIdx;
+			line1TripIdx = bgFEvsTsupport::getFEvTperiodIdx();
 			break;
 
-#endif // useBarFuelEconVsTime
-#ifdef useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
 		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
 
@@ -82,20 +164,17 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			break;
 
-#endif // useBarFuelEconVsSpeed
+#endif // defined(useBarFuelEconVsSpeed)
 	}
 
 	switch (cmd)
 	{
 
-		case menuExitIdx:
-			break;
-
-		case menuEntryIdx:
-		case menuCursorUpdateIdx:
+		case displayInitialEntryIdx:
+		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, labelList, cursorPos); // briefly display screen name
 
-		case menuOutputDisplayIdx:
+		case displayOutputIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);
 			displayBarGraphLine(0, line0TripIdx, line0CalcIdx);
 			displayBarGraphLine(1, line1TripIdx, line1CalcIdx);
@@ -109,29 +188,16 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	}
 
-	return retVal;
-
 }
 
 static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx)
 {
 
-	calcFuncObj thisCalcFuncObj;
-
 	text::stringOut(devLCD, bgSpaces, lineNumber);
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, mBuff1, 6, 0);
+	text::tripFunctionOut(devLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
 
-	if (thisCalcFuncObj.isValid & isValidFlag)
-	{
-
-		text::charOut(devLCD, thisCalcFuncObj.tripChar);
-		text::charOut(devLCD, thisCalcFuncObj.calcChar);
-
-		text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
-
-	}
-	else text::newLine(devLCD);
+	text::newLine(devLCD);
 
 }
 
@@ -383,4 +449,4 @@ static void barGraphSupport::draw(uint8_t color, uint8_t xPos, uint8_t yPos)
 
 }
 
-#endif // useBarGraph
+#endif // defined(useBarGraph)

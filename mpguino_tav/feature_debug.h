@@ -1,36 +1,40 @@
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 namespace systemInfo /* CPU loading and RAM availability support section prototype */
 {
 
 	static void idleProcess(void);
+#if defined(useCPUreading)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
 	static void showCPUloading(void);
-	static uint16_t getAvailableRAMsize(void);
-	static uint32_t findCycleLength(unsigned long lastCycle, unsigned long thisCycle);
-	static uint32_t cycles0(void);
+#endif // defined(useCPUreading)
 
 };
 
 static uint32_t mainStart;
 static uint32_t idleTimerLength;
+
+#if defined(useCPUreading)
+extern char __bss_end;
+extern char *__brkval;
+
+#endif // defined(useCPUreading)
 #if defined(useDebugCPUreading)
 static uint8_t monitorState;
 static uint32_t idleProcessTimerLength;
 static uint32_t displayTimerLength;
 static uint32_t SWEET64timerLength;
+
 #endif // defined(useDebugCPUreading)
-
-extern char __bss_end;
-extern char *__brkval;
-
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useSimulatedFIandVSS)
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
 {
 
+#if defined(useButtonInput)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
+#endif // defined(useButtonInput)
 	static void configurePorts(void);
 	static void idleProcessFuel(void);
 	static void idleProcessVSS(void);
@@ -49,20 +53,22 @@ static const uint8_t debugFIreadyFlags =		debugFIPready | debugInjectorFlag;
 static const unsigned long debugVSSresetLength = (unsigned long)(ceil)((2ul * F_CPU) / (2ul * 255ul)) - 1; // 2 sec
 static const unsigned long debugFIPresetLength = (unsigned long)(ceil)((4ul * F_CPU) / (3ul * 2ul * 255ul)) - 1; // 4/3 sec
 
+#if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
-	 (lblInstantIdx << 8 ) |	(tInjectorTotalTime) 		// Debug
-	,(lblInstantIdx << 8 ) |	(tVSStotalTime)
-	,(lblInstantIdx << 8 ) |	(tInjectorPulseCount)
-	,(lblInstantIdx << 8 ) |	(tVSSpulseCount)
+	 (instantIdx << 8 ) |		(tInjectorTotalTime) 		// Debug
+	,(instantIdx << 8 ) |		(tVSStotalTime)
+	,(instantIdx << 8 ) |		(tInjectorPulseCount)
+	,(instantIdx << 8 ) |		(tVSSpulseCount)
 };
 
 static const char debugScreenFuncNames[] PROGMEM = {
-	"FI ON   VSS ON" tcEOSCR
-	"FI OFF  VSS ON" tcEOSCR
-	"FI OFF  VSS OFF" tcEOSCR
-	"FI ON   VSS OFF" tcEOSCR
+	"FI ON   VSS ON" tcEOS
+	"FI OFF  VSS ON" tcEOS
+	"FI OFF  VSS OFF" tcEOS
+	"FI ON   VSS OFF" tcEOS
 };
 
+#endif // defined(useButtonInput)
 static const uint16_t debugVSSvalues[] PROGMEM = {
  65535
 ,2258
@@ -222,7 +228,6 @@ static const uint8_t tmByteReadIn =			0x80;
 static const uint8_t tmSourceReadIn =		0x40;
 static const uint8_t tmTargetReadIn =		0x20;
 static const uint8_t tmAddressReadIn =		0x10;
-
 static const uint8_t tmHexInput =			0x08;
 static const uint8_t tmDecimalInput =		0x04;
 static const uint8_t tmButtonInput =		0x02;
@@ -279,6 +284,7 @@ static const char terminalHelp[] PROGMEM = {
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
+	"           S - toggles display status line echo to terminal" tcEOSCR
 	"           ? - displays this help" tcEOSCR
 	tcEOS
 };
@@ -293,6 +299,7 @@ static uint8_t terminalByte;
 static uint8_t terminalSource;
 static uint8_t terminalTarget;
 
+static uint8_t peek;
 static uint8_t chr;
 static uint8_t inpIdx;
 static uint8_t readIdx;
@@ -303,8 +310,6 @@ static uint8_t decPlace;
 static uint8_t decWindow;
 static uint8_t decMode;
 
-static char termNumberBuff[17];
-
 static char terminalBuff[tBuffLength];
 
 static const char * labelList;
@@ -312,22 +317,105 @@ static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
 
-const char terminalActivityFlagStr[] PROGMEM = {
+static const char terminalPrimarySeparator[] PROGMEM = {
+	": " tcEOS
+};
+
+static const char terminalSecondarySeparator[] PROGMEM = {
+	" - " tcEOS
+};
+
+static const char terminalActivityFlagStr[] PROGMEM = {
 	"activityFlags: " tcEOS
-	"EngOff" tcOTOG "running" tcEOS
-	"VehStop" tcOTOG "moving" tcEOS
-	"NoButtons" tcOTOG "pressed" tcEOS
-	"Parked" tcOTOG "notparked" tcEOS
-	"Inactive" tcOTOG "active" tcEOS
-	"FuelRate" tcOTOG "fuelecon" tcEOS
-#if defined(useInterruptBasedTWI)
-	"TWIsample" tcOTOG "twi" tcEOS
-#else // defined(useInterruptBasedTWI)
+	"EngOff" tcOTOG "0" tcEOS
+	"VehStop" tcOTOG "0" tcEOS
+	"NoButtons" tcOTOG "0" tcEOS
+	"Parked" tcOTOG "0" tcEOS
+	"Inactive" tcOTOG "0" tcEOS
+	"FuelRate" tcOTOG "0" tcEOS
+#if defined(useBluetooth)
+	"BTOut" tcOTOG "0" tcEOS
+#else // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
-#endif // defined(useInterruptBasedTWI)
+#endif // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
 };
 
+static const uint8_t peekStatusMessage =		0b10000000;
+static const uint8_t peekBluetoothInput =		0b01000000;
+
+static const char terminalPeekStr[] PROGMEM = {
+	"peek: " tcEOS
+	"STATUS" tcOTOG "0" tcEOS
+#if defined(useBluetooth)
+	"BTinp" tcOTOG "0" tcEOS
+#else // defined(useBluetooth)
+	"1" tcOTOG "0" tcEOS
+#endif // defined(useBluetooth)
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+};
+
+#if defined(useSerial0Port)
+static const char serial0ControlFlagsStr[] PROGMEM = {
+	"devSerial0.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE0" tcOTOG "0" tcEOS
+	"DOR0" tcOTOG "0" tcEOS
+	"UPE0" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+static const char serial1ControlFlagsStr[] PROGMEM = {
+	"devSerial1.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE1" tcOTOG "0" tcEOS
+	"DOR1" tcOTOG "0" tcEOS
+	"UPE1" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+static const char serial2ControlFlagsStr[] PROGMEM = {
+	"devSerial2.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE2" tcOTOG "0" tcEOS
+	"DOR2" tcOTOG "0" tcEOS
+	"UPE2" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+static const char serial3ControlFlagsStr[] PROGMEM = {
+	"devSerial3.controlFlags: " tcEOS
+	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
+	"CRLF" tcOTOG "0" tcEOS
+	"FE3" tcOTOG "0" tcEOS
+	"DOR3" tcOTOG "0" tcEOS
+	"UPE3" tcOTOG "0" tcEOS
+	"DH" tcOTOG "0" tcEOS
+	"OUTPUT" tcOTOG "0" tcEOS
+};
+
+#endif // defined(useSerial3Port)
 #endif // defined(useDebugTerminal)
 #if defined(useTestButtonValues)
 namespace buttonView /* Button input value viewer section prototype */

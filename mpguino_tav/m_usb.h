@@ -7,7 +7,7 @@ namespace usbSupport
 
 };
 
-#ifdef useUSBserial
+#if defined(useUSBserial)
 namespace usbDevice
 {
 
@@ -283,7 +283,7 @@ static const struct endpointDescriptorList {
 
 #define NUM_DESC_LIST (sizeof(thisEndpointDescriptorList)/sizeof(struct endpointDescriptorList))
 
-#endif // useUSBserial
+#endif // defined(useUSBserial)
 // zero when we are not configured, non-zero when enumerated
 static volatile uint8_t usbConfiguration;
 

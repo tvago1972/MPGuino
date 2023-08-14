@@ -1,24 +1,26 @@
-static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+static void translateCalcIdx(uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
-	calcFuncObj thisCalcFuncObj;
+	union union_16 * tC = (union union_16 *)(&tripCalc);
+
+	translateCalcIdx(tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+
+}
+
+static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
+{
 
 	uint8_t calcFmtIdx;
+	uint8_t i;
 
-	thisCalcFuncObj.isValid = 0;
+	mainCalcFuncVar.isValid = 0;
 
-	if (tripIdx < tripSlotTotalCount)
+	if (tripIdx < tripSlotTotalCount) mainCalcFuncVar.isValid ^= (isValidTripIdx);
+
+	if (calcIdx < dfMaxValCalcCount)
 	{
 
-		thisCalcFuncObj.isValid ^= (isValidTripIdx);
-		thisCalcFuncObj.tripChar = pgm_read_byte(&tripVarChars[(uint16_t)(tripIdx)]);
-
-	}
-
-	if (calcIdx < dfMaxValDisplayCount)
-	{
-
-		thisCalcFuncObj.isValid ^= (isValidCalcIdx);
+		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
 		if (activityFlags & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
 		{
@@ -27,33 +29,64 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 		}
 
-		thisCalcFuncObj.tripIdx = tripIdx;
-		thisCalcFuncObj.calcIdx = calcIdx;
+		mainCalcFuncVar.tripIdx = tripIdx;
+		mainCalcFuncVar.calcIdx = calcIdx;
 
-		calcFmtIdx = pgm_read_byte(&calcFormatIdx[(unsigned int)(calcIdx)]);
-		if ((calcIdx >= dfMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
-		if ((calcIdx >= dfMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+		mainCalcFuncVar.suppressTripLabel = ((calcIdx < dfMaxValTripFunction) ? 0 : 0x80);
 
-		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
-		thisCalcFuncObj.decimalPlaces = pgm_read_byte(&calcFormatDecimalPlaces[(unsigned int)(calcFmtIdx)]);
-		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(unsigned int)(calcFmtIdx)]);
+		if (calcIdx < dfMaxValDisplayCount)
+		{
+
+			calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
+			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (metricFlag & metricMode)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
+			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (metricFlag & alternateFEmode)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+
+		}
+		else calcFmtIdx = calcFormatTimeInMillisecondsIdx;
+
+		mainCalcFuncVar.calcFmtIdx = calcFmtIdx;
+
+		i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
+
+		if (((decimalFlag & dfOutputBluetooth) == dfOutputBluetooth) && (i & 0xF0)) mainCalcFuncVar.decimalPlaces = (i >> 4); // fetch useBluetooth supplemental data, if present
+		else mainCalcFuncVar.decimalPlaces = (i & 0x0F); // strip off useBluetooth supplemental data
+
+		if (mainCalcFuncVar.suppressTripLabel) mainCalcFuncVar.tripChar = ' ';
+		else mainCalcFuncVar.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
+
+		mainCalcFuncVar.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
 
 	}
 
-	if (thisCalcFuncObj.isValid & isValidCalcObj) thisCalcFuncObj.isValid ^= (isValidFlag);
+	if (mainCalcFuncVar.isValid & isValidCalcObj) mainCalcFuncVar.isValid ^= (isValidFlag);
 
-	thisCalcFuncObj.strBuffer = strBuff;
-
-	if (thisCalcFuncObj.isValid)
+	if (mainCalcFuncVar.isValid)
 	{
 
+#if defined(useDebugTerminal) || defined(useJSONoutput)
+		mainCalcFuncVar.calcFormatLabelPtr = findStr(calcFormatLabels, mainCalcFuncVar.calcFmtIdx);
+#endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
-		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx) ull2str(strBuff, thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
+		if (mainCalcFuncVar.calcFmtIdx == calcFormatTimeHHmmSSIdx)
+		{
+
+			ull2str(nBuff, mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx);
+
+			if (windowLength > 6)
+			{
+
+				i = 6;
+
+				for (uint8_t x = windowLength; x <= windowLength; x--) nBuff[(uint16_t)(x)] = ((i < 7) ? nBuff[(uint16_t)(i--)] : ' ');
+
+			}
+
+		}
 		else
 		{
 
-			SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
-			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag);
+			mainCalcFuncVar.value = SWEET64::doCalculate(mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx); // perform calculation
+			ull2str(nBuff, mainCalcFuncVar.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
 
 		}
 
@@ -61,12 +94,10 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	else
 	{
 
-		strcpy_P(strBuff, overFlowStr);
-		thisCalcFuncObj.strBuffer[(unsigned int)(windowLength)] = 0;
+		strcpy_P(nBuff, overFlowStr);
+		nBuff[(uint16_t)(windowLength)] = 0;
 
 	}
-
-	return thisCalcFuncObj;
 
 }
 

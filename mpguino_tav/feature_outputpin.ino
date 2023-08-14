@@ -111,7 +111,7 @@ static void outputPin::init(void)
 	TCCR2A |= (1 << COM2A1);
 
 	// enable EXP1 and EXP2 option pin outputs
-	DDRB |= ((1 << PB6) | (1 << PB4));
+	DDRB |= ((1 << DDB6) | (1 << DDB4));
 
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
@@ -124,7 +124,7 @@ static void outputPin::init(void)
 	TCCR2A |= (1 << COM2A1);
 
 	// enable EXP1 and EXP2 option pin outputs
-	DDRB |= ((1 << PB3) | (1 << PB2));
+	DDRB |= ((1 << DDB3) | (1 << DDB2));
 
 #endif // defined(__AVR_ATmega328P__)
 	setOutputPin1(2); // initially set EXP1 option pin to 0
@@ -152,7 +152,7 @@ static void outputPin::shutdown(void)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 	// disable expansion pin output
-	DDRB &= ~((1 << PB6) | (1 << PB4));
+	DDRB &= ~((1 << DDB6) | (1 << DDB4));
 
 	// set OC1B to disabled for EXP1 option pin
 	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
@@ -163,7 +163,7 @@ static void outputPin::shutdown(void)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 	// disable expansion pin output
-	DDRB &= ~((1 << PB3) | (1 << PB2));
+	DDRB &= ~((1 << DDB3) | (1 << DDB2));
 
 	// set OC1B to disabled for EXP1 option pin
 	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));

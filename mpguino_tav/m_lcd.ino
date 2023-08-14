@@ -10,11 +10,12 @@ static void LCD::init(void)
 	cli(); // disable interrupts
 
 	devLCD.chrOut = LCD::writeData;
+	devLCD.controlFlags |= (odvFlagEnableOutput);
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::init(lcdBuffer, LCDdata);
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 	lcdDelayCount = 0; // reset LCD delay count
 	timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
 
@@ -126,10 +127,10 @@ static void LCD::init(void)
 	// ready to use normal LCD output function now!
 	writeCommand(lcdFunctionSet | lcdFSnumberOfLines); // 4-bit interface, 2 display lines, 5x8 font
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(use4BitLCD)
 #if defined(useLCDgraphics)
 	for (uint8_t x = 0; x < 64; x++) CGRAMbuffer[(uint16_t)(x)] = cgramFlagDirty;
@@ -139,14 +140,14 @@ static void LCD::init(void)
 	setContrast(EEPROM::readByte(pContrastIdx));
 
 #endif // defined(useLCDcontrast)
-	writeData(0x11); // set initial brightness
+	setBrightness(EEPROM::readByte(pBrightnessIdx));
 	writeData(0x16); // display control - turn on display, no cursor, no blink
 	writeData(0x0C); // clear display, set cursor position to zero
 
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD screen to clear
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(LCDserialBuffer)
 	ringBuffer::flush(LCDserialBuffer); // clear the LCD buffer to force the LCD screen to clear
 
@@ -156,10 +157,10 @@ static void LCD::init(void)
 static void LCD::shutdown(void)
 {
 
-	writeData(0x12); // turn off LCD brightness
-#if defined(useBufferedLCD)
+	setBrightness(0); // turn off LCD brightness
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD brightness to turn off
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(useLCDcontrast)
 	setContrast(255); // turn off LCD contrast
 #endif // defined(useLCDcontrast)
@@ -175,10 +176,10 @@ static void LCD::shutdown(void)
 	writeCommand(lcdDisplayControl); // turn off LCD display
 
 #if defined(usePort4BitLCD)
-#if defined(useBufferedLCD)
+#if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
 
-#endif // defined(useBufferedLCD)
+#endif // defined(useLCDbufferedOutput)
 #if defined(__AVR_ATmega32U4__)
 #if defined(useTinkerkitLCDmodule)
 	// disable LCD pins
@@ -258,6 +259,84 @@ static void LCD::shutdown(void)
 #endif // defined(use4BitLCD)
 }
 
+static void LCD::setBrightness(uint8_t idx)
+{
+
+#if defined(use4BitLCD)
+#if defined(usePort4BitLCD)
+#if defined(__AVR_ATmega32U4__)
+#if defined(useTinkerkitLCDmodule)
+	OCR1B = pgm_read_byte(&brightness[(uint16_t)(idx)]);
+
+#endif // defined(useTinkerkitLCDmodule)
+	// any port commands for any other ATmega32U4 board goes here
+
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#if defined(useArduinoMega2560)
+	OCR1A = pgm_read_byte(&brightness[(uint16_t)(idx)]);
+
+#endif // defined(useArduinoMega2560)
+	// any port commands for any other ATmega2560 board goes here
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+#if defined(useLegacyLCD)
+	OCR1A = pgm_read_byte(&brightness[(uint16_t)(idx)]);
+
+#endif // defined(useLegacyLCD)
+#if defined(useDFR0009LCD)
+	OCR1B = pgm_read_byte(&brightness[(uint16_t)(idx)]);
+
+#endif // defined(useDFR0009LCD)
+	// any port commands for any other ATmega168/328/328P board goes here
+
+#endif // defined(__AVR_ATmega328P__)
+#endif // defined(usePort4BitLCD)
+#if defined(useTWI4BitLCD)
+#if defined(useAdafruitRGBLCDshield)
+	if (idx) idx = EEPROM::readByte(pLCDcolorIdx); // get LCD backlight color
+
+	setRGBcolor(idx); // set LCD backlight color
+
+#endif // defined(useAdafruitRGBLCDshield)
+#if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
+	if (idx) portLCD |= lcdBrightness; // turn on LCD backlight
+	else portLCD &= ~(lcdBrightness); // turn off LCD backlight
+
+#endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
+#endif // defined(useTWI4BitLCD)
+#endif // defined(use4BitLCD)
+#if defined(useSerialLCD)
+	if (idx) idx = 0x11;
+	else idx = 0x12;
+
+	LCDserialPort::chrOut(idx);
+
+#endif // defined(useSerialLCD)
+}
+
+#if defined(useSerialLCD)
+static void LCD::wait(uint16_t delayTickT1)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	lcdDelayCount = delayTickT1; // request a set number of timer1 tick delays per millisecond
+
+	if (delayTickT1) timer1Command |= (t1cDelayLCD); // if delay requested, make it active
+	else timer1Command &= ~(t1cDelayLCD); // otherwise, cancel delay
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	while (timer1Command & t1cDelayLCD) idleProcess(); // wait for delay timeout to complete
+
+}
+
+#endif // defined(useSerialLCD)
 #if defined(useLCDfonts)
 static void LCD::loadCGRAMfont(const char * fontPtr)
 {
@@ -376,77 +455,6 @@ static void LCD::flushCGRAM(void)
 }
 
 #endif // defined(useLCDgraphics)
-#if defined(useSerialLCD)
-static void LCD::wait(uint16_t delayTickT1)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	lcdDelayCount = delayTickT1; // request a set number of timer1 tick delays per millisecond
-
-	if (delayTickT1) timer1Command |= (t1cDelayLCD); // if delay requested, make it active
-	else timer1Command &= ~(t1cDelayLCD); // otherwise, cancel delay
-
-	SREG = oldSREG; // restore interrupt flag status
-
-	while (timer1Command & t1cDelayLCD) idleProcess(); // wait for delay timeout to complete
-
-}
-
-#endif // defined(useSerialLCD)
-#if defined(use4BitLCD)
-static void LCD::setBrightness(uint8_t idx)
-{
-
-#if defined(usePort4BitLCD)
-#if defined(__AVR_ATmega32U4__)
-#if defined(useTinkerkitLCDmodule)
-	OCR1B = pgm_read_byte(&brightness[(unsigned int)(idx)]);
-
-#endif // defined(useTinkerkitLCDmodule)
-	// any port commands for any other ATmega32U4 board goes here
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#if defined(useArduinoMega2560)
-	OCR1A = pgm_read_byte(&brightness[(unsigned int)(idx)]);
-
-#endif // defined(useArduinoMega2560)
-	// any port commands for any other ATmega2560 board goes here
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-#if defined(useLegacyLCD)
-	OCR1A = pgm_read_byte(&brightness[(unsigned int)(idx)]);
-
-#endif // defined(useLegacyLCD)
-#if defined(useDFR0009LCD)
-	OCR1B = pgm_read_byte(&brightness[(unsigned int)(idx)]);
-
-#endif // defined(useDFR0009LCD)
-	// any port commands for any other ATmega168/328/328P board goes here
-
-#endif // defined(__AVR_ATmega328P__)
-#endif // defined(usePort4BitLCD)
-#if defined(useTWI4BitLCD)
-#if defined(useAdafruitRGBLCDshield)
-	if (idx) idx = EEPROM::readByte(pLCDcolorIdx); // get LCD backlight color
-
-	setRGBcolor(idx); // set LCD backlight color
-
-#endif // defined(useAdafruitRGBLCDshield)
-#if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
-	if (idx) portLCD |= lcdBrightness; // turn on LCD backlight
-	else portLCD &= ~(lcdBrightness); // turn off LCD backlight
-
-#endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
-#endif // defined(useTWI4BitLCD)
-}
-
-#endif // defined(use4BitLCD)
 #if defined(useLCDcontrast)
 static void LCD::setContrast(uint8_t idx)
 {
@@ -485,7 +493,9 @@ static void LCD::setRGBcolor(uint8_t idx)
 	uint8_t RGBbitMask;
 	uint8_t byt;
 
-	RGBbitMask = pgm_read_byte(&RGBcolors[(unsigned int)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
+	if (EEPROM::readByte(pBrightnessIdx) == 0) idx = 0;
+
+	RGBbitMask = pgm_read_byte(&RGBcolors[(uint16_t)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
 
 	byt = RGBbitMask; // get the color bitmask pattern
 	byt ^= portSwitches; // flip the color bitmask by what's stored in the portSwitches register
@@ -526,18 +536,20 @@ static void LCD::writeData(uint8_t value)
 	{
 
 		case 0x08: // go back one character
-			charFlags |= (lcdCharGotoXY | lcdCharBackwardX);
+			charFlags |= (lcdCharGotoXY);
+			LCDaddressX--;
 			break;
 
 		case 0x09:	// tab (go forward one character)
-			charFlags |= (lcdCharGotoXY | lcdCharForwardX);
+			charFlags |= (lcdCharGotoXY);
+			LCDaddressX++;
 			break;
 
 		case 0x0D: // carriage return with clreol
 #if defined(blankScreenOnMessage)
-			if ((timer0Command & t0cDisplayDelay) == 0)
+			if (timer0DisplayDelayFlags == 0)
 #else // defined(blankScreenOnMessage)
-			if (((timer0Command & t0cDisplayDelay) == 0) || (LCDaddressY > 0))
+			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
 			{
 
@@ -555,25 +567,29 @@ static void LCD::writeData(uint8_t value)
 				}
 
 			}
-			charFlags |= (lcdCharGotoXY | lcdCharZeroX);
+			LCDaddressX = 0;
 		case 0x0A: // linefeed
-			charFlags |= (lcdCharGotoXY | lcdCharForwardY);
+			LCDaddressY++;
+			charFlags |= (lcdCharGotoXY);
 			break;
 
 		case 0x0C: // clear screen
 #if defined(use4BitLCD)
 			writeCommand(lcdClearDisplay); // clear display, set cursor position to zero
-			charFlags |= (lcdCharZeroX | lcdCharZeroY);
+			charFlags |= (lcdCharGotoXY);
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
-			charFlags |= (lcdCharOutput | lcdCharZeroX | lcdCharZeroY);
+			charFlags |= (lcdCharOutput);
 #endif // defined(useSerialLCD)
+			LCDaddressY = 0;
+			LCDaddressX = 0;
 			break;
 
 		case 0x80 ... 0xCF: // hijack the gotoxy characters
 			value &= 0x7F;
 			LCDaddressY = value / 20;
 			LCDaddressX = value % 20;
+			if (devLCD.controlFlags & odvFlagDoubleHeight) LCDaddressY += 2;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -583,13 +599,9 @@ static void LCD::writeData(uint8_t value)
 #endif // !defined(useBinaryLCDbrightness)
 		case 0x11:	// turn on LCD backlight / LCD backlight low bright
 		case 0x12:	// turn off LCD backlight
-			brightnessIdx = 0x12 - value;
-#if defined(use4BitLCD)
-			setBrightness(brightnessIdx);
-#endif // defined(use4BitLCD)
-#if defined(useSerialLCD)
-			charFlags |= (lcdCharOutput);
-#endif // defined(useSerialLCD)
+			x = 0x12 - value;
+			EEPROM::writeByte(pBrightnessIdx, x);
+			setBrightness(x);
 			break;
 
 		case 0x15:	// turn off display
@@ -599,7 +611,7 @@ static void LCD::writeData(uint8_t value)
 		case 0x19:	// turn on display with cursor and character blink
 #if defined(use4BitLCD)
 			x = value - 0x15;
-			writeCommand(pgm_read_byte(&lcdDisplayModes[(unsigned int)(x)])); // set display mode
+			writeCommand(pgm_read_byte(&lcdDisplayModes[(uint16_t)(x)])); // set display mode
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 			charFlags |= (lcdCharOutput);
@@ -620,11 +632,16 @@ static void LCD::writeData(uint8_t value)
 		case 0x00 ... 0x07: // print defined CGRAM characters 0 through 7
 		case 0x20 ... 0x7F: // print normal characters
 #if defined(blankScreenOnMessage)
-			if (timer0Command & t0cDisplayDelay) charFlags |= (lcdCharGotoXY | lcdCharForwardX | lcdCharForwardY);
+			if (timer0DisplayDelayFlags == 0)
 #else // defined(blankScreenOnMessage)
-			if ((timer0Command & t0cDisplayDelay) && (LCDaddressY < 1)) charFlags |= (lcdCharGotoXY | lcdCharForwardX | lcdCharForwardY);
+			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
-			else charFlags |= (lcdCharOutput | lcdCharForwardX | lcdCharForwardY);
+			{
+
+				if ((LCDaddressX < LCDcharWidth) && (LCDaddressY < LCDcharHeight)) charFlags |= (lcdCharOutput);
+				LCDaddressX++;
+
+			}
 			break;
 
 		case 0xD0 ... 0xE8: // apparently, the Parallax LCD can play tunes
@@ -637,44 +654,8 @@ static void LCD::writeData(uint8_t value)
 
 	}
 
-	if (charFlags & lcdCharForwardX)
-	{
-
-		LCDaddressX++;
-		if (LCDaddressX < 20) charFlags &= ~(lcdCharForwardY);
-		else charFlags |= (lcdCharZeroX);
-
-	}
-
-	if (charFlags & lcdCharForwardY)
-	{
-
-		LCDaddressY++;
-		if (LCDaddressY > (LCDcharHeight + 1)) charFlags |= (lcdCharZeroY);
-
-	}
-
-	if (charFlags & lcdCharZeroX) LCDaddressX = 0;
-	if (charFlags & lcdCharZeroY) LCDaddressY = 0;
-
-	if (charFlags & lcdCharBackwardX)
-	{
-
-		if (LCDaddressX) LCDaddressX--;
-		else LCDaddressX = LCDcharWidth - 1;
-
-	}
-
-	if (charFlags & lcdCharBackwardY)
-	{
-
-		if (LCDaddressY) LCDaddressY--;
-		else LCDaddressY = 3;
-
-	}
-
 #if defined(use4BitLCD)
-	if (charFlags & lcdCharCalcXY) LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[LCDaddressY]) + LCDaddressX;
+	LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[(uint16_t)(LCDaddressY & 0x03)]) + LCDaddressX;
 
 #endif // defined(use4BitLCD)
 	if (charFlags & lcdCharGotoXY)
@@ -742,9 +723,9 @@ static void LCD::writeByte(uint8_t value, uint8_t flags, uint8_t delay)
 static void LCD::writeNybble(uint8_t value, uint8_t flags)
 {
 
-#ifdef useBufferedLCD
+#if defined(useLCDbufferedOutput)
 	ringBuffer::push(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
-#else // useBufferedLCD
+#else // defined(useLCDbufferedOutput)
 #if defined(usePort4BitLCD)
 	uint8_t oldSREG;
 
@@ -788,9 +769,9 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 
 	}
 #endif // defined(useTWI4BitLCD)
-#endif // useBufferedLCD
+#endif // defined(useLCDbufferedOutput)
 
-	changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
+	heart::changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
 
 }
 
@@ -848,7 +829,7 @@ static void LCD::outputNybble(uint8_t LCDchar)
 
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-#ifdef useArduinoMega2560
+#if defined(useArduinoMega2560)
 		PORTA |= (lcdEnable); // set enable high
 
 		if (LCDchar & lcdDataByte) PORTA |= (lcdRegisterSelect); // set nybble type (command or data)
@@ -868,7 +849,7 @@ static void LCD::outputNybble(uint8_t LCDchar)
 
 		PORTA &= ~(lcdEnable); // set enable low to 'tickle' enable bit
 
-#endif // useArduinoMega2560
+#endif // defined(useArduinoMega2560)
 		// any port commands for any other ATmega2560 board goes here
 
 #endif // defined(__AVR_ATmega2560__)

@@ -25,7 +25,7 @@ static void serial0::init(void)
 #endif // defined(__AVR_ATmega328P__)
 
 	// calculate initial baudrate setting
-	myubbr0 = (F_CPU / 4 / myBaudRate0 - 1) / 2;
+	myubbr0 = (F_CPU / 4 / serial0BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR0A = (1 << U2X0);
@@ -34,7 +34,7 @@ static void serial0::init(void)
 	{
 
 		UCSR0A = 0;
-		myubbr0 = (F_CPU / 8 / myBaudRate0 - 1) / 2;
+		myubbr0 = (F_CPU / 8 / serial0BaudRate - 1) / 2;
 
 	}
 
@@ -55,7 +55,7 @@ static void serial0::init(void)
 #if defined(useSerial0PortInput)
 	devSerial0.chrIn = chrIn;
 #endif // defined(useSerial0PortInput)
-	devSerial0.controlFlags |= (odvFlagCRLF);
+	devSerial0.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -93,7 +93,7 @@ static void serial0::chrOut(uint8_t chr)
 static uint8_t serial0::chrIn(void)
 {
 
-	return ringBuffer::pull(serial0InputBuffer);
+	return ringBuffer::pullMain(serial0InputBuffer);
 
 }
 
@@ -117,6 +117,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR0A & ((1 << FE0) | (1 << DOR0) | (1 << UPE0)));
+	devSerial0.controlFlags |= errFlags;
 
 	chr = UDR0; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::pushInterrupt(serial0InputBuffer, chr);
@@ -188,7 +189,7 @@ static void serial1::init(void)
 	PRR1 &= ~(1 << PRUSART1);
 
 	// calculate initial baudrate setting
-	myubbr1 = (F_CPU / 4 / myBaudRate1 - 1) / 2;
+	myubbr1 = (F_CPU / 4 / serial1BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR1A = (1 << U2X1);
@@ -197,7 +198,7 @@ static void serial1::init(void)
 	{
 
 		UCSR1A = 0;
-		myubbr1 = (F_CPU / 8 / myBaudRate1 - 1) / 2;
+		myubbr1 = (F_CPU / 8 / serial1BaudRate - 1) / 2;
 
 	}
 
@@ -218,7 +219,7 @@ static void serial1::init(void)
 #if defined(useSerial1PortInput)
 	devSerial1.chrIn = chrIn;
 #endif // defined(useSerial1PortInput)
-	devSerial1.controlFlags |= (odvFlagCRLF);
+	devSerial1.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -251,7 +252,7 @@ static void serial1::chrOut(uint8_t chr)
 static uint8_t serial1::chrIn(void)
 {
 
-	return ringBuffer::pull(serial1InputBuffer);
+	return ringBuffer::pullMain(serial1InputBuffer);
 
 }
 
@@ -270,6 +271,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR1A & ((1 << FE1) | (1 << DOR1) | (1 << UPE1)));
+	devSerial1.controlFlags |= errFlags;
 
 	chr = UDR1; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::pushInterrupt(serial1InputBuffer, chr);
@@ -341,7 +343,7 @@ static void serial2::init(void)
 	PRR1 &= ~(1 << PRUSART2);
 
 	// calculate initial baudrate setting
-	myubbr2 = (F_CPU / 4 / myBaudRate2 - 1) / 2;
+	myubbr2 = (F_CPU / 4 / serial2BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR2A = (1 << U2X2);
@@ -350,7 +352,7 @@ static void serial2::init(void)
 	{
 
 		UCSR2A = 0;
-		myubbr2 = (F_CPU / 8 / myBaudRate2 - 1) / 2;
+		myubbr2 = (F_CPU / 8 / serial2BaudRate - 1) / 2;
 
 	}
 
@@ -371,7 +373,7 @@ static void serial2::init(void)
 #if defined(useSerial2PortInput)
 	devSerial2.chrIn = chrIn;
 #endif // defined(useSerial2PortInput)
-	devSerial2.controlFlags |= (odvFlagCRLF);
+	devSerial2.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -404,7 +406,7 @@ static void serial2::chrOut(uint8_t chr)
 static uint8_t serial2::chrIn(void)
 {
 
-	return ringBuffer::pull(serial2InputBuffer);
+	return ringBuffer::pullMain(serial2InputBuffer);
 
 }
 
@@ -423,6 +425,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR2A & ((1 << FE2) | (1 << DOR2) | (1 << UPE2)));
+	devSerial2.controlFlags |= errFlags;
 
 	chr = UDR2; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::pushInterrupt(serial2InputBuffer, chr);
@@ -489,7 +492,7 @@ static void serial3::init(void)
 	PRR1 &= ~(1 << PRUSART3);
 
 	// calculate initial baudrate setting
-	myubbr3 = (F_CPU / 4 / myBaudRate3 - 1) / 2;
+	myubbr3 = (F_CPU / 4 / serial3BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR3A = (1 << U2X3);
@@ -498,7 +501,7 @@ static void serial3::init(void)
 	{
 
 		UCSR3A = 0;
-		myubbr3 = (F_CPU / 8 / myBaudRate3 - 1) / 2;
+		myubbr3 = (F_CPU / 8 / serial3BaudRate - 1) / 2;
 
 	}
 
@@ -519,7 +522,7 @@ static void serial3::init(void)
 #if defined(useSerial3PortInput)
 	devSerial3.chrIn = chrIn;
 #endif // defined(useSerial3PortInput)
-	devSerial3.controlFlags |= (odvFlagCRLF);
+	devSerial3.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -552,7 +555,7 @@ static void serial3::chrOut(uint8_t chr)
 static uint8_t serial3::chrIn(void)
 {
 
-	return ringBuffer::pull(serial3InputBuffer);
+	return ringBuffer::pullMain(serial3InputBuffer);
 
 }
 
@@ -571,6 +574,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR3A & ((1 << FE3) | (1 << DOR3) | (1 << UPE3)));
+	devSerial3.controlFlags |= errFlags;
 
 	chr = UDR3; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::pushInterrupt(serial3InputBuffer, chr);

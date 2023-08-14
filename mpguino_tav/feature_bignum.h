@@ -1,5 +1,12 @@
-#ifdef useClockDisplay
-namespace clockSet /* Big Clock Display support section prototype */
+#if defined(useClockDisplay)
+namespace clockDisplay /* Big Clock Display support section prototype */
+{
+
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
+
+};
+
+namespace clockSet
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
@@ -11,27 +18,11 @@ namespace clockSet /* Big Clock Display support section prototype */
 
 };
 
-static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
-	instrLdRegVolatile, 0x02, vClockCycleIdx,			// read software clock
-	instrDiv2byConst, idxTicksPerSecond,				// convert datetime value from cycles to seconds
-	instrDiv2byConst, idxSecondsPerDay,					// divide by number of seconds in a day, to remove the existing time portion from the datetime value
-	instrMul2byByte, 24,								// multiply datetime value by 24 (hours per day)
-	instrLdRegByteFromY, 0x31, 0,						// add user-defined hours value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multply datetime value by 60 (minutes per hour)
-	instrLdRegByteFromY, 0x31, 2,						// add user-defined minutes value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multiply datetime value by 60 (seconds per minute)
-	instrLdRegByteFromY, 0x31, 4,						// add user-defined seconds value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byConst, idxTicksPerSecond,				// convert datetime value from seconds to cycles
-	instrStRegVolatile, 0x02, vClockCycleIdx,			// write software clock
-	instrDone
-};
+static char csBuff[17];
 
-#endif // useClockDisplay
-#if defined(useStatusBar)
-namespace statusBar /* Status Bar Output support section prototype */
+#endif // defined(useClockDisplay)
+#if defined(useStatusMeter)
+namespace statusBar /* Status Meter Output support section prototype */
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
@@ -233,24 +224,24 @@ static const uint8_t statusBarOverflowFont[] PROGMEM = {
 	0b00000000,
 };
 
-#endif // defined(useStatusBar)
-#ifdef useBigDigitDisplay
+#endif // defined(useStatusMeter)
+#if defined(useBigDigitDisplay)
 namespace bigDigit /* Big Digit output support section prototype */
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-#ifdef useBigTimeDisplay
-	static void outputTime(char * val, uint8_t blinkFlag, uint8_t blinkPos);
-#endif // useBigTimeDisplay
-#ifdef useBigNumberDisplay
-	static uint8_t outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
-#endif // useBigNumberDisplay
+#if defined(useBigTimeDisplay)
+	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos);
+#endif // defined(useBigTimeDisplay)
+#if defined(useBigNumberDisplay)
+	static void outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
+#endif // defined(useBigNumberDisplay)
 	static void outputNumberString(char * str);
 	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
 
 };
 
-#ifdef useBigFE
+#if defined(useBigFE)
 static const char bigFElabels[] PROGMEM = {
 	"MPG" tcEOSCR
 	"L100" tcEOSCR
@@ -258,36 +249,36 @@ static const char bigFElabels[] PROGMEM = {
 	"KPL" tcEOSCR
 };
 
-#endif // useBigFE
-#ifdef useSpiffyBigChars
+#endif // defined(useBigFE)
+#if defined(useSpiffyBigChars)
 static const char bigDigitChars1[] PROGMEM = {
-	0xF6, 0xF0, 0xF7, 0,
-	0xF0, 0xF4, 0x20, 0,
-	0xF2, 0xF2, 0xF7, 0,
-	0xF0, 0xF2, 0xF7, 0,
-	0xF4, 0xF1, 0xF4, 0,
-	0xF4, 0xF2, 0xF2, 0,
-	0xF6, 0xF2, 0xF2, 0,
-	0xF0, 0xF0, 0xF5, 0,
-	0xF6, 0xF2, 0xF7, 0,
-	0xF6, 0xF2, 0xF7, 0,
-	0x20, 0x20, 0x20, 0,
-	0xF1, 0xF1, 0xF1, 0
+	tcCG6	tcCG0	tcCG7	tcEOS
+	tcCG0	tcCG4	" "		tcEOS
+	tcCG2	tcCG2	tcCG7	tcEOS
+	tcCG0	tcCG2	tcCG7	tcEOS
+	tcCG4	tcCG1	tcCG4	tcEOS
+	tcCG4	tcCG2	tcCG2	tcEOS
+	tcCG6	tcCG2	tcCG2	tcEOS
+	tcCG0	tcCG0	tcCG5	tcEOS
+	tcCG6	tcCG2	tcCG7	tcEOS
+	tcCG6	tcCG2	tcCG7	tcEOS
+	"   "					tcEOS
+	tcCG1	tcCG1	tcCG1	tcEOS
 };
 
 static const char bigDigitChars2[] PROGMEM = {
-	0xF3, 0xF1, 0xF5, 0,
-	0x20, 0xF4, 0x20, 0,
-	0xF4, 0xF1, 0xF1, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0x20, 0x20, 0xF4, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0xF3, 0xF1, 0xF5, 0,
-	0x20, 0xF6, 0x20, 0,
-	0xF3, 0xF1, 0xF5, 0,
-	0xF1, 0xF1, 0xF5, 0,
-	0x20, 0x20, 0x20, 0,
-	0x20, 0x20, 0x20, 0
+	tcCG3	tcCG1	tcCG5	tcEOS
+	" "		tcCG4	" "		tcEOS
+	tcCG4	tcCG1	tcCG1	tcEOS
+	tcCG1	tcCG1	tcCG5	tcEOS
+	"  "			tcCG4	tcEOS
+	tcCG1	tcCG1	tcCG5	tcEOS
+	tcCG3	tcCG1	tcCG5	tcEOS
+	" "		tcCG6	" "		tcEOS
+	tcCG3	tcCG1	tcCG5	tcEOS
+	tcCG1	tcCG1	tcCG5	tcEOS
+	"   "					tcEOS
+	"   "					tcEOS
 };
 
 static const char bigDigitFont[] PROGMEM = {
@@ -366,35 +357,35 @@ static const char bigDigitFont[] PROGMEM = {
 	0b00011111
 };
 
-#else // useSpiffyBigChars
+#else // defined(useSpiffyBigChars)
 static const char bigDigitChars1[] PROGMEM = {
-	0xF3, 0xF0, 0xF3, 0,
-	0xF0, 0xF3, 0x20, 0,
-	0xF2, 0xF2, 0xF3, 0,
-	0xF0, 0xF2, 0xF3, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0xF3, 0xF2, 0xF2, 0,
-	0xF3, 0xF2, 0xF2, 0,
-	0xF0, 0xF0, 0xF3, 0,
-	0xF3, 0xF2, 0xF3, 0,
-	0xF3, 0xF2, 0xF3, 0,
-	0x20, 0x20, 0x20, 0,
-	0xF1, 0xF1, 0xF1, 0
+	tcCG3	tcCG0	tcCG3	tcEOS
+	tcCG0	tcCG3	" "		tcEOS
+	tcCG2	tcCG2	tcCG3	tcEOS
+	tcCG0	tcCG2	tcCG3	tcEOS
+	tcCG3	tcCG1	tcCG3	tcEOS
+	tcCG3	tcCG2	tcCG2	tcEOS
+	tcCG3	tcCG2	tcCG2	tcEOS
+	tcCG0	tcCG0	tcCG3	tcEOS
+	tcCG3	tcCG2	tcCG3	tcEOS
+	tcCG3	tcCG2	tcCG3	tcEOS
+	"   "					tcEOS
+	tcCG1	tcCG1	tcCG1	tcEOS
 };
 
 static const char bigDigitChars2[] PROGMEM = {
-	0xF3, 0xF1, 0xF3, 0,
-	0xF1, 0xF3, 0xF1, 0,
-	0xF3, 0xF1, 0xF1, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0x20, 0x20, 0xF3, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0x20, 0xF3, 0x20, 0,
-	0xF3, 0xF1, 0xF3, 0,
-	0xF1, 0xF1, 0xF3, 0,
-	0x20, 0x20, 0x20, 0,
-	0x20, 0x20, 0x20, 0
+	tcCG3	tcCG1	tcCG3	tcEOS
+	tcCG1	tcCG3	tcCG1	tcEOS
+	tcCG3	tcCG1	tcCG1	tcEOS
+	tcCG1	tcCG1	tcCG3	tcEOS
+	"  "			tcCG3	tcEOS
+	tcCG1	tcCG1	tcCG3	tcEOS
+	tcCG3	tcCG1	tcCG3	tcEOS
+	" "		tcCG3	" "		tcEOS
+	tcCG3	tcCG1	tcCG3	tcEOS
+	tcCG1	tcCG1	tcCG3	tcEOS
+	"   "					tcEOS
+	"   "					tcEOS
 };
 
 static const char bigDigitFont[] PROGMEM = {
@@ -437,5 +428,5 @@ static const char bigDigitFont[] PROGMEM = {
 	0b00011111,
 };
 
-#endif // useSpiffyBigChars
-#endif // useBigDigitDisplay
+#endif // defined(useSpiffyBigChars)
+#endif // defined(useBigDigitDisplay)

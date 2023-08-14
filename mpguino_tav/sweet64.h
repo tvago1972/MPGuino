@@ -10,16 +10,16 @@
 
 */
 
-#ifdef useIsqrt
+#if defined(useIsqrt)
 static uint32_t iSqrt(uint32_t input);
 
-#endif // useIsqrt
+#endif // defined(useIsqrt)
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
-#ifdef useSWEET64trace
+#if defined(useSWEET64trace)
 	static void listProgram(uint8_t calcIdx);
-#endif // useSWEET64trace
+#endif // defined(useSWEET64trace)
 	static uint32_t doCalculate(uint8_t tripIdx, uint8_t calcIdx);
 	static uint32_t runPrgm(const uint8_t * sched, uint8_t tripIdx);
 	static uint8_t fetchByte(const uint8_t * &prgmPtr);
@@ -50,7 +50,7 @@ static const uint8_t r03 =	r02 + 32;	// set rX = r5, rY = r1
 static const uint8_t r04 =	r03 + 32;	// fetch rP and rS from program
 static const uint8_t r05 =	r04 + 32;	// set rP = r5, rS = r2
 static const uint8_t r06 =	r05 + 32;	// fetch rP from program, set rS = r5, and rX to r5
-static const uint8_t r07 =	r06 + 32;	// 
+static const uint8_t r07 =	r06 + 32;	// fetch rX and rY from program, shift rY to rX if in metric mode
 
 static const uint8_t rxxMask =	0b11100000;
 
@@ -58,7 +58,7 @@ static const uint8_t p00 =	0;			// do not fetch primary operand
 static const uint8_t p01 =	p00 + 4;	// load primary operand from program
 static const uint8_t p02 =	p01 + 4;	// load primary operand from index
 static const uint8_t p03 =	p02 + 4;	// load primary operand from program + index
-static const uint8_t p04 =	p03 + 4;	// load primary operand with EEPROM indirect[index]
+static const uint8_t p04 =	p03 + 4;	//
 static const uint8_t p05 =	p04 + 4;	//
 static const uint8_t p06 =	p05 + 4;	//
 static const uint8_t p07 =	p06 + 4;	//
@@ -130,8 +130,8 @@ static const uint8_t i08 =	i07 + 8;	// store volatile rX
 static const uint8_t i09 =	i08 + 8;	// load rX with byte[operand]
 static const uint8_t i10 =	i09 + 8;	// load rX with byte
 static const uint8_t i11 =	i10 + 8;	// store rX byte to bargraph data array
-static const uint8_t i12 =	i11 + 8;	// load rX with denominator for constant
-static const uint8_t i13 =	i12 + 8;	// load rX with numerator for constant
+static const uint8_t i12 =	i11 + 8;
+static const uint8_t i13 =	i12 + 8;
 static const uint8_t i14 =	i13 + 8;	// load rX with const
 static const uint8_t i15 =	i14 + 8;	// load rX with EEPROM init
 static const uint8_t i16 =	i15 + 8;	// load rX with voltage
@@ -200,7 +200,7 @@ matrix_c - coastdown coefficient matrix (what we are trying to solve for)
 
 for useFuelParamCalculator -
 
-(fillup amount)(pMicroSecondsPerGallonIdx) + (injector open count)(pInjectorOpeningTimeIdx) = (raw injector open time)
+(fillup amount)(pMicroSecondsPerGallonIdx) + (injector open count)(pInjectorSettleTimeIdx) = (raw injector open time)
 
          fillup amount - user provided
    injector open count - measured by MPGuino
@@ -216,7 +216,7 @@ matrix_e
 
 matrix_c - fuel injector coefficient matrix (what we are trying to solve for)
     [ pMicroSecondsPerGallonIdx
-	  pInjectorOpeningTimeIdx ]
+	  pInjectorSettleTimeIdx ]
 
 for both cases -
 
@@ -288,17 +288,16 @@ static const uint8_t instrLdRegTripVarIndexedRV =	instrLdRegTripVarOffset + 1;		
 static const uint8_t instrStRegTripVarIndexed =		instrLdRegTripVarIndexedRV + 1;			// store 64-bit register X value to indexed trip specified read-in register
 static const uint8_t instrStRegTripVarIndexedRV =	instrStRegTripVarIndexed + 1;			// store 64-bit register X value to specified trip indexed read-in register
 static const uint8_t instrLdRegConst =				instrStRegTripVarIndexedRV + 1;			// load 64-bit register X with stored constant value
-static const uint8_t instrLdRegConstIndexed =		instrLdRegConst + 1;					// load 64-bit register X with indexed stored constant value
+static const uint8_t instrLdRegConstMetric =		instrLdRegConst + 1;					// load 64-bit register X (or Y if in metric mode) with stored constant value
+static const uint8_t instrLdRegConstIndexed =		instrLdRegConstMetric + 1;				// load 64-bit register X with indexed stored constant value
 static const uint8_t instrDoBCDadjust =				instrLdRegConstIndexed + 1;				// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
 static const uint8_t instrLdRegEEPROM =				instrDoBCDadjust + 1;					// load 64-bit register X with EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindexed =		instrLdRegEEPROM + 1;					// load 64-bit register X with indexed EEPROM parameter value
-static const uint8_t instrLdRegEEPROMindirect =		instrLdRegEEPROMindexed + 1;			// load 64-bit register X with value of EEPROM parameter indexed in the SAE/metric reference conversion table
-static const uint8_t instrLdRegEinit =				instrLdRegEEPROMindirect + 1;			// load 64-bit register X with initial EEPROM parameter value
+static const uint8_t instrLdRegEinit =				instrLdRegEEPROMindexed + 1;			// load 64-bit register X with initial EEPROM parameter value
 static const uint8_t instrLdRegEinitIndexed =		instrLdRegEinit + 1;					// load 64-bit register X with indexed initial EEPROM parameter value
 static const uint8_t instrStRegEEPROM =				instrLdRegEinitIndexed + 1;				// store 64-bit register X value to EEPROM parameter
 static const uint8_t instrStRegEEPROMindexed =		instrStRegEEPROM + 1;					// store 64-bit register X value to indexed EEPROM parameter
-static const uint8_t instrStRegEEPROMindirect =		instrStRegEEPROMindexed + 1;			// store 64-bit register X value to EEPROM parameter indexed in the SAE/metric reference conversion table
-static const uint8_t instrLdRegMain =				instrStRegEEPROMindirect + 1;			// load 64-bit register X with main program register value
+static const uint8_t instrLdRegMain =				instrStRegEEPROMindexed + 1;			// load 64-bit register X with main program register value
 static const uint8_t instrLdRegMainIndexed =		instrLdRegMain + 1;						// load 64-bit register X with indexed main program register value
 static const uint8_t instrLdRegMainOffset =			instrLdRegMainIndexed + 1;				// load 64-bit register X with offset indexed main program register value
 static const uint8_t instrStRegMain =				instrLdRegMainOffset + 1;				// store 64-bit register X value to main program register
@@ -312,11 +311,10 @@ static const uint8_t instrLxdIEEPROM =				instrLxdI + 1;							// load primary i
 static const uint8_t instrLxdIEEPROMoffset =		instrLxdIEEPROM + 1;					// load primary index register with offset indexed EEPROM parameter
 static const uint8_t instrLxdIParamLength =			instrLxdIEEPROMoffset + 1;				// load primary index register with bit length of EEPROM parameter
 static const uint8_t instrLxdIParamLengthIndexed =	instrLxdIParamLength + 1;				// load primary index register with bit length of indexed EEPROM parameter
-static const uint8_t instrLdRegNumer =				instrLxdIParamLengthIndexed + 1;		// load 64-bit register X with constant numerator (SAE mode) or denominator (metric mode)
-static const uint8_t instrLdRegDenom =				instrLdRegNumer + 1;					// load 64-bit register X with constant denominator (SAE mode) or numerator (metric mode)
-static const uint8_t instrSwapReg =					instrLdRegDenom + 1;					// swap contents of 64-bit registers X and Y
+static const uint8_t instrSwapReg =					instrLxdIParamLengthIndexed + 1;		// swap contents of 64-bit registers X and Y
 static const uint8_t instrSubYfromX =				instrSwapReg + 1;						// subtract 64-bit register Y from 64-bit register X
-static const uint8_t instrSubMainFromX =			instrSubYfromX + 1;						// subtract main program register value from 64-bit register X
+static const uint8_t instrSubByteFromX =			instrSubYfromX + 1;						// subtract immediate byte value from 64-bit register X
+static const uint8_t instrSubMainFromX =			instrSubByteFromX + 1;					// subtract main program register value from 64-bit register X
 static const uint8_t instrAddYtoX =					instrSubMainFromX + 1;					// add 64-bit register Y to 64-bit register X
 static const uint8_t instrAdjustQuotient =			instrAddYtoX + 1;						// bumps 64-bit register 2 by 1 if last division resulted in remainder * 2 > divisor
 static const uint8_t instrAddByteToX =				instrAdjustQuotient + 1;				// add immediate byte value to 64-bit register X
@@ -359,17 +357,17 @@ static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer 
 static const uint8_t instrLdRegVoltage =			nextAllowedValue;						// load 64-bit register with specified raw 10-bit analog voltage value
 static const uint8_t instrLdRegVoltageIndexed =		instrLdRegVoltage + 1;					// load 64-bit register with indexed raw 10-bit analog voltage value
 #define nextAllowedValue instrLdRegVoltageIndexed + 1
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 
-#ifdef useBarFuelEconVsTime
+#if defined(useBarFuelEconVsTime)
 static const uint8_t instrLdRegTripFEvTindexed =	nextAllowedValue;						// load trip index from fuel econ vs time trip array
 #define nextAllowedValue instrLdRegTripFEvTindexed + 1
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarFuelEconVsTime)
 
-#ifdef useBarGraph
+#if defined(useBarGraph)
 static const uint8_t instrStRegBGdataIndexed =		nextAllowedValue;						// store register byte to bargraph data array
 #define nextAllowedValue instrStRegBGdataIndexed + 1
-#endif // useBarFuelEconVsTime
+#endif // defined(useBarGraph)
 
 #if defined(useMatrixMath)
 static const uint8_t instrLdRegXColIndexedRow =		nextAllowedValue;						// load 64-bit register X with contents of Matrix X indexed row specified column
@@ -388,7 +386,7 @@ static const uint8_t instrDone =					nextAllowedValue;						// return to caller 
 
 static const uint8_t maxValidSWEET64instr =			nextAllowedValue;
 
-#ifdef useSWEET64trace
+#if defined(useSWEET64trace)
 static const char opcodeList[] PROGMEM = {
 	"instrTestReg" tcEOSCR
 	"instrTestIndex" tcEOSCR
@@ -421,12 +419,10 @@ static const char opcodeList[] PROGMEM = {
 	"instrDoBCDadjust" tcEOSCR
 	"instrLdRegEEPROM" tcEOSCR
 	"instrLdRegEEPROMindexed" tcEOSCR
-	"instrLdRegEEPROMindirect" tcEOSCR
 	"instrLdRegEinit" tcEOSCR
 	"instrLdRegEinitIndexed" tcEOSCR
 	"instrStRegEEPROM" tcEOSCR
 	"instrStRegEEPROMindexed" tcEOSCR
-	"instrStRegEEPROMindirect" tcEOSCR
 	"instrLdRegMain" tcEOSCR
 	"instrLdRegMainIndexed" tcEOSCR
 	"instrLdRegMainOffset" tcEOSCR
@@ -441,12 +437,11 @@ static const char opcodeList[] PROGMEM = {
 	"instrLxdIEEPROMindexed" tcEOSCR
 	"instrLxdIParamLength" tcEOSCR
 	"instrLxdIParamLengthIndexed" tcEOSCR
-	"instrLdRegNumer" tcEOSCR
-	"instrLdRegDenom" tcEOSCR
 	"instrCall" tcEOSCR
 	"instrJump" tcEOSCR
 	"instrSwapReg" tcEOSCR
 	"instrSubYfromX" tcEOSCR
+	"instrSubByteFromX" tcEOSCR
 	"instrSubMainFromX" tcEOSCR
 	"instrAddYtoX" tcEOSCR
 	"instrAdjustQuotient" tcEOSCR
@@ -485,13 +480,13 @@ static const char opcodeList[] PROGMEM = {
 #if defined(useAnalogRead)
 	"instrLdRegVoltage" tcEOSCR
 	"instrLdRegVoltageIndexed" tcEOSCR
-#endif // useAnalogRead
-#ifdef useBarFuelEconVsTime
+#endif // defined(useAnalogRead)
+#if defined(useBarFuelEconVsTime)
 	"instrLdRegTripFEvTindexed" tcEOSCR
-#endif // useBarFuelEconVsTime
-#ifdef useBarGraph
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarGraph)
 	"instrStRegBGdataIndexed" tcEOSCR
-#endif // useBarGraph
+#endif // defined(useBarGraph)
 #if defined(useMatrixMath)
 	"instrLdRegXColIndexedRow" tcEOSCR
 	"instrStRegXColIndexedRow" tcEOSCR
@@ -505,7 +500,7 @@ static const char opcodeList[] PROGMEM = {
 	"instrDone" tcEOSCR
 };
 
-#endif // useSWEET64trace
+#endif // defined(useSWEET64trace)
 // these #defines can optionally be used to generate SWEET64 bytecodes
 //
 #define instrBranchIfOverflow		instrBranchIfVset					// provided as a convenience for aspiring SWEET64 coders
@@ -552,16 +547,15 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,r01 | p02 | s01	// instrStRegTripVarIndexed
 	,r01 | p01 | s02	// instrStRegTripVarIndexedRV
 	,r01 | p01 | s00	// instrLdRegConst
+	,r07 | p01 | s00	// instrLdRegConstMetric
 	,r01 | p02 | s00	// instrLdRegConstIndexed
 	,r01 | p01 | s00	// instrDoBCDadjust
 	,r01 | p01 | s00	// instrLdRegEEPROM
 	,r01 | p02 | s00	// instrLdRegEEPROMindexed
-	,r01 | p04 | s00	// instrLdRegEEPROMindirect
 	,r01 | p01 | s00	// instrLdRegEinit
 	,r01 | p02 | s00	// instrLdRegEinitIndexed
 	,r01 | p01 | s00	// instrStRegEEPROM
 	,r01 | p02 | s00	// instrStRegEEPROMindexed
-	,r01 | p04 | s00	// instrStRegEEPROMindirect
 	,r01 | p01 | s00	// instrLdRegMain
 	,r01 | p02 | s00	// instrLdRegMainIndexed
 	,r01 | p03 | s00	// instrLdRegMainOffset
@@ -576,10 +570,9 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,r00 | p03 | s00	// instrLxdIEEPROMoffset
 	,r00 | p01 | s00	// instrLxdIParamLength
 	,r00 | p02 | s00	// instrLxdIParamLengthIndexed
-	,r01 | p02 | s00	// instrLdRegNumer
-	,r01 | p02 | s00	// instrLdRegDenom
 	,r01 | p00 | s00	// instrSwapReg
 	,r04 | p00 | s00	// instrSubYfromX
+	,r06 | p01 | s00	// instrSubByteFromX
 	,r06 | p01 | s00	// instrSubMainFromX
 	,r04 | p00 | s00	// instrAddYtoX
 	,r05 | p00 | s00	// instrAdjustQuotient
@@ -618,13 +611,13 @@ static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 #if defined(useAnalogRead)
 	,r01 | p01 | s00	// instrLdRegVoltage
 	,r01 | p02 | s00	// instrLdRegVoltageIndexed
-#endif // useAnalogRead
-#ifdef useBarFuelEconVsTime
+#endif // defined(useAnalogRead)
+#if defined(useBarFuelEconVsTime)
 	,r04 | p02 | s01	// instrLdRegTripFEvTindexed
-#endif // useBarFuelEconVsTime
-#ifdef useBarGraph
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarGraph)
 	,r01 | p02 | s00	// instrStRegBGdataIndexed
-#endif // useBarGraph
+#endif // defined(useBarGraph)
 #if defined(useMatrixMath)
 	,r01 | p01 | s02	// instrLdRegXColIndexedRow
 	,r01 | p01 | s02	// instrStRegXColIndexedRow
@@ -672,16 +665,15 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,m00 | i19			// instrStRegTripVarIndexed
 	,m00 | i19			// instrStRegTripVarIndexedRV
 	,m00 | i14			// instrLdRegConst
+	,m00 | i14			// instrLdRegConstMetric
 	,m00 | i14			// instrLdRegConstIndexed
 	,m00 | i31			// instrDoBCDadjust
 	,m00 | i03			// instrLdRegEEPROM
 	,m00 | i03			// instrLdRegEEPROMindexed
-	,m00 | i03			// instrLdRegEEPROMindirect
 	,m00 | i15			// instrLdRegEinit
 	,m00 | i15			// instrLdRegEinitIndexed
 	,m00 | i04			// instrStRegEEPROM
 	,m00 | i04			// instrStRegEEPROMindexed
-	,m00 | i04			// instrStRegEEPROMindirect
 	,m00 | i05			// instrLdRegMain
 	,m00 | i05			// instrLdRegMainIndexed
 	,m00 | i05			// instrLdRegMainOffset
@@ -696,10 +688,9 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e24				// instrLxdIEEPROMoffset
 	,e26				// instrLxdIParamLength
 	,e26				// instrLxdIParamLengthIndexed
-	,m00 | i13			// instrLdRegNumer
-	,m00 | i12			// instrLdRegDenom
 	,m00 | i02			// instrSwapReg
 	,m02 | i00			// instrSubYfromX
+	,m02 | i10			// instrSubByteFromX
 	,m02 | i05			// instrSubMainFromX
 	,m01 | i00			// instrAddYtoX
 	,m01 | i00			// instrAdjustQuotient
@@ -738,13 +729,13 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 #if defined(useAnalogRead)
 	,m00 | i16			// instrLdRegVoltage
 	,m00 | i16			// instrLdRegVoltageIndexed
-#endif // useAnalogRead
-#ifdef useBarFuelEconVsTime
+#endif // defined(useAnalogRead)
+#if defined(useBarFuelEconVsTime)
 	,m04 | i17			// instrLdRegTripFEvTindexed
-#endif // useBarFuelEconVsTime
-#ifdef useBarGraph
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarGraph)
 	,m00 | i11			// instrStRegBGdataIndexed
-#endif // useBarGraph
+#endif // defined(useBarGraph)
 #if defined(useMatrixMath)
 	,m00 | i20			// instrLdRegXColIndexedRow
 	,m00 | i21			// instrStRegXColIndexedRow
@@ -758,53 +749,7 @@ static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM
 	,e16				// instrDone
 };
 
-// SWEET64 stored parameter conversion list
-//
-const uint8_t convIdx[] PROGMEM = {
-	 pPulsesPerDistanceIdx
-	,pMinGoodSpeedidx
-	,pTankSizeIdx
-	,pTankBingoSizeIdx
-#ifdef usePartialRefuel
-	,pRefuelSizeIdx
-#endif // usePartialRefuel
-#ifdef useDragRaceFunction
-	,pDragSpeedIdx
-	,pDragDistanceIdx
-#endif // useDragRaceFunction
-#ifdef useVehicleMass
-	,pVehicleMassIdx
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	,pVehicleFrontalAreaIdx
-	,pLocustDensityIdx
-#endif // useCoastDownCalculator
-#ifdef useCalculatedFuelFactor
-	,pSysFuelPressureIdx
-	,pRefFuelPressureIdx
-#endif // useCalculatedFuelFactor
-#ifdef useChryslerMAPCorrection
-	,pMAPsensorRangeIdx
-	,pMAPsensorOffsetIdx
-#ifdef useChryslerBaroSensor
-	,pBaroSensorRangeIdx
-	,pBaroSensorOffsetIdx
-#else // useChryslerBaroSensor
-	,pBarometricPressureIdx
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-#ifdef useBarFuelEconVsSpeed
-	,pBarLowSpeedCutoffIdx
-	,pBarSpeedQuantumIdx
-#endif // useBarFuelEconVsSpeed
-#ifdef useFuelCost
-	,pCostPerQuantity
-#endif // useFuelCost
-};
-
-const uint8_t convSize = (sizeof(convIdx) / sizeof(uint8_t));
-
-// indexes into SWEET64 conversion factor value table
+// indexes into SWEET64 constant number value table
 //
 // the order of the indices, representing the powers of 10 between 10 and 1000000000, is vitally important to the
 //    proper functioning of the autoranging feature of ull2str
@@ -821,9 +766,9 @@ const uint8_t idxTenThousand =				idxOneThousand + 1;
 
 const uint8_t idxOneHundredThousand =		idxTenThousand + 1;
 const uint8_t idxMetricFE =					idxOneHundredThousand;			// decimal point format * 100 for metric FE (L / 100km)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 const uint8_t idxNumerDensity =				idxOneHundredThousand;			// numerator to convert SAE density to metric density
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
 const uint8_t idxDenomImperialGallon =		idxOneHundredThousand;			// denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
@@ -839,23 +784,29 @@ const uint8_t idxDenomPressure =			idxTenMillion;					// denominator to convert 
 
 const uint8_t idxOneHundredMillion =		idxTenMillion + 1;
 const uint8_t idxBCDdivisor =				idxOneHundredMillion;			// divisor to separate lower 4 BCD bytes from 5th byte
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 const uint8_t idxDenomArea =				idxOneHundredMillion;			// denominator to convert square feet to square meters
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 
 const uint8_t idxOneBillion =				idxOneHundredMillion + 1;
 const uint8_t idxDenomVolume =				idxOneBillion;					// denominator to convert US gallons to liters
-#ifdef useVehicleMass
+#if defined(useVehicleParameters)
 const uint8_t idxNumerMass =				idxOneBillion;					// numerator to convert pounds to kilograms
-#endif // useVehicleMass
+#endif // defined(useVehicleParameters)
+
+// these are not required to be in any particular order
 
 const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
 const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
 const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
 const uint8_t idxNumerDistance =			idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
 const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
-const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// seconds per hour
+const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
 #define nextAllowedValue idxSecondsPerHour + 1
+#if defined(useClockDisplay)
+const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in a day
+#define nextAllowedValue idxSecondsPerDay + 1
+#endif // defined(useClockDisplay)
 #if defined(usePressure)
 const uint8_t idxNumerPressure =			nextAllowedValue;				// numerator to convert psig to kPa
 const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor used for fuel calculations
@@ -866,124 +817,120 @@ const uint8_t idxCorrectionFactor2 =		idxCorrectionFactor + 1;		// correction fa
 const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
 const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
 #define nextAllowedValue idxDenomVoltage + 1
-#endif // useAnalogRead
-#ifdef useCarVoltageOutput
+#endif // defined(useAnalogRead)
+#if defined(useCarVoltageOutput)
 const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
 const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
-#endif // useCarVoltageOutput
-#ifdef useVehicleMass
+#endif // defined(useCarVoltageOutput)
+#if defined(useVehicleParameters)
 const uint8_t idxDenomMass =				nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 const uint8_t idxNumerArea =				nextAllowedValue;				// numerator to convert square feet to square meters
 const uint8_t idxDenomDensity =				idxNumerArea + 1;				// denominator to convert SAE density to metric density
 #define nextAllowedValue idxDenomDensity + 1
-#endif // useCoastDownCalculator
-#ifdef useClockDisplay
-const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in a day
-#define nextAllowedValue idxSecondsPerDay + 1
-#endif // useClockDisplay
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+#define nextAllowedValue idxPowerFactor + 1
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
 const uint8_t idxNumerImperialGallon =		nextAllowedValue;				// numerator to convert Imperial gallons to liters
 #define nextAllowedValue idxNumerImperialGallon + 1
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
-const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
-#define nextAllowedValue idxPowerFactor + 1
-#endif // useDragRaceFunction
 
 const uint8_t idxMaxConstant =				nextAllowedValue;
 
-#ifdef useDebugTerminalLabels
+#if defined(useDebugTerminalLabels)
 static const char terminalConstIdxNames[] PROGMEM = {
 	"idxTen"
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundred"
-	tcEOSCR
+	tcEOS
 
 	"idxOneThousand"
 	"/idxDecimalPoint"
-	tcEOSCR
+	tcEOS
 
 	"idxTenThousand"
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundredThousand"
 	"/idxMetricFE"
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"/idxNumerDensity"
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
 	"/idxDenomImperialGallon"
 #endif // useImperialGallon
-	tcEOSCR
+	tcEOS
 
 	"idxOneMillion"
 	"/idxMicroSecondsPerSecond"
 	"/idxDenomDistance"
-	tcEOSCR
+	tcEOS
 
 	"idxTenMillion"
 #if defined(usePressure)
 	"/idxDenomPressure"
 #endif // defined(usePressure)
-	tcEOSCR
+	tcEOS
 
 	"idxOneHundredMillion"
 	"/idxBCDdivisor"
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	"/idxDenomArea"
-#endif // useCoastDownCalculator
-	tcEOSCR
+#endif // defined(useCoastDownCalculator)
+	tcEOS
 
 	"idxOneBillion"
 	"/idxDenomVolume"
-#ifdef useVehicleMass
+#if defined(useVehicleParameters)
 	"/idxNumerMass"
-#endif // useVehicleMass
-	tcEOSCR
+#endif // defined(useVehicleParameters)
+	tcEOS
 
-	"idxCycles0PerSecond" tcEOSCR
-	"idxCycles0PerTick" tcEOSCR
-	"idxTicksPerSecond" tcEOSCR
-	"idxNumerDistance" tcEOSCR
-	"idxNumerVolume" tcEOSCR
-	"idxSecondsPerHour" tcEOSCR
+	"idxCycles0PerSecond" tcEOS
+	"idxCycles0PerTick" tcEOS
+	"idxTicksPerSecond" tcEOS
+	"idxNumerDistance" tcEOS
+	"idxNumerVolume" tcEOS
+	"idxSecondsPerHour" tcEOS
+#if defined(useClockDisplay)
+	"idxSecondsPerDay" tcEOS
+#endif // defined(useClockDisplay)
 #if defined(usePressure)
-	"idxNumerPressure" tcEOSCR
-	"idxCorrectionFactor" tcEOSCR
-	"idxCorrectionFactor2" tcEOSCR
+	"idxNumerPressure" tcEOS
+	"idxCorrectionFactor" tcEOS
+	"idxCorrectionFactor2" tcEOS
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
-	"idxNumerVoltage" tcEOSCR
-	"idxDenomVoltage" tcEOSCR
-#endif // useAnalogRead
-#ifdef useCarVoltageOutput
-	"idxResistanceR5" tcEOSCR
-	"idxResistanceR6" tcEOSCR
-#endif // useCarVoltageOutput
-#ifdef useVehicleMass
-	"idxDenomMass" tcEOSCR
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	"idxNumerArea" tcEOSCR
-	"idxDenomDensity" tcEOSCR
-#endif // useCoastDownCalculator
-#ifdef useClockDisplay
-	"idxSecondsPerDay" tcEOSCR
-#endif // useClockDisplay
+	"idxNumerVoltage" tcEOS
+	"idxDenomVoltage" tcEOS
+#endif // defined(useAnalogRead)
+#if defined(useCarVoltageOutput)
+	"idxResistanceR5" tcEOS
+	"idxResistanceR6" tcEOS
+#endif // defined(useCarVoltageOutput)
+#if defined(useVehicleParameters)
+	"idxDenomMass" tcEOS
+#if defined(useCoastDownCalculator)
+	"idxNumerArea" tcEOS
+	"idxDenomDensity" tcEOS
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	"idxPowerFactor" tcEOS
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
-	"idxNumerImperialGallon" tcEOSCR
+	"idxNumerImperialGallon" tcEOS
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
-	"idxPowerFactor" tcEOSCR
-#endif // useDragRaceFunction
 };
 
-#endif // useDebugTerminalLabels
+#endif // defined(useDebugTerminalLabels)
 
 static const uint32_t correctionFactor =	4096ul;
 // SWEET64 conversion factor value table
@@ -991,7 +938,7 @@ static const uint32_t correctionFactor =	4096ul;
 // the order of the values, representing the powers of 10 between 10 and 1000000000, is vitally important to the
 //    proper functioning of the autoranging feature of ull2str
 //
-static const uint32_t convNumbers[] PROGMEM = {
+static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 	 10ul							// idxTen
 
 	,100ul							// idxOneHundred
@@ -1003,9 +950,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 
 	,100000ul						// idxOneHundredThousand
 									// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 									// idxNumerDensity - numerator to convert SAE density to metric density
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
 									// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
@@ -1021,15 +968,15 @@ static const uint32_t convNumbers[] PROGMEM = {
 
 	,100000000ul					// idxOneHundredMillion
 									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 									// idxDenomArea - denominator to convert square feet to square meters
-#endif // useCoastDownCalculator
+#endif // defined(useCoastDownCalculator)
 
 	,1000000000ul					// idxOneBillion
 									// idxDenomVolume - denominator to convert US gallons to liters
-#ifdef useVehicleMass
+#if defined(useVehicleParameters)
 									// idxNumerMass - numerator to convert pounds to kilograms
-#endif // useVehicleMass
+#endif // defined(useVehicleParameters)
 
 	,t0CyclesPerSecond						// idxCycles0PerSecond - timer0 clock cycles per second
 	,256ul									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
@@ -1037,6 +984,9 @@ static const uint32_t convNumbers[] PROGMEM = {
 	,1609344ul								// idxNumerDistance - numerator to convert miles to kilometers
 	,3785411784ul							// idxNumerVolume - numerator to convert US gallons to liters
 	,3600ul									// idxSecondsPerHour - seconds per hour
+#if defined(useClockDisplay)
+	,86400ul								// idxSecondsPerDay - number of seconds in a day
+#endif // defined(useClockDisplay)
 #if defined(usePressure)
 	,68947573ul								// idxNumerPressure - numerator to convert psig to kPa
 	,correctionFactor						// idxCorrectionFactor - correction factor used for fuel calculations
@@ -1045,69 +995,24 @@ static const uint32_t convNumbers[] PROGMEM = {
 #if defined(useAnalogRead)
 	,1024ul									// idxNumerVoltage - numerator to convert volts DC to ADC steps
 	,5000ul									// idxDenomVoltage - denominator to convert volts DC to ADC steps
-#endif // useAnalogRead
-#ifdef useCarVoltageOutput
+#endif // defined(useAnalogRead)
+#if defined(useCarVoltageOutput)
 	,9600ul									// idxResistanceR5 - resistor next to ground (via meelis11)
 	,27000ul								// idxResistanceR6 - resistor next to diode  (via meelis11)
-#endif // useCarVoltageOutput
-#ifdef useVehicleMass
+#endif // defined(useCarVoltageOutput)
+#if defined(useVehicleParameters)
 	,2204622621ul							// idxDenomMass - denominator to convert pounds to kilograms
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
+#if defined(useCoastDownCalculator)
 	,9290304ul								// idxNumerArea - numerator to convert square feet to square meters
 	,168555ul								// idxDenomDensity - denominator to convert SAE density to metric density
-#endif // useCoastDownCalculator
-#ifdef useClockDisplay
-	,86400ul								// idxSecondsPerDay - number of seconds in a day
-#endif // useClockDisplay
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	,22840ul								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
 	,454609ul								// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
 #endif // useImperialGallon
-#ifdef useDragRaceFunction
-	,22840ul								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
-#endif // useDragRaceFunction
-};
-
-const uint8_t convNumerIdx[] PROGMEM = {
-	 idxDenomDistance						// pPulsesPerDistanceIdx
-	,idxNumerDistance						// pMinGoodSpeedidx
-	,idxNumerVolume							// pTankSizeIdx
-	,idxNumerVolume							// pTankBingoSizeIdx
-#ifdef usePartialRefuel
-	,idxNumerVolume							// pRefuelSizeIdx
-#endif // usePartialRefuel
-#ifdef useDragRaceFunction
-	,idxNumerDistance						// pDragSpeedIdx
-	,idxNumerDistance						// pDragDistanceIdx
-#endif // useDragRaceFunction
-#ifdef useVehicleMass
-	,idxNumerMass							// pVehicleMassIdx
-#endif // useVehicleMass
-#ifdef useCoastDownCalculator
-	,idxNumerArea							// pVehicleFrontalAreaIdx
-	,idxNumerDensity						// pLocustDensityIdx
-#endif // useCoastDownCalculator
-#ifdef useCalculatedFuelFactor
-	,idxNumerPressure						// pSysFuelPressureIdx
-	,idxNumerPressure						// pRefFuelPressureIdx
-#endif // useCalculatedFuelFactor
-#ifdef useChryslerMAPCorrection
-	,idxNumerPressure						// pMAPsensorRangeIdx
-	,idxNumerPressure						// pMAPsensorOffsetIdx
-#ifdef useChryslerBaroSensor
-	,idxNumerPressure						// pBaroSensorRangeIdx
-	,idxNumerPressure						// pBaroSensorOffsetIdx
-#else // useChryslerBaroSensor
-	,idxNumerPressure						// pBarometricPressureIdx
-#endif // useChryslerBaroSensor
-#endif // useChryslerMAPCorrection
-#ifdef useBarFuelEconVsSpeed
-	,idxNumerDistance						// pBarLowSpeedCutoffIdx
-	,idxNumerDistance						// pBarSpeedQuantumIdx
-#endif // useBarFuelEconVsSpeed
-#ifdef useFuelCost
-	,idxDenomVolume							// pCostPerQuantity
-#endif // useFuelCost
 };
 
 const uint8_t s64BCDformatList[] PROGMEM = {
