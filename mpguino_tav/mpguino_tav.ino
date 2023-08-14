@@ -322,9 +322,28 @@ Expansion outputs
 -------------------------------------
 
 Bluetooth I/O
-  MPGuino Colour Touch by abbalooga
-    RX      D3 (TXD1), Digital 18   (USART1)
+ HM-10
+  legacy MPGuino hardware
+    RX      D1 (TXD), Digital 1     (USART)
+    TX      D0 (RXD), Digital 0
+
+  Arduino Mega2560
+    RX      E1 (TXD0), Digital 1    (USART0)
+    TX      E0 (RXD0), Digital 0
+    - or -
+    RX      D3 (TXD1), Digital 18   (USART1, MPGuino Colour Touch by abbalooga)
     TX      D2 (RXD1), Digital 19
+    - or -
+    RX      H1 (TXD2), Digital 16   (USART2)
+    TX      H0 (RXD2), Digital 17
+    - or -
+    RX      J1 (TXD3), Digital 14   (USART3)
+    TX      J0 (RXD3), Digital 15
+
+ Adafruit Bluefruit LE Shield
+  legacy MPGuino hardware
+
+  Arduino Mega2560
 
 -------------------------------------
 
@@ -423,6 +442,7 @@ int main(void);
 #include "trip_measurement.h"
 #include "sweet64.h"
 #include "m_serial.h"
+#include "m_spi.h"
 #include "m_analog.h"
 #include "m_twi.h"
 //#include "m_usb.h"
@@ -462,27 +482,28 @@ int main(void);
 static void idleProcess(void)
 {
 
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 	uint32_t idleStart;
 
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(0);
 
 #endif // defined(useActivityLED)
-#if defined(useCPUreading)
-	idleStart = systemInfo::cycles0(); // record starting time
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	idleStart = heart::cycles0(); // record starting time
 
-#endif // defined(useCPUreading)
-	performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+	heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
-#if defined(useCPUreading)
-	idleTimerLength += systemInfo::findCycleLength(idleStart, systemInfo::cycles0());
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	idleTimerLength += heart::findCycle0Length(idleStart);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
-	idleStart = systemInfo::cycles0(); // record starting time
-#endif // defined(useDebugCPUreading)
+	idleStart = heart::cycles0(); // record starting time
 
-#endif // defined(useCPUreading)
+#endif // defined(useDebugCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(1);
 
@@ -491,12 +512,12 @@ static void idleProcess(void)
 	if (timer0Status & t0sTakeSample) // if main timer has commanded a sample be taken
 	{
 
-		changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
+		heart::changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
 
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 		systemInfo::idleProcess();
 
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 		tripSupport::idleProcess();
 
 	}
@@ -506,7 +527,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadMAPchannel)
 	{
 
-		changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
+		heart::changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
 
 		SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
 
@@ -517,7 +538,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadBaroChannel)
 	{
 
-		changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
+		heart::changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
 
 		SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
 
@@ -528,7 +549,7 @@ static void idleProcess(void)
 	if (analogStatus & asReadButtonChannel)
 	{
 
-		changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
+		heart::changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
 
 		for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 		{
@@ -554,7 +575,7 @@ static void idleProcess(void)
 	if (timer0Status & t0sAccelTestFlag)
 	{
 
-		changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
+		heart::changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
 
 		accelerationTest::idleProcess();
 
@@ -565,7 +586,7 @@ static void idleProcess(void)
 	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
 	{
 
-		changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
+		heart::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
 
 		signalSim::idleProcessFuel();
 
@@ -574,7 +595,7 @@ static void idleProcess(void)
 	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
 	{
 
-		changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
+		heart::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
 
 		signalSim::idleProcessVSS();
 
@@ -582,7 +603,7 @@ static void idleProcess(void)
 
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugCPUreading)
-	idleProcessTimerLength += systemInfo::findCycleLength(idleStart, systemInfo::cycles0());
+	idleProcessTimerLength += heart::findCycle0Length(idleStart);
 
 #endif // defined(useDebugCPUreading)
 }
@@ -593,13 +614,14 @@ int main(void)
 {
 
 	uint8_t i;
+	uint8_t j;
 #if defined(useDebugCPUreading)
 	uint32_t displayStart;
 #endif // defined(useDebugCPUreading)
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
-	initCore(); // go initialize core MPGuino functionality
+	heart::initCore(); // go initialize core MPGuino functionality
 
 	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required
 
@@ -616,9 +638,9 @@ int main(void)
 #endif // defined(useDragRaceFunction)
 	sei();
 
-	delay0(delay1500msTick); // show splash screen for 1.5 seconds
+	j = heart::delay0(delay1500msTick); // show splash screen for 1.5 seconds
 
-	initHardware(); // initialize all human interface peripherals
+	heart::initHardware(); // initialize all human interface peripherals
 
 #if defined(useSavedTrips)
 	i = tripSave::doAutoAction(taaModeRead);
@@ -642,7 +664,7 @@ int main(void)
 	terminalState = 0;
 
 #endif // defined(outputDebugTerminalSplash)
-	doDelay0(); // show splash screen for 1.5 seconds
+	heart::doDelay0(j); // show splash screen for 1.5 seconds
 
 #if defined(useButtonInput)
 #if defined(useTestButtonValues)
@@ -670,33 +692,34 @@ int main(void)
 #endif // defined(useLCDoutput)
 #endif // defined(useSavedTrips)
 #if defined(useCPUreading)
-	mainStart = systemInfo::cycles0();
+	mainStart = heart::cycles0();
 	idleTimerLength = 0;
+
+#endif // defined(useCPUreading)
 #if defined(useDebugCPUreading)
 	idleProcessTimerLength = 0;
 	monitorState = 0;
 	displayTimerLength = 0;
 	SWEET64timerLength = 0;
-#endif // defined(useDebugCPUreading)
 
-#endif // defined(useCPUreading)
+#endif // defined(useDebugCPUreading)
 	while (true)
 	{
 
 #if defined(useDebugCPUreading)
-		displayStart = systemInfo::cycles0();
+		displayStart = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
 		if (activityChangeFlags & afActivityTimeoutFlag)
 		{
 
-			changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
+			heart::changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
 
 			if (activityFlags & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
 			{
 
 #ifdef useDeepSleep
-				doGoDeepSleep();
+				heart::doGoDeepSleep();
 
 #else // useDeepSleep
 #if defined(useClockDisplay)
@@ -735,7 +758,7 @@ int main(void)
 		if (activityChangeFlags & afEngineOffFlag)
 		{
 
-			changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
+			heart::changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
 
 #if defined(useButtonInput)
 			// if engine start is detected
@@ -747,7 +770,7 @@ int main(void)
 		if (activityChangeFlags & afVehicleStoppedFlag)
 		{
 
-			changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
+			heart::changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
 
 #if defined(useButtonInput)
 			// if vehicle movement is detected
@@ -765,7 +788,7 @@ int main(void)
 		if (activityChangeFlags & afParkFlag)
 		{
 
-			changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
+			heart::changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
 
 			if (activityFlags & afParkFlag) // if MPGuino is commanded to go park
 			{
@@ -813,7 +836,7 @@ int main(void)
 		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
 		{
 
-			changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
+			heart::changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
 
 			cursor::doCommand(); // go perform button action
 
@@ -825,7 +848,7 @@ int main(void)
 		if (timer0Status & t0sOutputLogging)
 		{
 
-			changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
+			heart::changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
 
 #if defined(useDataLoggingOutput)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
@@ -847,7 +870,7 @@ int main(void)
 		if (timer0Status & t0sUpdateDisplay)
 		{
 
-			changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
+			heart::changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
 
 #if defined(useOutputPins)
 			outputPin::setOutputPin1(0);
@@ -920,7 +943,7 @@ int main(void)
 		}
 
 #if defined(useDebugCPUreading)
-		displayTimerLength =+ systemInfo::findCycleLength(displayStart, systemInfo::cycles0());
+		displayTimerLength =+ heart::findCycle0Length(displayStart);
 
 #endif // defined(useDebugCPUreading)
 		idleProcess(); // all functions are completed at this point, so wait for an interrupt to occur
