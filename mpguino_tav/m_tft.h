@@ -31,7 +31,7 @@ interfaceDevice devLCD; // this will be used to emulate LCD output on the TFT sc
 5 -  DC			48	//	pin 36	//	PL1			data/command d=1 c=0
 6 -  SDI (MOSI)	51	//	pin 21	//	PB2			hardware spi
 7 -  SCK		52	//	pin 20	//	PB1			hardware spi
-8 -  LED		12	//	pin 25	//	PB6/OC1B
+8 -  LED		12	//	pin 25	//	PB6 / OC1B
 9 -  SDO (MISO)
 
 10 - T_CLK		11	//	pin 23	//	PB5			software spi
