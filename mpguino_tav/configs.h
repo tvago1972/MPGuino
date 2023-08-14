@@ -7,18 +7,68 @@
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module 
 //#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
-// the below line sets the serial output speed
+// the below output options may be chosen independently of any other MPGuino hardware
+//   - none of the below options require an LCD or TFT display
+//   - none of the below options require buttons or a touch screen
+//   - useBluetooth provides for a basic I/O capability with an Android SMARTphone
+//   - useDataLoggingOutput outputs 5 basic trip functions to a data logger or SD card
+//   - useJSONoutput outputs selected trip functions as a JSON array of JSON objects
+//   - useDebugTerminal provides for a PC-MPGuino debugging environment to test various basic MPGuino functions
 //
-// Bluetooth output is normally at 9600 baud, Parallax Serial LCD is normally at 19200 baud
-//
-const unsigned long myBaudRate0 = 38400ul;	// (most Arduino boards, excluding TinkerKit! LCD module))
-const unsigned long myBaudRate1 = 9600ul;	// (ATmega2560 board)
-const unsigned long myBaudRate2 = 38400ul;	// (ATmega2560 board)
-const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
+//#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
+#define useJSONoutput true					// skybolt added to enable and call JSON out routine
+//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
+//#define useBluetooth true					// bluetooth interface with Android phone
 
-// the below output options may be chosen independently of the standard 16x2 (or similar) LCD display
+// logging output port options
+//   - if useDataLoggingOutput is not selected, the below output port options will be ignored
+//   - if useDataLoggingOutput is selected, choose only one of the below output port options, or an error will result
 //
-#define useBluetooth true					// Use bluetooth interface with Android phone in addition to or instead of LCD/buttons
+//#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
+//#define useLoggingSerialPort1 true			// select logging output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
+//#define useLoggingSerialPort2 true			// select logging output on serial port channel 2 (ATmega2560 board)
+//#define useLoggingSerialPort3 true			// select logging output on serial port channel 3 (ATmega2560 board)
+//#define useLoggingSerialUSB true			// select logging output on USB CDC output (TinkerKit! LCD module)
+
+// JSON output port options
+//   - if useJSONoutput is not selected, the below output port options will be ignored
+//   - if useJSONoutput is selected, choose only one of the below output port options, or an error will result
+//
+#define useJSONserialPort0 true			// select JSON output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
+//#define useJSONserialPort1 true			// select JSON output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
+//#define useJSONserialPort2 true			// select JSON output on serial port channel 2 (ATmega2560 board)
+//#define useJSONserialPort3 true			// select JSON output on serial port channel 3 (ATmega2560 board)
+//#define useJSONserialUSB true			// select JSON output on USB CDC output (TinkerKit! LCD module)
+
+// debug terminal I/O port options
+//   - if useDebugTerminal is not selected, the below output port options will be ignored
+//   - if useDebugTerminal is selected, choose only one of the below output port options, or an error will result
+//
+#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
+//#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
+//#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
+//#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
+//#define useDebugTerminalSerialUSB true		// select USB CDC output for PC-MPGuino terminal interface (TinkerKit! LCD module)
+
+// Bluetooth output port options
+//   - if useBluetooth is not selected, the below output port options will be ignored
+//   - if useBluetooth is selected, choose only one of the below output port options, or an error will result
+//
+//#define useBluetoothSerialPort0 true		// select Bluetooth output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
+//#define useBluetoothSerialPort1 true		// select Bluetooth output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
+//#define useBluetoothSerialPort2 true		// select Bluetooth output on serial port channel 2 (ATmega2560 board)
+//#define useBluetoothSerialPort3 true		// select Bluetooth output on serial port channel 3 (ATmega2560 board)
+#define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
+
+// options for debugging terminal interface between PC and MPGuino
+//   - mainly used to conserve space on ATmega328/128 and ATmega32U4 boards
+//   - an LCD display option must be selected with useDebugButtonInjection, or a configuration error will result
+//
+//#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
+//#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists
+//#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
+//#define useDebugCPUreading true				// Show enhanced CPU loading
+//#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //
@@ -26,7 +76,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //
 //#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
-//#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
+#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
 //#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
 //#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
@@ -40,7 +90,7 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 // the below options only work if useParallaxSerialLCDmodule is selected. If useParallaxSerialLCDmodule is not selected, the below options will not be inserted at all
 //
 //#define useLCDserialPort0 true				// select serial LCD module output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useLCDserialPort1 true				// select serial LCD module output on serial port channel 1 (ATmega2560 board)
+//#define useLCDserialPort1 true				// select serial LCD module output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useLCDserialPort2 true				// select serial LCD module output on serial port channel 2 (ATmega2560 board)
 //#define useLCDserialPort3 true				// select serial LCD module output on serial port channel 3 (ATmega2560 board)
 
@@ -81,44 +131,30 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of status message
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
 #define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
-//#define useDataLoggingOutput true			// Ability to output 5 basic parameters to a data logger or SD card, once every refresh period (0.5 second)
-//#define useJSONoutput true					// skybolt added to enable and call JSON out routine
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 
-// performance enhancement options - all may be chosen independently of one another
+// performance enhancement options
+//   - all may be chosen independently of one another
+//   - if the performance enhancement option depends on a base option that is not selected, the performance enhancement is ignored
 //
-//#define useBufferedLCD true					// Speed up LCD output
-//#define useBufferedSerial0Port true			// Speed up serial port 0 output
-#define useBufferedSerial1Port true			// Speed up serial port 1 output
-//#define useBufferedSerial2Port true			// Speed up serial port 2 output
-//#define useBufferedSerial3Port true			// Speed up serial port 3 output
+#define useLCDbufferedOutput true			// Speed up LCD output
+#define useBluetoothBufferedOutput true		// speed up Bluetooth output on serial port
+#define useLoggingBufferedOutput true		// speed up logging output on serial port
+#define useJSONbufferedOutput true			// speed up JSON output on serial port
+#define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
 #define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
-// Bluetooth output port options - choose one for use with useBluetooth, or an error will result
+// serial speed options
+//   - if the corresponding serial port is not selected, serial speed option will be ignored
 //
-//#define useBluetoothSerialPort0 true		// select Bluetooth output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-#define useBluetoothSerialPort1 true		// select Bluetooth output on serial port channel 1 (ATmega2560 board)
-//#define useBluetoothSerialPort2 true		// select Bluetooth output on serial port channel 2 (ATmega2560 board)
-//#define useBluetoothSerialPort3 true		// select Bluetooth output on serial port channel 3 (ATmega2560 board)
-
-// logging output port options - choose one for use with the above logging output options, or an error will result
-//
-//#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useLoggingSerialPort1 true			// select logging output on serial port channel 1 (ATmega2560 board)
-//#define useLoggingSerialPort2 true			// select logging output on serial port channel 2 (ATmega2560 board)
-//#define useLoggingSerialPort3 true			// select logging output on serial port channel 3 (ATmega2560 board)
-//#define useLoggingUSBserial true			// select logging output on USB CDC output (TinkerKit! LCD module)
-
-// debug terminal I/O port options - choose one for use with useDebugTerminal, or an error will result
-//
-//#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board)
-//#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
-//#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
-//#define useDebugTerminalUSBserial true		// select USB CDC output for PC-MPGuino terminal interface (TinkerKit! LCD module)
+#define useLCDserialBaudRate 19200
+#define useBluetoothSerialBaudRate 9600
+#define useLoggingSerialBaudRate 9600
+#define useJSONserialBaudRate 19200
+#define useDebugTerminalSerialBaudRate 38400
 
 // options that are in progress at the moment - don't enable them unless you want to test them
 //
@@ -127,14 +163,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 //#define useFuelParamCalculator true			// (inw) Ability to calculate microseconds per gallon and fuel injector delay stored parameters
 //#define useRealTimeClockModule true			// (inw) Ability to read and display Realtime Clock data from an SPI RTC module
 
-// program measurement and debugging tools
+// other program measurement and debugging tools
 //
-//#define useDebugTerminal true				// terminal interface between PC and MPGuino
-//#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help - requires useDebugTerminal
-//#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists - requires useDebugTerminal
-//#define useDebugButtonInjection true		// ability to inject button presses into MPGuino - requires useDebugTerminal
-//#define useDebugCPUreading true				// Show enhanced CPU loading - requires useDebugTerminal
-//#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
 //#define useTestButtonValues true			// Allows observation of button mapping
 #define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
 //#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
@@ -163,6 +193,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useTouchScreenInput true
 #define useBluetooth true
 #define useBluetoothSerialPort1 true
+#define useBluetoothSerialBaudRate 9600
+#define useBluetoothBufferedOutput true
 #define useCarVoltageOutput true
 #undef useLegacyButtons
 #undef useAnalogMuxButtons
@@ -174,6 +206,9 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #undef useParallaxSerialLCDmodule
 #undef useSainSmart2004LCD
 #undef useGenericTWILCD
+#undef useBluetoothSerialPort0
+#undef useBluetoothSerialPort2
+#undef useBluetoothSerialPort3
 #endif // defined(useMPGuinoColourTouch)
 
 #if defined(useArduinoMega2560)
@@ -279,6 +314,8 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #error *** CANNOT use useSpiffyTripLabels with an LCD display height of 4 lines!!! ***
 #endif // defined(useSpiffyTripLabels) && LCDcharHeight == 4
 
+// major feature define configurations
+
 #if defined(usePartialRefuel) || defined(useSavedTrips)
 #define useEnhancedTripReset true
 #endif // defined(usePartialRefuel) || defined(useSavedTrips)
@@ -319,8 +356,6 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 #if defined(useCPUreading)
 #define useExpandedMainDisplay true
-#else // defined(useCPUreading)
-#undef useDebugCPUreading
 #endif // defined(useCPUreading)
 
 #if defined(useClockDisplay)
@@ -376,201 +411,522 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #define useMatrixMath true
 #endif // useFuelParamCalculator
 
+// serial / USB / SPI initial define configurations
+
 #if defined(useSerialLCD)
+#if ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
+#error *** Serial LCD Output requires exactly one serial output port!!! ***
+#endif // ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
 #define useBinaryLCDbrightness true
 #else // defined(useSerialLCD)
 #undef useLCDserialPort0
 #undef useLCDserialPort1
 #undef useLCDserialPort2
 #undef useLCDserialPort3
+#undef useLCDserialBaudRate
 #endif // defined(useSerialLCD)
 
-#if !defined(useBluetooth)
+#if defined(useBluetooth)
+#if ( defined(useBluetoothSerialPort0) + defined(useBluetoothSerialPort1) + defined(useBluetoothSerialPort2) + defined(useBluetoothSerialPort3) + defined(useBluetoothAdaFruitSPI) ) != 1
+#error *** Bluetooth interface requires exactly one output port!!! ***
+#endif // ( defined(useBluetoothSerialPort0) + defined(useBluetoothSerialPort1) + defined(useBluetoothSerialPort2) + defined(useBluetoothSerialPort3) + defined(useBluetoothAdaFruitSPI) ) != 1
+#else // defined(useBluetooth)
 #undef useBluetoothSerialPort0
 #undef useBluetoothSerialPort1
 #undef useBluetoothSerialPort2
 #undef useBluetoothSerialPort3
-#endif // !defined(useBluetooth)
+#undef useBluetoothSerialBaudRate
+#undef useBluetoothAdaFruitSPI
+#undef useBluetoothBufferedOutput
+#endif // defined(useBluetooth)
 
-#if !defined(useJSONoutput) && !defined(useDataLoggingOutput)
+#if defined(useDataLoggingOutput)
+#if ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingSerialUSB) ) != 1
+#error *** Logging Output requires exactly one I/O port!!! ***
+#endif // ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingSerialUSB) ) != 1
+#else // defined(useDataLoggingOutput)
 #undef useLoggingSerialPort0
 #undef useLoggingSerialPort1
 #undef useLoggingSerialPort2
 #undef useLoggingSerialPort3
-#undef useLoggingUSBserial
-#endif // !defined(useJSONoutput) && !defined(useDataLoggingOutput)
+#undef useLoggingSerialBaudRate
+#undef useLoggingSerialUSB
+#undef useLoggingBufferedOutput
+#endif // defined(useDataLoggingOutput)
 
-#if !defined(useDebugTerminal)
+#if defined(useJSONoutput)
+#if ( defined(useJSONserialPort0) + defined(useJSONserialPort1) + defined(useJSONserialPort2) + defined(useJSONserialPort3) + defined(useJSONserialUSB) ) != 1
+#error *** JSON Output requires exactly one I/O port!!! ***
+#endif // ( defined(useJSONserialPort0) + defined(useJSONserialPort1) + defined(useJSONserialPort2) + defined(useJSONserialPort3) + defined(useJSONserialUSB) ) != 1
+#else // defined(useJSONoutput)
+#undef useJSONserialPort0
+#undef useJSONserialPort1
+#undef useJSONserialPort2
+#undef useJSONserialPort3
+#undef useJSONserialBaudRate
+#undef useJSONserialUSB
+#undef useJSONbufferedOutput
+#endif // defined(useJSONoutput)
+
+#if defined(useDebugTerminal)
+#if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
+#error *** Debug Terminal output requires exactly one I/O port!!! ***
+#endif // ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
+#else // defined(useDebugTerminal)
 #undef useDebugTerminalSerialPort0
 #undef useDebugTerminalSerialPort1
 #undef useDebugTerminalSerialPort2
 #undef useDebugTerminalSerialPort3
-#undef useDebugTerminalUSBserial
+#undef useDebugTerminalSerialBaudRate
+#undef useDebugTerminalSerialUSB
+#undef useDebugTerminalBufferedOutput
 #undef useDebugButtonInjection
 #undef useDebugTerminalLabels
 #undef useDebugTerminalHelp
 #undef useDebugCPUreading
 #undef useSWEET64trace
-#endif // !defined(useDebugTerminal)
+#endif // defined(useDebugTerminal)
 
 #if defined(useLCDserialPort0)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLCDserialPort0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if !defined(useLCDserialBaudRate)
+#error *** useLCDserialPort0 requires useLCDserialBaudRate!!! ***
+#endif // !defined(useLCDserialBaudRate)
 #define useSerial0Port true
+#define serial0BaudRate useLCDserialBaudRate
 #define devLCDserial devSerial0
 #define LCDserialPort serial0
-#if defined(useBufferedLCD)
-#undef useBufferedLCD
+#if defined(useLCDbufferedOutput)
+#undef useLCDbufferedOutput
 #define useBufferedSerial0Port true
-#endif // defined(useBufferedLCD)
-#if defined(useBufferedSerial0Port)
 #define LCDserialBuffer serial0Buffer
-#endif // defined(useBufferedSerial0Port)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort0)
 
 #if defined(useLCDserialPort1)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLCDserialPort1!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(useTinkerkitLCDmodule)
+#error *** useLCDserialPort1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#if !defined(useLCDserialBaudRate)
+#error *** useLCDserialPort1 requires useLCDserialBaudRate!!! ***
+#endif // !defined(useLCDserialBaudRate)
 #define useSerial1Port true
+#define serial1BaudRate useLCDserialBaudRate
 #define devLCDserial devSerial1
 #define LCDserialPort serial1
-#if defined(useBufferedLCD)
-#undef useBufferedLCD
+#if defined(useLCDbufferedOutput)
+#undef useLCDbufferedOutput
 #define useBufferedSerial1Port true
-#endif // defined(useBufferedLCD)
-#if defined(useBufferedSerial1Port)
 #define LCDserialBuffer serial1Buffer
-#endif // defined(useBufferedSerial1Port)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort1)
 
 #if defined(useLCDserialPort2)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLCDserialPort2!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLCDserialPort2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useLCDserialBaudRate)
+#error *** useLCDserialPort2 requires useLCDserialBaudRate!!! ***
+#endif // !defined(useLCDserialBaudRate)
 #define useSerial2Port true
+#define serial2BaudRate useLCDserialBaudRate
 #define devLCDserial devSerial2
 #define LCDserialPort serial2
-#if defined(useBufferedLCD)
-#undef useBufferedLCD
+#if defined(useLCDbufferedOutput)
+#undef useLCDbufferedOutput
 #define useBufferedSerial2Port true
-#endif // defined(useBufferedLCD)
-#if defined(useBufferedSerial2Port)
 #define LCDserialBuffer serial2Buffer
-#endif // defined(useBufferedSerial2Port)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort2)
 
 #if defined(useLCDserialPort3)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLCDserialPort3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLCDserialPort3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useLCDserialBaudRate)
+#error *** useLCDserialPort3 requires useLCDserialBaudRate!!! ***
+#endif // !defined(useLCDserialBaudRate)
 #define useSerial3Port true
+#define serial3BaudRate useLCDserialBaudRate
 #define devLCDserial devSerial3
 #define LCDserialPort serial3
-#if defined(useBufferedLCD)
-#undef useBufferedLCD
+#if defined(useLCDbufferedOutput)
+#undef useLCDbufferedOutput
 #define useBufferedSerial3Port true
-#endif // defined(useBufferedLCD)
-#if defined(useBufferedSerial3Port)
 #define LCDserialBuffer serial3Buffer
-#endif // defined(useBufferedSerial3Port)
+#endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort3)
 
 #if defined(useBluetoothSerialPort0)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useBluetoothSerialPort0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if !defined(useBluetoothSerialBaudRate)
+#error *** useBluetoothSerialPort0 requires useBluetoothSerialBaudRate!!! ***
+#endif // !defined(useBluetoothSerialBaudRate)
 #define useSerial0Port true
 #define useSerial0PortInput true
+#define serial0BaudRate useBluetoothSerialBaudRate
 #define devBluetooth devSerial0
-#if defined(useBufferedSerial0Port)
+#if defined(useBluetoothBufferedOutput)
+#define useBufferedSerial0Port true
 #define bluetoothSerialBuffer serial0Buffer
-#endif // defined(useBufferedSerial0Port)
+#endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort0)
 
 #if defined(useBluetoothSerialPort1)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useBluetoothSerialPort1!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(useTinkerkitLCDmodule)
+#error *** useBluetoothSerialPort1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#if !defined(useBluetoothSerialBaudRate)
+#error *** useBluetoothSerialPort1 requires useBluetoothSerialBaudRate!!! ***
+#endif // !defined(useBluetoothSerialBaudRate)
 #define useSerial1Port true
 #define useSerial1PortInput true
+#define serial1BaudRate useBluetoothSerialBaudRate
 #define devBluetooth devSerial1
-#if defined(useBufferedSerial1Port)
+#if defined(useBluetoothBufferedOutput)
+#define useBufferedSerial1Port true
 #define bluetoothSerialBuffer serial1Buffer
-#endif // defined(useBufferedSerial1Port)
+#endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort1)
 
 #if defined(useBluetoothSerialPort2)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useBluetoothSerialPort2!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useBluetoothSerialPort2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useBluetoothSerialBaudRate)
+#error *** useBluetoothSerialPort2 requires useBluetoothSerialBaudRate!!! ***
+#endif // !defined(useBluetoothSerialBaudRate)
 #define useSerial2Port true
 #define useSerial2PortInput true
+#define serial2BaudRate useBluetoothSerialBaudRate
 #define devBluetooth devSerial2
-#if defined(useBufferedSerial2Port)
+#if defined(useBluetoothBufferedOutput)
+#define useBufferedSerial2Port true
 #define bluetoothSerialBuffer serial2Buffer
-#endif // defined(useBufferedSerial2Port)
+#endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort2)
 
 #if defined(useBluetoothSerialPort3)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useBluetoothSerialPort3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useBluetoothSerialPort3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useBluetoothSerialBaudRate)
+#error *** useBluetoothSerialPort3 requires useBluetoothSerialBaudRate!!! ***
+#endif // !defined(useBluetoothSerialBaudRate)
 #define useSerial3Port true
 #define useSerial3PortInput true
+#define serial3BaudRate useBluetoothSerialBaudRate
 #define devBluetooth devSerial3
-#if defined(useBufferedSerial3Port)
+#if defined(useBluetoothBufferedOutput)
+#define useBufferedSerial3Port true
 #define bluetoothSerialBuffer serial3Buffer
-#endif // defined(useBufferedSerial3Port)
+#endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort3)
 
+#if defined(useBluetoothAdaFruitSPI)
+#define useHardwareSPI true
+#endif // defined(useBluetoothAdaFruitSPI)
+
 #if defined(useLoggingSerialPort0)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLoggingSerialPort0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if !defined(useLoggingSerialBaudRate)
+#error *** useLoggingSerialPort0 requires useLoggingSerialBaudRate!!! ***
+#endif // !defined(useLoggingSerialBaudRate)
 #define useSerial0Port true
+#define serial0BaudRate useLoggingSerialBaudRate
 #define devLogOutput devSerial0
 #define outputLoggingSplash true
+#if defined(useLoggingBufferedOutput)
+#define useBufferedSerial0Port true
+#endif // defined(useLoggingBufferedOutput)
 #endif // defined(useLoggingSerialPort0)
 
 #if defined(useLoggingSerialPort1)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLoggingSerialPort1!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(useTinkerkitLCDmodule)
+#error *** useLoggingSerialPort1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#if !defined(useLoggingSerialBaudRate)
+#error *** useLoggingSerialPort1 requires useLoggingSerialBaudRate!!! ***
+#endif // !defined(useLoggingSerialBaudRate)
 #define useSerial1Port true
+#define serial1BaudRate useLoggingSerialBaudRate
 #define devLogOutput devSerial1
 #define outputLoggingSplash true
+#if defined(useLoggingBufferedOutput)
+#define useBufferedSerial1Port true
+#endif // defined(useLoggingBufferedOutput)
 #endif // defined(useLoggingSerialPort1)
 
 #if defined(useLoggingSerialPort2)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLoggingSerialPort2!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLoggingSerialPort2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useLoggingSerialBaudRate)
+#error *** useLoggingSerialPort2 requires useLoggingSerialBaudRate!!! ***
+#endif // !defined(useLoggingSerialBaudRate)
 #define useSerial2Port true
+#define serial2BaudRate useLoggingSerialBaudRate
 #define devLogOutput devSerial2
 #define outputLoggingSplash true
+#if defined(useLoggingBufferedOutput)
+#define useBufferedSerial2Port true
+#endif // defined(useLoggingBufferedOutput)
 #endif // defined(useLoggingSerialPort2)
 
 #if defined(useLoggingSerialPort3)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useLoggingSerialPort3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useLoggingSerialPort3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useLoggingSerialBaudRate)
+#error *** useLoggingSerialPort3 requires useLoggingSerialBaudRate!!! ***
+#endif // !defined(useLoggingSerialBaudRate)
 #define useSerial3Port true
+#define serial3BaudRate useLoggingSerialBaudRate
 #define devLogOutput devSerial3
 #define outputLoggingSplash true
+#if defined(useLoggingBufferedOutput)
+#define useBufferedSerial3Port true
+#endif // defined(useLoggingBufferedOutput)
 #endif // defined(useLoggingSerialPort3)
 
-#if defined(useLoggingUSBserial)
+#if defined(useLoggingSerialUSB)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 hardware and useLoggingSerialUSB!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(__AVR_ATmega2560__)
+#error *** Cannot use ATmega2560 hardware and useLoggingSerialUSB!!! ***
+#endif // defined(__AVR_ATmega2560__)
 #define useUSBserial true
 #define devLogOutput devUSB
 #define outputLoggingSplash true
-#endif // defined(useLoggingUSBserial)
+#endif // defined(useLoggingSerialUSB)
+
+#if defined(useJSONserialPort0)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useJSONserialPort0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if !defined(useJSONserialBaudRate)
+#error *** useJSONserialPort0 requires useJSONserialBaudRate!!! ***
+#endif // !defined(useJSONserialBaudRate)
+#define useSerial0Port true
+#define serial0BaudRate useJSONserialBaudRate
+#define devJSONoutput devSerial0
+#if defined(useJSONbufferedOutput)
+#define useBufferedSerial0Port true
+#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialPort0)
+
+#if defined(useJSONserialPort1)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useJSONserialPort1!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(useTinkerkitLCDmodule)
+#error *** useJSONserialPort1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#if !defined(useJSONserialBaudRate)
+#error *** useJSONserialPort1 requires useJSONserialBaudRate!!! ***
+#endif // !defined(useJSONserialBaudRate)
+#define useSerial1Port true
+#define serial1BaudRate useJSONserialBaudRate
+#define devJSONoutput devSerial1
+#if defined(useJSONbufferedOutput)
+#define useBufferedSerial1Port true
+#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialPort1)
+
+#if defined(useJSONserialPort2)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useJSONserialPort2!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useJSONserialPort2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useJSONserialBaudRate)
+#error *** useJSONserialPort2 requires useJSONserialBaudRate!!! ***
+#endif // !defined(useJSONserialBaudRate)
+#define useSerial2Port true
+#define serial2BaudRate useJSONserialBaudRate
+#define devJSONoutput devSerial2
+#if defined(useJSONbufferedOutput)
+#define useBufferedSerial2Port true
+#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialPort2)
+
+#if defined(useJSONserialPort3)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useJSONserialPort3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useJSONserialPort3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useJSONserialBaudRate)
+#error *** useJSONserialPort3 requires useJSONserialBaudRate!!! ***
+#endif // !defined(useJSONserialBaudRate)
+#define useSerial3Port true
+#define serial3BaudRate useJSONserialBaudRate
+#define devJSONoutput devSerial3
+#if defined(useJSONbufferedOutput)
+#define useBufferedSerial3Port true
+#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialPort3)
+
+#if defined(useJSONserialUSB)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 hardware and useJSONserialUSB!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(__AVR_ATmega2560__)
+#error *** Cannot use ATmega2560 hardware and useJSONserialUSB!!! ***
+#endif // defined(__AVR_ATmega2560__)
+#define useUSBserial true
+#define devJSONoutput devUSB
+#endif // defined(useJSONserialUSB)
 
 #if defined(useDebugTerminalSerialPort0)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useDebugTerminalSerialPort0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if !defined(useDebugTerminalSerialBaudRate)
+#error *** useDebugTerminalSerialPort0 requires useDebugTerminalSerialBaudRate!!! ***
+#endif // !defined(useDebugTerminalSerialBaudRate)
 #define useSerial0Port true
 #define useSerial0PortInput true
+#define serial0BaudRate useDebugTerminalSerialBaudRate
 #define devDebugTerminal devSerial0
 #define outputDebugTerminalSplash true
+#if defined(useDebugTerminalBufferedOutput)
+#define useBufferedSerial0Port true
+#endif // defined(useDebugTerminalBufferedOutput)
 #endif // defined(useDebugTerminalSerialPort0)
 
 #if defined(useDebugTerminalSerialPort1)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useDebugTerminalSerialPort1!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(useTinkerkitLCDmodule)
+#error *** useDebugTerminalSerialPort1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
+#endif // defined(useTinkerkitLCDmodule)
+#if !defined(useDebugTerminalSerialBaudRate)
+#error *** useDebugTerminalSerialPort1 requires useDebugTerminalSerialBaudRate!!! ***
+#endif // !defined(useDebugTerminalSerialBaudRate)
 #define useSerial1Port true
 #define useSerial1PortInput true
+#define serial1BaudRate useDebugTerminalSerialBaudRate
 #define devDebugTerminal devSerial1
 #define outputDebugTerminalSplash true
+#if defined(useDebugTerminalBufferedOutput)
+#define useBufferedSerial1Port true
+#endif // defined(useDebugTerminalBufferedOutput)
 #endif // defined(useDebugTerminalSerialPort1)
 
 #if defined(useDebugTerminalSerialPort2)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useDebugTerminalSerialPort2!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useDebugTerminalSerialPort2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useDebugTerminalSerialBaudRate)
+#error *** useDebugTerminalSerialPort2 requires useDebugTerminalSerialBaudRate!!! ***
+#endif // !defined(useDebugTerminalSerialBaudRate)
 #define useSerial2Port true
 #define useSerial2PortInput true
+#define serial2BaudRate useDebugTerminalSerialBaudRate
 #define devDebugTerminal devSerial2
 #define outputDebugTerminalSplash true
+#if defined(useDebugTerminalBufferedOutput)
+#define useBufferedSerial2Port true
+#endif // defined(useDebugTerminalBufferedOutput)
 #endif // defined(useDebugTerminalSerialPort2)
 
 #if defined(useDebugTerminalSerialPort3)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and useDebugTerminalSerialPort3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and useDebugTerminalSerialPort3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if !defined(useDebugTerminalSerialBaudRate)
+#error *** useDebugTerminalSerialPort3 requires useDebugTerminalSerialBaudRate!!! ***
+#endif // !defined(useDebugTerminalSerialBaudRate)
 #define useSerial3Port true
 #define useSerial3PortInput true
+#define serial3BaudRate useDebugTerminalSerialBaudRate
 #define devDebugTerminal devSerial3
 #define outputDebugTerminalSplash true
+#if defined(useDebugTerminalBufferedOutput)
+#define useBufferedSerial3Port true
+#endif // defined(useDebugTerminalBufferedOutput)
 #endif // defined(useDebugTerminalSerialPort3)
 
-#if defined(useDebugTerminalUSBserial)
+#if defined(useDebugTerminalSerialUSB)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 hardware and useDebugTerminalSerialUSB!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#if defined(__AVR_ATmega2560__)
+#error *** Cannot use ATmega2560 hardware and useDebugTerminalSerialUSB!!! ***
+#endif // defined(__AVR_ATmega2560__)
 #define useUSBserial true
 #define devDebugTerminal devUSB
 #define outputDebugTerminalSplash true
-#endif // defined(useDebugTerminalUSBserial)
+#endif // defined(useDebugTerminalSerialUSB)
+
+#if ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useJSONserialPort0) + defined(useDebugTerminalSerialPort0) + defined(useBluetoothSerialPort0) ) > 1
+#error *** Serial Port 0 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useJSONserialPort0) + defined(useDebugTerminalSerialPort0) + defined(useBluetoothSerialPort0) ) > 1
+
+#if ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useJSONserialPort1) + defined(useDebugTerminalSerialPort1) + defined(useBluetoothSerialPort1) ) > 1
+#error *** Serial Port 1 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useJSONserialPort1) + defined(useDebugTerminalSerialPort1) + defined(useBluetoothSerialPort1) ) > 1
+
+#if ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useJSONserialPort2) + defined(useDebugTerminalSerialPort2) + defined(useBluetoothSerialPort2) ) > 1
+#error *** Serial Port 2 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useJSONserialPort2) + defined(useDebugTerminalSerialPort2) + defined(useBluetoothSerialPort2) ) > 1
+
+#if ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useJSONserialPort3) + defined(useDebugTerminalSerialPort3) + defined(useBluetoothSerialPort3) ) > 1
+#error *** Serial Port 3 assignment conflict exists!!! ***
+#endif // ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useJSONserialPort3) + defined(useDebugTerminalSerialPort3) + defined(useBluetoothSerialPort3) ) > 1
 
 #if defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedSerial2Port) || defined(useBufferedSerial3Port) \
 	|| defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useSerial2PortInput) || defined(useSerial3PortInput) \
-	|| defined(useBufferedLCD) \
+	|| defined(useLCDbufferedOutput) \
 	|| defined(useUSBserial)
 #define useBuffering true
 #endif
+
+// hardware input define configurations
 
 #if defined(useTouchScreenInput)
 #undef useLegacyButtons
@@ -650,10 +1006,6 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 
 // this section catches configuration errors
 
-#if !defined(useBluetooth) && !defined(useTouchScreenInput) && !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && !defined(useDebugButtonInjection)
-#error *** MPGuino input configuration not specified!!! ***
-#endif // !defined(useBluetooth) && !defined(useTouchScreenInput) && !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && !defined(useDebugButtonInjection)
-
 #if defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
 #error *** CANNOT configure for Legacy pushbuttons and TwoWire support!!! ***
 #endif // defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
@@ -661,57 +1013,6 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #if ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
 #error *** Button hardware configuration error detected!!! ***
 #endif // ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
-
-#if ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useDebugTerminalSerialPort0) + defined(useBluetoothSerialPort0) ) > 1
-#error *** Serial Port 0 assignment conflict exists!!! ***
-#endif // ( defined(useLCDserialPort0) + defined(useLoggingSerialPort0) + defined(useDebugTerminalSerialPort0) + defined(useBluetoothSerialPort0) ) > 1
-
-#if ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useDebugTerminalSerialPort1) + defined(useBluetoothSerialPort1) ) > 1
-#error *** Serial Port 1 assignment conflict exists!!! ***
-#endif // ( defined(useLCDserialPort1) + defined(useLoggingSerialPort1) + defined(useDebugTerminalSerialPort1) + defined(useBluetoothSerialPort1) ) > 1
-
-#if ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useDebugTerminalSerialPort2) + defined(useBluetoothSerialPort2) ) > 1
-#error *** Serial Port 2 assignment conflict exists!!! ***
-#endif // ( defined(useLCDserialPort2) + defined(useLoggingSerialPort2) + defined(useDebugTerminalSerialPort2) + defined(useBluetoothSerialPort2) ) > 1
-
-#if ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useDebugTerminalSerialPort3) + defined(useBluetoothSerialPort3) ) > 1
-#error *** Serial Port 3 assignment conflict exists!!! ***
-#endif // ( defined(useLCDserialPort3) + defined(useLoggingSerialPort3) + defined(useDebugTerminalSerialPort3) + defined(useBluetoothSerialPort3) ) > 1
-
-#if defined(useDebugTerminalUSBserial) && defined(useLoggingUSBserial)
-#error *** USB port conflict exists between Logging Output and something else!!! ***
-#endif // defined(useDebugTerminalUSBserial) && defined(useLoggingUSBserial)
-
-#if defined(useJSONoutput) && defined(useDataLoggingOutput)
-#error *** CANNOT use useJSONoutput and useDataLoggingOutput!!! ***
-#endif // defined(useJSONoutput) && defined(useDataLoggingOutput)
-
-#if defined(useSerialLCD)
-#if ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
-#error *** Serial LCD Output requires exactly one serial output port!!! ***
-#endif // ( defined(useLCDserialPort0) + defined(useLCDserialPort1) + defined(useLCDserialPort2) + defined(useLCDserialPort3) ) != 1
-#endif // defined(useSerialLCD)
-
-#if defined(useBluetooth)
-#if ( defined(useBluetoothSerialPort0) + defined(useBluetoothSerialPort1) + defined(useBluetoothSerialPort2) + defined(useBluetoothSerialPort3) ) != 1
-#error *** Bluetooth interface requires exactly one serial port!!! ***
-#endif // ( defined(useBluetoothSerialPort0) + defined(useBluetoothSerialPort1) + defined(useBluetoothSerialPort2) + defined(useBluetoothSerialPort3) ) != 1
-#endif // defined(useBluetooth)
-
-#if defined(useDebugTerminal)
-#if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalUSBserial) ) != 1
-#error *** Terminal Output requires exactly one I/O port!!! ***
-#endif // ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalUSBserial) ) != 1
-#endif // defined(useDebugTerminal)
-
-#if ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingUSBserial) ) != 1
-#if defined(useJSONoutput)
-#error *** JSON Output requires exactly one I/O port!!! ***
-#endif // defined(useJSONoutput)
-#if defined(useDataLoggingOutput)
-#error *** Logging Output requires exactly one I/O port!!! ***
-#endif // defined(useDataLoggingOutput)
-#endif // ( defined(useLoggingSerialPort0) + defined(useLoggingSerialPort1) + defined(useLoggingSerialPort2) + defined(useLoggingSerialPort3) + defined(useLoggingUSBserial) ) != 1
 
 #if defined(useUSBserial)
 #if defined(__AVR_ATmega328P__)
@@ -722,31 +1023,43 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #endif // defined(__AVR_ATmega2560__)
 #endif // defined(useUSBserial)
 
+#if defined(useSerial0Port)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and Serial Port 0!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#endif // defined(useSerial0Port)
+
 #if defined(useSerial1Port)
-#if defined(__AVR_ATmega328P__)
-#error *** Cannot use ATmega328/128 hardware and useSerial1Port!!! ***
-#endif // defined(__AVR_ATmega328P__)
 #if defined(useTinkerkitLCDmodule)
 #error *** Serial Port 1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
 #endif // defined(useTinkerkitLCDmodule)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and Serial Port 1!!! ***
+#endif // defined(__AVR_ATmega328P__)
 #endif // defined(useSerial1Port)
 
-#if defined(__AVR_ATmega328P__)
-#if defined(useSerial1Port) || defined(useSerial2Port) || defined(useSerial3Port)
-#error *** Cannot use ATmega328/128 and configured serial port!!! ***
-#endif // defined(useSerial1Port) || defined(useSerial2Port) || defined(useSerial3Port)
-#endif // defined(__AVR_ATmega328P__)
-
+#if defined(useSerial2Port)
 #if defined(__AVR_ATmega32U4__)
-#if defined(useSerial0Port) || defined(useSerial2Port) || defined(useSerial3Port)
-#error *** Cannot use ATmega32U4 and configured serial port!!! ***
-#endif // defined(useSerial0Port) || defined(useSerial2Port) || defined(useSerial3Port)
+#error *** Cannot use ATmega32U4 and Serial Port 2!!! ***
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and Serial Port 2!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#endif // defined(useSerial2Port)
+
+#if defined(useSerial3Port)
+#if defined(__AVR_ATmega32U4__)
+#error *** Cannot use ATmega32U4 and Serial Port 3!!! ***
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega328P__)
+#error *** Cannot use ATmega328/128 and Serial Port 3!!! ***
+#endif // defined(__AVR_ATmega328P__)
+#endif // defined(useSerial3Port)
 
 // Really, dcb? Really? You couldn't have used something else for LCD data bit 3?
-#if defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && defined(useActivityLED)
+#if defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && ( defined(useActivityLED) || defined(useHardwareSPI) )
 #error *** CANNOT use useLegacyLCD and useActivityLED!!! ***
-#endif // defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && defined(useActivityLED)
+#endif // defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && ( defined(useActivityLED) || defined(useHardwareSPI) )
 
 #if defined(useSoftwareClock) && defined(useDeepSleep)
 #error *** CANNOT use both useSoftwareClock and useDeepSleep!!! ***
@@ -755,4 +1068,10 @@ const unsigned long myBaudRate3 = 19200ul;	// (ATmega2560 board)
 #if defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
 #error *** CANNOT use both useCarVoltageOutput and useChryslerBaroSensor!!! ***
 #endif // defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
+
+#if defined(useHardwareSPI)
+#if defined(__AVR_ATmega328P__) && ( defined(useOutputPins) || defined(useActivityLED) )
+#error *** Conflict exists between useHardwareSPI and useOutputPins / useActivityLED!!! ***
+#endif // defined(__AVR_ATmega328P__) && ( defined(useOutputPins) || defined(useActivityLED) )
+#endif // defined(useHardwareSPI)
 

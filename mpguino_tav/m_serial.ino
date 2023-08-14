@@ -25,7 +25,7 @@ static void serial0::init(void)
 #endif // defined(__AVR_ATmega328P__)
 
 	// calculate initial baudrate setting
-	myubbr0 = (F_CPU / 4 / myBaudRate0 - 1) / 2;
+	myubbr0 = (F_CPU / 4 / serial0BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR0A = (1 << U2X0);
@@ -34,7 +34,7 @@ static void serial0::init(void)
 	{
 
 		UCSR0A = 0;
-		myubbr0 = (F_CPU / 8 / myBaudRate0 - 1) / 2;
+		myubbr0 = (F_CPU / 8 / serial0BaudRate - 1) / 2;
 
 	}
 
@@ -189,7 +189,7 @@ static void serial1::init(void)
 	PRR1 &= ~(1 << PRUSART1);
 
 	// calculate initial baudrate setting
-	myubbr1 = (F_CPU / 4 / myBaudRate1 - 1) / 2;
+	myubbr1 = (F_CPU / 4 / serial1BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR1A = (1 << U2X1);
@@ -198,7 +198,7 @@ static void serial1::init(void)
 	{
 
 		UCSR1A = 0;
-		myubbr1 = (F_CPU / 8 / myBaudRate1 - 1) / 2;
+		myubbr1 = (F_CPU / 8 / serial1BaudRate - 1) / 2;
 
 	}
 
@@ -343,7 +343,7 @@ static void serial2::init(void)
 	PRR1 &= ~(1 << PRUSART2);
 
 	// calculate initial baudrate setting
-	myubbr2 = (F_CPU / 4 / myBaudRate2 - 1) / 2;
+	myubbr2 = (F_CPU / 4 / serial2BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR2A = (1 << U2X2);
@@ -352,7 +352,7 @@ static void serial2::init(void)
 	{
 
 		UCSR2A = 0;
-		myubbr2 = (F_CPU / 8 / myBaudRate2 - 1) / 2;
+		myubbr2 = (F_CPU / 8 / serial2BaudRate - 1) / 2;
 
 	}
 
@@ -492,7 +492,7 @@ static void serial3::init(void)
 	PRR1 &= ~(1 << PRUSART3);
 
 	// calculate initial baudrate setting
-	myubbr3 = (F_CPU / 4 / myBaudRate3 - 1) / 2;
+	myubbr3 = (F_CPU / 4 / serial3BaudRate - 1) / 2;
 
 	// clear all clearable flags, disable multiprocessor comms, set double speed
 	UCSR3A = (1 << U2X3);
@@ -501,7 +501,7 @@ static void serial3::init(void)
 	{
 
 		UCSR3A = 0;
-		myubbr3 = (F_CPU / 8 / myBaudRate3 - 1) / 2;
+		myubbr3 = (F_CPU / 8 / serial3BaudRate - 1) / 2;
 
 	}
 
