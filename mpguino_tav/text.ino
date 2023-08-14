@@ -1,4 +1,16 @@
-/* text string output section */
+/* text support section */
+
+static uint8_t text::charIn(interfaceDevice &dev)
+{
+
+	uint8_t retVal;
+
+	if (dev.chrIn) retVal = dev.chrIn();
+	else retVal = 0;
+
+	return retVal;
+
+}
 
 static void text::gotoXY(interfaceDevice &dev, uint8_t xPos, uint8_t yPos)
 {
@@ -151,7 +163,7 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 static void text::initStatus(interfaceDevice &dev)
 {
 
-	delayS(0);
+	heart::delayS(0);
 
 #if defined(blankScreenOnMessage)
 	charOut(dev, 0x0C); // clear the entire screen
@@ -165,7 +177,7 @@ static void text::commitStatus(interfaceDevice &dev)
 {
 
 	newLine(dev);
-	delayS(holdDelay);
+	heart::delayS(holdDelay);
 
 }
 
@@ -253,6 +265,132 @@ static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
 
 	for (uint8_t i = 7; i < 8; i--) hexByteOut(dev, vee->u8[i]);
 
+}
+
+static void text::tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
+{
+
+	union union_16 * tC = (union union_16 *)(&tripCalc);
+
+	tripFunctionOut(dev, tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+
+}
+
+static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
+{
+
+	uint8_t i;
+
+	// perform the required decimal formatting
+	translateCalcIdx(tripIdx, calcIdx, windowLength, decimalFlag);
+
+	if (mainCalcFuncVar.isValid & isValidFlag)
+	{
+
+		if (decimalFlag & dfBlinkCalc) mainCalcFuncVar.calcChar = ' ';
+		if (decimalFlag & dfBlinkTrip) mainCalcFuncVar.tripChar = ' ';
+
+		i = 0;
+
+		do
+		{
+
+			if ((decimalFlag & dfOutputTagFirst) ^ i)
+			{
+
+				if (decimalFlag & dfOutputTag)
+				{
+
+#if defined(useSpiffyTripLabels)
+					if (decimalFlag & dfOutputSpiffyTag)
+					{
+
+						charOut(dev, 0xF0 + mainCalcFuncVar.labelIdx);
+						charOut(dev, 0xF1 + mainCalcFuncVar.labelIdx);
+
+					}
+					else
+					{
+
+						charOut(dev, mainCalcFuncVar.tripChar);
+						charOut(dev, mainCalcFuncVar.calcChar);
+
+					}
+
+#else // defined(useSpiffyTripLabels)
+					charOut(dev, mainCalcFuncVar.tripChar);
+					charOut(dev, mainCalcFuncVar.calcChar);
+
+#endif // defined(useSpiffyTripLabels)
+				}
+
+			}
+			else
+			{
+
+				if (decimalFlag & dfBlinkCalc) charOut(dev, ' ', windowLength); // output blanks corresponding to number
+				else numberOut(dev, decimalFlag);
+
+			}
+
+		}
+		while ((i++) < 2);
+
+	}
+	else
+	{
+
+		if (windowLength)
+		{
+
+			if (decimalFlag & dfOutputTag) windowLength += 2;
+
+			charOut(dev, ' ', windowLength);
+
+		}
+
+	}
+
+}
+
+static void text::numberOut(interfaceDevice &dev, uint8_t decimalFlag)
+{
+
+	uint8_t c;
+	uint8_t f;
+	char * strBuffer;
+
+	if ((decimalFlag & dfOutputBluetooth) == dfOutputBluetooth)
+	{
+
+		f = 0;
+		strBuffer = nBuff;
+
+		do
+		{
+
+			c = * strBuffer++;
+
+			if (((c >= '1') && (c <= '9')) || ((* strBuffer) == 0)) f = 1;
+
+			if ((c != '.') && (f)) c = charOut(dev, c);
+
+		}
+		while (c);
+
+	}
+	else stringOut(dev, nBuff); // output the number
+
+#if defined(useDebugTerminal) || defined(useJSONoutput)
+	if ((decimalFlag & dfOutputLabelCheck) == dfOutputLabel)
+	{
+
+		charOut(dev, ' ');
+		stringOut(dev, mainCalcFuncVar.calcFormatLabelPtr);
+
+	}
+
+#endif // defined(useDebugTerminal) || defined(useJSONoutput)
 }
 
 static const char * findStr(const char * str, uint8_t strIdx)
@@ -412,19 +550,18 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 //
 // if no window length is specified, this routine just removes all leading spaces
 //
-// decimalFlag currently has three bits defined:
+// decimalFlag currently has three bits defined within ull2str below:
 // 1xxx xxxx - fill overflow string from all 9s instead of all '-' characters
 // x1xx xxxx - ignore decimal point character in window length consideration (used with useBigNumberDisplay)
 // xx1x xxxx - suppress autoranging (used with useBluetooth)
 //
 // the following bits are also defined in decimalFlag, but are used in other functions instead of ull2str below
-// xxx1 xxxx - output trip label (used in outputTripFunctionValue, with useJSONoutput and useDebugTerminal)
-// xxxx 1xxx - output trip character after number (used in outputTripFunctionValue, with useDebugTerminal)
-// xxxx x1xx - suppress leading spaces/zeros/decimal point (used in outputTripFunctionValue, with useBluetooth)
+// xxx1 xxxx - output trip label (used in tripFunctionOut, with useJSONoutput and useDebugTerminal)
+// xxxx 1xxx - suppress leading spaces/zeros/decimal point (used in tripFunctionOut, with useBluetooth)
 //
 // sample debug monitor outputs:
 //
-// ]0<6.2u (overflow='-', do not ignore decimal point)        ]c0<6.2u (overflow='9', ignore decimal point)
+// ]6<2.0u (overflow='-', do not ignore decimal point)        ]6<2.c0u (overflow='9', ignore decimal point)
 // 00: 00 06 02                                               00: c0 06 02
 //     0000000000000005 -   0.01 -                                0000000000000005 -    0.01 -
 // 01: 0000000000000037 -   0.06 -                            01: 0000000000000037 -    0.06 -

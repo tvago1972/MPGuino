@@ -1,33 +1,26 @@
-static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+static void translateCalcIdx(uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
-	uint8_t tripIdx;
-	uint8_t calcIdx;
 
-	calcIdx = tC->u8[0];
-	tripIdx = tC->u8[1];
-
-	return translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag);
+	translateCalcIdx(tC->u8[1], tC->u8[0], windowLength, decimalFlag);
 
 }
 
-static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
+static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
 {
-
-	calcFuncObj thisCalcFuncObj;
 
 	uint8_t calcFmtIdx;
 	uint8_t i;
 
-	thisCalcFuncObj.isValid = 0;
+	mainCalcFuncVar.isValid = 0;
 
-	if (tripIdx < tripSlotTotalCount) thisCalcFuncObj.isValid ^= (isValidTripIdx);
+	if (tripIdx < tripSlotTotalCount) mainCalcFuncVar.isValid ^= (isValidTripIdx);
 
 	if (calcIdx < dfMaxValCalcCount)
 	{
 
-		thisCalcFuncObj.isValid ^= (isValidCalcIdx);
+		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
 		if (activityFlags & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
 		{
@@ -36,10 +29,10 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 
 		}
 
-		thisCalcFuncObj.tripIdx = tripIdx;
-		thisCalcFuncObj.calcIdx = calcIdx;
+		mainCalcFuncVar.tripIdx = tripIdx;
+		mainCalcFuncVar.calcIdx = calcIdx;
 
-		thisCalcFuncObj.suppressTripLabel = ((calcIdx < dfMaxValTripFunction) ? 0 : 0x80);
+		mainCalcFuncVar.suppressTripLabel = ((calcIdx < dfMaxValTripFunction) ? 0 : 0x80);
 
 		if (calcIdx < dfMaxValDisplayCount)
 		{
@@ -51,42 +44,40 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		}
 		else calcFmtIdx = calcFormatTimeInMillisecondsIdx;
 
-		thisCalcFuncObj.calcFmtIdx = calcFmtIdx;
+		mainCalcFuncVar.calcFmtIdx = calcFmtIdx;
 
 		i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
 
-		if ((decimalFlag & dfBluetoothOutput) && (i & 0xF0)) thisCalcFuncObj.decimalPlaces = (i >> 4); // fetch useBluetooth supplemental data, if present
-		else thisCalcFuncObj.decimalPlaces = (i & 0x0F); // strip off useBluetooth supplemental data
+		if (((decimalFlag & dfOutputBluetooth) == dfOutputBluetooth) && (i & 0xF0)) mainCalcFuncVar.decimalPlaces = (i >> 4); // fetch useBluetooth supplemental data, if present
+		else mainCalcFuncVar.decimalPlaces = (i & 0x0F); // strip off useBluetooth supplemental data
 
-		if (thisCalcFuncObj.suppressTripLabel) thisCalcFuncObj.tripChar = ' ';
-		else thisCalcFuncObj.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
+		if (mainCalcFuncVar.suppressTripLabel) mainCalcFuncVar.tripChar = ' ';
+		else mainCalcFuncVar.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
 
-		thisCalcFuncObj.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
+		mainCalcFuncVar.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
 
 	}
 
-	if (thisCalcFuncObj.isValid & isValidCalcObj) thisCalcFuncObj.isValid ^= (isValidFlag);
+	if (mainCalcFuncVar.isValid & isValidCalcObj) mainCalcFuncVar.isValid ^= (isValidFlag);
 
-	thisCalcFuncObj.strBuffer = strBuff;
-
-	if (thisCalcFuncObj.isValid)
+	if (mainCalcFuncVar.isValid)
 	{
 
 #if defined(useDebugTerminal) || defined(useJSONoutput)
-		thisCalcFuncObj.calcFormatLabelPtr = findStr(calcFormatLabels, thisCalcFuncObj.calcFmtIdx);
+		mainCalcFuncVar.calcFormatLabelPtr = findStr(calcFormatLabels, mainCalcFuncVar.calcFmtIdx);
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
-		if (thisCalcFuncObj.calcFmtIdx == calcFormatTimeHHmmSSIdx)
+		if (mainCalcFuncVar.calcFmtIdx == calcFormatTimeHHmmSSIdx)
 		{
 
-			ull2str(strBuff, thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx);
+			ull2str(nBuff, mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx);
 
 			if (windowLength > 6)
 			{
 
 				i = 6;
 
-				for (uint8_t x = windowLength; x <= windowLength; x--) strBuff[(uint16_t)(x)] = ((i < 7) ? strBuff[(uint16_t)(i--)] : ' ');
+				for (uint8_t x = windowLength; x <= windowLength; x--) nBuff[(uint16_t)(x)] = ((i < 7) ? nBuff[(uint16_t)(i--)] : ' ');
 
 			}
 
@@ -94,8 +85,8 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 		else
 		{
 
-			thisCalcFuncObj.value = SWEET64::doCalculate(thisCalcFuncObj.tripIdx, thisCalcFuncObj.calcIdx); // perform calculation
-			ull2str(strBuff, thisCalcFuncObj.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
+			mainCalcFuncVar.value = SWEET64::doCalculate(mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx); // perform calculation
+			ull2str(nBuff, mainCalcFuncVar.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
 
 		}
 
@@ -103,59 +94,10 @@ static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * str
 	else
 	{
 
-		strcpy_P(strBuff, overFlowStr);
-		thisCalcFuncObj.strBuffer[(uint16_t)(windowLength)] = 0;
+		strcpy_P(nBuff, overFlowStr);
+		nBuff[(uint16_t)(windowLength)] = 0;
 
 	}
-
-	return thisCalcFuncObj;
 
 }
 
-#if defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
-static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag)
-{
-
-	uint8_t c;
-	uint8_t f;
-
-	calcFuncObj thisCalcFuncObj;
-
-	// perform the required decimal formatting
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, strBuff, windowLength, decimalFlag);
-
-	if (decimalFlag & dfBluetoothOutput)
-	{
-
-		f = 0;
-
-		do
-		{
-
-			c = * thisCalcFuncObj.strBuffer++;
-
-			if (((c >= '1') && (c <= '9')) || ((* thisCalcFuncObj.strBuffer) == 0)) f = 1;
-
-			if ((c != '.') && (f)) c = text::charOut(dev, c);
-
-		}
-		while (c);
-
-	}
-	else text::stringOut(dev, thisCalcFuncObj.strBuffer); // output the number
-
-#if defined(useDebugTerminal) || defined(useJSONoutput)
-	if ((decimalFlag & dfSuppressLabel) == 0)
-	{
-
-		text::charOut(dev, ' ');
-		text::stringOut(dev, thisCalcFuncObj.calcFormatLabelPtr);
-
-	}
-
-#endif // defined(useDebugTerminal) || defined(useJSONoutput)
-	if (decimalFlag & dfOutputTripChar) text::charOut(dev, thisCalcFuncObj.tripChar);
-
-}
-
-#endif // defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)

@@ -15,9 +15,19 @@ namespace bluetooth /* Bluetooth interface terminal section prototype */
 	static uint16_t findFormat(uint8_t inpChar);
 	static void mainProcess(void);
 	static void mainOutput(void);
+#if defined(useBluetoothAdaFruitSPI)
+	static void chrOut(uint8_t chr);
+	static uint8_t chrIn(void);
+#endif // defined(useBluetoothAdaFruitSPI)
 
 }
 
+#if defined(useBluetoothAdaFruitSPI)
+interfaceDevice devBluetooth;
+
+static uint8_t SPIconfigBluetooth;
+
+#endif // defined(useBluetoothAdaFruitSPI)
 /*
 
 list of commands sent from MPGuino Blue android app
@@ -73,6 +83,7 @@ static uint8_t btInputState;
 static const uint8_t btiStringInput =			0b10000000;
 static const uint8_t btiGetSecondaryCharacter =	0b01000000;
 
+static uint8_t btDelayFlag;
 static uint8_t btOutputState;
 
 static const uint8_t btoFlagActiveOutput =		0b10000000;

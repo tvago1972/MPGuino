@@ -85,7 +85,7 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 static void accelerationTest::init(void)
 {
 
-	changeBitFlags(accelerationFlags, accelTestClearFlags, 0);
+	heart::changeBitFlags(accelerationFlags, accelTestClearFlags, 0);
 
 	lastAccelTestStatus = 0;
 	accelTestStatus = 0;
@@ -210,7 +210,7 @@ static void accelerationTest::triggerTest(void)
 	{
 
 		// reset accel test capture flags, and signal that accel test is cancelled
-		changeBitFlags(accelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
+		heart::changeBitFlags(accelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
 		EEPROM::writeByte(pDragAutoFlagIdx, 0);
@@ -224,13 +224,13 @@ static void accelerationTest::triggerTest(void)
 		if (activityFlags & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
 		{
 
-			changeBitFlags(accelerationFlags, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
+			heart::changeBitFlags(accelerationFlags, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
 
 			tripVar::reset(dragRawHalfSpeedIdx); // zero out acceleration 1/2 speed setpoint data
 			tripVar::reset(dragRawFullSpeedIdx); // zero out acceleration full speed setpoint data
 			tripVar::reset(dragRawDistanceIdx); // zero out acceleration distance setpoint data
 
-			changeBitFlags(accelerationFlags, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in accelerationFlags register
+			heart::changeBitFlags(accelerationFlags, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in accelerationFlags register
 
 			retVal = attTriggerNormal;
 

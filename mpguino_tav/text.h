@@ -4,8 +4,10 @@ static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx);
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag);
 
-namespace text /* text string output section prototype */
+namespace text /* text support section prototype */
 {
+
+	static uint8_t charIn(interfaceDevice &dev);
 
 	static void gotoXY(interfaceDevice &dev, uint8_t x, uint8_t y);
 	static void newLine(interfaceDevice &dev);
@@ -28,19 +30,30 @@ namespace text /* text string output section prototype */
 	static void hexWordOut(interfaceDevice &dev, uint16_t val);
 	static void hexDWordOut(interfaceDevice &dev, uint32_t val);
 	static void hexLWordOut(interfaceDevice &dev, uint64_t * val);
+	static void tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
+	static void tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
+	static void numberOut(interfaceDevice &dev, uint8_t decimalFlag);
 
 };
 
-static const char overFlowStr[] PROGMEM = "----------";
-static const char overFlow9Str[] PROGMEM = "9999999999";
+static const char overFlowStr[] PROGMEM =	"----------";
+static const char overFlow9Str[] PROGMEM =	"9999999999";
 
 static const uint8_t dfOverflow9s =			0b10000000;
 static const uint8_t dfIgnoreDecimalPoint =	0b01000000;
 static const uint8_t dfSuppressAutoRange =	0b00100000;
 
 static const uint8_t dfOutputLabel =		0b00010000;
-static const uint8_t dfOutputTripChar =		0b00001000;
-static const uint8_t dfBluetoothOutput =	0b00000100;
+
+static const uint8_t dfOutputSpiffyTag =	0b00010000;
+static const uint8_t dfOutputTag =			0b00001000;
+static const uint8_t dfBlinkCalc =			0b00000100;
+static const uint8_t dfBlinkTrip =			0b00000010;
+static const uint8_t dfOutputTagFirst =		0b00000001;
+#define dfOutputNumberLast dfOutputTagFirst
+
+static const uint8_t dfOutputBluetooth =	(dfOverflow9s | dfIgnoreDecimalPoint | dfSuppressAutoRange);
+static const uint8_t dfOutputLabelCheck =	(dfOutputSpiffyTag | dfOutputTag);
 
 static const uint8_t prgmMultiplyBy100[] PROGMEM = {
 	instrMul2byByte, 100,								// multiply result by 100

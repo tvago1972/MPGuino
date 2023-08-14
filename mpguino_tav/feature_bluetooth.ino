@@ -19,8 +19,35 @@ static const uint8_t prgmCheckInstantSpeed[] PROGMEM = {
 static void bluetooth::init(void)
 {
 
+#if defined(useBluetoothAdaFruitSPI)
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	devBluetooth.chrOut = chrOut;
+	devBluetooth.chrIn = chrIn;
+
+	PORTB &= ~(1 << PORTB0); // disable CS when this pin becomes an output
+	PORTD &= ~(1 << PORTD4); // force /RST low when this pin becomes an output
+
+	DDRB |= (1 << DDB0); // turn CS to an output pin
+	DDRD &= ~(1 << DDD7); // turn IRQ to an input pin
+	DDRD |= (1 << DDD4); // turn /RST to an output pin
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	heart::doDelay0(delay0(delay0005msTick)); // hold /RST low for 5 ms
+
+	PORTD |= (1 << PORTD4); // pull /RST high
+	PORTB |= (1 << PORTB0); // enable CS
+
+	heart::doDelay0(delay0(delay0002msTick)); // wait for 2 ms to allow Bluefruit module to become ready
+
+#else // defined(useBluetoothAdaFruitSPI)
 	devBluetooth.controlFlags &= ~(odvFlagCRLF);
 
+#endif // defined(useBluetoothAdaFruitSPI)
 	btInputState = 0;
 	btOutputState = btoFlagContinuousOutput;
 	btOutputListIdx = btolTripFunctionIdx;
@@ -30,11 +57,36 @@ static void bluetooth::init(void)
 static void bluetooth::shutdown(void)
 {
 
+#if defined(useBluetoothAdaFruitSPI)
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	PORTB &= ~(1 << PORTB0);
+	PORTD &= ~((1 << PORTD7) | (1 << PORTD4));
+
+	DDRB |= (1 << DDB0); // turn all PORTB pins to input
+	DDRD &= ~((1 << DDD7) | (1 << DDD4)); // turn all PORTD pins to input
+
+	SREG = oldSREG; // restore interrupt flag status
+
+#endif // defined(useBluetoothAdaFruitSPI)
 	btInputState = 0;
 	btOutputState = 0;
 
 }
 
+#if defined(useBluetoothAdaFruitSPI)
+static void bluetooth::chrOut(uint8_t chr)
+{
+}
+
+static uint8_t bluetooth::chrIn(void)
+{
+}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 static uint16_t bluetooth::findFormat(uint8_t inpChar)
 {
 
@@ -60,7 +112,7 @@ static void bluetooth::mainProcess(void)
 	do
 	{
 
-		btChar = devBluetooth.chrIn(); // read in a character from the input buffer
+		btChar = text::charIn(devBluetooth); // read in a character from the input buffer
 
 		if (btChar) // if a valid character was read in
 		{
@@ -77,7 +129,7 @@ static void bluetooth::mainProcess(void)
 					{
 
 						case 'M':	// output selected EEPROM parameter list
-							changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
+							heart::changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
 
 							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
 
@@ -113,7 +165,7 @@ static void bluetooth::mainProcess(void)
 					{
 
 						case '!':
-							changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
+							heart::changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
 
 							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
 
@@ -205,13 +257,13 @@ static void bluetooth::mainProcess(void)
 												if (btF->u8[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
 												parameterEdit::onEEPROMchange(prgmWriteBTparameterValue, btF->u8[1]);
-												changeBitFlags(timer0Command, 0, t0cInputReceived);
+												heart::changeBitFlags(timer0Command, 0, t0cInputReceived);
 												break;
 
 											case tFetchMainProgramValue:
 												str2ull(btInpBuff); // convert digit string into a number
 												SWEET64::runPrgm(prgmWriteMainProgramValue, btF->u8[1]);
-												changeBitFlags(timer0Command, 0, t0cInputReceived);
+												heart::changeBitFlags(timer0Command, 0, t0cInputReceived);
 												break;
 
 											default:
@@ -249,7 +301,7 @@ static void bluetooth::mainProcess(void)
 		{
 
 			btOutputState &= ~(btoFlagFlushBuffer);
-			delay0(delay0020msTick); // set for a 20 ms delay
+			btDelayFlag = heart::delay0(delay0020msTick); // set for a 20 ms delay
 			btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 		}
@@ -260,7 +312,7 @@ static void bluetooth::mainProcess(void)
 	if (btOutputState & btoFlagDelay) // check if output delay is finished
 	{
 
-		if ((timer0Command & t0cDoDelay) == 0) btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
+		if ((timer0DelayFlags & btDelayFlag) == 0) btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
 
 	}
 
@@ -291,13 +343,13 @@ static void bluetooth::mainProcess(void)
 
 					btChar = ((btF->u8[0] < dfMaxValDisplayCount) ? 7 : 10);
 
-					outputTripFunctionValue(devBluetooth, btF->u8[1], btF->u8[0], pBuff, btChar, (dfOverflow9s | dfIgnoreDecimalPoint| dfSuppressAutoRange | dfBluetoothOutput));
+					text::tripFunctionOut(devBluetooth, btFormat, btChar, (dfOutputBluetooth));
 
 #if defined(bluetoothSerialBuffer)
 					btOutputState |= (btoFlagFlushBuffer);
 
 #else // defined(bluetoothSerialBuffer)
-					delay0(delay0020msTick); // set for a 20 ms delay
+					btDelayFlag = heart::delay0(delay0020msTick); // set for a 20 ms delay
 					btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 #endif // defined(bluetoothSerialBuffer)
@@ -319,7 +371,7 @@ static void bluetooth::mainOutput(void)
 	if (activityFlags & afBluetoothOutput)
 	{
 
-		changeBitFlags(activityFlags, afBluetoothOutput, 0); // acknowledge update bluetooth output command
+		heart::changeBitFlags(activityFlags, afBluetoothOutput, 0); // acknowledge update bluetooth output command
 
 		if ((btOutputState & btoOutputEnabledFlags) && ((btOutputState & btoFlagActiveOutput) == 0))
 		{

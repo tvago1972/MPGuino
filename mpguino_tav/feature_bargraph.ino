@@ -193,21 +193,9 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx)
 {
 
-	calcFuncObj thisCalcFuncObj;
-
 	text::stringOut(devLCD, bgSpaces, lineNumber);
 
-	thisCalcFuncObj = translateCalcIdx(tripIdx, calcIdx, nBuff, (LCDcharWidth / 2) - 2, 0);
-
-	if (thisCalcFuncObj.isValid & isValidFlag)
-	{
-
-		text::charOut(devLCD, thisCalcFuncObj.tripChar);
-		text::charOut(devLCD, thisCalcFuncObj.calcChar);
-
-		text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
-
-	}
+	text::tripFunctionOut(devLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
 
 	text::newLine(devLCD);
 

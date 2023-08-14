@@ -157,7 +157,7 @@ void coastdown::goDisplay(void)
 		ull2str(nBuff, 0, tFormatToNumber);
 
 		text::stringOut(devLCD, parmLabels, i); // print parameter name at top left
-		text::stringOut(devLCD, nBuff);
+		text::numberOut(devLCD, 0);
 
 	}
 

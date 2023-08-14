@@ -1,27 +1,30 @@
+static void translateCalcIdx(uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
+static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
+
 typedef struct
 {
 
-  uint8_t isValid;
-  uint8_t suppressTripLabel;
-  uint8_t tripIdx;
-  uint8_t calcIdx;
-  uint8_t tripChar;
-  uint8_t calcChar;
-  uint8_t calcFmtIdx;
-  uint8_t decimalPlaces;
-  uint32_t value;
-  char * strBuffer;
+	uint8_t isValid;
+	uint8_t suppressTripLabel;
+	uint8_t tripIdx;
+	uint8_t calcIdx;
+	uint8_t calcFmtIdx;
+	uint8_t tripChar;
+	uint8_t calcChar;
+	uint8_t decimalPlaces;
+	uint32_t value;
+#if defined(useSpiffyTripLabels)
+	uint8_t labelIdx;
+#endif // defined(useSpiffyTripLabels)
 #if defined(useDebugTerminal) || defined(useJSONoutput)
-  const char * calcFormatLabelPtr;
+	const char * calcFormatLabelPtr;
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
 } calcFuncObj;
 
-static calcFuncObj translateCalcIdx(uint16_t tripCalc, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-static calcFuncObj translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-#if defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
-static void outputTripFunctionValue(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, char * strBuff, uint8_t windowLength, uint8_t decimalFlag);
-#endif // defined(useDebugTerminal) || defined(useJSONoutput) || defined(useBluetooth)
+calcFuncObj mainCalcFuncVar;
+
+static char nBuff[17]; // used by bigDigit::, barGraphSupport::, systemInfo::, data logging, function result output routines
 
 // calculation indexes into SWEET64 S64programList[] for display functions to either screen or logging output
 #define nextAllowedValue 0
@@ -144,67 +147,67 @@ static const uint8_t tParseCharacterToReg =			nextAllowedValue;
 
 #if defined(useDebugTerminalLabels) || defined(useSWEET64trace)
 static const char terminalTripFuncNames[] PROGMEM = {
-	"tEngineRunTime" tcEOSCR			// engine runtime (hhmmss)
-	"tRangeTime" tcEOSCR				// estimated total runtime from full tank (hhmmss)
-	"tReserveTime" tcEOSCR				// estimated reserve runtime from full tank (hhmmss)
-	"tBingoTime" tcEOSCR				// estimated bingo fuel runtime from full tank (hhmmss)
-	"tTimeToEmpty" tcEOSCR				// estimated remaining engine runtime (hhmmss)
-	"tReserveTimeToEmpty" tcEOSCR		// estimated remaining reserve engine runtime (hhmmss)
-	"tBingoTimeToEmpty" tcEOSCR			// estimated bingo fuel quantity engine runtime (hhmmss)
-	"tMotionTime" tcEOSCR				// time vehicle in motion (hhmmss)
-	"tInjectorOpenTime" tcEOSCR			// fuel used (milliseconds)
-	"tInjectorTotalTime" tcEOSCR		// engine run time (milliseconds)
-	"tVSStotalTime" tcEOSCR				// time vehicle in motion (milliseconds)
-	"tEngineSpeed" tcEOSCR				// engine speed (1/m)
-	"tInjectorPulseCount" tcEOSCR		// fuel injector pulse count
-	"tVSSpulseCount" tcEOSCR			// VSS pulse count
-	"tDistance" tcEOSCR					// vehicle distance traveled (SI/SAE)
-	"tSpeed" tcEOSCR					// vehicle speed (SI/SAE)
-	"tFuelUsed" tcEOSCR					// fuel quantity used (SI/SAE)
-	"tFuelRate" tcEOSCR					// fuel consumption rate (SI/SAE)
-	"tFuelEcon" tcEOSCR					// fuel economy (SI/SAE)
-	"tRangeDistance" tcEOSCR			// estimated total distance on a full tank (SI/SAE)
-	"tReserveDistance" tcEOSCR			// estimated reserve fuel tank distance (SI/SAE)
-	"tBingoDistance" tcEOSCR			// estimated bingo fuel tank distance (SI/SAE)
-	"tDistanceToEmpty" tcEOSCR			// estimated remaining distance (SI/SAE)
-	"tReserveDistanceToEmpty" tcEOSCR	// estimated reserve remaining distance (SI/SAE)
-	"tBingoDistanceToEmpty" tcEOSCR		// estimated bingo remaining distance (SI/SAE)
+	"tEngineRunTime" tcEOS				// engine runtime (hhmmss)
+	"tRangeTime" tcEOS					// estimated total runtime from full tank (hhmmss)
+	"tReserveTime" tcEOS				// estimated reserve runtime from full tank (hhmmss)
+	"tBingoTime" tcEOS					// estimated bingo fuel runtime from full tank (hhmmss)
+	"tTimeToEmpty" tcEOS				// estimated remaining engine runtime (hhmmss)
+	"tReserveTimeToEmpty" tcEOS			// estimated remaining reserve engine runtime (hhmmss)
+	"tBingoTimeToEmpty" tcEOS			// estimated bingo fuel quantity engine runtime (hhmmss)
+	"tMotionTime" tcEOS					// time vehicle in motion (hhmmss)
+	"tInjectorOpenTime" tcEOS			// fuel used (milliseconds)
+	"tInjectorTotalTime" tcEOS			// engine run time (milliseconds)
+	"tVSStotalTime" tcEOS				// time vehicle in motion (milliseconds)
+	"tEngineSpeed" tcEOS				// engine speed (1/m)
+	"tInjectorPulseCount" tcEOS			// fuel injector pulse count
+	"tVSSpulseCount" tcEOS				// VSS pulse count
+	"tDistance" tcEOS					// vehicle distance traveled (SI/SAE)
+	"tSpeed" tcEOS						// vehicle speed (SI/SAE)
+	"tFuelUsed" tcEOS					// fuel quantity used (SI/SAE)
+	"tFuelRate" tcEOS					// fuel consumption rate (SI/SAE)
+	"tFuelEcon" tcEOS					// fuel economy (SI/SAE)
+	"tRangeDistance" tcEOS				// estimated total distance on a full tank (SI/SAE)
+	"tReserveDistance" tcEOS			// estimated reserve fuel tank distance (SI/SAE)
+	"tBingoDistance" tcEOS				// estimated bingo fuel tank distance (SI/SAE)
+	"tDistanceToEmpty" tcEOS			// estimated remaining distance (SI/SAE)
+	"tReserveDistanceToEmpty" tcEOS		// estimated reserve remaining distance (SI/SAE)
+	"tBingoDistanceToEmpty" tcEOS		// estimated bingo remaining distance (SI/SAE)
 #if defined(useFuelCost)
-	"tFuelCostUsed" tcEOSCR				// cost of fuel quantity used
-	"tFuelRateCost" tcEOSCR				// fuel rate cost in currency units
-	"tFuelCostPerDistance" tcEOSCR		// fuel cost per unit distance (SI/SAE)
-	"tDistancePerFuelCost" tcEOSCR		// distance per unit fuel cost (SI/SAE)
+	"tFuelCostUsed" tcEOS				// cost of fuel quantity used
+	"tFuelRateCost" tcEOS				// fuel rate cost in currency units
+	"tFuelCostPerDistance" tcEOS		// fuel cost per unit distance (SI/SAE)
+	"tDistancePerFuelCost" tcEOS		// distance per unit fuel cost (SI/SAE)
 #endif // defined(useFuelCost)
 #if defined(useDragRaceFunction)
-	"tAccelTestTime" tcEOSCR			// acceleration test time (sec)
+	"tAccelTestTime" tcEOS				// acceleration test time (sec)
 #endif // defined(useDragRaceFunction)
-	"tFuelQuantity" tcEOSCR				// tank total fuel quantity (SI/SAE)
-	"tReserveQuantity" tcEOSCR			// tank reserve fuel quantity (SI/SAE)
-	"tBingoQuantity" tcEOSCR			// tank bingo fuel quantity (SI/SAE)
-	"tRemainingFuel" tcEOSCR			// estimated remaining fuel quantity (SI/SAE)
-	"tReserveRemainingFuel" tcEOSCR		// estimated remaining reserve fuel quantity (SI/SAE)
-	"tBingoRemainingFuel" tcEOSCR		// estimated bingo fuel quantity remaining (SI/SAE)
+	"tFuelQuantity" tcEOS				// tank total fuel quantity (SI/SAE)
+	"tReserveQuantity" tcEOS			// tank reserve fuel quantity (SI/SAE)
+	"tBingoQuantity" tcEOS				// tank bingo fuel quantity (SI/SAE)
+	"tRemainingFuel" tcEOS				// estimated remaining fuel quantity (SI/SAE)
+	"tReserveRemainingFuel" tcEOS		// estimated remaining reserve fuel quantity (SI/SAE)
+	"tBingoRemainingFuel" tcEOS			// estimated bingo fuel quantity remaining (SI/SAE)
 #if defined(useDebugAnalog)
-	"tAnalogChannel" tcEOSCR			// DC voltage
+	"tAnalogChannel" tcEOS				// DC voltage
 #endif // defined(useDebugAnalog)
 #if defined(useCarVoltageOutput)
-	"tAlternatorChannel" tcEOSCR		// DC voltage
+	"tAlternatorChannel" tcEOS			// DC voltage
 #endif // defined(useCarVoltageOutput)
 #if defined(useChryslerMAPCorrection)
-	"tPressureChannel" tcEOSCR			// absolute pressure (SI/SAE)
+	"tPressureChannel" tcEOS			// absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useFuelCost)
-	"tFuelCostTank" tcEOSCR				// full tank fuel cost in currency units
-	"tFuelCostReserve" tcEOSCR			// reserve fuel quantity fuel cost in currency units
-	"tFuelCostBingo" tcEOSCR			// bingo fuel quantity cost in currency units
-	"tFuelCostRemaining" tcEOSCR		// value of estimated remaining total fuel quantity in currency units
-	"tFuelCostReserveRemaining" tcEOSCR	// value of estimated remaining reserve fuel quantity in currency units
-	"tFuelCostBingoRemaining" tcEOSCR	// value of estimated remaining bingo fuel quantity in currency units
+	"tFuelCostTank" tcEOS				// full tank fuel cost in currency units
+	"tFuelCostReserve" tcEOS			// reserve fuel quantity fuel cost in currency units
+	"tFuelCostBingo" tcEOS				// bingo fuel quantity cost in currency units
+	"tFuelCostRemaining" tcEOS			// value of estimated remaining total fuel quantity in currency units
+	"tFuelCostReserveRemaining" tcEOS	// value of estimated remaining reserve fuel quantity in currency units
+	"tFuelCostBingoRemaining" tcEOS		// value of estimated remaining bingo fuel quantity in currency units
 #endif // defined(useFuelCost)
 #if defined(useDragRaceFunction)
-	"tEstimatedEnginePower" tcEOSCR		// estimated engine power (SI/SAE)
-	"tDragSpeed" tcEOSCR				// acceleration test maximum vehicle speed (SI/SAE)
-	"tTrapSpeed" tcEOSCR				// acceleration test vehicle speed at defined distance (SI/SAE)
+	"tEstimatedEnginePower" tcEOS		// estimated engine power (SI/SAE)
+	"tDragSpeed" tcEOS					// acceleration test maximum vehicle speed (SI/SAE)
+	"tTrapSpeed" tcEOS					// acceleration test vehicle speed at defined distance (SI/SAE)
 #endif // defined(useDragRaceFunction)
 };
 

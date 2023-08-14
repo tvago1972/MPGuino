@@ -13,7 +13,7 @@ static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_
 
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-namespace JSON /* JSON formatting support section prototype */
+namespace JSONsupport /* JSON formatting support section prototype */
 {
 
 	static void init(interfaceDevice &dev);
@@ -26,7 +26,6 @@ namespace JSON /* JSON formatting support section prototype */
 	static void outputElementEnd(interfaceDevice &dev);
 	static void outputNumber(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx);
 	static void outputNumber(interfaceDevice &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces);
-	static void outputNumber(interfaceDevice &dev, union union_64 * an, uint8_t decimalPlaces);
 	static void outputNumber(interfaceDevice &dev, uint32_t an, uint8_t decimalPlaces);
 
 };
@@ -42,8 +41,24 @@ static const uint8_t JSONflagMany =			0b00001000;
 
 /* skybolt JSON packet output support section prototype */
 
-void doOutputJSONnumber(unsigned long an, uint8_t decimalPlaces, const char * labelStr);
-void doOutputJSON(void);
+#if defined(useDragRaceFunction)
+static void doOutputJSONnumber(uint32_t an, uint8_t decimalPlaces, const char * labelStr);
+#endif // defined(useDragRaceFunction)
+static void doOutputJSONfuelEcon(const char * prefixStr, uint8_t tripIdx);
+static void doOutputJSONremainingFuel(void);
+static void doOutputJSON(void);
+
+static const char tripStr[] PROGMEM = {
+	"trip " tcEOS
+};
+
+static const char semicolonTankStr[] PROGMEM = {
+	"; tank " tcEOS
+};
+
+static const char semicolonUsingStr[] PROGMEM = {
+	"; using " tcEOS
+};
 
 static const char JSONtitleStr[] PROGMEM = {
 	"title" tcEOS

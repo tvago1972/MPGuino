@@ -204,73 +204,60 @@ static void mainDisplay::outputPage(pageFunc pageFormatFunc, uint8_t cursorPos, 
 static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunction, uint8_t tripBlink, uint8_t calcBlink)
 {
 
-	calcFuncObj thisCalcFuncObj;
-
 	uint8_t x;
 	uint8_t y;
 	uint8_t tripBitmask;
 	uint8_t calcBitmask;
+	uint8_t windowLength;
 #if defined(useSpiffyTripLabels)
 	uint8_t tripPart;
 	uint8_t calcPart;
 	uint8_t localTripIdx;
 #endif // defined(useSpiffyTripLabels)
 
-	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? 0 : 0x1F); // determine if trip label component should blink or not
-	calcBitmask = ((mainLoopHeartBeat & calcBlink) ? 0 : 0x1F); // determine if function component should blink or not
+	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? dfBlinkTrip : 0); // determine if trip label component should blink or not
+	calcBitmask = ((mainLoopHeartBeat & calcBlink) ? dfBlinkCalc : 0); // determine if function component should blink or not
 
 	readingIdx &= 3;
-	x = (readingIdx & 1) * (LCDcharWidth / 2); // figure out horizontal component (0 or 8)
+	windowLength = LCDcharWidth / 2;
+	x = (readingIdx & 1) * windowLength; // figure out horizontal component (0 or 8)
 	y = (readingIdx & 2) >> 1; // figure out vertical component (0 or 1)
-
-	thisCalcFuncObj = translateCalcIdx(tripFunction, nBuff, (LCDcharWidth / 2) - 2, 0);
-
-	text::gotoXY(devLCD, x, y);
-	if (calcBitmask) text::stringOut(devLCD, thisCalcFuncObj.strBuffer);
-	else
-	{
-
-		thisCalcFuncObj.calcChar = ' ';
-		text::charOut(devLCD, ' ', (LCDcharWidth / 2) - 2);
-
-	}
+	windowLength -= 2; // account for trip/function tag characters for tripFunctionOut
 
 #if defined(useSpiffyTripLabels)
 	readingIdx <<= 1;
 
-	text::charOut(devLCD, 0xF0 + readingIdx);
-	text::charOut(devLCD, 0xF1 + readingIdx);
+	mainCalcFuncVar.labelIdx = readingIdx;
 
 	readingIdx <<= 3;
 
-	if (thisCalcFuncObj.suppressTripLabel == 0) localTripIdx = findTripIdx(thisCalcFuncObj.tripIdx);
+#endif // defined(useSpiffyTripLabels)
+	text::gotoXY(devLCD, x, y);
+	text::tripFunctionOut(devLCD, tripFunction, windowLength, (tripBitmask | calcBitmask | dfOutputTag | dfOutputSpiffyTag));
+
+#if defined(useSpiffyTripLabels)
+	if (mainCalcFuncVar.suppressTripLabel == 0) localTripIdx = findTripIdx(mainCalcFuncVar.tripIdx);
+	else localTripIdx = 0;
 
 	for (uint8_t x = 0; x < 16; x++)
 	{
 
-		calcPart = pgm_read_byte(&calcFormatLabelCGRAM[(uint16_t)(thisCalcFuncObj.calcFmtIdx)][(uint16_t)(x)]); // read a byte of function label bit pattern
+		// provide for blinking function label component
+		if (calcBitmask) calcPart = 0;
+		else calcPart = pgm_read_byte(&calcFormatLabelCGRAM[(uint16_t)(mainCalcFuncVar.calcFmtIdx)][(uint16_t)(x)]); // read a byte of function label bit pattern
 
-		if (thisCalcFuncObj.suppressTripLabel) tripPart = 0;
+		if ((mainCalcFuncVar.tripChar == ' ') || (tripBitmask)) tripPart = 0; // provide for blinking trip label component
 		else
 		{
 
 			tripPart = (calcPart >> 5) & 0x03; // fetch partial address of trip label component
 			tripPart = pgm_read_byte(&tripFormatLabelCGRAM[(uint16_t)(localTripIdx)][(uint16_t)(tripPart)]); // read a byte of trip label bit pattern
-			tripPart &= tripBitmask; // provide for blinking trip label component
 
 		}
-
-		calcPart &= calcBitmask; // provide for blinking function label component
 
 		LCD::writeCGRAMbyte(readingIdx + x, calcPart | tripPart); // combine trip label and function label components
 
 	}
-
-#else // defined(useSpiffyTripLabels)
-	if (tripBitmask == 0) thisCalcFuncObj.tripChar = ' ';
-
-	text::charOut(devLCD, thisCalcFuncObj.tripChar);
-	text::charOut(devLCD, thisCalcFuncObj.calcChar);
 
 #endif // defined(useSpiffyTripLabels)
 }
@@ -279,6 +266,8 @@ static uint8_t mainDisplay::findTripIdx(uint8_t tripIdx)
 {
 
 	uint8_t i;
+
+	i = 0;
 
 	for (uint8_t x = 0; x < tripFormatIdxCount; x++) if (tripIdx == pgm_read_byte(&tripFormatReverseList[(uint16_t)(x)])) i = x;
 

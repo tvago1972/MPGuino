@@ -18,6 +18,8 @@ namespace clockSet
 
 };
 
+static char csBuff[17];
+
 #endif // defined(useClockDisplay)
 #if defined(useStatusMeter)
 namespace statusBar /* Status Meter Output support section prototype */
@@ -232,7 +234,7 @@ namespace bigDigit /* Big Digit output support section prototype */
 	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos);
 #endif // defined(useBigTimeDisplay)
 #if defined(useBigNumberDisplay)
-	static uint8_t outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
+	static void outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
 #endif // defined(useBigNumberDisplay)
 	static void outputNumberString(char * str);
 	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
