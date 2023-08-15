@@ -782,6 +782,15 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following display entries are supplemental non-menu display entries for options selected via configs.h 
 
+#if defined(useDragRaceFunction)
+	,{dragRaceDisplayIdx,			1,					4,								0,								accelerationTest::displayHandler,	bpListMiscViewer}
+#endif // defined(useDragRaceFunction)
+#if defined(useCoastDownCalculator)
+	,{coastdownDisplayIdx,			1,					4,								0,								coastdown::displayHandler,			bpListMiscViewer}
+#endif // defined(useCoastDownCalculator)
+
+// the following display entries are display entries whose cursor positions do not get saved into EEPROM
+
 	,{parameterEditDisplayIdx,		1,					12,								dfFullScreen,					parameterEdit::displayHandler,		bpListParameterEdit}
 #if defined(useClockDisplay)
 	,{clockSetDisplayIdx,			1,					4,								dfFullScreen,					clockSet::displayHandler,			bpListClockSet}
@@ -789,12 +798,6 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useScreenEditor)
 	,{displayEditDisplayIdx,		1,					8,								dfSplitScreen,					displayEdit::displayHandler,		bpListMainDisplayEdit}
 #endif // defined(useScreenEditor)
-#if defined(useDragRaceFunction)
-	,{dragRaceDisplayIdx,			1,					4,								0,								accelerationTest::displayHandler,	bpListMiscViewer}
-#endif // defined(useDragRaceFunction)
-#if defined(useCoastDownCalculator)
-	,{coastdownDisplayIdx,			1,					4,								0,								coastdown::displayHandler,			bpListMiscViewer}
-#endif // defined(useCoastDownCalculator)
 };
 
 #if defined(useLCDoutput)
