@@ -2157,6 +2157,16 @@ static uint32_t heart::cycles0(void)
 
 }
 
+static void heart::wait0(uint16_t ms)
+{
+
+	uint8_t delay0Channel;
+
+	delay0Channel = delay0(ms);
+	doDelay0(delay0Channel);
+
+}
+
 static void heart::doDelay0(uint8_t delay0Channel)
 {
 
