@@ -8,8 +8,8 @@ static void systemInfo::idleProcess(void)
 	uint8_t oldSREG;
 
 #endif // defined(useDebugCPUreading)
-	mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = heart::findCycle0Length(mainStart);
 	mainProgramVariables[(uint16_t)(mpIdleAccumulatorIdx)] = idleTimerLength;
+	mainProgramVariables[(uint16_t)(mpMainLoopAccumulatorIdx)] = heart::findCycle0Length(mainStart);
 
 	mainStart = heart::cycles0();
 	idleTimerLength = 0;

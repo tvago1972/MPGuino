@@ -313,7 +313,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	{
 
 		byt = bargraphData[(uint16_t)(x)];
-		blinkFlag = ((x == cursorPos) && (mainLoopHeartBeat & 136));
+		blinkFlag = ((x == cursorPos) && (mainLoopHeartBeat & 0b10001000));
 
 		switch (byt)
 		{
