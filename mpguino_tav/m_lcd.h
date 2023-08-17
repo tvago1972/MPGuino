@@ -21,9 +21,12 @@ namespace LCD /* LCD hardware support section prototype */
 	static void shutdown(void);
 	static void writeData(uint8_t value);
 	static void setBrightness(uint8_t idx);
-#if defined(useSerialLCD)
-	static void wait(uint16_t delayTickT1);
-#endif // defined(useSerialLCD)
+#if defined(useLCDcontrast)
+	static void setContrast(uint8_t idx);
+#endif // defined(useLCDcontrast)
+#if defined(useAdafruitRGBLCDshield)
+	static void setRGBcolor(uint8_t idx);
+#endif // defined(useAdafruitRGBLCDshield)
 #if defined(useLCDfonts)
 	static void loadCGRAMfont(const char * fontPtr);
 #endif // defined(useLCDfonts)
@@ -33,12 +36,6 @@ namespace LCD /* LCD hardware support section prototype */
 	static uint8_t peekCGRAMbyte(uint8_t cgrAddress);
 	static void flushCGRAM(void);
 #endif // defined(useLCDgraphics)
-#if defined(useLCDcontrast)
-	static void setContrast(uint8_t idx);
-#endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
-	static void setRGBcolor(uint8_t idx);
-#endif // defined(useAdafruitRGBLCDshield)
 #if defined(use4BitLCD)
 	static void writeCommand(uint8_t value);
 	static void writeByte(uint8_t value, uint8_t flags, uint8_t delay);
@@ -245,11 +242,6 @@ static const uint8_t lcdDisplayModes[] PROGMEM = {
 };
 
 #endif // defined(use4BitLCD)
-#if defined(useSerialLCD)
-static const uint16_t delayLCD100000usTick = (uint16_t)(ceil)((double)(100000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // serial LCD initialization delay
-static const uint16_t delayLCD005000usTick = (uint16_t)(ceil)((double)(5000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // serial LCD screen clear delay
-
-#endif // defined(useSerialLCD)
 #if defined(useBinaryLCDbrightness)
 static const uint8_t brightnessLength = 2;
 

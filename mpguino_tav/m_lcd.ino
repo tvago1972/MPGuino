@@ -4,6 +4,13 @@
 static void LCD::init(void)
 {
 
+#if defined(useSerialLCD)
+	devLCDserial.controlFlags &= ~(odvFlagCRLF);
+
+	heart::wait0(delay0100msTick); // wait for 100 ms to allow serial LCD to initialize
+
+#endif // defined(useSerialLCD)
+#if defined(use4BitLCD)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
@@ -21,13 +28,6 @@ static void LCD::init(void)
 
 	SREG = oldSREG; // restore interrupt flag status
 
-#if defined(useSerialLCD)
-	devLCDserial.controlFlags &= ~(odvFlagCRLF);
-
-	wait(delayLCD100000usTick); // wait for 100 ms to allow serial LCD to initialize
-
-#endif // defined(useSerialLCD)
-#if defined(use4BitLCD)
 #if defined(usePort4BitLCD)
 #if defined(__AVR_ATmega32U4__)
 #if defined(useTinkerkitLCDmodule)
@@ -158,28 +158,19 @@ static void LCD::shutdown(void)
 {
 
 	setBrightness(0); // turn off LCD brightness
-#if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD brightness to turn off
-#endif // defined(useLCDbufferedOutput)
 #if defined(useLCDcontrast)
 	setContrast(255); // turn off LCD contrast
 #endif // defined(useLCDcontrast)
-
-#if defined(useSerialLCD)
-	LCDserialPort::chrOut(21); // turn off LCD display
+	writeData(0x15); // display control - turn off display
 #if defined(LCDserialBuffer)
 	ringBuffer::flush(LCDserialBuffer); // flush LCD output buffer to force the LCD display to turn off
 #endif // defined(LCDserialBuffer)
-
-#endif // defined(useSerialLCD)
-#if defined(use4BitLCD)
-	writeCommand(lcdDisplayControl); // turn off LCD display
-
-#if defined(usePort4BitLCD)
 #if defined(useLCDbufferedOutput)
 	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
-
 #endif // defined(useLCDbufferedOutput)
+
+#if defined(use4BitLCD)
+#if defined(usePort4BitLCD)
 #if defined(__AVR_ATmega32U4__)
 #if defined(useTinkerkitLCDmodule)
 	// disable LCD pins
@@ -316,27 +307,73 @@ static void LCD::setBrightness(uint8_t idx)
 #endif // defined(useSerialLCD)
 }
 
-#if defined(useSerialLCD)
-static void LCD::wait(uint16_t delayTickT1)
+#if defined(useLCDcontrast)
+static void LCD::setContrast(uint8_t idx)
 {
 
-	uint8_t oldSREG;
+#if defined(__AVR_ATmega32U4__)
+#if defined(useTinkerkitLCDmodule)
+	OCR1A = idx;
 
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+#endif // defined(useTinkerkitLCDmodule)
+	// any port commands for any other ATmega32U4 board goes here
 
-	lcdDelayCount = delayTickT1; // request a set number of timer1 tick delays per millisecond
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#if defined(useArduinoMega2560)
+	OCR0A = idx;
 
-	if (delayTickT1) timer1Command |= (t1cDelayLCD); // if delay requested, make it active
-	else timer1Command &= ~(t1cDelayLCD); // otherwise, cancel delay
+#endif // defined(useArduinoMega2560)
+	// any port commands for any other ATmega2560 board goes here
 
-	SREG = oldSREG; // restore interrupt flag status
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+#if defined(useLegacyLCD)
+	OCR0A = idx;
 
-	while (timer1Command & t1cDelayLCD) idleProcess(); // wait for delay timeout to complete
+#endif // defined(useLegacyLCD)
+	// any port commands for any other ATmega168/328/328P board goes here
 
+#endif // defined(__AVR_ATmega328P__)
 }
 
-#endif // defined(useSerialLCD)
+#endif // defined(useLCDcontrast)
+#if defined(useAdafruitRGBLCDshield)
+static void LCD::setRGBcolor(uint8_t idx)
+{
+
+	uint8_t RGBbitMask;
+	uint8_t byt;
+
+	if (EEPROM::readByte(pBrightnessIdx) == 0) idx = 0;
+
+	RGBbitMask = pgm_read_byte(&RGBcolors[(uint16_t)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
+
+	byt = RGBbitMask; // get the color bitmask pattern
+	byt ^= portSwitches; // flip the color bitmask by what's stored in the portSwitches register
+	byt &= (lcdBrightnessRed | lcdBrightnessGreen); // strip out all but the relevant bits
+	portSwitches ^= byt; // flip again - restores non-relevant bits and causes relevant bits to change according to RGBbitMask
+
+	byt = RGBbitMask; // get the color bitmask
+	byt ^= portLCD; // flip the color bitmask by what's stored in the portLCD register
+	byt &= (lcdBrightnessBlue); // strip out all but the relevant bit
+	portLCD ^= byt; // flip again - restores non-relevant bits and causes relevant bit to change according to RGBbitMask
+
+#if defined(useInterruptBasedTWI)
+	TWI::disableISRactivity(); // disable ISR-based TWI activity
+
+#endif // defined(useInterruptBasedTWI)
+	MCP23017portExpanderSupport::writeRegister16Bit(MCP23017_B0_OLATx, portSwitches, portLCD); // write out 16-bit register (which sets address mode to toggle)
+
+	MCP23017portExpanderSupport::setTransferMode(adaTWIbyteMode); // set address mode to byte mode
+
+#if defined(useInterruptBasedTWI)
+	TWI::enableISRactivity(); // enable ISR-based TWI activity
+
+#endif // defined(useInterruptBasedTWI)
+}
+
+#endif // defined(useAdafruitRGBLCDshield)
 #if defined(useLCDfonts)
 static void LCD::loadCGRAMfont(const char * fontPtr)
 {
@@ -455,75 +492,6 @@ static void LCD::flushCGRAM(void)
 }
 
 #endif // defined(useLCDgraphics)
-#if defined(useLCDcontrast)
-static void LCD::setContrast(uint8_t idx)
-{
-
-#if defined(__AVR_ATmega32U4__)
-#if defined(useTinkerkitLCDmodule)
-	OCR1A = idx;
-
-#endif // defined(useTinkerkitLCDmodule)
-	// any port commands for any other ATmega32U4 board goes here
-
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#if defined(useArduinoMega2560)
-	OCR0A = idx;
-
-#endif // defined(useArduinoMega2560)
-	// any port commands for any other ATmega2560 board goes here
-
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-#if defined(useLegacyLCD)
-	OCR0A = idx;
-
-#endif // defined(useLegacyLCD)
-	// any port commands for any other ATmega168/328/328P board goes here
-
-#endif // defined(__AVR_ATmega328P__)
-}
-
-#endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
-static void LCD::setRGBcolor(uint8_t idx)
-{
-
-	uint8_t RGBbitMask;
-	uint8_t byt;
-
-	if (EEPROM::readByte(pBrightnessIdx) == 0) idx = 0;
-
-	RGBbitMask = pgm_read_byte(&RGBcolors[(uint16_t)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
-
-	byt = RGBbitMask; // get the color bitmask pattern
-	byt ^= portSwitches; // flip the color bitmask by what's stored in the portSwitches register
-	byt &= (lcdBrightnessRed | lcdBrightnessGreen); // strip out all but the relevant bits
-	byt ^= portSwitches; // flip again - restores non-relevant bits and causes relevant bits to change according to RGBbitMask
-	portSwitches = byt; // save the modified portSwitches register
-
-	byt = RGBbitMask; // get the color bitmask
-	byt ^= portLCD; // flip the color bitmask by what's stored in the portLCD register
-	byt &= (lcdBrightnessBlue); // strip out all but the relevant bit
-	byt ^= portLCD; // flip again - restores non-relevant bits and causes relevant bit to change according to RGBbitMask
-	portLCD = byt; // save the modified portLCD register
-
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
-	MCP23017portExpanderSupport::writeRegister16Bit(MCP23017_B0_OLATx, portSwitches, portLCD); // write out 16-bit register (which sets address mode to toggle)
-
-	MCP23017portExpanderSupport::setTransferMode(adaTWIbyteMode); // set address mode to byte mode
-
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
-}
-
-#endif // defined(useAdafruitRGBLCDshield)
 static void LCD::writeData(uint8_t value)
 {
 
@@ -593,17 +561,6 @@ static void LCD::writeData(uint8_t value)
 			charFlags |= (lcdCharGotoXY);
 			break;
 
-#if !defined(useBinaryLCDbrightness)
-		case 0x0F:	// LCD backlight full bright
-		case 0x10:	// LCD backlight medium bright
-#endif // !defined(useBinaryLCDbrightness)
-		case 0x11:	// turn on LCD backlight / LCD backlight low bright
-		case 0x12:	// turn off LCD backlight
-			x = 0x12 - value;
-			EEPROM::writeByte(pBrightnessIdx, x);
-			setBrightness(x);
-			break;
-
 		case 0x15:	// turn off display
 		case 0x16:	// turn on display with no cursor and no blink (default)
 		case 0x17:	// turn on display with no cursor and character blink
@@ -619,11 +576,7 @@ static void LCD::writeData(uint8_t value)
 			break;
 
 		case 0x0B: // undefined character
-		case 0x0E: // undefined character
-#if defined(useBinaryLCDbrightness)
-		case 0x0F ... 0x10:	// undefined character range
-#endif // defined(useBinaryLCDbrightness)
-		case 0x13 ... 0x14: // undefined character range
+		case 0x0E ... 0x14: // undefined character range (LCD brightness is processed elsewhere)
 		case 0x1A ... 0x1F: // undefined character range
 		case 0xE9 ... 0xF7: // undefined character range
 		case 0xF8 ... 0xFF: // CGRAM definition stuff is processed elsewhere
@@ -678,7 +631,7 @@ static void LCD::writeData(uint8_t value)
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 		LCDserialPort::chrOut(value);
-		if (value == 0x0C) wait(delayLCD005000usTick); // wait for 5 ms
+		if (value == 0x0C) heart::wait0(delay0005msTick); // wait for 5 ms to allow cls to complete
 #endif // defined(useSerialLCD)
 
 	}
