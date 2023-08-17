@@ -401,10 +401,6 @@ Logging Output / Debug Monitor I/O
 
 #define tcEOS		"\0"
 #define tcEOSCR		"\r"
-#define tcLCDHI		"\x0F"
-#define tcLCDMED	"\x10"
-#define tcLCDLO		"\x11"
-#define tcLCDOFF	"\x12"
 #define tcOMOFF		"\xEB"
 #define tcOTOG		"\xEC"
 #define tcOON		"\xED"
@@ -724,7 +720,8 @@ int main(void)
 #else // useDeepSleep
 #if defined(useClockDisplay)
 				clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
-				text::charOut(devLCD, 0x12); // set backlight brightness to zero
+
+				LCD::setBrightness(0); // set backlight brightness to zero
 
 #else // defined(useClockDisplay)
 #if defined(useLCDoutput)

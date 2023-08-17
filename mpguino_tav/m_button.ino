@@ -313,7 +313,15 @@ static void cursor::doNothing(void)
 static void cursor::doNextBright(void)
 {
 
-	text::statusOut(devLCD, brightMsg, brightString, EEPROM::readByte(pBrightnessIdx));
+	uint8_t i;
+
+	i = EEPROM::readByte(pBrightnessIdx); // fetch current LCD brightness index
+	i++; // update
+	i &= brightMask; // constrain to within allowed values
+	EEPROM::writeByte(pBrightnessIdx, i); // save new LCD brightness index
+	LCD::setBrightness(i);
+
+	text::statusOut(devLCD, brightMsg, brightString, i); // send status message 
 
 }
 

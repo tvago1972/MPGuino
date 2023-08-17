@@ -17,6 +17,7 @@ namespace heart /* core MPGuino system support section prototype */
 	static uint32_t cycles0(void);
 	static void doDelay0(uint8_t delay0Channel);
 	static uint8_t delay0(uint16_t ms);
+	static void wait0(uint16_t ms);
 	static void delayS(uint16_t ms);
 	static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
 	static void performSleepMode(uint8_t sleepMode);
