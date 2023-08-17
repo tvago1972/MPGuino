@@ -37,12 +37,12 @@ static void bluetooth::init(void)
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	heart::doDelay0(delay0(delay0005msTick)); // hold /RST low for 5 ms
+	heart::wait0(delay0005msTick); // hold /RST low for 5 ms
 
 	PORTD |= (1 << PORTD4); // pull /RST high
 	PORTB |= (1 << PORTB0); // enable CS
 
-	heart::doDelay0(delay0(delay0002msTick)); // wait for 2 ms to allow Bluefruit module to become ready
+	heart::wait0(delay0002msTick); // wait for 2 ms to allow Bluefruit module to become ready
 
 #else // defined(useBluetoothAdaFruitSPI)
 	devBluetooth.controlFlags &= ~(odvFlagCRLF);
