@@ -34,7 +34,7 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 			text::statusOut(devLCD, PSTR("Clock"));
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4, 0, 0);
 			break;
 
 		default:
@@ -56,7 +56,7 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useSoftwareClock)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (timer0Status & t0sShowCursor), cursorPos);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (timer0Status & t0sShowCursor), cursorPos, 0, 0);
 
 		default:
 			break;
@@ -295,35 +295,6 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos + 1)]);
 	char * str;
-#if defined(useBigFE)
-	uint8_t i;
-#endif // defined(useBigFE)
-
-	switch (callingDisplayIdx)
-	{
-
-#if defined(useBigFE)
-		case bigFEdisplayIdx:
-			str = PSTR(" Fuel Econ");
-			break;
-
-#endif // defined(useBigFE)
-#if defined(useBigDTE)
-		case bigDTEdisplayIdx:
-			str = PSTR(" DistToEmpty");
-			break;
-
-#endif // defined(useBigDTE)
-#if defined(useBigTTE)
-		case bigTTEdisplayIdx:
-			str = PSTR(" TimeToEmpty");
-			break;
-
-#endif // defined(useBigTTE)
-		default:
-			break;
-
-	}
 
 	switch (cmd)
 	{
@@ -333,6 +304,32 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
+			switch (callingDisplayIdx)
+			{
+
+#if defined(useBigFE)
+				case bigFEdisplayIdx:
+					str = PSTR(" Fuel Econ");
+					break;
+
+#endif // defined(useBigFE)
+#if defined(useBigDTE)
+				case bigDTEdisplayIdx:
+					str = PSTR(" DistToEmpty");
+					break;
+
+#endif // defined(useBigDTE)
+#if defined(useBigTTE)
+				case bigTTEdisplayIdx:
+					str = PSTR(" TimeToEmpty");
+					break;
+
+#endif // defined(useBigTTE)
+				default:
+					break;
+
+			}
+
 			text::statusOut(devLCD, tripFormatReverseNames, cursorPos, str);
 
 		case displayOutputIdx:
@@ -341,34 +338,19 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 #if defined(useBigFE)
 				case bigFEdisplayIdx:
-					outputNumber(0, tripIdx, tFuelEcon, (LCDcharWidth / 4) - 1);
-
-					text::gotoXY(devLCD, LCDcharWidth - 4, 0);
-					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
-					text::gotoXY(devLCD, LCDcharWidth - 4, 1);
-					text::stringOut(devLCD, bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx);
+					outputNumber(0, tripIdx, tFuelEcon, 0, cursorPos, findStr(bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx));
 					break;
 
 #endif // defined(useBigFE)
 #if defined(useBigDTE)
 				case bigDTEdisplayIdx:
-					outputNumber(0, tripIdx, tDistanceToEmpty, (LCDcharWidth / 4) - 1);
-					text::gotoXY(devLCD, 16, 0);
-					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
-					text::gotoXY(devLCD, 16, 1);
-					text::stringOut(devLCD, PSTR("DTE "));
+					outputNumber(0, tripIdx, tDistanceToEmpty, dfOverflow9s, cursorPos, PSTR("DTE "));
 					break;
 
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
 				case bigTTEdisplayIdx:
-					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b01010101), 4);
-#if LCDcharWidth == 20
-					text::gotoXY(devLCD, 16, 0);
-					text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
-					text::gotoXY(devLCD, 16, 1);
-					text::stringOut(devLCD, PSTR("TTE "));
-#endif // LCDcharWidth == 20
+					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b10001000), 4, cursorPos, PSTR("TTE "));
 					break;
 
 #endif // defined(useBigTTE)
@@ -385,8 +367,23 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 }
 
+#if defined(useBigNumberDisplay)
+static void bigDigit::outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str)
+{
+
+	uint8_t windowLength;
+
+	windowLength = (LCDcharWidth / 4);
+
+	translateCalcIdx(tripIdx, calcIdx, windowLength - 1, (dfIgnoreDecimalPoint | decimalFlag)); // perform the required decimal formatting
+
+	outputNumberString(nBuff, cursorPos, str); // output the number
+
+}
+
+#endif // defined(useBigNumberDisplay)
 #if defined(useBigTimeDisplay)
-static void bigDigit::outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos)
+static void bigDigit::outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos, uint8_t cursorPos, const char * str)
 {
 
 	val[4] = val[0];
@@ -405,23 +402,12 @@ static void bigDigit::outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, ui
 
 	}
 
-	outputNumberString(&val[4]);
+	outputNumberString(&val[4], cursorPos, str);
 
 }
 
 #endif // defined(useBigTimeDisplay)
-#if defined(useBigNumberDisplay)
-static void bigDigit::outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength)
-{
-
-	translateCalcIdx(tripIdx, calcIdx, windowLength, dfIgnoreDecimalPoint); // perform the required decimal formatting
-
-	outputNumberString(nBuff); // output the number
-
-}
-
-#endif // defined(useBigNumberDisplay)
-static void bigDigit::outputNumberString(char * str)
+static void bigDigit::outputNumberString(char * str, uint8_t cursorPos, const char * titleStr)
 {
 
 	uint8_t c;
@@ -458,6 +444,16 @@ static void bigDigit::outputNumberString(char * str)
 		outputDigit(bigDigitChars2, x, 1, c, d);
 		outputDigit(bigDigitChars1, x, 0, c, e);
 		x += 4;
+
+	}
+
+	if ((x < LCDcharWidth) && (str))
+	{
+
+		text::gotoXY(devLCD, x, 1);
+		text::stringOut(devLCD, titleStr);
+		text::gotoXY(devLCD, x, 0);
+		text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
 
 	}
 

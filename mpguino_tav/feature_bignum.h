@@ -230,13 +230,13 @@ namespace bigDigit /* Big Digit output support section prototype */
 {
 
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-#if defined(useBigTimeDisplay)
-	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos);
-#endif // defined(useBigTimeDisplay)
 #if defined(useBigNumberDisplay)
-	static void outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength);
+	static void outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str);
 #endif // defined(useBigNumberDisplay)
-	static void outputNumberString(char * str);
+#if defined(useBigTimeDisplay)
+	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos, uint8_t cursorPos, const char * str);
+#endif // defined(useBigTimeDisplay)
+	static void outputNumberString(char * str, uint8_t cursorPos, const char * titleStr);
 	static void outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar);
 
 };

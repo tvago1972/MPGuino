@@ -809,18 +809,18 @@ static const char brightMsg[] PROGMEM = {
 static const uint8_t brightMask = 0x01;
 
 static const char brightString[] PROGMEM = {
-	"ON" tcEOS
 	"OFF" tcEOS
+	"ON" tcEOS
 };
 
 #else // defined(useBinaryLCDbrightness)
 static const uint8_t brightMask = 0x03;
 
 static const char brightString[] PROGMEM = {
+	"OFF" tcEOS
 	"LOW" tcEOS
 	"MED" tcEOS
 	"HIGH" tcEOS
-	"OFF" tcEOS
 };
 
 #endif // defined(useBinaryLCDbrightness)
