@@ -293,7 +293,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos)]);
+	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos + 1)]);
 	char * str;
 #if defined(useBigFE)
 	uint8_t i;
