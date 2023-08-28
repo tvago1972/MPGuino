@@ -1015,6 +1015,12 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 #endif // useImperialGallon
 };
 
+#define nextAllowedValue 0
+static const uint8_t bcdFormat10digit =		nextAllowedValue;
+static const uint8_t bcdFormatHHMMSS =		bcdFormat10digit + 1;
+static const uint8_t bcdFormatH9MMSS =		bcdFormatHHMMSS + 1;
+static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
+
 const uint8_t s64BCDformatList[] PROGMEM = {
 	// 10 digit number format
 	 0x08		// total entry length
@@ -1034,6 +1040,15 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	,60			// seconds
 	,60			// minutes
 	,24			// hours
+
+	// h9mmss number format
+	,0x07		// total entry length
+	,'0'		// leading zero character
+	,0x03		// total BCD byte length / offset into 64-bit register for BCD LSB
+	,0x03		// divisor string length
+	,60			// seconds
+	,60			// minutes
+	,100		// hours
 
 	// overflow number format
 	,0x03		// total entry length

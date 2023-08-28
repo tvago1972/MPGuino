@@ -338,13 +338,13 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 #if defined(useBigFE)
 				case bigFEdisplayIdx:
-					outputNumber(0, tripIdx, tFuelEcon, 0, cursorPos, findStr(bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx));
+					outputNumber(tripIdx, tFuelEcon, 0, cursorPos, findStr(bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx));
 					break;
 
 #endif // defined(useBigFE)
 #if defined(useBigDTE)
 				case bigDTEdisplayIdx:
-					outputNumber(0, tripIdx, tDistanceToEmpty, dfOverflow9s, cursorPos, PSTR("DTE "));
+					outputNumber(tripIdx, tDistanceToEmpty, dfOverflow9s, cursorPos, PSTR("DTE "));
 					break;
 
 #endif // defined(useBigDTE)
@@ -368,7 +368,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 }
 
 #if defined(useBigNumberDisplay)
-static void bigDigit::outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str)
+static void bigDigit::outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str)
 {
 
 	uint8_t windowLength;
@@ -377,7 +377,7 @@ static void bigDigit::outputNumber(uint8_t hPos, uint8_t tripIdx, uint8_t calcId
 
 	translateCalcIdx(tripIdx, calcIdx, windowLength - 1, (dfIgnoreDecimalPoint | decimalFlag)); // perform the required decimal formatting
 
-	outputNumberString(nBuff, cursorPos, str); // output the number
+	outputNumberString(0, nBuff, cursorPos, str); // output the number
 
 }
 
@@ -402,12 +402,12 @@ static void bigDigit::outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, ui
 
 	}
 
-	outputNumberString(&val[4], cursorPos, str);
+	outputNumberString(hPos, &val[4], cursorPos, str);
 
 }
 
 #endif // defined(useBigTimeDisplay)
-static void bigDigit::outputNumberString(char * str, uint8_t cursorPos, const char * titleStr)
+static void bigDigit::outputNumberString(uint8_t hPos, char * str, uint8_t cursorPos, const char * titleStr)
 {
 
 	uint8_t c;
@@ -415,7 +415,7 @@ static void bigDigit::outputNumberString(char * str, uint8_t cursorPos, const ch
 	uint8_t e;
 	uint8_t x;
 
-	x = 0;
+	x = hPos;
 	while (*str)
 	{
 
@@ -441,13 +441,18 @@ static void bigDigit::outputNumberString(char * str, uint8_t cursorPos, const ch
 		if (c == 240) c = 10;
 		else if (c > 9) c = 11;
 
-		outputDigit(bigDigitChars2, x, 1, c, d);
-		outputDigit(bigDigitChars1, x, 0, c, e);
+		text::gotoXY(devLCD, x, 1);
+		text::stringOut(devLCD, bigDigitChars2, c);
+		text::charOut(devLCD, d);
+		text::gotoXY(devLCD, x, 0);
+		text::stringOut(devLCD, bigDigitChars1, c);
+		text::charOut(devLCD, e);
+
 		x += 4;
 
 	}
 
-	if ((x < LCDcharWidth) && (str))
+	if (((x + 4) <= LCDcharWidth) && (str))
 	{
 
 		text::gotoXY(devLCD, x, 1);
@@ -456,15 +461,6 @@ static void bigDigit::outputNumberString(char * str, uint8_t cursorPos, const ch
 		text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
 
 	}
-
-}
-
-static void bigDigit::outputDigit(const char * digitDefStr, uint8_t xPos, uint8_t yPos, uint8_t strIdx, uint8_t endChar)
-{
-
-	text::gotoXY(devLCD, xPos, yPos);
-	text::stringOut(devLCD, digitDefStr, strIdx);
-	text::charOut(devLCD, endChar);
 
 }
 

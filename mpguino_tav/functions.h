@@ -121,8 +121,9 @@ static const uint8_t tCalculateFuelQuantity =		tConvertToMicroSeconds + 1;
 static const uint8_t tCalculateFuelDistance =		tCalculateFuelQuantity + 1;
 static const uint8_t tCalculateFuelTime =			tCalculateFuelDistance + 1;
 static const uint8_t tCalculateSpeed =				tCalculateFuelTime + 1;
-static const uint8_t tFormatToTime =				tCalculateSpeed + 1;
-static const uint8_t tFormatToNumber =				tFormatToTime + 1;
+static const uint8_t tFormatToHHMMSStime =			tCalculateSpeed + 1;
+static const uint8_t tFormatToH9MMSStime =			tFormatToHHMMSStime + 1;
+static const uint8_t tFormatToNumber =				tFormatToH9MMSStime + 1;
 static const uint8_t tRoundOffNumber =				tFormatToNumber + 1;
 static const uint8_t tLoadTrip =					tRoundOffNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
@@ -228,13 +229,13 @@ static const uint8_t prgmEngineSpeed[] PROGMEM = {
 static const uint8_t prgmMotionTime[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToTime							// go format the number to hhmmss time
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
 };
 
 static const uint8_t prgmEngineRunTime[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse cycle value into register 2
 	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToTime							// go format the number to hhmmss time
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
 };
 
 static const uint8_t prgmRangeTime[] PROGMEM = {
@@ -278,7 +279,7 @@ static const uint8_t prgmCalculateFuelTime[] PROGMEM = {
 	instrDiv2byConst, idxMicroSecondsPerSecond,			// shift number downward - high numeric precision no longer needed
 
 //cont:
-	instrJump, tFormatToTime							// go format the number to hhmmss time
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
 };
 
 static const uint8_t prgmDistance[] PROGMEM = {
@@ -665,11 +666,11 @@ static const uint8_t prgmFormatToNumber[] PROGMEM = {	// tFormatToNumber
 	instrBranchIfLTorE, 4,								// if quotient is 99 or less, continue with processing
 
 //overflow:
-	instrDoBCDadjust, 0x12, 0x02,						// store overflow BCD string in register 2
+	instrDoBCDadjust, 0x12, bcdFormatOverflow,			// store overflow BCD string in register 2
 	instrDone,
 
 //cont:
-	instrDoBCDadjust, 0x12, 0x00,						// process register 1 as 10 digit BCD string and store it in register 2
+	instrDoBCDadjust, 0x12, bcdFormat10digit,			// process register 1 as 10 digit BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
@@ -810,7 +811,7 @@ static const uint8_t prgmSaveTrip[] PROGMEM = {
 static const uint8_t prgmReadTicksToSeconds[] PROGMEM = {
 	instrLdRegVolatileIndexed, 0x02,
 	instrDiv2byConst, idxTicksPerSecond,
-	instrJump, tFormatToTime							// go format the number to hhmmss time
+	instrJump, tFormatToHHMMSStime						// go format the number to hhmmss time
 };
 
 #if defined(useBarFuelEconVsTime)
@@ -924,9 +925,15 @@ static const uint8_t prgmParseCharacterToReg[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminal)
-static const uint8_t prgmFormatToTime[] PROGMEM = {
+static const uint8_t prgmFormatToHHMMSStime[] PROGMEM = {
 	instrLdReg, 0x21,									// move time in seconds into register 1
-	instrDoBCDadjust, 0x12, 0x01,						// process register 1 as hhmmss BCD string and store it in register 2
+	instrDoBCDadjust, 0x12, bcdFormatHHMMSS,			// process register 1 as hhmmss BCD string and store it in register 2
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmFormatToH9MMSStime[] PROGMEM = {
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
@@ -1079,7 +1086,8 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	,prgmCalculateFuelDistance					// tCalculateFuelDistance
 	,prgmCalculateFuelTime						// tCalculateFuelTime
 	,prgmCalculateSpeed							// tCalculateSpeed
-	,prgmFormatToTime							// tFormatToTime
+	,prgmFormatToHHMMSStime						// tFormatToHHMMSStime
+	,prgmFormatToH9MMSStime						// tFormatToH9MMSStime
 	,prgmFormatToNumber							// tFormatToNumber
 	,prgmRoundOffNumber							// tRoundOffNumber
 	,prgmLoadTrip								// tLoadTrip
