@@ -254,12 +254,8 @@ static void blefriend::init(void)
 
 	SPIconfigBluetooth = spi::configuration(4000000ul, SPI_MSBFIRST, SPI_MODE0);
 
-	devBluetooth.chrOut = chrOut;
-	devBluetooth.chrIn = chrIn;
-	devBluetooth.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
-
-	ringBuffer::init(btSPIinputBuffer, inputSPIdata, inputSPIdataSize);
-	ringBuffer::init(btSPIoutputBuffer, outputSPIdata, outputSPIdataSize);
+	devBLEfriend.chrOut = chrOut;
+	devBLEfriend.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	heart::changeBitFlags(bleStatus, 0, bleResetFlags); // request hardware reset
 
@@ -272,36 +268,7 @@ static void blefriend::shutdown(void)
 static void blefriend::chrOut(uint8_t chr)
 {
 
-	ringBuffer::push(btSPIoutputBuffer, chr);
-
-}
-
-static uint8_t blefriend::chrIn(void)
-{
-
-	uint8_t k;
-
-	if (ringBuffer::isBufferEmpty(btSPIinputBuffer))
-	{
-
-		k = writePacketHeader(SDEP_CMDTYPE_BLE_UARTRX, 0); // write UART RX request packet
-
-		if (k)
-		{
-
-			while ((bleStatus & blePacketWaiting) && (inputCheck() == 0)) idleProcess(); // wait for input response
-
-			blefriend::readPacket(); // read in the response packet
-
-			k = ringBuffer::isBufferNotEmpty(btSPIinputBuffer);
-
-		}
-
-	}
-	else k = 1;
-
-	if (k) return ringBuffer::pull(btSPIinputBuffer);
-	else return 0;
+	ringBuffer::push(rbIdxBLEfriendOut, chr);
 
 }
 
@@ -325,7 +292,7 @@ static uint8_t blefriend::outputBufferWithResponse(void)
 			{
 
 				// if remaining space is less than packet payload size, finish anyhow
-				if (ringBuffer::free(btSPIinputBuffer) < 16)
+				if (ringBuffer::free(rbIdxBLEfriendIn) < 16)
 				{
 
 					f = 1;
@@ -360,7 +327,7 @@ static uint8_t blefriend::outputBuffer(uint16_t cmdWord)
 	uint8_t j;
 	uint8_t k;
 
-	outLen = ringBuffer::length(btSPIoutputBuffer);
+	outLen = ringBuffer::length(rbIdxBLEfriendOut);
 
 	do
 	{
@@ -376,7 +343,7 @@ static uint8_t blefriend::outputBuffer(uint16_t cmdWord)
 			j &= 0x1F; // strip 'more data' bit from partial length
 			outLen -= j;
 
-			while (j--) spi::transfer(ringBuffer::pull(btSPIoutputBuffer)); // output a byte of SDEP payload
+			while (j--) spi::transfer(ringBuffer::pull(rbIdxBLEfriendOut)); // output a byte of SDEP payload
 
 		}
 
@@ -400,12 +367,6 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 
 	heart::changeBitFlags(bleStatus, 0, (blePacketWaitFlags)); // start tranceiver delay
 
-//	text::hexByteOut(devDebugTerminal, btSPIoutputBuffer.size);
-//	text::charOut(devDebugTerminal, '-');
-//	text::hexByteOut(devDebugTerminal, btSPIoutputBuffer.start);
-//	text::charOut(devDebugTerminal, '-');
-//	text::hexByteOut(devDebugTerminal, btSPIoutputBuffer.end);
-//	text::charOut(devDebugTerminal, '-');
 //	text::hexByteOut(devDebugTerminal, outLen);
 //	text::newLine(devDebugTerminal);
 
@@ -513,7 +474,7 @@ static uint8_t blefriend::readPacket(void)
 						if ((cmdWord != SDEP_CMDTYPE_AT_WRAPPER) && (cmdWord != SDEP_CMDTYPE_BLE_UARTTX) && (cmdWord != SDEP_CMDTYPE_BLE_UARTRX))
 						{
 
-							ringBuffer::push(btSPIinputBuffer, '*');
+							ringBuffer::push(rbIdxBLEfriendIn, '*');
 							while (bleStatus & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 
 						}
@@ -526,7 +487,7 @@ static uint8_t blefriend::readPacket(void)
 							if ((j > 16) || ((j < 16) && (partialPayload))) // if this is an invalid message length
 							{
 
-								ringBuffer::push(btSPIinputBuffer, '&');
+								ringBuffer::push(rbIdxBLEfriendIn, '&');
 								partialPayload = 0;
 
 								while (bleStatus & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
@@ -535,7 +496,7 @@ static uint8_t blefriend::readPacket(void)
 							else
 							{
 
-								while (j--) ringBuffer::push(btSPIinputBuffer, spi::transfer(0xFF)); // read and push a character of response
+								while (j--) ringBuffer::push(rbIdxBLEfriendIn, spi::transfer(0xFF)); // read and push a character of response
 
 								i = 0;
 
@@ -554,7 +515,7 @@ static uint8_t blefriend::readPacket(void)
 						break;
 
 					default:
-						ringBuffer::push(btSPIinputBuffer, '!');
+						ringBuffer::push(rbIdxBLEfriendIn, '!');
 						while (bleStatus & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 						break;
 
@@ -639,8 +600,8 @@ static void blefriend::assertCS(void)
 static void blefriend::pushByte(uint8_t chr)
 {
 
-	ringBuffer::push(btSPIinputBuffer, text::nybble(chr >> 4));
-	ringBuffer::push(btSPIinputBuffer, text::nybble(chr));
+	ringBuffer::push(rbIdxBLEfriendIn, text::nybble(chr >> 4));
+	ringBuffer::push(rbIdxBLEfriendIn, text::nybble(chr));
 
 }
 

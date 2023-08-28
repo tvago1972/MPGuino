@@ -28,7 +28,6 @@ namespace blefriend /* AdaFruit BLE Friend support section prototype */
 	static void init(void);
 	static void shutdown(void);
 	static void chrOut(uint8_t chr);
-	static uint8_t chrIn(void);
 	static uint8_t outputBufferWithResponse(void);
 	static uint8_t outputBuffer(uint16_t cmdWord);
 	static uint8_t writePacketHeader(uint16_t cmdWord, uint8_t loadLen);
@@ -41,17 +40,9 @@ namespace blefriend /* AdaFruit BLE Friend support section prototype */
 
 };
 
-interfaceDevice devBluetooth;
+interfaceDevice devBLEfriend;
 
 static uint8_t SPIconfigBluetooth;
-
-ringBufferVariable btSPIoutputBuffer;
-ringBufferVariable btSPIinputBuffer;
-
-static const uint16_t outputSPIdataSize = 128;
-static const uint16_t inputSPIdataSize = 128;
-static uint8_t outputSPIdata[outputSPIdataSize];
-static uint8_t inputSPIdata[inputSPIdataSize];
 
 static const uint16_t SDEP_CMDTYPE_INITIALIZE =	0xBEEF;
 static const uint16_t SDEP_CMDTYPE_AT_WRAPPER =	0x0A00;

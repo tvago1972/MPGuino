@@ -680,10 +680,6 @@ int main(void)
 	terminalState = 0;
 
 #endif // defined(outputDebugTerminalSplash)
-#if defined(useDebugTerminal)
-	ringBuffer::init(terminalBuffer, terminalBuff, tBuffLength);
-
-#endif // defined(useDebugTerminal)
 	heart::doDelay0(j); // show splash screen for 1.5 seconds
 
 #if defined(useButtonInput)

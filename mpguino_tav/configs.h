@@ -507,7 +507,7 @@
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
 #define useBufferedSerial0Port true
-#define LCDserialBuffer serial0Buffer
+#define rbIdxLCDserial rbIdxSerial0Out
 #endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort0)
 
@@ -528,7 +528,7 @@
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
 #define useBufferedSerial1Port true
-#define LCDserialBuffer serial1Buffer
+#define rbIdxLCDserial rbIdxSerial1Out
 #endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort1)
 
@@ -549,7 +549,7 @@
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
 #define useBufferedSerial2Port true
-#define LCDserialBuffer serial2Buffer
+#define rbIdxLCDserial rbIdxSerial2Out
 #endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort2)
 
@@ -570,7 +570,7 @@
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
 #define useBufferedSerial3Port true
-#define LCDserialBuffer serial3Buffer
+#define rbIdxLCDserial rbIdxSerial3Out
 #endif // defined(useLCDbufferedOutput)
 #endif // defined(useLCDserialPort3)
 
@@ -587,7 +587,7 @@
 #define devBluetooth devSerial0
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial0Port true
-#define bluetoothSerialBuffer serial0Buffer
+#define rbIdxBluetoothSerial rbIdxSerial0Out
 #endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort0)
 
@@ -607,7 +607,7 @@
 #define devBluetooth devSerial1
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial1Port true
-#define bluetoothSerialBuffer serial1Buffer
+#define rbIdxBluetoothSerial rbIdxSerial1Out
 #endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort1)
 
@@ -627,7 +627,7 @@
 #define devBluetooth devSerial2
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial2Port true
-#define bluetoothSerialBuffer serial2Buffer
+#define rbIdxBluetoothSerial rbIdxSerial2Out
 #endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort2)
 
@@ -647,7 +647,7 @@
 #define devBluetooth devSerial3
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial3Port true
-#define bluetoothSerialBuffer serial3Buffer
+#define rbIdxBluetoothSerial rbIdxSerial3Out
 #endif // defined(useBluetoothBufferedOutput)
 #endif // defined(useBluetoothSerialPort3)
 

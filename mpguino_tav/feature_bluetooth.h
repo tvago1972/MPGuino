@@ -12,12 +12,19 @@ namespace bluetooth /* Bluetooth interface terminal section prototype */
 
 	static void init(void);
 	static void shutdown(void);
+#if defined(useBluetoothAdaFruitSPI)
+	static uint8_t chrIn(void);
+#endif // defined(useBluetoothAdaFruitSPI)
 	static uint16_t findFormat(uint8_t inpChar);
 	static void mainProcess(void);
 	static void mainOutput(void);
 
 }
 
+#if defined(useBluetoothAdaFruitSPI)
+interfaceDevice devBluetooth;
+
+#endif // defined(useBluetoothAdaFruitSPI)
 /*
 
 list of commands sent from MPGuino Blue android app
@@ -73,6 +80,7 @@ static uint8_t btInputState;
 static const uint8_t btiResetFlag =				0b10000000;
 static const uint8_t btiStringInput =			0b01000000;
 static const uint8_t btiGetSecondaryCharacter =	0b00100000;
+static const uint8_t btiAllowPolling =			0b00010000;
 
 static uint8_t btDelayFlag;
 static uint8_t btOutputState;
@@ -94,7 +102,7 @@ static const uint8_t btolParameterIdx =			btolTripFunctionIdx + 1;
 
 static char btInpBuff[20];
 static uint8_t btInpBuffIdx;
-static const char * btOutputString;
+static const char * btOutputStringPtr;
 
 static const char btOutputList[] PROGMEM = { // any undefined letters simply get ignored - handy for optional compile-time features
 	"UABCDEFGHIJL" tcEOS
@@ -139,11 +147,15 @@ static const uint8_t btFunctionListLength = (sizeof(btFunctionList) / sizeof(blu
 static const uint8_t btResetString[] PROGMEM = {
 	"AT+GATTCLEAR" tcEOS
 	"AT+GATTADDSERVICE=UUID=0XFFE0" tcEOS
-	"AT+GATTADDCHAR=UUID=0XFFE1,PROPERTIES=0X16,MIN_LEN=1,MAX_LEN=16,DATATYPE=STRING,DESCRIPTION=MPGuino" tcEOS
+	"AT+GATTADDCHAR=UUID=0XFFE1,PROPERTIES=0X16,MIN_LEN=1,MAX_LEN=32,DATATYPE=STRING,DESCRIPTION=MPGuino" tcEOS
 	"ATZ" tcEOS
 };
 
-static const char btIOstring[] PROGMEM = {
+static const char btOutputString[] PROGMEM = {
+	"AT+GATTCHAR=1," tcEOS
+};
+
+static const char btInputString[] PROGMEM = {
 	"AT+GATTCHAR=1" tcEOS
 };
 

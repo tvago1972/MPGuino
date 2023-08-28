@@ -85,9 +85,6 @@ static void usbDevice::init(void)
 
 	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
 
-	ringBuffer::init(USBoutputBuffer, USBoutputData, USBoutputDataSize);
-	ringBuffer::init(USBinputBuffer, USBinputData, USBinputDataSize);
-
 	devUSB.chrOut = chrOut;
 	devUSB.chrIn = chrIn;
 
@@ -122,14 +119,14 @@ static void usbDevice::shutdown(void)
 static void usbDevice::chrOut(uint8_t chr)
 {
 
-	ringBuffer::pushMain(USBoutputBuffer, chr);
+	ringBuffer::pushMain(rbIdxUSBout, chr);
 
 }
 
 static uint8_t usbDevice::chrIn(void)
 {
 
-	return ringBuffer::pull(USBinputBuffer);
+	return ringBuffer::pull(rbIdxUSBin);
 
 }
 

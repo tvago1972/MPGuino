@@ -618,12 +618,12 @@ static void terminal::outputBluetoothResponse(void)
 	do
 	{
 
-		f = ringBuffer::isBufferNotEmpty(btSPIinputBuffer);
+		f = ringBuffer::isBufferNotEmpty(rbIdxBLEfriendIn);
 
 		if (f)
 		{
 
-			c = ringBuffer::pull(btSPIinputBuffer);
+			c = ringBuffer::pull(rbIdxBLEfriendIn);
 
 			if (c >= 0x20) i = 1; // if this is a printable character, signal to end this function with a newline
 			else i = 0; // otherwise, suppress the newline at the end of the function
@@ -632,7 +632,7 @@ static void terminal::outputBluetoothResponse(void)
 			else if (c == 0x0A) c = 0;
 			else text::charOut(devDebugTerminal, c);
 
-			if (ringBuffer::free(btSPIinputBuffer) > 15) // is there enough room in the input buffer for another packet?
+			if (ringBuffer::free(rbIdxBLEfriendIn) > 15) // is there enough room in the input buffer for another packet?
 			{
 
 				// if IRQ is still pulled high, there's another packet to be read in
@@ -735,7 +735,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			terminalCmd = 0;
 			terminalMode = tmInitHex;
 			terminalAddress = 0;
-			ringBuffer::empty(terminalBuffer);
+			ringBuffer::empty(rbIdxTerminal);
 #if defined(useBluetoothAdaFruitSPI)
 			tmOutputBluetooth = 0;
 #endif // defined(useBluetoothAdaFruitSPI)
@@ -763,7 +763,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 					case 0x0C:
 #endif // defined(useSWEET64trace)
 					case 0x20 ... 0x7E:
-						if (ringBuffer::isBufferFull(terminalBuffer))
+						if (ringBuffer::isBufferFull(rbIdxTerminal))
 						{
 
 							text::stringOut(devDebugTerminal, PSTR("\\" tcEOSCR));
@@ -781,7 +781,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								text::charOut(devDebugTerminal, i + 64);
 
 							}
-							ringBuffer::push(terminalBuffer, i);
+							ringBuffer::push(rbIdxTerminal, i);
 
 						}
 						break;
@@ -801,12 +801,12 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 				i = 0;
 
-				while (ringBuffer::isBufferNotEmpty(terminalBuffer))
+				while (ringBuffer::isBufferNotEmpty(rbIdxTerminal))
 				{
 
-					i = ringBuffer::pull(terminalBuffer);
+					i = ringBuffer::pull(rbIdxTerminal);
 					if (peek & peekBLEfriendEcho) text::charOut(devDebugTerminal, i);
-					text::charOut(devBluetooth, i);
+					text::charOut(devBLEfriend, i);
 					i = 1;
 
 				}
@@ -830,14 +830,14 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			else
 			{
 
-				if (ringBuffer::isBufferEmpty(terminalBuffer)) chr = 0x0D;
-				else chr = ringBuffer::pull(terminalBuffer);
+				if (ringBuffer::isBufferEmpty(rbIdxTerminal)) chr = 0x0D;
+				else chr = ringBuffer::pull(rbIdxTerminal);
 
 			}
 
 #else // defined(useBluetoothAdaFruitSPI)
-			if (ringBuffer::isBufferEmpty(terminalBuffer)) chr = 0x0D;
-			else chr = ringBuffer::pull(terminalBuffer);
+			if (ringBuffer::isBufferEmpty(rbIdxTerminal)) chr = 0x0D;
+			else chr = ringBuffer::pull(rbIdxTerminal);
 
 #endif // defined(useBluetoothAdaFruitSPI)
 			i = 1;

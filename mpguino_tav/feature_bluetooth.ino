@@ -22,6 +22,10 @@ static void bluetooth::init(void)
 #if defined(useBluetoothAdaFruitSPI)
 	btInputState = btiResetFlag;
 
+	devBluetooth.chrOut = devBLEfriend.chrOut;
+	devBluetooth.chrIn = chrIn;
+	devBluetooth.controlFlags |= (odvFlagEnableOutput);
+
 #else // defined(useBluetoothAdaFruitSPI)
 	devBluetooth.controlFlags &= ~(odvFlagCRLF);
 	btInputState = 0;
@@ -40,6 +44,16 @@ static void bluetooth::shutdown(void)
 
 }
 
+#if defined(useBluetoothAdaFruitSPI)
+static uint8_t bluetooth::chrIn(void)
+{
+
+	if (ringBuffer::isBufferEmpty(rbIdxBluetoothIn)) return 0;
+	else return ringBuffer::pull(rbIdxBluetoothIn);
+
+}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 static uint16_t bluetooth::findFormat(uint8_t inpChar)
 {
 
@@ -60,6 +74,8 @@ static void bluetooth::mainProcess(void)
 
 	uint8_t btChar;
 	uint16_t btFormat;
+	uint8_t c;
+	uint8_t k;
 	union union_16 * btF = (union union_16 *)(&btFormat);
 
 #if defined(useBluetoothAdaFruitSPI)
@@ -71,23 +87,16 @@ static void bluetooth::mainProcess(void)
 
 			btInputState &= ~(btiResetFlag); // mark /RST cycle as completed
 
-			text::stringOut(devBluetooth, btResetString, 0); // clear all custom GATT services
+			for (uint8_t x = 0; x < 4; x++)
+			{
 
-			blefriend::outputBufferWithResponse();
+				text::stringOut(devBluetooth, btResetString, x); // send a string of reset message
 
-			text::stringOut(devBluetooth, btResetString, 1); // create 0xFFE0 service for HM-10 compatible serial output
+				blefriend::outputBufferWithResponse(); // go output via AT wrapper, and pop response from input
 
-			blefriend::outputBufferWithResponse();
+			}
 
-			text::stringOut(devBluetooth, btResetString, 2); // create 0xFFE1 characteristic for HM-10 compatible serial output
-
-			blefriend::outputBufferWithResponse();
-
-			text::stringOut(devBluetooth, btResetString, 3); // perform system reset to get GATT change to take effect
-
-			blefriend::outputBufferWithResponse();
-
-			ringBuffer::empty(btSPIinputBuffer);
+			ringBuffer::empty(rbIdxBLEfriendIn);
 
 			btDelayFlag = heart::delay0(delay0Tick500ms); // set for a 1/2 sec delay
 			btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
@@ -103,6 +112,37 @@ static void bluetooth::mainProcess(void)
 	if ((btInputState & btiResetFlag) == 0)
 	{
 
+#if defined(useBluetoothAdaFruitSPI)
+		if (btInputState & btiAllowPolling)
+		{
+
+			if (awakeFlags & aAwakeSampleBLEfriend)
+			{
+
+				heart::changeBitFlags(awakeFlags, aAwakeSampleBLEfriend, 0);
+
+				text::stringOut(devBluetooth, btInputString);
+				blefriend::outputBufferWithResponse(); // output GATT input request via 0xFFE1 characteristic
+
+				k = 1;
+
+				while (ringBuffer::isBufferNotEmpty(rbIdxBLEfriendIn)) // read GATT response from 0xFFE1 characteristic
+				{
+
+					c = ringBuffer::pull(rbIdxBLEfriendIn);
+
+					if (c < 0x20) k = 0;
+
+					if ((k) && (c != ' ')) ringBuffer::push(rbIdxBluetoothIn, c);
+
+				}
+
+
+			}
+
+		}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 		do
 		{
 
@@ -279,11 +319,11 @@ static void bluetooth::mainProcess(void)
 		}
 		while (btChar);
 
-#if defined(bluetoothSerialBuffer)
+#if defined(rbIdxBluetoothSerial)
 		if (btOutputState & btoFlagFlushBuffer) // flush the output ring buffer
 		{
 
-			if (bluetoothSerialBuffer.status & bufferIsEmpty) // if the output ring buffer is flushed
+			if (ringBuffer::isBufferEmpty(rbIdxBluetoothSerial)) // if the output ring buffer is flushed
 			{
 
 				btOutputState &= ~(btoFlagFlushBuffer);
@@ -294,11 +334,26 @@ static void bluetooth::mainProcess(void)
 
 		}
 
-#endif // defined(bluetoothSerialBuffer)
+#endif // defined(rbIdxBluetoothSerial)
 		if (btOutputState & btoFlagDelay) // check if output delay is finished
 		{
 
-			if ((timer0DelayFlags & btDelayFlag) == 0) btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
+			if ((timer0DelayFlags & btDelayFlag) == 0)
+			{
+
+				btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
+
+#if defined(useBluetoothAdaFruitSPI)
+				if ((btInputState & btiAllowPolling) == 0)
+				{
+
+					btInputState |= (btiAllowPolling);
+					heart::changeBitFlags(timer0Command, 0, t0cEnableBLEsample);
+
+				}
+
+#endif // defined(useBluetoothAdaFruitSPI)
+			}
 
 		}
 
@@ -308,7 +363,7 @@ static void bluetooth::mainProcess(void)
 			do
 			{
 
-				btChar = pgm_read_byte(btOutputString++); // read in a character of output list
+				btChar = pgm_read_byte(btOutputStringPtr++); // read in a character of output list
 
 				if (btChar)  // if this is a valid character
 				{
@@ -319,9 +374,7 @@ static void bluetooth::mainProcess(void)
 					{
 
 #if defined(useBluetoothAdaFruitSPI)
-						text::stringOut(devBluetooth, btIOstring);
-						text::charOut(devBluetooth, ',');
-
+						text::stringOut(devBluetooth, btOutputString);
 #endif // defined(useBluetoothAdaFruitSPI)
 						text::charOut(devBluetooth, btChar); // output character corresponding to output format
 #if defined(useDebugTerminal)
@@ -342,20 +395,20 @@ static void bluetooth::mainProcess(void)
 						if (peek & peekBluetoothOutput) text::tripFunctionOut(devDebugTerminal, btFormat, btChar, (dfOutputBluetooth));
 #endif // defined(useDebugTerminal)
 #if defined(useBluetoothAdaFruitSPI)
-						blefriend::outputBufferWithResponse(); // send out via 0xFFE1 service
-						ringBuffer::empty(btSPIinputBuffer); // pop response from input buffer
+						blefriend::outputBufferWithResponse(); // send out via 0xFFE1 characteristic
+						ringBuffer::empty(rbIdxBLEfriendIn); // pop response from input buffer
 						btDelayFlag = heart::delay0(delay0Tick20ms); // set for a 20 ms delay
 						btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 #else // defined(useBluetoothAdaFruitSPI)
-#if defined(bluetoothSerialBuffer)
+#if defined(rbIdxBluetoothSerial)
 						btOutputState |= (btoFlagFlushBuffer);
 
-#else // defined(bluetoothSerialBuffer)
+#else // defined(rbIdxBluetoothSerial)
 						btDelayFlag = heart::delay0(delay0Tick20ms); // set for a 20 ms delay
 						btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
-#endif // defined(bluetoothSerialBuffer)
+#endif // defined(rbIdxBluetoothSerial)
 #endif // defined(useBluetoothAdaFruitSPI)
 					}
 
@@ -380,7 +433,7 @@ static void bluetooth::mainOutput(void)
 		btOutputState &= ~(btoFlagSingleShotOutput); // clear single-shot flag
 		btOutputState |= (btoFlagActiveOutput); // enable bluetooth::mainProcess output
 
-		btOutputString = findStr(btOutputList, btOutputListIdx); // get selected bluetooth output list string pointer
+		btOutputStringPtr = findStr(btOutputList, btOutputListIdx); // get selected bluetooth output list string pointer
 
 	}
 

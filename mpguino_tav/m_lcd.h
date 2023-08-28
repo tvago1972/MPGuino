@@ -47,13 +47,6 @@ namespace LCD /* LCD hardware support section prototype */
 
 interfaceDevice devLCD;
 
-#if defined(useLCDbufferedOutput)
-ringBufferVariable lcdBuffer;
-
-static const uint16_t LCDdataSize = 32;
-static uint8_t LCDdata[LCDdataSize];
-
-#endif // defined(useLCDbufferedOutput)
 // these flags provide flow control for the LCD::writeData character output routine
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;

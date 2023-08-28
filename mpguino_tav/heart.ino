@@ -29,6 +29,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #if defined(useJSONoutput)
 	static uint16_t JSONtimeoutCount;
 #endif // defined(useJSONoutput)
+#if defined(useBluetoothAdaFruitSPI)
+	static uint16_t BLEtimeoutCount;
+#endif // defined(useBluetoothAdaFruitSPI)
 	static uint8_t previousActivity;
 #if defined(useButtonInput)
 	static uint8_t internalFlags;
@@ -56,6 +59,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		timer0Status = 0;
 		loopCount = delay0TickSampleLoop;
 		awakeFlags = 0;
+#if defined(useBluetoothAdaFruitSPI)
+		BLEtimeoutCount = 0;
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useButtonInput)
 		internalFlags = 0;
 #endif // defined(useButtonInput)
@@ -466,6 +472,22 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useJSONoutput)
+#if defined(useBluetoothAdaFruitSPI)
+	if (timer0Command & t0cEnableBLEsample)
+	{
+
+		if (BLEtimeoutCount) BLEtimeoutCount--;
+		else
+		{
+
+			BLEtimeoutCount = delay0Tick100ms;
+			awakeFlags |= (aAwakeSampleBLEfriend);
+
+		}
+
+	}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 	if (loopCount) loopCount--;
 	else
 	{
@@ -1034,7 +1056,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 		else
 		{
 
-			if (ringBuffer::isBufferNotEmpty(lcdBuffer)) // if there's at least one nybble in the LCD send buffer
+			if (ringBuffer::isBufferNotEmpty(rbIdxLCD)) // if there's at least one nybble in the LCD send buffer
 			{
 
 #if defined(useTWI4BitLCD)
@@ -1048,7 +1070,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 					do
 					{
 
-						value = ringBuffer::pull(lcdBuffer); // pull a buffered LCD nybble
+						value = ringBuffer::pull(rbIdxLCD); // pull a buffered LCD nybble
 
 						if (value & lcdSendNybble) // if this nybble is to be sent out
 						{
@@ -1075,7 +1097,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 							{
 
 								if ((twiDataBufferSize - twiDataBufferLen) < 5) timer1Status &= ~(t1sLoopFlag); // if TWI send buffer is getting low, signal end of loop
-								if (ringBuffer::isBufferEmpty(lcdBuffer)) timer1Status &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
+								if (ringBuffer::isBufferEmpty(rbIdxLCD)) timer1Status &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
 
 							}
 							else timer1Status &= ~(t1sLoopFlag); // otherwise, this is a special (command or reset) nybble, so signal end of loop
@@ -1092,7 +1114,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(useTWI4BitLCD)
 #if defined(usePort4BitLCD)
-				value = ringBuffer::pull(lcdBuffer); // pull a buffered LCD byte
+				value = ringBuffer::pull(rbIdxLCD); // pull a buffered LCD byte
 
 				LCD::outputNybble(value); // output byte
 
@@ -1448,7 +1470,7 @@ ISR( PCINT1_vect )
 }
 
 #if defined(useBuffering)
-static void ringBuffer::init(ringBufferVariable &bfr, uint8_t * storage, uint16_t storageSize)
+static void ringBuffer::init(void)
 {
 
 	uint8_t oldSREG;
@@ -1456,54 +1478,59 @@ static void ringBuffer::init(ringBufferVariable &bfr, uint8_t * storage, uint16_
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	bfr.data = storage;
-	bfr.size = storageSize;
-	bfr.start = 0;
-	bfr.end = 0;
-	bfr.status = bufferIsEmpty;
+	for (uint8_t x = 0; x < rbIdxCount; x++)
+	{
+
+		ringBufferDef[(uint16_t)(x)].data = (uint8_t *)(pgm_read_word(&ringBufferDefList[(uint16_t)(x)].data));
+		ringBufferDef[(uint16_t)(x)].size = pgm_read_word(&ringBufferDefList[(uint16_t)(x)].size);
+		ringBufferDef[(uint16_t)(x)].start = 0;
+		ringBufferDef[(uint16_t)(x)].end = 0;
+		ringBufferDef[(uint16_t)(x)].status = (bufferIsEmpty);
+
+	}
 
 	SREG = oldSREG; // restore interrupt flag status
 
 }
 
-static uint8_t ringBuffer::isBufferEmpty(ringBufferVariable &bfr)
+static uint8_t ringBuffer::isBufferEmpty(uint8_t ringBufferIdx)
 {
 
-	return (bfr.status & bufferIsEmpty);
+	return (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty);
 
 }
 
-static uint8_t ringBuffer::isBufferNotEmpty(ringBufferVariable &bfr)
+static uint8_t ringBuffer::isBufferNotEmpty(uint8_t ringBufferIdx)
 {
 
-	return ((bfr.status & bufferIsEmpty) == 0);
+	return ((ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) == 0);
 
 }
 
-static uint8_t ringBuffer::isBufferFull(ringBufferVariable &bfr)
+static uint8_t ringBuffer::isBufferFull(uint8_t ringBufferIdx)
 {
 
-	return (bfr.status & bufferIsFull);
+	return (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull);
 
 }
 
-static void ringBuffer::pushMain(ringBufferVariable &bfr, uint8_t value)
+static void ringBuffer::pushMain(uint8_t ringBufferIdx, uint8_t value)
 {
 
 	uint8_t oldSREG;
 
-	while (bfr.status & bufferIsFull) idleProcess(); // wait for calling routine's buffer to become not full
+	while (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) idleProcess(); // wait for calling routine's buffer to become not full
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	push(bfr, value);
+	push(ringBufferIdx, value);
 
 	SREG = oldSREG; // restore interrupt flag status
 
 }
 
-static uint8_t ringBuffer::pullMain(ringBufferVariable &bfr)
+static uint8_t ringBuffer::pullMain(uint8_t ringBufferIdx)
 {
 
 	uint8_t value;
@@ -1512,7 +1539,7 @@ static uint8_t ringBuffer::pullMain(ringBufferVariable &bfr)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	value = pull(bfr);
+	value = pull(ringBufferIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -1520,7 +1547,7 @@ static uint8_t ringBuffer::pullMain(ringBufferVariable &bfr)
 
 }
 
-static uint16_t ringBuffer::lengthMain(ringBufferVariable &bfr)
+static uint16_t ringBuffer::lengthMain(uint8_t ringBufferIdx)
 {
 
 	uint16_t i;
@@ -1529,7 +1556,7 @@ static uint16_t ringBuffer::lengthMain(ringBufferVariable &bfr)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	i = length(bfr);
+	i = length(ringBufferIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -1537,7 +1564,7 @@ static uint16_t ringBuffer::lengthMain(ringBufferVariable &bfr)
 
 }
 
-static uint16_t ringBuffer::freeMain(ringBufferVariable &bfr)
+static uint16_t ringBuffer::freeMain(uint8_t ringBufferIdx)
 {
 
 	uint16_t i;
@@ -1546,7 +1573,7 @@ static uint16_t ringBuffer::freeMain(ringBufferVariable &bfr)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	i = free(bfr);
+	i = free(ringBufferIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -1554,14 +1581,14 @@ static uint16_t ringBuffer::freeMain(ringBufferVariable &bfr)
 
 }
 
-static void ringBuffer::flush(ringBufferVariable &bfr)
+static void ringBuffer::flush(uint8_t ringBufferIdx)
 {
 
-	while ((bfr.status & bufferIsEmpty) == 0) idleProcess(); // wait for calling routine's buffer to become empty
+	while ((ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) == 0) idleProcess(); // wait for calling routine's buffer to become empty
 
 }
 
-static void ringBuffer::empty(ringBufferVariable &bfr)
+static void ringBuffer::empty(uint8_t ringBufferIdx)
 {
 
 	uint8_t oldSREG;
@@ -1569,38 +1596,38 @@ static void ringBuffer::empty(ringBufferVariable &bfr)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	bfr.end = bfr.start;
-	bfr.status = bufferIsEmpty;
+	ringBufferDef[(uint16_t)(ringBufferIdx)].end = ringBufferDef[(uint16_t)(ringBufferIdx)].start;
+	ringBufferDef[(uint16_t)(ringBufferIdx)].status = bufferIsEmpty;
 
 	SREG = oldSREG; // restore interrupt flag status
 
 }
 
-static void ringBuffer::push(ringBufferVariable &bfr, uint8_t value)
+static void ringBuffer::push(uint8_t ringBufferIdx, uint8_t value)
 {
 
-	bfr.data[bfr.start++] = value; // save a buffered character
+	ringBufferDef[(uint16_t)(ringBufferIdx)].data[ringBufferDef[(uint16_t)(ringBufferIdx)].start++] = value; // save a buffered character
 
-	if (bfr.status & bufferIsEmpty) bfr.status &= ~(bufferIsEmpty); // mark buffer as no longer empty
-	if (bfr.start == bfr.size) bfr.start = 0; // handle wrap-around
-	if (bfr.start == bfr.end) bfr.status |= (bufferIsFull); // test if buffer is full
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) ringBufferDef[(uint16_t)(ringBufferIdx)].status &= ~(bufferIsEmpty); // mark buffer as no longer empty
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].start == ringBufferDef[(uint16_t)(ringBufferIdx)].size) ringBufferDef[(uint16_t)(ringBufferIdx)].start = 0; // handle wrap-around
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].start == ringBufferDef[(uint16_t)(ringBufferIdx)].end) ringBufferDef[(uint16_t)(ringBufferIdx)].status |= (bufferIsFull); // test if buffer is full
 
 }
 
-static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
+static uint8_t ringBuffer::pull(uint8_t ringBufferIdx)
 {
 
 	uint8_t value;
 
-	if (bfr.status & bufferIsEmpty) value = 0; // if buffer is empty, return a NULL
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) value = 0; // if buffer is empty, return a NULL
 	else
 	{
 
-		value = bfr.data[bfr.end++]; // pull a buffered character
+		value = ringBufferDef[(uint16_t)(ringBufferIdx)].data[ringBufferDef[(uint16_t)(ringBufferIdx)].end++]; // pull a buffered character
 
-		if (bfr.status & bufferIsFull) bfr.status &= ~(bufferIsFull); // mark buffer as no longer full
-		if (bfr.end == bfr.size) bfr.end = 0; // handle wrap-around
-		if (bfr.end == bfr.start) bfr.status |= (bufferIsEmpty); // test if buffer is empty
+		if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) ringBufferDef[(uint16_t)(ringBufferIdx)].status &= ~(bufferIsFull); // mark buffer as no longer full
+		if (ringBufferDef[(uint16_t)(ringBufferIdx)].end == ringBufferDef[(uint16_t)(ringBufferIdx)].size) ringBufferDef[(uint16_t)(ringBufferIdx)].end = 0; // handle wrap-around
+		if (ringBufferDef[(uint16_t)(ringBufferIdx)].end == ringBufferDef[(uint16_t)(ringBufferIdx)].start) ringBufferDef[(uint16_t)(ringBufferIdx)].status |= (bufferIsEmpty); // test if buffer is empty
 
 	}
 
@@ -1608,19 +1635,19 @@ static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 
 }
 
-static uint16_t ringBuffer::length(ringBufferVariable &bfr)
+static uint16_t ringBuffer::length(uint8_t ringBufferIdx)
 {
 
 	uint16_t i;
 
-	if (bfr.status & bufferIsFull) i = bfr.size;
-	else if (bfr.status & bufferIsEmpty) i = 0;
-	else if (bfr.end < bfr.start) i = (bfr.start - bfr.end);
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) i = ringBufferDef[(uint16_t)(ringBufferIdx)].size;
+	else if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) i = 0;
+	else if (ringBufferDef[(uint16_t)(ringBufferIdx)].end < ringBufferDef[(uint16_t)(ringBufferIdx)].start) i = (ringBufferDef[(uint16_t)(ringBufferIdx)].start - ringBufferDef[(uint16_t)(ringBufferIdx)].end);
 	else
 	{
 
-		i = bfr.size - bfr.end;
-		i += bfr.start;
+		i = ringBufferDef[(uint16_t)(ringBufferIdx)].size - ringBufferDef[(uint16_t)(ringBufferIdx)].end;
+		i += ringBufferDef[(uint16_t)(ringBufferIdx)].start;
 
 	}
 
@@ -1628,19 +1655,19 @@ static uint16_t ringBuffer::length(ringBufferVariable &bfr)
 
 }
 
-static uint16_t ringBuffer::free(ringBufferVariable &bfr)
+static uint16_t ringBuffer::free(uint8_t ringBufferIdx)
 {
 
 	uint16_t i;
 
-	if (bfr.status & bufferIsFull) i = 0;
-	else if (bfr.status & bufferIsEmpty) i = bfr.size;
-	else if (bfr.end > bfr.start) i = (bfr.end - bfr.start);
+	if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) i = 0;
+	else if (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) i = ringBufferDef[(uint16_t)(ringBufferIdx)].size;
+	else if (ringBufferDef[(uint16_t)(ringBufferIdx)].end > ringBufferDef[(uint16_t)(ringBufferIdx)].start) i = (ringBufferDef[(uint16_t)(ringBufferIdx)].end - ringBufferDef[(uint16_t)(ringBufferIdx)].start);
 	else
 	{
 
-		i = bfr.size - bfr.start;
-		i += bfr.end;
+		i = ringBufferDef[(uint16_t)(ringBufferIdx)].size - ringBufferDef[(uint16_t)(ringBufferIdx)].start;
+		i += ringBufferDef[(uint16_t)(ringBufferIdx)].end;
 
 	}
 
@@ -2206,6 +2233,9 @@ static void heart::initHardware(void)
 #endif // defined(useTimer4)
 	SREG = oldSREG; // restore interrupt flag status
 
+#if defined(useBuffering)
+	ringBuffer::init();
+#endif // defined(useBuffering)
 #if defined(useTWIsupport)
 	TWI::init();
 #if defined(useMCP23017portExpander)

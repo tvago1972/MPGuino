@@ -34,30 +34,217 @@ typedef struct
 	uint16_t start;
 	uint16_t end;
 
-} ringBufferVariable;
+} FIFO_t;
+
+typedef struct
+{
+
+	uint8_t * data;
+	uint16_t size;
+
+} FIFO_storage_t;
 
 namespace ringBuffer // ringBuffer prototype
 {
 
-	static void init(ringBufferVariable &bfr, uint8_t * storage, uint16_t storageSize);
-	static uint8_t isBufferEmpty(ringBufferVariable &bfr);
-	static uint8_t isBufferNotEmpty(ringBufferVariable &bfr);
-	static uint8_t isBufferFull(ringBufferVariable &bfr);
-	static uint16_t lengthMain(ringBufferVariable &bfr);
-	static uint16_t freeMain(ringBufferVariable &bfr);
-	static void pushMain(ringBufferVariable &bfr, uint8_t value);
-	static uint8_t pullMain(ringBufferVariable &bfr);
-	static void flush(ringBufferVariable &bfr);
-	static void empty(ringBufferVariable &bfr);
-	static void push(ringBufferVariable &bfr, uint8_t value);
-	static uint8_t pull(ringBufferVariable &bfr);
-	static uint16_t length(ringBufferVariable &bfr);
-	static uint16_t free(ringBufferVariable &bfr);
+	static void init(void);
+	static uint8_t isBufferEmpty(uint8_t ringBufferIdx);
+	static uint8_t isBufferNotEmpty(uint8_t ringBufferIdx);
+	static uint8_t isBufferFull(uint8_t ringBufferIdx);
+	static uint16_t lengthMain(uint8_t ringBufferIdx);
+	static uint16_t freeMain(uint8_t ringBufferIdx);
+	static void pushMain(uint8_t ringBufferIdx, uint8_t value);
+	static uint8_t pullMain(uint8_t ringBufferIdx);
+	static void flush(uint8_t ringBufferIdx);
+	static void empty(uint8_t ringBufferIdx);
+	static void push(uint8_t ringBufferIdx, uint8_t value);
+	static uint8_t pull(uint8_t ringBufferIdx);
+	static uint16_t length(uint8_t ringBufferIdx);
+	static uint16_t free(uint8_t ringBufferIdx);
 
 };
 
 static const uint8_t bufferIsFull =		0b10000000;
 static const uint8_t bufferIsEmpty =	0b01000000;
+
+#if defined(useLCDbufferedOutput)
+static const uint16_t LCDdataSize = 32;
+#endif // defined(useLCDbufferedOutput)
+#if defined(useBufferedSerial0Port)
+static const uint16_t serial0DataSize = 32;
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial0PortInput)
+static const uint16_t serial0InputDataSize = 64;
+#endif // defined(useSerial0PortInput)
+#if defined(useBufferedSerial1Port)
+static const uint16_t serial1DataSize = 32;
+#endif // defined(useBufferedSerial1Port)
+#if defined(useSerial1PortInput)
+static const uint16_t serial1InputDataSize = 64;
+#endif // defined(useSerial1PortInput)
+#if defined(useBufferedSerial2Port)
+static const uint16_t serial2DataSize = 32;
+#endif // defined(useBufferedSerial2Port)
+#if defined(useSerial2PortInput)
+static const uint16_t serial2InputDataSize = 64;
+#endif // defined(useSerial2PortInput)
+#if defined(useBufferedSerial3Port)
+static const uint16_t serial3DataSize = 32;
+#endif // defined(useBufferedSerial3Port)
+#if defined(useSerial3PortInput)
+static const uint16_t serial3InputDataSize = 64;
+#endif // defined(useSerial3PortInput)
+#if defined(useBluetoothAdaFruitSPI)
+static const uint16_t outputSPIdataSize = 128;
+static const uint16_t inputSPIdataSize = 32;
+static const uint16_t inputBTdataSize = 32;
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useDebugTerminal)
+static const uint16_t tBuffLength = 120;
+#endif // defined(useDebugTerminal)
+#if defined(__AVR_ATmega32U4__)
+static const uint16_t USBoutputDataSize = 250;
+static const uint16_t USBinputDataSize = 250;
+#endif // defined(__AVR_ATmega32U4__)
+
+#if defined(useLCDbufferedOutput)
+static uint8_t LCDdata[LCDdataSize];
+#endif // defined(useLCDbufferedOutput)
+#if defined(useBufferedSerial0Port)
+static uint8_t serial0Data[serial0DataSize];
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial0PortInput)
+static uint8_t serial0InputData[serial0InputDataSize];
+#endif // defined(useSerial0PortInput)
+#if defined(useBufferedSerial1Port)
+static uint8_t serial1Data[serial1DataSize];
+#endif // defined(useBufferedSerial1Port)
+#if defined(useSerial1PortInput)
+static uint8_t serial1InputData[serial1InputDataSize];
+#endif // defined(useSerial1PortInput)
+#if defined(useBufferedSerial2Port)
+static uint8_t serial2Data[serial2DataSize];
+#endif // defined(useBufferedSerial2Port)
+#if defined(useSerial2PortInput)
+static uint8_t serial2InputData[serial2InputDataSize];
+#endif // defined(useSerial2PortInput)
+#if defined(useBufferedSerial3Port)
+static uint8_t serial3Data[serial3DataSize];
+#endif // defined(useBufferedSerial3Port)
+#if defined(useSerial3PortInput)
+static uint8_t serial3InputData[serial3InputDataSize];
+#endif // defined(useSerial3PortInput)
+#if defined(useBluetoothAdaFruitSPI)
+static uint8_t outputSPIdata[outputSPIdataSize];
+static uint8_t inputSPIdata[inputSPIdataSize];
+static uint8_t inputBTdata[inputBTdataSize];
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useDebugTerminal)
+static uint8_t terminalBuff[tBuffLength];
+#endif // defined(useDebugTerminal)
+#if defined(__AVR_ATmega32U4__)
+static uint8_t USBoutputData[USBoutputDataSize];
+static uint8_t USBinputData[USBinputDataSize];
+#endif // defined(__AVR_ATmega32U4__)
+
+#define nextAllowedValue 0
+#if defined(useLCDbufferedOutput)
+static const uint8_t rbIdxLCD =				nextAllowedValue;		// lcdBuffer
+#define nextAllowedValue rbIdxLCD + 1;
+#endif // defined(useLCDbufferedOutput)
+#if defined(useBufferedSerial0Port)
+static const uint8_t rbIdxSerial0Out =		nextAllowedValue;		// serial0Buffer
+#define nextAllowedValue rbIdxSerial0Out + 1;
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial0PortInput)
+static const uint8_t rbIdxSerial0In =		nextAllowedValue;		// serial0InputBuffer
+#define nextAllowedValue rbIdxSerial0In + 1;
+#endif // defined(useSerial0PortInput)
+#if defined(useBufferedSerial1Port)
+static const uint8_t rbIdxSerial1Out =		nextAllowedValue;		// serial1Buffer
+#define nextAllowedValue rbIdxSerial1Out + 1;
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial1PortInput)
+static const uint8_t rbIdxSerial1In =		nextAllowedValue;		// serial1InputBuffer
+#define nextAllowedValue rbIdxSerial1In + 1;
+#endif // defined(useSerial1PortInput)
+#if defined(useBufferedSerial2Port)
+static const uint8_t rbIdxSerial2Out =		nextAllowedValue;		// serial2Buffer
+#define nextAllowedValue rbIdxSerial2Out + 1;
+#endif // defined(useBufferedSerial2Port)
+#if defined(useSerial2PortInput)
+static const uint8_t rbIdxSerial2In =		nextAllowedValue;		// serial2InputBuffer
+#define nextAllowedValue rbIdxSerial2In + 1;
+#endif // defined(useSerial2PortInput)
+#if defined(useBufferedSerial3Port)
+static const uint8_t rbIdxSerial3Out =		nextAllowedValue;		// serial3Buffer
+#define nextAllowedValue rbIdxSerial3Out + 1;
+#endif // defined(useBufferedSerial3Port)
+#if defined(useSerial3PortInput)
+static const uint8_t rbIdxSerial3In =		nextAllowedValue;		// serial3InputBuffer
+#define nextAllowedValue rbIdxSerial3In + 1;
+#endif // defined(useSerial3PortInput)
+#if defined(useBluetoothAdaFruitSPI)
+static const uint8_t rbIdxBLEfriendOut =	nextAllowedValue;		// btSPIoutputBuffer
+static const uint8_t rbIdxBLEfriendIn =		rbIdxBLEfriendOut + 1;	// btSPIinputBuffer
+static const uint8_t rbIdxBluetoothIn =		rbIdxBLEfriendIn + 1;	// btInputBuffer
+#define nextAllowedValue rbIdxBluetoothIn + 1;
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useDebugTerminal)
+static const uint8_t rbIdxTerminal =		nextAllowedValue;		// terminalBuffer
+#define nextAllowedValue rbIdxTerminal + 1;
+#endif // defined(useDebugTerminal)
+#if defined(__AVR_ATmega32U4__)
+static const uint8_t rbIdxUSBout =			nextAllowedValue;		// USBoutputBuffer
+static const uint8_t rbIdxUSBin =			rbIdxUSBout + 1;		// USBinputBuffer
+#define nextAllowedValue rbIdxUSBin + 1;
+#endif defined(__AVR_ATmega32U4__)
+
+static const uint8_t rbIdxCount =			nextAllowedValue;
+
+static FIFO_t ringBufferDef[(uint16_t)(rbIdxCount)];
+
+static const FIFO_storage_t ringBufferDefList[(uint16_t)(rbIdxCount)] PROGMEM = {
+#if defined(useLCDbufferedOutput)
+	{LCDdata,			LCDdataSize},
+#endif // defined(useLCDbufferedOutput)
+#if defined(useBufferedSerial0Port)
+	{serial0Data,		serial0DataSize},
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial0PortInput)
+	{serial0InputData,	serial0InputDataSize},
+#endif // defined(useSerial0PortInput)
+#if defined(useBufferedSerial1Port)
+	{serial1Data,		serial1DataSize},
+#endif // defined(useBufferedSerial0Port)
+#if defined(useSerial1PortInput)
+	{serial1InputData,	serial1InputDataSize},
+#endif // defined(useSerial1PortInput)
+#if defined(useBufferedSerial2Port)
+	{serial2Data,		serial2DataSize},
+#endif // defined(useBufferedSerial2Port)
+#if defined(useSerial2PortInput)
+	{serial2InputData,	serial2InputDataSize},
+#endif // defined(useSerial2PortInput)
+#if defined(useBufferedSerial3Port)
+	{serial3Data,		serial3DataSize},
+#endif // defined(useBufferedSerial3Port)
+#if defined(useSerial3PortInput)
+	{serial3InputData,	serial3InputDataSize},
+#endif // defined(useSerial3PortInput)
+#if defined(useBluetoothAdaFruitSPI)
+	{outputSPIdata,		outputSPIdataSize},
+	{inputSPIdata,		inputSPIdataSize},
+	{inputBTdata,		inputBTdataSize},
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useDebugTerminal)
+	{terminalBuff,		tBuffLength},
+#endif // defined(useDebugTerminal)
+#if defined(__AVR_ATmega32U4__)
+	{USBoutputData,		USBoutputDataSize},
+	{USBinputData,		USBinputDataSize},
+#endif // defined(__AVR_ATmega32U4__)
+};
 
 #endif // defined(useBuffering)
 #if defined(useBarGraph)
@@ -451,6 +638,9 @@ static const uint8_t t0cResetFEvTime =			0b00010000;
 #if defined(useAnalogButtons)
 static const uint8_t t0cEnableAnalogButtons =	0b00001000;
 #endif // defined(useAnalogButtons)
+#if defined(useBluetoothAdaFruitSPI)
+static const uint8_t t0cEnableBLEsample =		0b00000100;
+#endif // defined(useBluetoothAdaFruitSPI)
 
 // these flags specifically tell the main program to do something
 // system timer0 sets flag, main program acknowledges by clearing flag
@@ -483,6 +673,9 @@ static const uint8_t aAwakeOnVSS =				0b01000000;
 static const uint8_t aAwakeOnInput =			0b00100000;
 static const uint8_t aAwakeEngineRunning =		0b00010000;
 static const uint8_t aAwakeVehicleMoving =		0b00001000;
+#if defined(useBluetoothAdaFruitSPI)
+static const uint8_t aAwakeSampleBLEfriend =	0b00000100;
+#endif // defined(useBluetoothAdaFruitSPI)
 
 static const uint8_t aAwake =					(aAwakeOnInjector | aAwakeOnVSS | aAwakeOnInput);
 static const uint8_t aAwakeOnVehicle =			(aAwakeOnInjector | aAwakeOnVSS);

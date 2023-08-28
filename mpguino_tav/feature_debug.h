@@ -315,11 +315,6 @@ static uint8_t decPlace;
 static uint8_t decWindow;
 static uint8_t decMode;
 
-ringBufferVariable terminalBuffer;
-
-static const uint8_t tBuffLength = 120;
-static volatile uint8_t terminalBuff[(uint16_t)(tBuffLength)];
-
 static const char * labelList;
 static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);

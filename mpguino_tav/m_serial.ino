@@ -8,14 +8,6 @@ static void serial0::init(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-#if defined(useBufferedSerial0Port)
-	ringBuffer::init(serial0Buffer, serial0Data, serial0DataSize);
-
-#endif // defined(useBufferedSerial0Port)
-#if defined(useSerial0PortInput)
-	ringBuffer::init(serial0InputBuffer, serial0InputData, serial0InputDataSize);
-
-#endif // defined(useSerial0PortInput)
 	// turn on USART0 transmitter
 #if defined(__AVR_ATmega2560__)
 	PRR0 &= ~(1 << PRUSART0);
@@ -78,7 +70,7 @@ static void serial0::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial0Port)
-	ringBuffer::pushMain(serial0Buffer, chr);
+	ringBuffer::pushMain(rbIdxSerial0Out, chr);
 	UCSR0B |= (1 << UDRIE0); // enable data register empty interrupt
 #else // defined(useBufferedSerial0Port)
 	while ((UCSR0A & (1 << UDRE0)) == 0) idleProcess(); // wait until USART0 data buffer is empty
@@ -93,7 +85,7 @@ static void serial0::chrOut(uint8_t chr)
 static uint8_t serial0::chrIn(void)
 {
 
-	return ringBuffer::pullMain(serial0InputBuffer);
+	return ringBuffer::pullMain(rbIdxSerial0In);
 
 }
 
@@ -120,7 +112,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 	devSerial0.controlFlags |= errFlags;
 
 	chr = UDR0; // clear receive buffer
-	if ((errFlags) == 0) ringBuffer::push(serial0InputBuffer, chr);
+	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial0In, chr);
 
 #if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
@@ -152,7 +144,7 @@ ISR( USART_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(serial0Buffer)) UDR0 = ringBuffer::pull(serial0Buffer); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::isBufferNotEmpty(rbIdxSerial0Out)) UDR0 = ringBuffer::pull(rbIdxSerial0Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR0B &= ~(1 << UDRIE0); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -177,14 +169,7 @@ static void serial1::init(void)
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
-#if defined(useBufferedSerial1Port)
 
-	ringBuffer::init(serial1Buffer, serial1Data, serial1DataSize);
-#endif // defined(useBufferedSerial1Port)
-#if defined(useSerial1PortInput)
-	ringBuffer::init(serial1InputBuffer, serial1InputData, serial1InputDataSize);
-
-#endif // defined(useSerial1PortInput)
 	// turn on USART1 transmitter
 	PRR1 &= ~(1 << PRUSART1);
 
@@ -237,7 +222,7 @@ static void serial1::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial1Port)
-	ringBuffer::pushMain(serial1Buffer, chr);
+	ringBuffer::pushMain(rbIdxSerial1Out, chr);
 	UCSR1B |= (1 << UDRIE1); // enable data register empty interrupt
 #else // defined(useBufferedSerial1Port)
 	while ((UCSR1A & (1 << UDRE1)) == 0) idleProcess(); // wait until USART1 data buffer is empty
@@ -252,7 +237,7 @@ static void serial1::chrOut(uint8_t chr)
 static uint8_t serial1::chrIn(void)
 {
 
-	return ringBuffer::pullMain(serial1InputBuffer);
+	return ringBuffer::pullMain(rbIdxSerial1In);
 
 }
 
@@ -274,7 +259,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 	devSerial1.controlFlags |= errFlags;
 
 	chr = UDR1; // clear receive buffer
-	if ((errFlags) == 0) ringBuffer::push(serial1InputBuffer, chr);
+	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial1In, chr);
 
 #if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
@@ -306,7 +291,7 @@ ISR( USART1_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(serial1Buffer)) UDR1 = ringBuffer::pull(serial1Buffer); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::isBufferNotEmpty(rbIdxSerial1Out)) UDR1 = ringBuffer::pull(rbIdxSerial1Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR1B &= ~(1 << UDRIE1); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -331,14 +316,7 @@ static void serial2::init(void)
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
-#if defined(useBufferedSerial2Port)
 
-	ringBuffer::init(serial2Buffer, serial2Data, serial2DataSize);
-#endif // defined(useBufferedSerial2Port)
-#if defined(useSerial2PortInput)
-	ringBuffer::init(serial2InputBuffer, serial2InputData, serial2InputDataSize);
-
-#endif // defined(useSerial2PortInput)
 	// turn on USART2 transmitter
 	PRR1 &= ~(1 << PRUSART2);
 
@@ -391,7 +369,7 @@ static void serial2::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial2Port)
-	ringBuffer::pushMain(serial2Buffer, chr);
+	ringBuffer::pushMain(rbIdxSerial2Out, chr);
 	UCSR2B |= (1 << UDRIE2); // enable data register empty interrupt
 #else // defined(useBufferedSerial2Port)
 	while ((UCSR2A & (1 << UDRE2)) == 0) idleProcess(); // wait until USART2 data buffer is empty
@@ -406,7 +384,7 @@ static void serial2::chrOut(uint8_t chr)
 static uint8_t serial2::chrIn(void)
 {
 
-	return ringBuffer::pullMain(serial2InputBuffer);
+	return ringBuffer::pullMain(rbIdxSerial2In);
 
 }
 
@@ -428,7 +406,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 	devSerial2.controlFlags |= errFlags;
 
 	chr = UDR2; // clear receive buffer
-	if ((errFlags) == 0) ringBuffer::push(serial2InputBuffer, chr);
+	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial2In, chr);
 
 #if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
@@ -455,7 +433,7 @@ ISR( USART2_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(serial2Buffer)) UDR2 = ringBuffer::pull(serial2Buffer); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::isBufferNotEmpty(rbIdxSerial2Out)) UDR2 = ringBuffer::pull(rbIdxSerial2Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR2B &= ~(1 << UDRIE2); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -480,14 +458,7 @@ static void serial3::init(void)
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
-#if defined(useBufferedSerial3Port)
 
-	ringBuffer::init(serial3Buffer, serial3Data, serial3DataSize);
-#endif // defined(useBufferedSerial3Port)
-#if defined(useSerial3PortInput)
-	ringBuffer::init(serial3InputBuffer, serial3InputData, serial3InputDataSize);
-
-#endif // defined(useSerial3PortInput)
 	// turn on USART3 transmitter
 	PRR1 &= ~(1 << PRUSART3);
 
@@ -540,7 +511,7 @@ static void serial3::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial3Port)
-	ringBuffer::pushMain(serial3Buffer, chr);
+	ringBuffer::pushMain(rbIdxSerial3Out, chr);
 	UCSR3B |= (1 << UDRIE3); // enable data register empty interrupt
 #else // defined(useBufferedSerial3Port)
 	while ((UCSR3A & (1 << UDRE3)) == 0) idleProcess(); // wait until USART3 data buffer is empty
@@ -555,7 +526,7 @@ static void serial3::chrOut(uint8_t chr)
 static uint8_t serial3::chrIn(void)
 {
 
-	return ringBuffer::pullMain(serial3InputBuffer);
+	return ringBuffer::pullMain(rbIdxSerial3In);
 
 }
 
@@ -577,7 +548,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 	devSerial3.controlFlags |= errFlags;
 
 	chr = UDR3; // clear receive buffer
-	if ((errFlags) == 0) ringBuffer::push(serial3InputBuffer, chr);
+	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial3In, chr);
 
 #if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
@@ -604,7 +575,7 @@ ISR( USART3_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(serial3Buffer)) UDR3 = ringBuffer::pull(serial3Buffer); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::isBufferNotEmpty(rbIdxSerial3Out)) UDR3 = ringBuffer::pull(rbIdxSerial3Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR3B &= ~(1 << UDRIE3); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)

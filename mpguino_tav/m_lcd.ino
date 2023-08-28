@@ -19,10 +19,6 @@ static void LCD::init(void)
 	devLCD.chrOut = LCD::writeData;
 	devLCD.controlFlags |= (odvFlagEnableOutput);
 
-#if defined(useLCDbufferedOutput)
-	ringBuffer::init(lcdBuffer, LCDdata, LCDdataSize);
-
-#endif // defined(useLCDbufferedOutput)
 	lcdDelayCount = 0; // reset LCD delay count
 	timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
 
@@ -128,7 +124,7 @@ static void LCD::init(void)
 	writeCommand(lcdFunctionSet | lcdFSnumberOfLines); // 4-bit interface, 2 display lines, 5x8 font
 
 #if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
+	ringBuffer::flush(rbIdxLCD); // flush LCD output buffer
 
 #endif // defined(useLCDbufferedOutput)
 #endif // defined(use4BitLCD)
@@ -145,13 +141,13 @@ static void LCD::init(void)
 	writeData(0x0C); // clear display, set cursor position to zero
 
 #if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD screen to clear
+	ringBuffer::flush(rbIdxLCD); // flush LCD output buffer to force the LCD screen to clear
 
 #endif // defined(useLCDbufferedOutput)
-#if defined(LCDserialBuffer)
-	ringBuffer::flush(LCDserialBuffer); // clear the LCD buffer to force the LCD screen to clear
+#if defined(rbIdxLCDserial)
+	ringBuffer::flush(rbIdxLCDserial); // clear the LCD buffer to force the LCD screen to clear
 
-#endif // defined(LCDserialBuffer)
+#endif // defined(rbIdxLCDserial)
 }
 
 static void LCD::shutdown(void)
@@ -162,11 +158,11 @@ static void LCD::shutdown(void)
 	setContrast(255); // turn off LCD contrast
 #endif // defined(useLCDcontrast)
 	writeData(0x15); // display control - turn off display
-#if defined(LCDserialBuffer)
-	ringBuffer::flush(LCDserialBuffer); // flush LCD output buffer to force the LCD display to turn off
-#endif // defined(LCDserialBuffer)
+#if defined(rbIdxLCDserial)
+	ringBuffer::flush(rbIdxLCDserial); // flush LCD output buffer to force the LCD display to turn off
+#endif // defined(rbIdxLCDserial)
 #if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
+	ringBuffer::flush(rbIdxLCD); // flush LCD output buffer
 #endif // defined(useLCDbufferedOutput)
 
 #if defined(use4BitLCD)
@@ -677,7 +673,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 {
 
 #if defined(useLCDbufferedOutput)
-	ringBuffer::pushMain(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
+	ringBuffer::pushMain(rbIdxLCD, (value & 0xF0) | (flags & 0x0F));
 #else // defined(useLCDbufferedOutput)
 #if defined(usePort4BitLCD)
 	uint8_t oldSREG;
