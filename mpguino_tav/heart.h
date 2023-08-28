@@ -28,24 +28,31 @@ namespace heart /* core MPGuino system support section prototype */
 typedef struct
 {
 
-	volatile uint8_t * data;
-	volatile uint8_t size;
-	volatile uint8_t start;
-	volatile uint8_t end;
-	volatile uint8_t status;
+	uint8_t * data;
+	uint8_t status;
+	uint16_t size;
+	uint16_t start;
+	uint16_t end;
 
 } ringBufferVariable;
 
 namespace ringBuffer // ringBuffer prototype
 {
 
-	static void init(ringBufferVariable &bfr, volatile uint8_t * storage);
+	static void init(ringBufferVariable &bfr, uint8_t * storage, uint16_t storageSize);
+	static uint8_t isBufferEmpty(ringBufferVariable &bfr);
 	static uint8_t isBufferNotEmpty(ringBufferVariable &bfr);
-	static void push(ringBufferVariable &bfr, uint8_t value);
-	static void pushInterrupt(ringBufferVariable &bfr, uint8_t value);
-	static uint8_t pull(ringBufferVariable &bfr);
+	static uint8_t isBufferFull(ringBufferVariable &bfr);
+	static uint16_t lengthMain(ringBufferVariable &bfr);
+	static uint16_t freeMain(ringBufferVariable &bfr);
+	static void pushMain(ringBufferVariable &bfr, uint8_t value);
 	static uint8_t pullMain(ringBufferVariable &bfr);
 	static void flush(ringBufferVariable &bfr);
+	static void empty(ringBufferVariable &bfr);
+	static void push(ringBufferVariable &bfr, uint8_t value);
+	static uint8_t pull(ringBufferVariable &bfr);
+	static uint16_t length(ringBufferVariable &bfr);
+	static uint16_t free(ringBufferVariable &bfr);
 
 };
 
@@ -118,30 +125,40 @@ static const uint8_t systemProcessorSpeed = (F_CPU / 1000000ul);
 static const unsigned long t0CyclesPerSecond = (unsigned long)(F_CPU / 64ul);
 static const unsigned long t0TicksPerSecond = t0CyclesPerSecond / 256ul;
 
-static const unsigned int loopTickLength = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(loopsPerSecond * 256ul)) - 1;
-static const unsigned int buttonLongPressTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul)); // 1 second delay
-static const unsigned int cursorDelayTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 2ul)) - 1; // display cursor toggle period is 500 milliseconds
-static const unsigned int swapFEwithFCRdelay = (unsigned int)(ceil)((double)(3ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 3 second delay
-static const unsigned int holdDelay = (unsigned int)(ceil)((double)(2ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 2 second delay
-static const unsigned int delay1500msTick = (unsigned int)(ceil)((double)(15ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.5 second delay
-static const unsigned int delay0002msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 500ul)) - 1; // 2 millisecond delay
-static const unsigned int delay0005msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 200ul)) - 1; // 5 millisecond delay
-static const unsigned int delay0020msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 50ul)) - 1; // 20 millisecond delay
-static const unsigned int delay0100msTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
-
-#if defined(useLegacyButtons)
-static const unsigned int buttonDebounceTick = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 20ul)) - 1; // 50 millisecond delay button debounce
-#endif // defined(useLegacyButtons)
+static const uint16_t delay0TickSampleLoop = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(loopsPerSecond * 256ul)) - 1;
 #if defined(useAnalogButtons)
-static const unsigned int analogSampleTickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(analogSamplesPerSecond * 256ul)) - 1;
+static const uint16_t delay0TickAnalogSample  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(analogSamplesPerSecond * 256ul)) - 1;
 #endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)
-static const unsigned int TWItickLength  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(TWIsamplesPerSecond * 256ul)) - 1;
+static const uint16_t delay0TickTWIsample  = (unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(TWIsamplesPerSecond * 256ul)) - 1;
 #endif // defined(useTWIbuttons)
-#if defined(useJSONoutput)
-static const unsigned int JSONtickLength = (unsigned int)(ceil)((double)(16ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.6 second delay
-#endif // defined(useJSONoutput)
 
+static const uint16_t delay0Tick3000ms =	(unsigned int)(ceil)((double)(3ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 3 second delay
+static const uint16_t delay0Tick2000ms =	(unsigned int)(ceil)((double)(2ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 2 second delay
+static const uint16_t delay0Tick1600ms =	(unsigned int)(ceil)((double)(16ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.6 second delay
+static const uint16_t delay0Tick1500ms =	(unsigned int)(ceil)((double)(15ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.5 second delay
+static const uint16_t delay0Tick1000ms =	(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul)); // 1 second delay
+static const uint16_t delay0Tick500ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 2ul)) - 1; // display cursor toggle period is 500 milliseconds
+static const uint16_t delay0Tick100ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
+static const uint16_t delay0Tick50ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 20ul)) - 1; // 50 millisecond delay button debounce
+static const uint16_t delay0Tick30ms =		(unsigned int)(ceil)((double)(30ul * t0CyclesPerSecond) / (double)(256ul * 1000ul)) - 1; // 30 millisecond delay
+static const uint16_t delay0Tick20ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 50ul)) - 1; // 20 millisecond delay
+static const uint16_t delay0Tick5ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 200ul)) - 1; // 5 millisecond delay
+static const uint16_t delay0Tick2ms =		(unsigned int)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 500ul)) - 1; // 2 millisecond delay
+
+#if defined(useTimer1Interrupt)
+static const uint16_t delay1Tick1s =		(uint16_t)(ceil)((double)(1000000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
+static const uint16_t delay1Tick500ms =		(uint16_t)(ceil)((double)(500000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
+static const uint16_t delay1Tick250ms =		(uint16_t)(ceil)((double)(250000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
+static const uint16_t delay1Tick15200us =	(uint16_t)(ceil)((double)(15200ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
+static const uint16_t delay1Tick10ms =		(uint16_t)(ceil)((double)(10000ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
+static const uint16_t delay1Tick4100us =	(uint16_t)(ceil)((double)(4100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // secondary LCD delay for 4-bit initialization
+static const uint16_t delay1Tick838us =		(uint16_t)(ceil)((double)(838ul * systemProcessorSpeed) / (double)(510ul)) - 1; // final LCD delay for 4-bit initialization
+static const uint16_t delay1Tick100us =		(uint16_t)(ceil)((double)(100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // final LCD delay for 4-bit initialization
+static const uint16_t delay1Tick50us =		(uint16_t)(ceil)((double)(75ul * systemProcessorSpeed) / (double)(510ul)) - 1; // final LCD delay for 4-bit initialization
+static const uint16_t delay1Tick40us =		(uint16_t)(ceil)((double)(40ul * systemProcessorSpeed) / (double)(510ul)); // normal LCD character transmission delay
+
+#endif // defined(useTimer1Interrupt)
 // volatile variable array index values - these may be referenced inside an interrupt service routine
 #define nextAllowedValue 0
 #if defined(useCPUreading)
@@ -434,9 +451,6 @@ static const uint8_t t0cResetFEvTime =			0b00010000;
 #if defined(useAnalogButtons)
 static const uint8_t t0cEnableAnalogButtons =	0b00001000;
 #endif // defined(useAnalogButtons)
-#if defined(useBluetooth)
-static const uint8_t t0cResetBluetoothOutput =	0b00000100;
-#endif // defined(useBluetooth)
 
 // these flags specifically tell the main program to do something
 // system timer0 sets flag, main program acknowledges by clearing flag
@@ -448,9 +462,9 @@ static const uint8_t t0sShowCursor =			0b00100000;
 #if defined(useButtonInput)
 static const uint8_t t0sReadButton =			0b00010000;
 #endif // defined(useButtonInput)
-#if defined(useDataLoggingOutput) || defined(useJSONoutput)
+#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 static const uint8_t t0sOutputLogging =			0b00001000;
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 #if defined(useDragRaceFunction)
 static const uint8_t t0sAccelTestFlag =			0b00000100;
 #endif // defined(useDragRaceFunction)
@@ -458,7 +472,7 @@ static const uint8_t t0sAccelTestFlag =			0b00000100;
 static const uint8_t t0sCoastdownTestFlag =		0b00000010;
 #endif // defined(useCoastDownCalculator)
 #if defined(useJSONoutput)
-static const uint8_t t0sOutputJSON =			0b00000001;
+static const uint8_t t0sJSONchangeSubtitle =	0b00000001;
 #endif // defined(useJSONoutput)
 
 // these status flags inform the main program about MPGuino awake state
@@ -483,9 +497,6 @@ static const uint8_t afUserInputFlag =			0b00100000;
 static const uint8_t afParkFlag =				0b00010000;
 static const uint8_t afActivityTimeoutFlag =	0b00001000;
 static const uint8_t afSwapFEwithFCR =			0b00000100;
-#if defined(useBluetooth)
-static const uint8_t afBluetoothOutput =		0b00000010;
-#endif // defined(useBluetooth)
 
 static const uint8_t afValidFlags =				(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag);
 static const uint8_t afInputCheckFlags =		(afEngineOffFlag | afVehicleStoppedFlag | afUserInputFlag);
@@ -544,4 +555,19 @@ static const uint8_t t1sDebugUpdateFIP =		0b00100000;
 static const uint8_t t1sDebugUpdateVSS =		0b00010000;
 #endif // defined(useSimulatedFIandVSS)
 
+#if defined(useBluetoothAdaFruitSPI)
+volatile uint8_t bleStatus;
+
+static const uint8_t bleReset =					0b10000000;
+static const uint8_t bleResetting =				0b01000000;
+static const uint8_t bleAssert =				0b00100000;
+static const uint8_t bleAsserting =				0b00010000;
+static const uint8_t blePacketWait =			0b00001000;
+static const uint8_t blePacketWaiting =			0b00000100;
+
+static const uint8_t bleResetFlags =			(bleReset | bleResetting);
+static const uint8_t bleAssertFlags =			(bleAssert | bleAsserting);
+static const uint8_t blePacketWaitFlags =		(blePacketWait | blePacketWaiting);
+
+#endif // defined(useBluetoothAdaFruitSPI)
 #endif // defined(useTimer1Interrupt)

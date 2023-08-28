@@ -54,7 +54,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		timer0DisplayDelayFlags = 0;
 		thisTime = TCNT0;
 		timer0Status = 0;
-		loopCount = loopTickLength;
+		loopCount = delay0TickSampleLoop;
 		awakeFlags = 0;
 #if defined(useButtonInput)
 		internalFlags = 0;
@@ -65,16 +65,16 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		activityFlags = (afActivityCheckFlags | afSwapFEwithFCR);
 		previousActivity = (afActivityCheckFlags);
 #if defined(useTWIbuttons)
-		TWIsampleCount = TWItickLength;
+		TWIsampleCount = delay0TickTWIsample;
 		TWIsampleState = 0;
 #endif // defined(useTWIbuttons)
 #if defined(useBluetooth)
-		bluetoothPeriodCount = loopTickLength;
+		bluetoothPeriodCount = delay0TickSampleLoop;
 #endif // defined(useBluetooth)
 #if defined(useAnalogRead)
 		analogStatus = asHardwareReady;
 #if defined(useAnalogButtons)
-		analogSampleCount = analogSampleTickLength;
+		analogSampleCount = delay0TickAnalogSample;
 #endif // defined(useAnalogButtons)
 #endif // defined(useAnalogRead)
 #if defined(useLegacyButtons)
@@ -178,7 +178,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			awakeFlags &= ~(aAwakeOnVSS); // signal that MPGuino is no longer awake due to no detected VSS pulse event during VSS watchdog period
 			dirty &= ~(dGoodVehicleMotion); // reset all VSS measurement flags
 			watchdogVSSCount = volatileVariables[(uint16_t)(vVehicleStopTimeoutIdx)]; // start the VSS watchdog for vehicle stopped mode
-			swapFEwithFCRcount = swapFEwithFCRdelay; // reset swap timer counter
+			swapFEwithFCRcount = delay0Tick3000ms; // reset swap timer counter
 
 		}
 
@@ -351,7 +351,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		TWIsampleCount = TWItickLength;
+		TWIsampleCount = delay0TickTWIsample;
 
 		if (twiStatusFlags & twiAllowISRactivity)
 		{
@@ -370,7 +370,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		analogSampleCount = analogSampleTickLength;
+		analogSampleCount = delay0TickAnalogSample;
 		if (timer0Command & t0cEnableAnalogButtons) analogCommand |= (acSampleButtonChannel); // go sample analog button channel
 
 	}
@@ -427,7 +427,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 				buttonPress = thisButtonState;
 				internalFlags |= (internalProcessButtonsUp);
-				buttonLongPressCount = buttonLongPressTick; // start the button long-press timer
+				buttonLongPressCount = delay0Tick1000ms; // start the button long-press timer
 
 			}
 
@@ -448,7 +448,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		if (activityFlags & afActivityTimeoutFlag) timer0Status |= (t0sUpdateDisplay); // simply update the display if MPGuino was asleep
 		else timer0Status |= (t0sReadButton | t0sShowCursor | t0sUpdateDisplay); // otherwise, force cursor show bit, and signal that keypress was detected
 		buttonLongPressCount = 0; // reset button long-press timer
-		cursorCount = cursorDelayTick; // reset cursor count
+		cursorCount = delay0Tick500ms; // reset cursor count
 		activityFlags &= ~(afUserInputFlag | afActivityTimeoutFlag);
 		inputTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
 
@@ -460,41 +460,22 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		timer0Status |= t0sOutputJSON; // signal to JSON output routine to display next round of subtitles
-		JSONtimeoutCount = JSONtickLength; // restart JSON output timeout count
+		timer0Status |= t0sJSONchangeSubtitle; // signal to JSON output routine to display next round of subtitles
+		JSONtimeoutCount = delay0Tick1600ms; // restart JSON output timeout count
 
 	}
 
 #endif // defined(useJSONoutput)
-#if defined(useBluetooth)
-	if (timer0Command & t0cResetBluetoothOutput)
-	{
-
-		timer0Command &= ~(t0cResetBluetoothOutput);
-		bluetoothPeriodCount = loopTickLength;
-
-	}
-
-	if (bluetoothPeriodCount) bluetoothPeriodCount--;
-	else
-	{
-
-		activityFlags |= (afBluetoothOutput);
-		bluetoothPeriodCount = loopTickLength;
-
-	}
-
-#endif // defined(useBluetooth)
 	if (loopCount) loopCount--;
 	else
 	{
 
-#if defined(useDataLoggingOutput) || defined(useJSONoutput)
+#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 		timer0Status |= (t0sUpdateDisplay | t0sTakeSample | t0sOutputLogging); // signal to main program that a sampling should occur, and to update display
-#else // defined(useDataLoggingOutput) || defined(useJSONoutput)
+#else // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 		timer0Status |= (t0sUpdateDisplay | t0sTakeSample); // signal to main program that a sampling should occur, and to update display
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
-		loopCount = loopTickLength; // restart loop count
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
+		loopCount = delay0TickSampleLoop; // restart loop count
 		mainLoopHeartBeat <<= 1; // cycle the heartbeat bit
 		if (mainLoopHeartBeat == 0) mainLoopHeartBeat = 1; // wrap around the heartbeat bit, if necessary
 #if defined(useAnalogRead)
@@ -507,7 +488,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		cursorCount = cursorDelayTick; // reset cursor count
+		cursorCount = delay0Tick500ms; // reset cursor count
 		timer0Status ^= t0sShowCursor; // toggle cursor show bit
 
 	}
@@ -759,12 +740,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 {
 
+#if defined(useBluetoothAdaFruitSPI)
+	static uint16_t responseDelay;
+	static uint16_t chipSelectDelay;
+	static uint16_t resetDelay;
+	static uint8_t chipSelectState;
+	static uint8_t resetState;
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(use4BitLCD)
 	static uint8_t value;
 #endif // defined(use4BitLCD)
 #if defined(useSimulatedFIandVSS)
-	static unsigned long debugVSSresetCount;
-	static unsigned long debugFIPresetCount;
+	static uint32_t debugVSSresetCount;
+	static uint32_t debugFIPresetCount;
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugCPUreading)
 	uint8_t a;
@@ -779,6 +767,10 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 		timer1Command &= ~(t1cResetTimer);
 		timer1Status = 0;
+#if defined(useBluetoothAdaFruitSPI)
+		chipSelectState = 0;
+		resetState = 0;
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useSimulatedFIandVSS)
 		debugVSScount = 0;
 		debugFIPcount = 0;
@@ -789,6 +781,144 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 	}
 
+#if defined(useBluetoothAdaFruitSPI)
+	if (bleStatus & bleReset) // if main program requests bluetooth hardware reset
+	{
+
+		bleStatus &= ~(bleReset | bleAssertFlags | blePacketWaitFlags); // clear any in-progress lesser waiting tasks
+		resetState = 1; // initialize reset state machine
+		chipSelectState = 0; // halt CS state machine
+
+	}
+
+	if (bleStatus & bleAssert) // if main program requests to assert /CS
+	{
+
+		if ((bleStatus & bleResetting) == 0) // wait until reset is complete
+		{
+
+			bleStatus &= ~(bleAssert); // acknowledge main program command
+			chipSelectState = 1; // initialize CS state machine
+
+		}
+
+	}
+
+	if (bleStatus & blePacketWait) // if main program requests waiting for a SDEP packet wait delay
+	{
+
+		if ((bleStatus & bleResetting) == 0) // wait until reset is complete
+		{
+
+			bleStatus &= ~(blePacketWait); // acknowledge main program command
+			responseDelay = delay1Tick250ms; // initialize response delay wait counter
+
+		}
+
+	}
+
+	if (bleStatus & bleResetting) // if hardware reset is in progress
+	{
+
+		switch (resetState)
+		{
+
+			case 1: // release /CS pin and assert /RST pin
+				blefriend::releaseCS();
+#if defined(__AVR_ATmega32U4__)
+				PORTD &= ~(1 << PORTD4);
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+				PORTG &= ~(1 << PORTG5);
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+				PORTD &= ~(1 << PORTD4);
+#endif // defined(__AVR_ATmega328P__)
+				resetDelay = delay1Tick10ms; // cause MPGuino to assert /RST for 10 ms
+				resetState++;
+				break;
+
+			case 3: // release /RST pin
+#if defined(__AVR_ATmega32U4__)
+				PORTD |= (1 << PORTD4);
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+				PORTG |= (1 << PORTG5);
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+				PORTD |= (1 << PORTD4);
+#endif // defined(__AVR_ATmega328P__)
+				resetDelay = delay1Tick1s; // cause MPGuino to wait on just-reset BLE hardware for 1 sec
+				resetState++;
+				break;
+
+			case 4:
+			case 2: // perform /RST delay
+				if (resetDelay) resetDelay--;
+				else resetState++;
+				break;
+
+			default: // catch invalid reset states
+				bleStatus &= ~(bleResetting); // mark hardware reset as completed
+				break;
+
+		}
+
+	}
+
+	if (bleStatus & bleAsserting) // if /CS assertion is in progress
+	{
+
+		switch (chipSelectState)
+		{
+
+			case 1: // release /CS pin if it's asserted
+				if (blefriend::isCSreleased()) chipSelectState += 2; // if /CS is not asserted, skip ahead
+				else // otherwise, release /CS and wait
+				{
+
+					blefriend::releaseCS();
+					chipSelectDelay = delay1Tick50us; // reset /CS delay timer
+					chipSelectState++;
+					break;
+
+				}
+
+			case 3: // assert /CS pin
+				blefriend::assertCS();
+				chipSelectDelay = delay1Tick100us; // reset CS delay timer
+				chipSelectState++;
+				break;
+
+			case 4:
+			case 2: // perform /CS delay
+				if (chipSelectDelay) chipSelectDelay--;
+				else chipSelectState++;
+				break;
+
+			default: // catch invalid chip select states
+				bleStatus &= ~(bleAsserting); // mark chip select assert as completed
+				break;
+
+		}
+
+	}
+
+	if (bleStatus & blePacketWaiting) // if response delay is in progress
+	{
+
+		if (responseDelay) responseDelay--; // if response delay counter still valid, bump down by one
+		else
+		{
+
+			bleStatus &= ~(blePacketWaiting); // otherwise, signal that response delay timed out
+			blefriend::releaseCS();
+
+		}
+
+	}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useSimulatedFIandVSS)
 	if (timer1Command & t1cEnableDebug)
 	{
@@ -945,7 +1075,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 							{
 
 								if ((twiDataBufferSize - twiDataBufferLen) < 5) timer1Status &= ~(t1sLoopFlag); // if TWI send buffer is getting low, signal end of loop
-								if (ringBuffer::isBufferNotEmpty(lcdBuffer) == 0) timer1Status &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
+								if (ringBuffer::isBufferEmpty(lcdBuffer)) timer1Status &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
 
 							}
 							else timer1Status &= ~(t1sLoopFlag); // otherwise, this is a special (command or reset) nybble, so signal end of loop
@@ -1303,7 +1433,7 @@ ISR( PCINT1_vect )
 	}
 
 #if defined(useLegacyButtons)
-	if (q & buttonMask) buttonDebounceCount = buttonDebounceTick; // if a button change was detected, set button press debounce count, and let system timer handle the debouncing
+	if (q & buttonMask) buttonDebounceCount = delay0Tick50ms; // if a button change was detected, set button press debounce count, and let system timer handle the debouncing
 
 #endif // defined(useLegacyButtons)
 	lastPINxState = p; // remember the current input pin state for the next time this ISR gets called
@@ -1318,7 +1448,7 @@ ISR( PCINT1_vect )
 }
 
 #if defined(useBuffering)
-static void ringBuffer::init(ringBufferVariable &bfr, volatile uint8_t * storage)
+static void ringBuffer::init(ringBufferVariable &bfr, uint8_t * storage, uint16_t storageSize)
 {
 
 	uint8_t oldSREG;
@@ -1327,12 +1457,19 @@ static void ringBuffer::init(ringBufferVariable &bfr, volatile uint8_t * storage
 	cli(); // disable interrupts
 
 	bfr.data = storage;
-	bfr.size = sizeof(storage) / sizeof(storage[0]);
+	bfr.size = storageSize;
 	bfr.start = 0;
 	bfr.end = 0;
 	bfr.status = bufferIsEmpty;
 
 	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static uint8_t ringBuffer::isBufferEmpty(ringBufferVariable &bfr)
+{
+
+	return (bfr.status & bufferIsEmpty);
 
 }
 
@@ -1343,7 +1480,14 @@ static uint8_t ringBuffer::isBufferNotEmpty(ringBufferVariable &bfr)
 
 }
 
-static void ringBuffer::push(ringBufferVariable &bfr, uint8_t value)
+static uint8_t ringBuffer::isBufferFull(ringBufferVariable &bfr)
+{
+
+	return (bfr.status & bufferIsFull);
+
+}
+
+static void ringBuffer::pushMain(ringBufferVariable &bfr, uint8_t value)
 {
 
 	uint8_t oldSREG;
@@ -1353,20 +1497,9 @@ static void ringBuffer::push(ringBufferVariable &bfr, uint8_t value)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	pushInterrupt(bfr, value);
+	push(bfr, value);
 
 	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void ringBuffer::pushInterrupt(ringBufferVariable &bfr, uint8_t value)
-{
-
-	bfr.data[(uint16_t)(bfr.start++)] = value; // save a buffered character
-
-	if (bfr.status & bufferIsEmpty) bfr.status &= ~(bufferIsEmpty); // mark buffer as no longer empty
-	if (bfr.start == bfr.size) bfr.start = 0; // handle wrap-around
-	if (bfr.start == bfr.end) bfr.status |= (bufferIsFull); // test if buffer is full
 
 }
 
@@ -1387,6 +1520,73 @@ static uint8_t ringBuffer::pullMain(ringBufferVariable &bfr)
 
 }
 
+static uint16_t ringBuffer::lengthMain(ringBufferVariable &bfr)
+{
+
+	uint16_t i;
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	i = length(bfr);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return i;
+
+}
+
+static uint16_t ringBuffer::freeMain(ringBufferVariable &bfr)
+{
+
+	uint16_t i;
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	i = free(bfr);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return i;
+
+}
+
+static void ringBuffer::flush(ringBufferVariable &bfr)
+{
+
+	while ((bfr.status & bufferIsEmpty) == 0) idleProcess(); // wait for calling routine's buffer to become empty
+
+}
+
+static void ringBuffer::empty(ringBufferVariable &bfr)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	bfr.end = bfr.start;
+	bfr.status = bufferIsEmpty;
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void ringBuffer::push(ringBufferVariable &bfr, uint8_t value)
+{
+
+	bfr.data[bfr.start++] = value; // save a buffered character
+
+	if (bfr.status & bufferIsEmpty) bfr.status &= ~(bufferIsEmpty); // mark buffer as no longer empty
+	if (bfr.start == bfr.size) bfr.start = 0; // handle wrap-around
+	if (bfr.start == bfr.end) bfr.status |= (bufferIsFull); // test if buffer is full
+
+}
+
 static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 {
 
@@ -1396,7 +1596,7 @@ static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 	else
 	{
 
-		value = bfr.data[(uint16_t)(bfr.end++)]; // pull a buffered character
+		value = bfr.data[bfr.end++]; // pull a buffered character
 
 		if (bfr.status & bufferIsFull) bfr.status &= ~(bufferIsFull); // mark buffer as no longer full
 		if (bfr.end == bfr.size) bfr.end = 0; // handle wrap-around
@@ -1408,10 +1608,43 @@ static uint8_t ringBuffer::pull(ringBufferVariable &bfr)
 
 }
 
-static void ringBuffer::flush(ringBufferVariable &bfr)
+static uint16_t ringBuffer::length(ringBufferVariable &bfr)
 {
 
-	while ((bfr.status & bufferIsEmpty) == 0) idleProcess(); // wait for calling routine's buffer to become empty
+	uint16_t i;
+
+	if (bfr.status & bufferIsFull) i = bfr.size;
+	else if (bfr.status & bufferIsEmpty) i = 0;
+	else if (bfr.end < bfr.start) i = (bfr.start - bfr.end);
+	else
+	{
+
+		i = bfr.size - bfr.end;
+		i += bfr.start;
+
+	}
+
+	return i;
+
+}
+
+static uint16_t ringBuffer::free(ringBufferVariable &bfr)
+{
+
+	uint16_t i;
+
+	if (bfr.status & bufferIsFull) i = 0;
+	else if (bfr.status & bufferIsEmpty) i = bfr.size;
+	else if (bfr.end > bfr.start) i = (bfr.end - bfr.start);
+	else
+	{
+
+		i = bfr.size - bfr.start;
+		i += bfr.end;
+
+	}
+
+	return i;
 
 }
 
@@ -1997,6 +2230,9 @@ static void heart::initHardware(void)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::init();
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(useBluetoothAdaFruitSPI)
+	blefriend::init();
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useBluetooth)
 	bluetooth::init();
 #endif // defined(useBluetooth)
@@ -2041,6 +2277,9 @@ static void heart::doGoDeepSleep(void)
 #if defined(useBluetooth)
 	bluetooth::shutdown();
 #endif // defined(useBluetooth)
+#if defined(useBluetoothAdaFruitSPI)
+	blefriend::shutdown();
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(__AVR_ATmega32U4__)
 //	usbSupport::shutdown();
 #endif // defined(__AVR_ATmega32U4__)

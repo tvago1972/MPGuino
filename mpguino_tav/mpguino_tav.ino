@@ -342,8 +342,28 @@ Bluetooth I/O
 
  Adafruit Bluefruit LE Shield
   legacy MPGuino hardware
+   SCK      PB5 (SCK), Digital 13
+  MISO      PB4 (MISO), Digital 12
+  MOSI      PB3 (MOSI), Digital 11
+    CS      PB0, Digital 8
+   IRQ      PD7, Digital 7
+   RST      PD4, Digital 4
 
   Arduino Mega2560
+   SCK      PB1 (SCK), Digital 52
+  MISO      PB3 (MISO), Digital 50
+  MOSI      PB2 (MOSI), Digital 51
+    CS      PH5, Digital 8
+   IRQ      PH4, Digital 7
+   RST      PG5, Digital 4
+
+  Arduino Leonardo
+   SCK      PB1 (SCK)
+  MISO      PB3 (MISO)
+  MOSI      PB2 (MOSI)
+    CS      PB4, Digital 8
+   IRQ      PE6, Digital 7
+   RST      PD4, Digital 4
 
 -------------------------------------
 
@@ -634,7 +654,7 @@ int main(void)
 #endif // defined(useDragRaceFunction)
 	sei();
 
-	j = heart::delay0(delay1500msTick); // show splash screen for 1.5 seconds
+	j = heart::delay0(delay0Tick1500ms); // show splash screen for 1.5 seconds
 
 	heart::initHardware(); // initialize all human interface peripherals
 
@@ -660,6 +680,10 @@ int main(void)
 	terminalState = 0;
 
 #endif // defined(outputDebugTerminalSplash)
+#if defined(useDebugTerminal)
+	ringBuffer::init(terminalBuffer, terminalBuff, tBuffLength);
+
+#endif // defined(useDebugTerminal)
 	heart::doDelay0(j); // show splash screen for 1.5 seconds
 
 #if defined(useButtonInput)
@@ -840,7 +864,7 @@ int main(void)
 		}
 
 #endif // defined(useButtonInput)
-#if defined(useDataLoggingOutput) || defined(useJSONoutput)
+#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 		// this part of the main loop handles logging data output
 		if (timer0Status & t0sOutputLogging)
 		{
@@ -855,13 +879,13 @@ int main(void)
 			if ((awakeFlags & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
 
 #endif // defined(useJSONoutput)
-		}
-
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
 #if defined(useBluetooth)
-		bluetooth::mainOutput();
+			if (EEPROM::readByte(pBluetoothOutputIdx)) bluetooth::mainOutput();
 
 #endif // defined(useBluetooth)
+		}
+
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
 		if (timer0Status & t0sUpdateDisplay)

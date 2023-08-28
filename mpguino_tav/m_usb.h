@@ -23,8 +23,10 @@ interfaceDevice devUSB;
 ringBufferVariable USBoutputBuffer;
 ringBufferVariable USBinputBuffer;
 
-volatile uint8_t USBoutputData[256];
-volatile uint8_t USBinputData[256];
+static const uint16_t USBoutputDataSize = 250;
+static const uint16_t USBinputDataSize = 250;
+static uint8_t USBoutputData[USBoutputDataSize];
+static uint8_t USBinputData[USBinputDataSize];
 
 // the time remaining before we transmit any partially full
 // packet, or send a zero length packet.
