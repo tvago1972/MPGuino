@@ -221,6 +221,9 @@ namespace terminal /* debug terminal section prototype */
 	static void outputDecimalValue(uint8_t lineNumber);
 	static void outputDecimalExtra(uint8_t lineNumber);
 	static void processMath(uint8_t cmd);
+#if defined(useBluetoothAdaFruitSPI)
+	static void outputBluetoothResponse(void);
+#endif // defined(useBluetoothAdaFruitSPI)
 
 }
 
@@ -238,8 +241,10 @@ static const uint8_t tmInitHex =			(tmInitInput | tmHexInput);
 static const uint8_t tmInitDecimal =		(tmInitInput | tmDecimalInput);
 static const uint8_t tmInitButton =			(tmInitInput | tmButtonInput);
 
-static const uint8_t tBuffLength = 40;
+#if defined(useBluetoothAdaFruitSPI)
+static uint8_t tmOutputBluetooth;
 
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugTerminalHelp)
 static const char terminalHelp[] PROGMEM = {
 	"    [y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
@@ -284,6 +289,9 @@ static const char terminalHelp[] PROGMEM = {
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
+#if defined(useBluetoothAdaFruitSPI)
+	"           Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
+#endif // defined(useBluetoothAdaFruitSPI)
 	"           S - toggles display status line echo to terminal" tcEOSCR
 	"           ? - displays this help" tcEOSCR
 	tcEOS
@@ -300,9 +308,6 @@ static uint8_t terminalSource;
 static uint8_t terminalTarget;
 
 static uint8_t peek;
-static uint8_t chr;
-static uint8_t inpIdx;
-static uint8_t readIdx;
 static uint8_t terminalAddress;
 static uint8_t terminalLine;
 static uint8_t maxLine;
@@ -310,7 +315,10 @@ static uint8_t decPlace;
 static uint8_t decWindow;
 static uint8_t decMode;
 
-static char terminalBuff[tBuffLength];
+ringBufferVariable terminalBuffer;
+
+static const uint8_t tBuffLength = 120;
+static volatile uint8_t terminalBuff[(uint16_t)(tBuffLength)];
 
 static const char * labelList;
 static const uint8_t * prgmPtr;
@@ -333,27 +341,30 @@ static const char terminalActivityFlagStr[] PROGMEM = {
 	"Parked" tcOTOG "0" tcEOS
 	"Inactive" tcOTOG "0" tcEOS
 	"FuelRate" tcOTOG "0" tcEOS
-#if defined(useBluetooth)
-	"BTOut" tcOTOG "0" tcEOS
-#else // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
-#endif // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
 };
 
 static const uint8_t peekStatusMessage =		0b10000000;
 static const uint8_t peekBluetoothInput =		0b01000000;
+static const uint8_t peekBluetoothOutput =		0b00100000;
+static const uint8_t peekBLEfriendEcho =		0b00010000;
 
 static const char terminalPeekStr[] PROGMEM = {
 	"peek: " tcEOS
 	"STATUS" tcOTOG "0" tcEOS
 #if defined(useBluetooth)
 	"BTinp" tcOTOG "0" tcEOS
+	"BTout" tcOTOG "0" tcEOS
 #else // defined(useBluetooth)
 	"1" tcOTOG "0" tcEOS
+	"1" tcOTOG "0" tcEOS
 #endif // defined(useBluetooth)
+#if defined(useBluetoothAdaFruitSPI)
+	"BLEecho" tcOTOG "0" tcEOS
+#else // defined(useBluetoothAdaFruitSPI)
 	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
+#endif // defined(useBluetoothAdaFruitSPI)
 	"1" tcOTOG "0" tcEOS
 	"1" tcOTOG "0" tcEOS
 	"1" tcOTOG "0" tcEOS

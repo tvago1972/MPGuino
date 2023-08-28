@@ -1,7 +1,7 @@
 // the following options sets preconfigured board settings, which determine hardware port usage, hardware support checking, and processor speed
 // if all of the below preconfigured board "#define"s are commented out, code will compile for an AVR microprocessor specified in either the Arduino IDE or the avr toolchain
 //
-#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
+//#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module 
@@ -17,8 +17,8 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
-//#define useBluetooth true					// bluetooth interface with Android phone
+#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
+#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
 //   - if useDataLoggingOutput is not selected, the below output port options will be ignored
@@ -44,7 +44,7 @@
 //   - if useDebugTerminal is not selected, the below output port options will be ignored
 //   - if useDebugTerminal is selected, choose only one of the below output port options, or an error will result
 //
-//#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
+#define useDebugTerminalSerialPort0 true	// select serial port channel 0 for PC-MPGuino terminal interface (most Arduino boards, excluding TinkerKit! LCD module)
 //#define useDebugTerminalSerialPort1 true	// select serial port channel 1 for PC-MPGuino terminal interface (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
@@ -58,10 +58,12 @@
 //#define useBluetoothSerialPort1 true		// select Bluetooth output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useBluetoothSerialPort2 true		// select Bluetooth output on serial port channel 2 (ATmega2560 board)
 //#define useBluetoothSerialPort3 true		// select Bluetooth output on serial port channel 3 (ATmega2560 board)
-//#define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
+#define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
 
 // options for debugging terminal interface between PC and MPGuino
 //   - mainly used to conserve space on ATmega328/128 and ATmega32U4 boards
+//   - useDebugTerminalHelp and useDebugTerminalLabels will automatically be chosen for ATmega2560 boards
+//   - if a hardware button option is already selected, useDebugButtonInjection will also be automatically chosen for ATmega2560 boards
 //   - an LCD display option must be selected with useDebugButtonInjection, or a configuration error will result
 //
 //#define useDebugTerminalHelp true			// entering '?' in debug terminal displays brief help
@@ -76,7 +78,7 @@
 //
 //#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
-//#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
+#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
 //#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
 //#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
@@ -99,6 +101,7 @@
 //#define useInvertedLegacyLCDbrightness true	// For alternate LCD backlight connections
 
 // only one of the below hardware button options may be chosen - choosing more than one will cause a compilation error to occur
+// one of the above LCD (not TFT) display options MUST be selected with one of the below button options
 //
 // note: if useAdafruitRGBLCDshield is selected, useLegacyButtons will be ignored
 //       if useMPGuinoColourTouch is selected, all hardware button choices will be ignored
@@ -106,6 +109,7 @@
 //#define useLegacyButtons true
 //#define useAnalogMuxButtons true
 //#define useParallax5PositionSwitch true
+//#define useTWIbuttons true
 
 // selectable options - any conflicts will be reported at compile time
 //
@@ -113,24 +117,24 @@
 #define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useFuelCost true					// Show fuel cost
-//#define useDragRaceFunction true			// Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
-//#define useBigFE true						// Show big fuel economy displays
-//#define useBigDTE true						// Show big distance-to-empty displays
-//#define useBigTTE true						// Show big time-to-empty displays
-//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
-//#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
-//#define useStatusMeter true					// displays a graphical meter for use with MPG display
-//#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
+#define useDragRaceFunction true			// Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
+#define useBigFE true						// Show big fuel economy displays
+#define useBigDTE true						// Show big distance-to-empty displays
+#define useBigTTE true						// Show big time-to-empty displays
+#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
+#define useStatusMeter true					// displays a graphical meter for use with MPG display
+#define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-//#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-//#define useCPUreading true					// Show CPU loading and available RAM usage
+#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+#define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of status message
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
-//#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
+#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
@@ -166,7 +170,7 @@
 // other program measurement and debugging tools
 //
 //#define useTestButtonValues true			// Allows observation of button mapping
-//#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
+#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
 //#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
 //#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
 //#define useSWEET64mult true					// shift mult64 from native C++ to SWEET64 bytecode (saves 36 bytes)
@@ -374,11 +378,6 @@
 #define useLCDgraphics true
 #endif // defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
 
-#if defined(useDebugTerminal)
-#define useIsqrt true
-#define usePressure true
-#endif // defined(useDebugTerminal)
-
 #ifdef useCalculatedFuelFactor
 #define useIsqrt true
 #define usePressure true
@@ -436,7 +435,7 @@
 #undef useBluetoothSerialPort2
 #undef useBluetoothSerialPort3
 #undef useBluetoothSerialBaudRate
-#undef useBluetoothAdaFruitSPI
+//#undef useBluetoothAdaFruitSPI
 #undef useBluetoothBufferedOutput
 #endif // defined(useBluetooth)
 
@@ -472,6 +471,13 @@
 #if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
 #error *** Debug Terminal output requires exactly one I/O port!!! ***
 #endif // ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
+#if defined(__AVR_ATmega2560__)
+#define useDebugTerminalHelp true
+#define useDebugTerminalLabels true
+#define useIsqrt true
+#define usePressure true
+#define useBuffering true
+#endif // defined(__AVR_ATmega2560__)
 #else // defined(useDebugTerminal)
 #undef useDebugTerminalSerialPort0
 #undef useDebugTerminalSerialPort1
@@ -647,6 +653,8 @@
 
 #if defined(useBluetoothAdaFruitSPI)
 #define useHardwareSPI true
+#define useBuffering true
+#define useTimer1Interrupt true
 #endif // defined(useBluetoothAdaFruitSPI)
 
 #if defined(useLoggingSerialPort0)
@@ -948,11 +956,11 @@
 
 #if defined(usePort4BitLCD) || defined(useTWI4BitLCD)
 #define use4BitLCD true
+#define useTimer1Interrupt true
 #endif // defined(usePort4BitLCD) || defined(useTWI4BitLCD)
 
 #if defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 #define useLCDoutput true
-#define useTimer1Interrupt true
 #endif // defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 
 #if defined(useAnalogButtons)
@@ -995,6 +1003,12 @@
 #if defined(useSavedTrips)
 #define useEEPROMtripStorage true
 #endif // defined(useSavedTrips)
+
+#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
+#if defined(__AVR_ATmega2560__)
+#define useDebugButtonInjection true
+#endif // defined(__AVR_ATmega2560__)
+#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
 
 #if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
 #define useButtonInput true

@@ -45,6 +45,9 @@ static const uint8_t displayCountSettingsDisplay = 2
 #if defined(useJSONoutput)
 	+ 1
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	+ 1
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	+ 1
 #endif // defined(useBarFuelEconVsTime)
@@ -145,6 +148,9 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 #if defined(useJSONoutput)
 	"JSONoutput 1-Yes" tcEOSCR
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	"BToutput 1-Yes" tcEOSCR
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	"FE/Time Period s" tcEOSCR
 #endif // defined(useBarFuelEconVsTime)
@@ -269,6 +275,9 @@ static const char settingsParameterList[] PROGMEM = {
 #if defined(useJSONoutput)
 	,pJSONoutputIdx
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	,pBluetoothOutputIdx
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,pFEvsTimeIdx
 #endif // defined(useBarFuelEconVsTime)

@@ -26,6 +26,7 @@ namespace text /* text support section prototype */
 	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx);
 	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str);
 	static void hexNybbleOut(interfaceDevice &dev, uint8_t val);
+	static uint8_t nybble(uint8_t val);
 	static void hexByteOut(interfaceDevice &dev, uint8_t val);
 	static void hexWordOut(interfaceDevice &dev, uint16_t val);
 	static void hexDWordOut(interfaceDevice &dev, uint32_t val);

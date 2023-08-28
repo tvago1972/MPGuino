@@ -232,6 +232,9 @@ static const uint8_t pSizeSerialDataLogging =			1;
 #if defined(useJSONoutput)
 static const uint8_t pSizeJSONoutput =					1;
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+static const uint8_t pSizeBluetoothOutput =				1;
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t pSizeFEvsTime =					16;
 #endif // defined(useBarFuelEconVsTime)
@@ -387,6 +390,10 @@ static const uint16_t pAddressSerialDataLogging =			nextAllowedValue;
 static const uint16_t pAddressJSONoutput =					nextAllowedValue;
 #define nextAllowedValue pAddressJSONoutput + byteSize(pSizeJSONoutput)
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+static const uint16_t pAddressBluetoothOutput =				nextAllowedValue;
+#define nextAllowedValue pAddressBluetoothOutput + byteSize(pSizeBluetoothOutput)
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 static const uint16_t pAddressFEvsTime =					nextAllowedValue;
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
@@ -573,6 +580,10 @@ static const uint8_t pSerialDataLoggingIdx =			nextAllowedValue;
 static const uint8_t pJSONoutputIdx =					nextAllowedValue;
 #define nextAllowedValue pJSONoutputIdx + 1
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+static const uint8_t pBluetoothOutputIdx =				nextAllowedValue;
+#define nextAllowedValue pBluetoothOutputIdx + 1
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
@@ -762,6 +773,9 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useJSONoutput)
 	"pJSONoutputIdx" tcEOS
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	"pBluetoothOutputIdx" tcEOS
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	"pFEvsTimeIdx" tcEOS
 #endif // defined(useBarFuelEconVsTime)
@@ -1099,6 +1113,9 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useJSONoutput)
 	,(pSizeJSONoutput & 0x07)													// JSON output Enable
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	,(pSizeBluetoothOutput & 0x07)												// Bluetooth output Enable
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
@@ -1240,6 +1257,9 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useJSONoutput)
 	,pAddressJSONoutput					// JSON output Enable
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	,pAddressBluetoothOutput			// Bluetooth output Enable
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,pAddressFEvsTime					// Period Of FE over Time Bar Graph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
@@ -1388,6 +1408,9 @@ static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
 #if defined(useJSONoutput)
 	,1					// JSON output Enable
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	,1					// Bluetooth output Enable
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	,60					// Length Of BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)

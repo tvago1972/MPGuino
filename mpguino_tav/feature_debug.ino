@@ -605,12 +605,58 @@ static void terminal::processMath(uint8_t cmd)
 
 }
 
+#if defined(useBluetoothAdaFruitSPI)
+static void terminal::outputBluetoothResponse(void)
+{
+
+	uint8_t c;
+	uint8_t f;
+	uint8_t i;
+
+	i = 0;
+
+	do
+	{
+
+		f = ringBuffer::isBufferNotEmpty(btSPIinputBuffer);
+
+		if (f)
+		{
+
+			c = ringBuffer::pull(btSPIinputBuffer);
+
+			if (c >= 0x20) i = 1; // if this is a printable character, signal to end this function with a newline
+			else i = 0; // otherwise, suppress the newline at the end of the function
+
+			if (c == 0x0D) text::newLine(devDebugTerminal);
+			else if (c == 0x0A) c = 0;
+			else text::charOut(devDebugTerminal, c);
+
+			if (ringBuffer::free(btSPIinputBuffer) > 15) // is there enough room in the input buffer for another packet?
+			{
+
+				// if IRQ is still pulled high, there's another packet to be read in
+				if (blefriend::inputCheck()) blefriend::readPacket();
+
+			}
+
+		}
+
+	}
+	while (f);
+
+	if (i) text::newLine(devDebugTerminal);
+
+}
+
+#endif // defined(useBluetoothAdaFruitSPI)
 static void terminal::mainProcess(void)
 {
 
 	uint8_t i;
 	uint8_t j;
 	const char * separatorPtr;
+	uint8_t chr;
 	uint8_t oldSREG;
 
 /*
@@ -651,6 +697,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
            I - inject button press
                 short (l, c, r, u, d)
                  long (L, C, R, U, D)
+           Y - sends the rest of the input string to BLEfriend shield
            S - toggles display status line echo to terminal
            ? - displays this help
 
@@ -685,11 +732,13 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			text::charOut(devDebugTerminal, 0x0D);
 			text::charOut(devDebugTerminal, ']');
 			terminalState++;
-			inpIdx = 0;
-			readIdx = 0;
 			terminalCmd = 0;
 			terminalMode = tmInitHex;
 			terminalAddress = 0;
+			ringBuffer::empty(terminalBuffer);
+#if defined(useBluetoothAdaFruitSPI)
+			tmOutputBluetooth = 0;
+#endif // defined(useBluetoothAdaFruitSPI)
 		case 1:		// get line
 			i = text::charIn(devDebugTerminal);
 
@@ -698,18 +747,6 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 
 				switch (i)
 				{
-
-					case 0x7F:
-					case 0x08:
-						if (inpIdx) inpIdx--;
-						else
-						{
-
-							text::charOut(devDebugTerminal, 0x0D);
-							terminalState = 0;
-
-						}
-						break;
 
 					case 0x0D:
 						text::charOut(devDebugTerminal, 0x0D);
@@ -726,7 +763,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 					case 0x0C:
 #endif // defined(useSWEET64trace)
 					case 0x20 ... 0x7E:
-						if (inpIdx == tBuffLength)
+						if (ringBuffer::isBufferFull(terminalBuffer))
 						{
 
 							text::stringOut(devDebugTerminal, PSTR("\\" tcEOSCR));
@@ -744,7 +781,7 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								text::charOut(devDebugTerminal, i + 64);
 
 							}
-							terminalBuff[(uint16_t)(inpIdx++)] = i;
+							ringBuffer::push(terminalBuffer, i);
 
 						}
 						break;
@@ -758,9 +795,51 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 			break;
 
 		case 2:   // process input line
-			if (readIdx >= inpIdx) chr = 0x0D;
-			else chr = terminalBuff[(uint16_t)(readIdx++)];
+#if defined(useBluetoothAdaFruitSPI)
+			if (tmOutputBluetooth)
+			{
 
+				i = 0;
+
+				while (ringBuffer::isBufferNotEmpty(terminalBuffer))
+				{
+
+					i = ringBuffer::pull(terminalBuffer);
+					if (peek & peekBLEfriendEcho) text::charOut(devDebugTerminal, i);
+					text::charOut(devBluetooth, i);
+					i = 1;
+
+				}
+
+				if (i)
+				{
+
+					if (peek & peekBLEfriendEcho) text::newLine(devDebugTerminal);
+
+					blefriend::outputBufferWithResponse();
+
+					outputBluetoothResponse();
+
+				}
+
+				terminalState = 0;
+
+				break;
+
+			}
+			else
+			{
+
+				if (ringBuffer::isBufferEmpty(terminalBuffer)) chr = 0x0D;
+				else chr = ringBuffer::pull(terminalBuffer);
+
+			}
+
+#else // defined(useBluetoothAdaFruitSPI)
+			if (ringBuffer::isBufferEmpty(terminalBuffer)) chr = 0x0D;
+			else chr = ringBuffer::pull(terminalBuffer);
+
+#endif // defined(useBluetoothAdaFruitSPI)
 			i = 1;
 
 			j = chr; // save raw input character for button press processing
@@ -864,6 +943,12 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 				switch (chr)
 				{
 
+#if defined(useBluetoothAdaFruitSPI)
+					case 'Y':   // copy the rest of the input buffer to the BLEfriend module
+						tmOutputBluetooth = 1;
+						break;
+
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugTerminalHelp)
 					case '?':   // display help
 						if (terminalMode & tmButtonInput) chr = '\\'; // if in button injection mode, reset input mode and pending command
@@ -1151,6 +1236,10 @@ entered at the prompt, separated by space characters. Pressing <Enter> will caus
 								text::newLine(devDebugTerminal);
 
 #endif // defined(useBarFuelEconVsSpeed)
+#if defined(useBluetoothAdaFruitSPI)
+								outputBluetoothResponse();
+
+#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugCPUreading)
 								monitorState = 1; // set up to perform interrupt handler execution time measurement
 

@@ -177,7 +177,7 @@ static void text::commitStatus(interfaceDevice &dev)
 {
 
 	newLine(dev);
-	heart::delayS(holdDelay);
+	heart::delayS(delay0Tick2000ms);
 
 }
 
@@ -225,10 +225,17 @@ static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const cha
 static void text::hexNybbleOut(interfaceDevice &dev, uint8_t val)
 {
 
+	charOut(dev, nybble(val));
+
+}
+
+static uint8_t text::nybble(uint8_t val)
+{
+
 	val &= 0x0F;
 	val |= 0x30;
 	if (val > 0x39) val += 0x07;
-	charOut(dev, val);
+	return val;
 
 }
 
