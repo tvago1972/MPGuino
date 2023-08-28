@@ -220,10 +220,10 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	uint32_t targetDistance;
 #endif // defined(useDragRaceFunction)
 
-	if (timer0Status & t0sOutputJSON) // replaced timerChecker with this because it's a more accurate method to change once every 1.6 seconds
+	if (timer0Status & t0sJSONchangeSubtitle) // replaced timerChecker with this because it's a more accurate method to change once every 1.6 seconds
 	{
 
-		heart::changeBitFlags(timer0Status, t0sOutputJSON, 0); // clear JSON subtitle change timer command
+		heart::changeBitFlags(timer0Status, t0sJSONchangeSubtitle, 0); // clear JSON subtitle change timer command
 
 		if (!(--subtitleCount1)) subtitleCount1 = 2;
 #if defined(useDragRaceFunction)

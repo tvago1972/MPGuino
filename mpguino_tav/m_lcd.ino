@@ -7,7 +7,7 @@ static void LCD::init(void)
 #if defined(useSerialLCD)
 	devLCDserial.controlFlags &= ~(odvFlagCRLF);
 
-	heart::wait0(delay0100msTick); // wait for 100 ms to allow serial LCD to initialize
+	heart::wait0(delay0Tick100ms); // wait for 100 ms to allow serial LCD to initialize
 
 #endif // defined(useSerialLCD)
 #if defined(use4BitLCD)
@@ -20,7 +20,7 @@ static void LCD::init(void)
 	devLCD.controlFlags |= (odvFlagEnableOutput);
 
 #if defined(useLCDbufferedOutput)
-	ringBuffer::init(lcdBuffer, LCDdata);
+	ringBuffer::init(lcdBuffer, LCDdata, LCDdataSize);
 
 #endif // defined(useLCDbufferedOutput)
 	lcdDelayCount = 0; // reset LCD delay count
@@ -631,7 +631,7 @@ static void LCD::writeData(uint8_t value)
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 		LCDserialPort::chrOut(value);
-		if (value == 0x0C) heart::wait0(delay0005msTick); // wait for 5 ms to allow cls to complete
+		if (value == 0x0C) heart::wait0(delay0Tick5ms); // wait for 5 ms to allow cls to complete
 #endif // defined(useSerialLCD)
 
 	}
@@ -677,7 +677,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 {
 
 #if defined(useLCDbufferedOutput)
-	ringBuffer::push(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
+	ringBuffer::pushMain(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
 #else // defined(useLCDbufferedOutput)
 #if defined(usePort4BitLCD)
 	uint8_t oldSREG;
@@ -861,27 +861,27 @@ static void LCD::outputNybble(uint8_t LCDchar)
 	{
 
 		case lcdDelay0015ms:
-			lcdDelayCount += delayLCD015000usTick;
+			lcdDelayCount += delay1Tick15200us;
 			break;
 
 		case lcdDelay4100us:
-			lcdDelayCount += delayLCD004100usTick;
+			lcdDelayCount += delay1Tick4100us;
 			break;
 
 		case lcdDelay0100us:
-			lcdDelayCount += delayLCD000100usTick;
+			lcdDelayCount += delay1Tick100us;
 			break;
 
 		case lcdDelay0040us:
-			lcdDelayCount += delayLCD000040usTick;
+			lcdDelayCount += delay1Tick40us;
 			break;
 
 		case lcdDataByte | lcdDelay0040us:
-			lcdDelayCount += delayLCD000040usTick;
+			lcdDelayCount += delay1Tick40us;
 			break;
 
 		default:
-			lcdDelayCount += delayLCD004100usTick;
+			lcdDelayCount += delay1Tick4100us;
 			break;
 
 	}

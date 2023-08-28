@@ -50,7 +50,8 @@ interfaceDevice devLCD;
 #if defined(useLCDbufferedOutput)
 ringBufferVariable lcdBuffer;
 
-static volatile uint8_t LCDdata[32];
+static const uint16_t LCDdataSize = 32;
+static uint8_t LCDdata[LCDdataSize];
 
 #endif // defined(useLCDbufferedOutput)
 // these flags provide flow control for the LCD::writeData character output routine
@@ -218,11 +219,6 @@ static const uint8_t lcdDelay0100us =				0x01;
 static const uint8_t lcdDelay0040us =				0x00;
 static const uint8_t lcdDelayFlags =				lcdDataByte | 0x03;
 static const uint8_t lcdSendFlags =					lcdSendNybble | 0x03;
-
-static const uint16_t delayLCD015000usTick = (uint16_t)(ceil)((double)(15200ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
-static const uint16_t delayLCD004100usTick = (uint16_t)(ceil)((double)(4100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // secondary LCD delay for 4-bit initialization
-static const uint16_t delayLCD000100usTick = (uint16_t)(ceil)((double)(100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // final LCD delay for 4-bit initialization
-static const uint16_t delayLCD000040usTick = (uint16_t)(ceil)((double)(40ul * systemProcessorSpeed) / (double)(510ul)); // normal LCD character transmission delay
 
 static uint8_t LCDgotoXYaddress;
 
