@@ -111,30 +111,36 @@
 //#define useParallax5PositionSwitch true
 //#define useTWIbuttons true
 
-// selectable options - any conflicts will be reported at compile time
+// core selectable options - any conflicts will be reported at compile time
+// *** these features will be supported, regardless of what user interface is chosen for MPGuino ***
 //
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
-#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
-#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
+#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 //#define useFuelCost true					// Show fuel cost
+#define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
+//#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
+#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
+//#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
+//#define useChryslerBaroSensor true			// Ability to use a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
+//#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
+#define useCPUreading true					// Show CPU loading and available RAM usage
+#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
+
+// user interface selectable options - any conflicts will be reported at compile time
+// *** these features only work with 16x2 or 20x2 or 20x4 LCD output display with buttons ***
+//
+#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define useDragRaceFunction true			// Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
 #define useBigFE true						// Show big fuel economy displays
 #define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
-#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
+//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+//#define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define useStatusMeter true					// displays a graphical meter for use with MPG display
 #define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
 #define useSpiffyBigChars true				// Provides better number font with use with big number displays above
 //#define useScreenEditor true				// Ability to change any of (9 or 12, depending on configuration) existing trip data screens, with 4 configurable figures on each screen
-#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
-#define useCPUreading true					// Show CPU loading and available RAM usage
-//#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
-//#define useChryslerBaroSensor true			// allows use of a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
-//#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 //#define blankScreenOnMessage true			// Completely blank display screen upon display of status message
-//#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
-#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
@@ -148,7 +154,6 @@
 #define useLoggingBufferedOutput true		// speed up logging output on serial port
 #define useJSONbufferedOutput true			// speed up JSON output on serial port
 #define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
-#define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
 // serial speed options
