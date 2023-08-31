@@ -1,6 +1,6 @@
 /* text support section */
 
-static uint8_t text::charIn(interfaceDevice &dev)
+static uint8_t text::charIn(device_t &dev)
 {
 
 	uint8_t retVal;
@@ -12,28 +12,28 @@ static uint8_t text::charIn(interfaceDevice &dev)
 
 }
 
-static void text::gotoXY(interfaceDevice &dev, uint8_t xPos, uint8_t yPos)
+static void text::gotoXY(device_t &dev, uint8_t xPos, uint8_t yPos)
 {
 
 	charOut(dev, 0x80 + yPos * 20 + xPos);
 
 }
 
-static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr, uint8_t chrCount)
+static uint8_t text::charOut(device_t &dev, uint8_t chr, uint8_t chrCount)
 {
 
 	while (chrCount--) charOut(dev, chr);
 
 }
 
-static void text::newLine(interfaceDevice &dev)
+static void text::newLine(device_t &dev)
 {
 
 	charOut(dev, 0x0D);
 
 }
 
-static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
+static uint8_t text::charOut(device_t &dev, uint8_t chr)
 {
 
 	uint8_t retVal;
@@ -92,7 +92,7 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str)
+static void text::statusOut(device_t &dev, const char * sList, uint8_t strIdx, const char * str)
 {
 
 	initStatus(dev);
@@ -113,7 +113,7 @@ static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t st
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx)
+static void text::statusOut(device_t &dev, const char * str, const char * sList, uint8_t strIdx)
 {
 
 	initStatus(dev);
@@ -134,14 +134,14 @@ static void text::statusOut(interfaceDevice &dev, const char * str, const char *
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx)
+static void text::statusOut(device_t &dev, const char * sList, uint8_t strIdx)
 {
 
 	statusOut(dev, findStr(sList, strIdx));
 
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * str)
+static void text::statusOut(device_t &dev, const char * str)
 {
 
 	initStatus(dev);
@@ -160,7 +160,7 @@ static void text::statusOut(interfaceDevice &dev, const char * str)
 #endif // defined(useDebugTerminal)
 }
 
-static void text::initStatus(interfaceDevice &dev)
+static void text::initStatus(device_t &dev)
 {
 
 	heart::delayS(0);
@@ -173,7 +173,7 @@ static void text::initStatus(interfaceDevice &dev)
 
 }
 
-static void text::commitStatus(interfaceDevice &dev)
+static void text::commitStatus(device_t &dev)
 {
 
 	newLine(dev);
@@ -181,28 +181,28 @@ static void text::commitStatus(interfaceDevice &dev)
 
 }
 
-static void text::stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx)
+static void text::stringOut(device_t &dev, const char * str, uint8_t strIdx)
 {
 
 	stringOut(dev, findStr(str, strIdx));
 
 }
 
-static void text::stringOut(interfaceDevice &dev, const char * str)
+static void text::stringOut(device_t &dev, const char * str)
 {
 
 	while (charOut(dev, pgm_read_byte(str++))) ;
 
 }
 
-static void text::stringOut(interfaceDevice &dev, char * str)
+static void text::stringOut(device_t &dev, char * str)
 {
 
 	while (charOut(dev, * str++));
 
 }
 
-static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx)
+static void text::stringOutIf(device_t &dev, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
 	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
@@ -212,7 +212,7 @@ static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const cha
 
 }
 
-static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str)
+static void text::stringOutIf(device_t &dev, uint8_t condition, const char * str)
 {
 
 	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
@@ -222,7 +222,7 @@ static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const cha
 
 }
 
-static void text::hexNybbleOut(interfaceDevice &dev, uint8_t val)
+static void text::hexNybbleOut(device_t &dev, uint8_t val)
 {
 
 	charOut(dev, nybble(val));
@@ -239,7 +239,7 @@ static uint8_t text::nybble(uint8_t val)
 
 }
 
-static void text::hexByteOut(interfaceDevice &dev, uint8_t val)
+static void text::hexByteOut(device_t &dev, uint8_t val)
 {
 
 	hexNybbleOut(dev, val >> 4);
@@ -247,7 +247,7 @@ static void text::hexByteOut(interfaceDevice &dev, uint8_t val)
 
 }
 
-static void text::hexWordOut(interfaceDevice &dev, uint16_t val)
+static void text::hexWordOut(device_t &dev, uint16_t val)
 {
 
 	union union_16 * vee = (union union_16 *) &val;
@@ -256,7 +256,7 @@ static void text::hexWordOut(interfaceDevice &dev, uint16_t val)
 
 }
 
-static void text::hexDWordOut(interfaceDevice &dev, uint32_t val)
+static void text::hexDWordOut(device_t &dev, uint32_t val)
 {
 
 	union union_32 * vee = (union union_32 *) &val;
@@ -265,7 +265,7 @@ static void text::hexDWordOut(interfaceDevice &dev, uint32_t val)
 
 }
 
-static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
+static void text::hexLWordOut(device_t &dev, uint64_t * val)
 {
 
 	union union_64 * vee = (union union_64 *) val;
@@ -274,7 +274,7 @@ static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
 
 }
 
-static void text::tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(device_t &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
@@ -283,7 +283,7 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8
 
 }
 
-static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	uint8_t i;
@@ -360,7 +360,7 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t
 
 }
 
-static void text::numberOut(interfaceDevice &dev, uint8_t decimalFlag)
+static void text::numberOut(device_t &dev, uint8_t decimalFlag)
 {
 
 	uint8_t c;
