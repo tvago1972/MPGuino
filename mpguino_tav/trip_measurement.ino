@@ -319,9 +319,11 @@ static void tripSupport::idleProcess(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
+	oldRawTripIdx = curRawTripIdx; // save old raw trip variable index
+	curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set current raw trip variable index
 #if defined(trackIdleEOCdata)
-	curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
+	oldRawEOCidleTripIdx = curRawEOCidleTripIdx; // save old raw EOC/idle trip variable index
+	curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set current raw EOC/idle trip variable index
 #endif // defined(trackIdleEOCdata)
 
 	SREG = oldSREG; // restore interrupt flag status
@@ -332,21 +334,15 @@ static void tripSupport::idleProcess(void)
 		k = translateTripIndex(x, 0);
 		m = translateTripIndex(x, 1);
 
-		if (m > raw1tripIdx) // if a valid target trip variable was specified
-		{
-
-			if (m & 0x80) // if transfer bit set
-			{
-
-				tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
-				tripVar::reset(k); // reset source trip variable
-
-			}
-			else tripVar::update(k, m); // otherwise, just do trip update
-
-		}
+		if (m & 0x80) tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
+		else tripVar::update(k, m); // otherwise, just do trip update
 
 	}
+
+	tripVar::reset(oldRawTripIdx); // reset old raw trip variable
+#if defined(trackIdleEOCdata)
+	tripVar::reset(oldRawEOCidleTripIdx); // reset old raw EOC/idle trip variable
+#endif // defined(trackIdleEOCdata)
 
 #if defined(useWindowTripFilter)
 	if (awakeFlags & aAwakeOnVehicle)
@@ -367,18 +363,18 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 	uint8_t j;
 
 	j = pgm_read_byte(&tripUpdateList[(uint16_t)(tripTransferIdx)][(uint16_t)(tripDirIndex)]);
-	i = j & 0x7F; // strip off upper bit for now, to look at the trip index in question
+	i = j & 0x7F; // strip off transfer/update bit for now, to look at the trip index in question
 
 	switch (i)
 	{
 
 		case 0x7F:		// replace generic raw trip index with old raw trip index
-			i = curRawTripIdx ^ (raw0tripIdx ^ raw1tripIdx);
+			i = oldRawTripIdx;
 			break;
 
 #if defined(trackIdleEOCdata)
 		case 0x7E:		// replace generic idle/eoc raw trip index with old idle/eoc raw trip index
-			i = curRawEOCidleTripIdx ^ (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx);
+			i = oldRawEOCidleTripIdx;
 			break;
 
 #endif // defined(trackIdleEOCdata)
@@ -405,8 +401,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 
 	}
 
-	if (i < tripSlotCount) i |= (j & 0x80); // restore high bit as it tells whether to update or transfer
-	else i = 0; // invalid values get remapped to 0
+	if (tripDirIndex) i |= (j & 0x80); // restore transfer/update bit if this is the destination trip index
 
 	return i;
 
