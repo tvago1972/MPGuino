@@ -45,7 +45,7 @@ namespace LCD /* LCD hardware support section prototype */
 
 };
 
-interfaceDevice devLCD;
+device_t devLCD;
 
 // these flags provide flow control for the LCD::writeData character output routine
 static const uint8_t lcdCharGotoXY =	0b00000010;
@@ -142,16 +142,14 @@ static const uint8_t lcdAddress =			0x20;
 
 static const uint8_t RGBcolors[8] PROGMEM =
 {
-
-	 0b11000001	// off
-	,0b01000001	// green
-	,0b10000001	// red
-	,0b00000001	// yeller
-	,0b11000000	// blue
-	,0b01000000	// cyan
-	,0b10000000	// magenta
-	,0b00000000	// white
-
+	0b11000001,	// off
+	0b01000001,	// green
+	0b10000001,	// red
+	0b00000001,	// yeller
+	0b11000000,	// blue
+	0b01000000,	// cyan
+	0b10000000,	// magenta
+	0b00000000,	// white
 };
 
 #endif // defined(useAdafruitRGBLCDshield)
@@ -216,18 +214,18 @@ static const uint8_t lcdSendFlags =					lcdSendNybble | 0x03;
 static uint8_t LCDgotoXYaddress;
 
 static const uint8_t lcdBaseYposition[] PROGMEM = {
-	 lcdSetDDRAMaddress
-	,lcdSetDDRAMaddress | 0x40
-	,lcdSetDDRAMaddress | 0x14
-	,lcdSetDDRAMaddress | 0x54
+	lcdSetDDRAMaddress,
+	lcdSetDDRAMaddress | 0x40,
+	lcdSetDDRAMaddress | 0x14,
+	lcdSetDDRAMaddress | 0x54,
 };
 
 static const uint8_t lcdDisplayModes[] PROGMEM = {
-	 lcdDisplayControl																		// turn off display
-	,lcdDisplayControl | lcdDCdisplayShow													// turn on display, no cursor, no character blink (default)
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorBlinkControl							// turn on display, no cursor, with character blink
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl								// turn on display, cursor, no character blink
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl | lcdDCcursorBlinkControl	// turn on display, cursor, with character blink
+	lcdDisplayControl,																		// turn off display
+	lcdDisplayControl | lcdDCdisplayShow,													// turn on display, no cursor, no character blink (default)
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorBlinkControl,							// turn on display, no cursor, with character blink
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl,								// turn on display, cursor, no character blink
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl | lcdDCcursorBlinkControl,	// turn on display, cursor, with character blink
 };
 
 #endif // defined(use4BitLCD)

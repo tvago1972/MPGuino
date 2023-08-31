@@ -20,6 +20,7 @@ namespace heart /* core MPGuino system support section prototype */
 	static void wait0(uint16_t ms);
 	static void delayS(uint16_t ms);
 	static void changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR);
+	static void changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR);
 	static void performSleepMode(uint8_t sleepMode);
 
 };
@@ -260,7 +261,7 @@ typedef struct
   void (* chrOut)(uint8_t character);
   uint8_t (* chrIn)(void);
 
-} interfaceDevice;
+} device_t;
 
 // for use with controlFlags above
 static const uint8_t odvFlagCRLF =				0b00100000;
@@ -346,6 +347,14 @@ static const uint16_t delay1Tick50us =		(uint16_t)(ceil)((double)(75ul * systemP
 static const uint16_t delay1Tick40us =		(uint16_t)(ceil)((double)(40ul * systemProcessorSpeed) / (double)(510ul)); // normal LCD character transmission delay
 
 #endif // defined(useTimer1Interrupt)
+// volatile bit flag array index values
+#define nextAllowedValue 0
+static const uint8_t bfTimer0Cmd =					nextAllowedValue;				// timer0 command flags
+static const uint8_t bfTimer0Sts =					bfTimer0Cmd + 1;				// timer0 status flags
+#define nextAllowedValue bfTimer0Sts + 1
+
+static const uint8_t bitFlagMaxIdx =				nextAllowedValue;
+
 // volatile variable array index values - these may be referenced inside an interrupt service routine
 #define nextAllowedValue 0
 #if defined(useCPUreading)
@@ -355,7 +364,8 @@ static const uint8_t vSystemCycleIdx =				nextAllowedValue;				// system timer t
 
 #if defined(useSoftwareClock)
 static const uint8_t vClockCycleIdx =				nextAllowedValue;				// software clock tick count
-#define nextAllowedValue vClockCycleIdx + 1
+static const uint8_t vClockCycleDayLengthIdx =		vClockCycleIdx + 1;				// software clock maximum tick count for 24 hours
+#define nextAllowedValue vClockCycleDayLengthIdx + 1
 #endif // defined(useSoftwareClock)
 
 static const uint8_t vVehicleStopTimeoutIdx =		nextAllowedValue;				// engine idle timeout value in timer0 ticks
@@ -484,6 +494,7 @@ static const char terminalVolatileVarLabels[] PROGMEM = {
 #endif // defined(useCPUreading)
 #if defined(useSoftwareClock)
 	"vClockCycleIdx" tcEOS						// timer0
+	"vClockCycleDayLengthIdx" tcEOS				// timer0
 #endif // defined(useSoftwareClock)
 	"vVehicleStopTimeoutIdx" tcEOS				// timer0
 	"vEngineOffTimeoutIdx" tcEOS				// timer0
@@ -577,8 +588,9 @@ static const char terminalMainProgramVarLabels[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminalLabels)
-volatile uint32_t volatileVariables[(uint16_t)(vVariableMaxIdx)];
-uint32_t mainProgramVariables[(uint16_t)(mpVariableMaxIdx)];
+static volatile uint8_t bitFlags[(uint16_t)(bitFlagMaxIdx)];
+static volatile uint32_t volatileVariables[(uint16_t)(vVariableMaxIdx)];
+static uint32_t mainProgramVariables[(uint16_t)(mpVariableMaxIdx)];
 
 static uint8_t metricFlag;
 

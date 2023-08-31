@@ -21,10 +21,10 @@ static const char accelTestMenuTitles[] PROGMEM = {
 };
 
 static const uint8_t accelTestParamList[] PROGMEM = {
-	 pDragAutoFlagIdx
-	,pDragDistanceIdx
-	,pDragSpeedIdx
-	,pVehicleMassIdx
+	pDragAutoFlagIdx,
+	pDragDistanceIdx,
+	pDragSpeedIdx,
+	pVehicleMassIdx,
 };
 
 #if defined(useDebugTerminal)
@@ -119,25 +119,25 @@ static const char accelTestTriggerMsgs[] PROGMEM = {
 };
 
 static const uint16_t accelTestPageFormats[] PROGMEM = {
-	 (dragDistanceIdx << 8 ) |			(tFuelEcon)
-	,(dragDistanceIdx << 8 ) |			(tDragSpeed)				// for calculations, it really doesn't matter what trip index is used here
-	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
-	,(dragDistanceIdx << 8 ) |			(tEstimatedEnginePower)		// for calculations, it really doesn't matter what trip index is used here
+	(dragDistanceIdx << 8 ) |			(tFuelEcon),
+	(dragDistanceIdx << 8 ) |			(tDragSpeed),				// for calculations, it really doesn't matter what trip index is used here
+	(dragDistanceIdx << 8 ) |			(tAccelTestTime),
+	(dragDistanceIdx << 8 ) |			(tEstimatedEnginePower),	// for calculations, it really doesn't matter what trip index is used here
 
-	,(dragHalfSpeedIdx << 8 ) |			(tAccelTestTime)
-	,(dragHalfSpeedIdx << 8 ) |			(tFuelUsed)
-	,(dragHalfSpeedIdx << 8 ) |			(tDistance)
-	,(dragHalfSpeedIdx << 8 ) |			(tFuelEcon)
+	(dragHalfSpeedIdx << 8 ) |			(tAccelTestTime),
+	(dragHalfSpeedIdx << 8 ) |			(tFuelUsed),
+	(dragHalfSpeedIdx << 8 ) |			(tDistance),
+	(dragHalfSpeedIdx << 8 ) |			(tFuelEcon),
 
-	,(dragFullSpeedIdx << 8 ) |			(tAccelTestTime)
-	,(dragFullSpeedIdx << 8 ) |			(tFuelUsed)
-	,(dragFullSpeedIdx << 8 ) |			(tDistance)
-	,(dragFullSpeedIdx << 8 ) |			(tFuelEcon)
+	(dragFullSpeedIdx << 8 ) |			(tAccelTestTime),
+	(dragFullSpeedIdx << 8 ) |			(tFuelUsed),
+	(dragFullSpeedIdx << 8 ) |			(tDistance),
+	(dragFullSpeedIdx << 8 ) |			(tFuelEcon),
 
-	,(dragDistanceIdx << 8 ) |			(tAccelTestTime)
-	,(dragDistanceIdx << 8 ) |			(tFuelUsed)
-	,(dragDistanceIdx << 8 ) |			(tDistance)
-	,(dragDistanceIdx << 8 ) |			(tFuelEcon)
+	(dragDistanceIdx << 8 ) |			(tAccelTestTime),
+	(dragDistanceIdx << 8 ) |			(tFuelUsed),
+	(dragDistanceIdx << 8 ) |			(tDistance),
+	(dragDistanceIdx << 8 ) |			(tFuelEcon),
 };
 
 #endif // defined(useDragRaceFunction)

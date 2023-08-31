@@ -22,13 +22,13 @@ static const char coastdownTestMenuTitles[] PROGMEM = {
 };
 
 static const uint8_t coastdownTestParamList[] PROGMEM = {
-	 pCoastdownSamplePeriodIdx
-	,pVehicleMassIdx
-	,pVehicleFrontalAreaIdx
-	,pLocustDensityIdx
-	,pCoefficientDidx
-	,pCoefficientVidx
-	,pCoefficientRRidx
+	pCoastdownSamplePeriodIdx,
+	pVehicleMassIdx,
+	pVehicleFrontalAreaIdx,
+	pLocustDensityIdx,
+	pCoefficientDidx,
+	pCoefficientVidx,
+	pCoefficientRRidx,
 };
 
 #if defined(useDebugTerminal)

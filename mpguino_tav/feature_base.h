@@ -102,100 +102,100 @@ static const char mainDisplayPageTitles[] PROGMEM = {
 };
 
 static const uint16_t mainDisplayPageFormats[(uint16_t)(mainDisplayFormatSize)] PROGMEM = {
-	 (instantIdx << 8 ) |			(tSpeed)				// Instrument
+	(instantIdx << 8 ) |			(tSpeed),				// Instrument
 #if defined(useCarVoltageOutput)
-	,								(tAlternatorChannel)
+									(tAlternatorChannel),
 #else // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tEngineSpeed)
+	(instantIdx << 8 ) |			(tEngineSpeed),
 #endif // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tFuelRate)
-	,(instantIdx << 8 ) |			(tFuelEcon)
+	(instantIdx << 8 ) |			(tFuelRate),
+	(instantIdx << 8 ) |			(tFuelEcon),
 
-	,(instantIdx << 8 ) |			(tFuelEcon)				// Custom
+	(instantIdx << 8 ) |			(tFuelEcon),			// Custom
 #if defined(useCarVoltageOutput)
-	,								(tAlternatorChannel)
+									(tAlternatorChannel),
 #else // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tEngineSpeed)
+	(instantIdx << 8 ) |			(tEngineSpeed),
 #endif // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tFuelRate)
-	,(currentIdx << 8 ) |			(tFuelEcon)
+	(instantIdx << 8 ) |			(tFuelRate),
+	(currentIdx << 8 ) |			(tFuelEcon),
 
-	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Current
+	(instantIdx << 8 ) |			(tFuelEcon),			// Instant / Current
 #if defined(useCarVoltageOutput)
-	,								(tAlternatorChannel)
+									(tAlternatorChannel),
 #else // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tEngineSpeed)
+	(instantIdx << 8 ) |			(tEngineSpeed),
 #endif // defined(useCarVoltageOutput)
-	,(currentIdx << 8 ) |			(tFuelEcon)
-	,(currentIdx << 8 ) |			(tDistance)
+	(currentIdx << 8 ) |			(tFuelEcon),
+	(currentIdx << 8 ) |			(tDistance),
 
-	,(instantIdx << 8 ) |			(tFuelEcon)				// Instant / Tank
+	(instantIdx << 8 ) |			(tFuelEcon),			// Instant / Tank
 #if defined(useCarVoltageOutput)
-	,								(tAlternatorChannel)
+									(tAlternatorChannel),
 #else // defined(useCarVoltageOutput)
-	,(instantIdx << 8 ) |			(tEngineSpeed)
+	(instantIdx << 8 ) |			(tEngineSpeed),
 #endif // defined(useCarVoltageOutput)
-	,(tankIdx << 8 ) |				(tFuelEcon)
-	,(tankIdx << 8 ) |				(tDistance)
+	(tankIdx << 8 ) |				(tFuelEcon),
+	(tankIdx << 8 ) |				(tDistance),
 
-	,(currentIdx << 8 ) |			(tSpeed)				// Current
-	,(currentIdx << 8 ) |			(tFuelEcon)
-	,(currentIdx << 8 ) |			(tDistance)
-	,(currentIdx << 8 ) |			(tFuelUsed)
+	(currentIdx << 8 ) |			(tSpeed),				// Current
+	(currentIdx << 8 ) |			(tFuelEcon),
+	(currentIdx << 8 ) |			(tDistance),
+	(currentIdx << 8 ) |			(tFuelUsed),
 
-	,(tankIdx << 8 ) |				(tSpeed)				// Tank
-	,(tankIdx << 8 ) |				(tFuelEcon)
-	,(tankIdx << 8 ) |				(tDistance)
-	,(tankIdx << 8 ) |				(tFuelUsed)
+	(tankIdx << 8 ) |				(tSpeed),				// Tank
+	(tankIdx << 8 ) |				(tFuelEcon),
+	(tankIdx << 8 ) |				(tDistance),
+	(tankIdx << 8 ) |				(tFuelUsed),
 
 #if defined(trackIdleEOCdata)
-	,(eocIdleCurrentIdx << 8 ) |	(tDistance)				// EOC / Idle
-	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(eocIdleTankIdx << 8 ) |		(tDistance)
-	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
+	(eocIdleCurrentIdx << 8 ) |		(tDistance),			// EOC / Idle
+	(eocIdleCurrentIdx << 8 ) |		(tFuelUsed),
+	(eocIdleTankIdx << 8 ) |		(tDistance),
+	(eocIdleTankIdx << 8 ) |		(tFuelUsed),
 
 #endif // defined(trackIdleEOCdata)
-	,(currentIdx << 8 ) |			(tEngineRunTime)		// Current data
-	,(currentIdx << 8 ) |			(tFuelUsed)
-	,(currentIdx << 8 ) |			(tMotionTime)
-	,(currentIdx << 8 ) |			(tDistance)
+	(currentIdx << 8 ) |			(tEngineRunTime),		// Current data
+	(currentIdx << 8 ) |			(tFuelUsed),
+	(currentIdx << 8 ) |			(tMotionTime),
+	(currentIdx << 8 ) |			(tDistance),
 
-	,(tankIdx << 8 ) |				(tEngineRunTime)		// Tank data
-	,(tankIdx << 8 ) |				(tFuelUsed)
-	,(tankIdx << 8 ) |				(tMotionTime)
-	,(tankIdx << 8 ) |				(tDistance)
+	(tankIdx << 8 ) |				(tEngineRunTime),		// Tank data
+	(tankIdx << 8 ) |				(tFuelUsed),
+	(tankIdx << 8 ) |				(tMotionTime),
+	(tankIdx << 8 ) |				(tDistance),
 
 #if defined(trackIdleEOCdata)
-	,(eocIdleCurrentIdx << 8 ) |	(tEngineRunTime)		// Current EOC / Idle
-	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(eocIdleCurrentIdx << 8 ) |	(tMotionTime)
-	,(eocIdleCurrentIdx << 8 ) |	(tDistance)
+	(eocIdleCurrentIdx << 8 ) |		(tEngineRunTime),		// Current EOC / Idle
+	(eocIdleCurrentIdx << 8 ) |		(tFuelUsed),
+	(eocIdleCurrentIdx << 8 ) |		(tMotionTime),
+	(eocIdleCurrentIdx << 8 ) |		(tDistance),
 
-	,(eocIdleTankIdx << 8 ) |		(tEngineRunTime)		// Tank EOC / Idle
-	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
-	,(eocIdleTankIdx << 8 ) |		(tMotionTime)
-	,(eocIdleTankIdx << 8 ) |		(tDistance)
+	(eocIdleTankIdx << 8 ) |		(tEngineRunTime),		// Tank EOC / Idle
+	(eocIdleTankIdx << 8 ) |		(tFuelUsed),
+	(eocIdleTankIdx << 8 ) |		(tMotionTime),
+	(eocIdleTankIdx << 8 ) |		(tDistance),
 
 #endif // defined(trackIdleEOCdata)
-	,(tankIdx << 8 ) |				(tFuelUsed)				// Remaining
-	,(tankIdx << 8 ) |				(tRemainingFuel)
-	,(tankIdx << 8 ) |				(tTimeToEmpty)
-	,(tankIdx << 8 ) |				(tDistanceToEmpty)
+	(tankIdx << 8 ) |				(tFuelUsed),			// Remaining
+	(tankIdx << 8 ) |				(tRemainingFuel),
+	(tankIdx << 8 ) |				(tTimeToEmpty),
+	(tankIdx << 8 ) |				(tDistanceToEmpty),
 };
 
 #if defined(trackIdleEOCdata)
 static const uint16_t mainEOCpageFormats[4] PROGMEM = {
-	 (instantIdx << 8 ) |			(tSpeed)
-	,(currentIdx << 8 ) |			(tFuelEcon)
-	,(eocIdleCurrentIdx << 8 ) |	(tDistance)
-	,(eocIdleTankIdx << 8 ) |		(tDistance)
+	(instantIdx << 8 ) |			(tSpeed),
+	(currentIdx << 8 ) |			(tFuelEcon),
+	(eocIdleCurrentIdx << 8 ) |		(tDistance),
+	(eocIdleTankIdx << 8 ) |		(tDistance),
 };
 
 static const uint16_t mainIdlePageFormats[4] PROGMEM = {
-	 (instantIdx << 8 ) |			(tFuelRate)
-	,(currentIdx << 8 ) |			(tFuelEcon)
-	,(eocIdleCurrentIdx << 8 ) |	(tFuelUsed)
-	,(eocIdleTankIdx << 8 ) |		(tFuelUsed)
+	(instantIdx << 8 ) |			(tFuelRate),
+	(currentIdx << 8 ) |			(tFuelEcon),
+	(eocIdleCurrentIdx << 8 ) |		(tFuelUsed),
+	(eocIdleTankIdx << 8 ) |		(tFuelUsed),
 };
 
 #endif // defined(trackIdleEOCdata)

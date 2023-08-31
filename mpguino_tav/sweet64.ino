@@ -66,7 +66,7 @@ static const uint8_t prgmDiv64[] PROGMEM = {
 	instrCmpXtoY, 0x51,									// compare divisor to dividend
 	instrBranchIfGT, 4,									// if divisor is greater than dividend, skip to bitmask adjustment
 	instrSubYfromX, 0x51,								// subtract divisor from dividend
-	instrAddYtoX, 0x42,	       							// add quotient bitmask to quotient
+	instrAddYtoX, 0x42,									// add quotient bitmask to quotient
 
 //divnext:
 	instrShiftRegRight, 0x04,							// shift quotient bitmask right by one bit

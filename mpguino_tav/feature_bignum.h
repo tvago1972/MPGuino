@@ -44,85 +44,85 @@ namespace statusBar /* Status Meter Output support section prototype */
 // the below is configured for a 16x2 display, endcaps with 3 elements each, and normal segments with 4 elements
 //
 static const uint8_t statusBarPos[63] PROGMEM = {
-	 0b00000000		// zero value
+	0b00000000,		// zero value
 
-	,0b01000000		// left endcap
-	,0b01100000
-	,0b10000000
+	0b01000000,		// left endcap
+	0b01100000,
+	0b10000000,
 
-	,0b00100001		// normal segment 1
-	,0b01000001
-	,0b01100001
-	,0b10000001
+	0b00100001,		// normal segment 1
+	0b01000001,
+	0b01100001,
+	0b10000001,
 
-	,0b00100010		// normal segment 2
-	,0b01000010
-	,0b01100010
-	,0b10000010
+	0b00100010,		// normal segment 2
+	0b01000010,
+	0b01100010,
+	0b10000010,
 
-	,0b00100011		// normal segment 3
-	,0b01000011
-	,0b01100011
-	,0b10000011
+	0b00100011,		// normal segment 3
+	0b01000011,
+	0b01100011,
+	0b10000011,
 
-	,0b00100100		// normal segment 4
-	,0b01000100
-	,0b01100100
-	,0b10000100
+	0b00100100,		// normal segment 4
+	0b01000100,
+	0b01100100,
+	0b10000100,
 
-	,0b00100101		// normal segment 5
-	,0b01000101
-	,0b01100101
-	,0b10000101
+	0b00100101,		// normal segment 5
+	0b01000101,
+	0b01100101,
+	0b10000101,
 
-	,0b00100110		// normal segment 6
-	,0b01000110
-	,0b01100110
-	,0b10000110
+	0b00100110,		// normal segment 6
+	0b01000110,
+	0b01100110,
+	0b10000110,
 
-	,0b00100111		// normal segment 7
-	,0b01000111
-	,0b01100111
-	,0b10000111
+	0b00100111,		// normal segment 7
+	0b01000111,
+	0b01100111,
+	0b10000111,
 
-	,0b00101000		// normal segment 8
-	,0b01001000
-	,0b01101000
-	,0b10001000
+	0b00101000,		// normal segment 8
+	0b01001000,
+	0b01101000,
+	0b10001000,
 
-	,0b00101001		// normal segment 9
-	,0b01001001
-	,0b01101001
-	,0b10001001
+	0b00101001,		// normal segment 9
+	0b01001001,
+	0b01101001,
+	0b10001001,
 
-	,0b00101010		// normal segment 10
-	,0b01001010
-	,0b01101010
-	,0b10001010
+	0b00101010,		// normal segment 10
+	0b01001010,
+	0b01101010,
+	0b10001010,
 
-	,0b00101011		// normal segment 11
-	,0b01001011
-	,0b01101011
-	,0b10001011
+	0b00101011,		// normal segment 11
+	0b01001011,
+	0b01101011,
+	0b10001011,
 
-	,0b00101100		// normal segment 12
-	,0b01001100
-	,0b01101100
-	,0b10001100
+	0b00101100,		// normal segment 12
+	0b01001100,
+	0b01101100,
+	0b10001100,
 
-	,0b00101101		// normal segment 13
-	,0b01001101
-	,0b01101101
-	,0b10001101
+	0b00101101,		// normal segment 13
+	0b01001101,
+	0b01101101,
+	0b10001101,
 
-	,0b00101110		// normal segment 14
-	,0b01001110
-	,0b01101110
-	,0b10001110
+	0b00101110,		// normal segment 14
+	0b01001110,
+	0b01101110,
+	0b10001110,
 
-	,0b00111111		// right endcap
-	,0b01011111
-	,0b01111111
+	0b00111111,		// right endcap
+	0b01011111,
+	0b01111111,
 };
 
 static const uint8_t statusBarElement[] PROGMEM = {
@@ -130,7 +130,7 @@ static const uint8_t statusBarElement[] PROGMEM = {
 	0b00010000,
 	0b00011000,
 	0b00011010,
-	0b00011011
+	0b00011011,
 };
 
 static const uint8_t statusBarLength = sizeof(statusBarPos) / sizeof(uint8_t);

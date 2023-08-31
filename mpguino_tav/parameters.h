@@ -1065,143 +1065,143 @@ static const uint8_t pfChangeDisplay =			pfDoMetricModeConversion + 32;
 static const uint8_t pfCalculateFuelParams =	pfChangeDisplay + 32;
 
 static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
-	 (pSizeSignature & 0x07) | pfHardwareInitMPGuino							// EEPROM MPGuino signature long word
-	,(pSizeMetricMode & 0x07) | pfDoMetricModeConversion						// Display Mode (0 - US Display, 1 - Metric Display)
-	,(pSizeAlternateFE & 0x07) | pfChangeDisplay								// 0 - MPG or L/100km, 1 - G/100mile or km/L
-	,(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino				// Microseconds per US gallon
-	,(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,(pSizeInjectorSettleTime & 0x07) | pfSoftwareInitMPGuino					// Fuel Injector Opening Delay Time (us)
-	,(pSizeInjPer2CrankRev & 0x07) | pfSoftwareInitMPGuino					// Crankshaft Revolutions per Fuel Injector Event
-	,(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino							// Minimum Engine Speed For Engine On (RPM)
-	,(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino					// VSS Pulses (per mile or per km)
-	,(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino								// VSS Pause Debounce Count (ms)
-	,(pSizeMinGoodSpeed & 0x07) | pfSoftwareInitMPGuino							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-	,(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino								// Tank Capacity * 1000 (gal or L)
-	,(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
-	,(pSizeIdleTimeout & 0x07) | pfSoftwareInitMPGuino							// Engine Idle Timeout (s)
-	,(pSizeEOCtimeout & 0x07) | pfSoftwareInitMPGuino							// Engine-Off Coasting Timeout (s)
-	,(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino						// Button Press Activity Timeout (s)
-	,(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino							// Vehicle Parked (engine off, no movement) Timeout (s)
-	,(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino						// Activity (engine off, no movement, no button press) Timeout (s)
-	,(pSizeScratchpad & 0x07)													// Scratchpad Memory
+	(pSizeSignature & 0x07) | pfHardwareInitMPGuino,							// EEPROM MPGuino signature long word
+	(pSizeMetricMode & 0x07) | pfDoMetricModeConversion,						// Display Mode (0 - US Display, 1 - Metric Display)
+	(pSizeAlternateFE & 0x07) | pfChangeDisplay,								// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino,				// Microseconds per US gallon
+	(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino,						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	(pSizeInjectorSettleTime & 0x07) | pfSoftwareInitMPGuino,					// Fuel Injector Opening Delay Time (us)
+	(pSizeInjPer2CrankRev & 0x07) | pfSoftwareInitMPGuino,						// Crankshaft Revolutions per Fuel Injector Event
+	(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino,							// Minimum Engine Speed For Engine On (RPM)
+	(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino,					// VSS Pulses (per mile or per km)
+	(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino,								// VSS Pause Debounce Count (ms)
+	(pSizeMinGoodSpeed & 0x07) | pfSoftwareInitMPGuino,							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino,								// Tank Capacity * 1000 (gal or L)
+	(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino,						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
+	(pSizeIdleTimeout & 0x07) | pfSoftwareInitMPGuino,							// Engine Idle Timeout (s)
+	(pSizeEOCtimeout & 0x07) | pfSoftwareInitMPGuino,							// Engine-Off Coasting Timeout (s)
+	(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino,						// Button Press Activity Timeout (s)
+	(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino,							// Vehicle Parked (engine off, no movement) Timeout (s)
+	(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino,						// Activity (engine off, no movement, no button press) Timeout (s)
+	(pSizeScratchpad & 0x07),													// Scratchpad Memory
 #if defined(useButtonInput)
-	,(pSizeWakeupResetCurrentOnEngine & 0x07)									// Enable current trip reset upon wakeup due to engine running
-	,(pSizeWakeupResetCurrentOnMove & 0x07)										// Enable current trip reset upon wakeup due to vehicle movement
+	(pSizeWakeupResetCurrentOnEngine & 0x07),									// Enable current trip reset upon wakeup due to engine running
+	(pSizeWakeupResetCurrentOnMove & 0x07),										// Enable current trip reset upon wakeup due to vehicle movement
 #endif // defined(useButtonInput)
 #if defined(useLCDoutput)
-	,(pSizeBrightness & 0x07) | pfChangeDisplay									// LCD Brightness
+	(pSizeBrightness & 0x07) | pfChangeDisplay,									// LCD Brightness
 #if defined(useLCDcontrast)
-	,(pSizeContrast & 0x07) | pfChangeDisplay									// LCD Contrast
+	(pSizeContrast & 0x07) | pfChangeDisplay,									// LCD Contrast
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-	,(pSizeLCDcolor & 0x07) | pfChangeDisplay									// LCD Backlight color
+	(pSizeLCDcolor & 0x07) | pfChangeDisplay,									// LCD Backlight color
 #endif // defined(useAdafruitRGBLCDshield)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	,(pSizeFuelUnitCost & 0x07)													// Price per unit volume of fuel
+	(pSizeFuelUnitCost & 0x07),													// Price per unit volume of fuel
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	,(pSizeOutputPin1Mode & 0x07)												// Output Pin 1 mode
-	,(pSizeOutputPin2Mode & 0x07)												// Output Pin 2 mode
+	(pSizeOutputPin1Mode & 0x07),												// Output Pin 1 mode
+	(pSizeOutputPin2Mode & 0x07),												// Output Pin 2 mode
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-	,(pSizeVoltageOffset & 0x07)												// diode offset from V(alternator)
+	(pSizeVoltageOffset & 0x07),												// diode offset from V(alternator)
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-	,(pSizeSerialDataLogging & 0x07)											// Serial Data Logging Enable
+	(pSizeSerialDataLogging & 0x07),											// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-	,(pSizeJSONoutput & 0x07)													// JSON output Enable
+	(pSizeJSONoutput & 0x07),													// JSON output Enable
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-	,(pSizeBluetoothOutput & 0x07)												// Bluetooth output Enable
+	(pSizeBluetoothOutput & 0x07),												// Bluetooth output Enable
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-	,(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino								// Period Of FE over Time BarGraph Bar (s)
+	(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino,								// Period Of FE over Time BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	,(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph lower speed
-	,(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino					// FE vs Speed Bargraph speed bar size
+	(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino,					// FE vs Speed Bargraph lower speed
+	(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino,					// FE vs Speed Bargraph speed bar size
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	,(pSizeSysFuelPressure & 0x07) | pfSoftwareInitMPGuino						// Fuel System Pressure (Pa or * 1000 psig)
+	(pSizeSysFuelPressure & 0x07) | pfSoftwareInitMPGuino,						// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	,(pSizeRefFuelPressure & 0x07) | pfCalculateFuelParams						// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
-	,(pSizeInjectorCount & 0x07) | pfCalculateFuelParams						// Fuel Injector Count
-	,(pSizeInjectorSize & 0x07) | pfCalculateFuelParams							// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
+	(pSizeRefFuelPressure & 0x07) | pfCalculateFuelParams,						// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
+	(pSizeInjectorCount & 0x07) | pfCalculateFuelParams,						// Fuel Injector Count
+	(pSizeInjectorSize & 0x07) | pfCalculateFuelParams,							// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
 #if defined(useChryslerMAPCorrection)
-	,(pSizeMAPsensorFloor & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Floor * 1000 (V)
-	,(pSizeMAPsensorCeiling & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Ceiling * 1000 (V)
-	,(pSizeMAPsensorRange & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Range (Pa or * 1000 psig)
-	,(pSizeMAPsensorOffset & 0x07) | pfSoftwareInitMPGuino						// MAP Sensor Offset (Pa or * 1000 psia)
+	(pSizeMAPsensorFloor & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Floor * 1000 (V)
+	(pSizeMAPsensorCeiling & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Ceiling * 1000 (V)
+	(pSizeMAPsensorRange & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Range (Pa or * 1000 psig)
+	(pSizeMAPsensorOffset & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Offset (Pa or * 1000 psia)
 #if defined(useChryslerBaroSensor)
-	,(pSizeBaroSensorFloor & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Floor * 1000 (V)
-	,(pSizeBaroSensorCeiling & 0x07) | pfSoftwareInitMPGuino					// Barometric Sensor Ceiling * 1000 (V)
-	,(pSizeBaroSensorRange & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Range (Pa or * 1000 psig)
-	,(pSizeBaroSensorOffset & 0x07) | pfSoftwareInitMPGuino						// Barometric Sensor Offset (Pa or * 1000 psia)
+	(pSizeBaroSensorFloor & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Floor * 1000 (V)
+	(pSizeBaroSensorCeiling & 0x07) | pfSoftwareInitMPGuino,					// Barometric Sensor Ceiling * 1000 (V)
+	(pSizeBaroSensorRange & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Range (Pa or * 1000 psig)
+	(pSizeBaroSensorOffset & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Offset (Pa or * 1000 psia)
 #else // defined(useChryslerBaroSensor)
-	,(pSizeBarometricPressure & 0x07) | pfSoftwareInitMPGuino					// Reference Barometric Pressure
+	(pSizeBarometricPressure & 0x07) | pfSoftwareInitMPGuino,					// Reference Barometric Pressure
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	,(pSizeVehicleMass & 0x07)													// Vehicle Weight/Mass (lbs or kg)
+	(pSizeVehicleMass & 0x07),													// Vehicle Weight/Mass (lbs or kg)
 #if defined(useCoastDownCalculator)
-	,(pSizeVehicleFrontalArea & 0x07)											// Vehicle Frontal Area * 1000 (ft^2 or m^2)
-	,(pSizeLocustDensity & 0x07)												// Air density (lb/yd^3 or kg/m^3)
-	,(pSizeCoefficientD & 0x07)													// Vehicle C(d) * 1000
-	,(pSizeCoefficientV & 0x07)													// Vehicle C(v) * 1000
-	,(pSizeCoefficientRR & 0x07)												// Vehicle C(rr) * 1000
-	,(pSizeCoastdownSamplePeriod & 0x07)										// Sample Period in seconds
+	(pSizeVehicleFrontalArea & 0x07),											// Vehicle Frontal Area * 1000 (ft^2 or m^2)
+	(pSizeLocustDensity & 0x07),												// Air density (lb/yd^3 or kg/m^3)
+	(pSizeCoefficientD & 0x07),													// Vehicle C(d) * 1000
+	(pSizeCoefficientV & 0x07),													// Vehicle C(v) * 1000
+	(pSizeCoefficientRR & 0x07),												// Vehicle C(rr) * 1000
+	(pSizeCoastdownSamplePeriod & 0x07),										// Sample Period in seconds
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	,(pSizeDragSpeed & 0x07)													// Drag speed cutoff (MPH or kph) * 1000
-	,(pSizeDragDistance & 0x07)													// Drag distance cutoff (miles or km) * 1000
-	,(pSizeDragAutoFlag & 0x07)													// Drag automatic retrigger on vehicle stop
+	(pSizeDragSpeed & 0x07),													// Drag speed cutoff (MPH or kph) * 1000
+	(pSizeDragDistance & 0x07),													// Drag distance cutoff (miles or km) * 1000
+	(pSizeDragAutoFlag & 0x07),													// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #if defined(useSavedTrips)
-	,(pSizeAutoSaveActive & 0x07)												// Autosave Active Trip Data Enable
+	(pSizeAutoSaveActive & 0x07),												// Autosave Active Trip Data Enable
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
-	,(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino							// Partial Refuel amount * 1000 (gal or L)
+	(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino,							// Partial Refuel amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
 
 #if defined(useButtonInput)
-	,(pSizeDisplayIdx & 0x07) | pfChangeDisplay									// current display index
+	(pSizeDisplayIdx & 0x07) | pfChangeDisplay,									// current display index
 #if LCDcharHeight == 4
-	,(pSizeBottomDisplayIdx & 0x07) | pfChangeDisplay							// bottom display index
-	,(pSizeBottomCursorIdx & 0x07)												// bottom display cursor position
+	(pSizeBottomDisplayIdx & 0x07) | pfChangeDisplay,							// bottom display index
+	(pSizeBottomCursorIdx & 0x07),												// bottom display cursor position
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 #if defined(useEEPROMtripStorage)
 #if defined(usePartialRefuel)
-	,(pSizeRefuelSaveSizeIdx & 0x07)											// Partial Refuel save amount * 1000 (gal or L)
+	(pSizeRefuelSaveSizeIdx & 0x07),											// Partial Refuel save amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
-	,(pSizeCurrTripSignatureIdx & 0x07)											// Current Trip signature byte
-	,(pSizeTankTripSignatureIdx & 0x07)											// Tank Trip signature byte
-	,(pSizeCurrTripVSSpulseIdx & 0x07)											// Current Trip VSS pulse count storage
-	,(pSizeCurrTripVSScycleIdx & 0x07)											// Current Trip VSS cycle accumulator storage
-	,(pSizeCurrTripInjPulseIdx & 0x07)											// Current Trip injector pulse count storage
-	,(pSizeCurrTripInjCycleIdx & 0x07)											// Current Trip injector open cycle accumulator storage
-	,(pSizeCurrTripEngCycleIdx & 0x07)											// Current Trip engine revolution cycle accumulator storage
-	,(pSizeTankTripVSSpulseIdx & 0x07)											// Tank Trip VSS pulse count storage
-	,(pSizeTankTripVSScycleIdx & 0x07)											// Tank Trip VSS cycle accumulator storage
-	,(pSizeTankTripInjPulseIdx & 0x07)											// Tank Trip injector pulse count storage
-	,(pSizeTankTripInjCycleIdx & 0x07)											// Tank Trip injector open cycle accumulator storage
-	,(pSizeTankTripEngCycleIdx & 0x07)											// Tank Trip engine revolution cycle accumulator storage
+	(pSizeCurrTripSignatureIdx & 0x07),											// Current Trip signature byte
+	(pSizeTankTripSignatureIdx & 0x07),											// Tank Trip signature byte
+	(pSizeCurrTripVSSpulseIdx & 0x07),											// Current Trip VSS pulse count storage
+	(pSizeCurrTripVSScycleIdx & 0x07),											// Current Trip VSS cycle accumulator storage
+	(pSizeCurrTripInjPulseIdx & 0x07),											// Current Trip injector pulse count storage
+	(pSizeCurrTripInjCycleIdx & 0x07),											// Current Trip injector open cycle accumulator storage
+	(pSizeCurrTripEngCycleIdx & 0x07),											// Current Trip engine revolution cycle accumulator storage
+	(pSizeTankTripVSSpulseIdx & 0x07),											// Tank Trip VSS pulse count storage
+	(pSizeTankTripVSScycleIdx & 0x07),											// Tank Trip VSS cycle accumulator storage
+	(pSizeTankTripInjPulseIdx & 0x07),											// Tank Trip injector pulse count storage
+	(pSizeTankTripInjCycleIdx & 0x07),											// Tank Trip injector open cycle accumulator storage
+	(pSizeTankTripEngCycleIdx & 0x07),											// Tank Trip engine revolution cycle accumulator storage
 #if defined(trackIdleEOCdata)
-	,(pSizeCurrIEOCvssPulseIdx & 0x07)											// Current Idle/EOC Trip VSS pulse count storage
-	,(pSizeCurrIEOCvssCycleIdx & 0x07)											// Current Idle/EOC Trip VSS cycle accumulator storage
-	,(pSizeCurrIEOCinjPulseIdx & 0x07)											// Current Idle/EOC Trip injector pulse count storage
-	,(pSizeCurrIEOCinjCycleIdx & 0x07)											// Current Idle/EOC Trip injector open cycle accumulator storage
-	,(pSizeCurrIEOCengCycleIdx & 0x07)											// Current Idle/EOC Trip engine revolution cycle accumulator storage
-	,(pSizeTankIEOCvssPulseIdx & 0x07)											// Tank Idle/EOC Trip VSS pulse count storage
-	,(pSizeTankIEOCvssCycleIdx & 0x07)											// Tank Idle/EOC Trip VSS cycle accumulator storage
-	,(pSizeTankIEOCinjPulseIdx & 0x07)											// Tank Idle/EOC Trip injector pulse count storage
-	,(pSizeTankIEOCinjCycleIdx & 0x07)											// Tank Idle/EOC Trip injector open cycle accumulator storage
-	,(pSizeTankIEOCengCycleIdx & 0x07)											// Tank Idle/EOC Trip engine revolution cycle accumulator storage
+	(pSizeCurrIEOCvssPulseIdx & 0x07),											// Current Idle/EOC Trip VSS pulse count storage
+	(pSizeCurrIEOCvssCycleIdx & 0x07),											// Current Idle/EOC Trip VSS cycle accumulator storage
+	(pSizeCurrIEOCinjPulseIdx & 0x07),											// Current Idle/EOC Trip injector pulse count storage
+	(pSizeCurrIEOCinjCycleIdx & 0x07),											// Current Idle/EOC Trip injector open cycle accumulator storage
+	(pSizeCurrIEOCengCycleIdx & 0x07),											// Current Idle/EOC Trip engine revolution cycle accumulator storage
+	(pSizeTankIEOCvssPulseIdx & 0x07),											// Tank Idle/EOC Trip VSS pulse count storage
+	(pSizeTankIEOCvssCycleIdx & 0x07),											// Tank Idle/EOC Trip VSS cycle accumulator storage
+	(pSizeTankIEOCinjPulseIdx & 0x07),											// Tank Idle/EOC Trip injector pulse count storage
+	(pSizeTankIEOCinjCycleIdx & 0x07),											// Tank Idle/EOC Trip injector open cycle accumulator storage
+	(pSizeTankIEOCengCycleIdx & 0x07),											// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 };
@@ -1209,143 +1209,143 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 /* parameter EEPROM addresses for parameter definitions above */
 
 static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
-	 pAddressSignature					// EEPROM signature long word for MPGuino
-	,pAddressMetricMode					// Display Mode (0 - US Display, 1 - Metric Display)
-	,pAddressAlternateFE				// 0 - MPG or L/100km, 1 - G/100mile or km/L
-	,pAddressMicroSecondsPerGallon		// Microseconds per US gallon
-	,pAddressInjEdgeTrigger				// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,pAddressInjectorSettleTime			// Fuel Injector Opening Delay Time (us)
-	,pAddressInjPer2CrankRev			// Fuel Injector Event Count for every 2 Crankshaft Revolutions
-	,pAddressMinGoodRPM					// Minimum Engine Speed For Engine On (RPM)
-	,pAddressPulsesPerDistance			// VSS Pulses (per mile or per km)
-	,pAddressVSSpause					// VSS Pause Debounce Count (ms)
-	,pAddressMinGoodSpeed				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-	,pAddressTankSize					// Tank Capacity * 1000 (gal or L)
-	,pAddressTankBingoSize				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-	,pAddressIdleTimeout				// Engine Idle Timeout (s)
-	,pAddressEOCtimeout					// Engine-Off Coasting Timeout (s)
-	,pAddressButtonTimeout				// Button Press Activity Timeout (s)
-	,pAddressParkTimeout				// Vehicle Parked (engine off, no movement) Timeout (s)
-	,pAddressActivityTimeout			// Activity (engine off, no movement, no button press) Timeout (s)
-	,pAddressScratchpad					// Scratchpad Memory
+	pAddressSignature,					// EEPROM signature long word for MPGuino
+	pAddressMetricMode,					// Display Mode (0 - US Display, 1 - Metric Display)
+	pAddressAlternateFE,				// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	pAddressMicroSecondsPerGallon,		// Microseconds per US gallon
+	pAddressInjEdgeTrigger,				// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	pAddressInjectorSettleTime,			// Fuel Injector Opening Delay Time (us)
+	pAddressInjPer2CrankRev,			// Fuel Injector Event Count for every 2 Crankshaft Revolutions
+	pAddressMinGoodRPM,					// Minimum Engine Speed For Engine On (RPM)
+	pAddressPulsesPerDistance,			// VSS Pulses (per mile or per km)
+	pAddressVSSpause,					// VSS Pause Debounce Count (ms)
+	pAddressMinGoodSpeed,				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	pAddressTankSize,					// Tank Capacity * 1000 (gal or L)
+	pAddressTankBingoSize,				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
+	pAddressIdleTimeout,				// Engine Idle Timeout (s)
+	pAddressEOCtimeout,					// Engine-Off Coasting Timeout (s)
+	pAddressButtonTimeout,				// Button Press Activity Timeout (s)
+	pAddressParkTimeout,				// Vehicle Parked (engine off, no movement) Timeout (s)
+	pAddressActivityTimeout,			// Activity (engine off, no movement, no button press) Timeout (s)
+	pAddressScratchpad,					// Scratchpad Memory
 #if defined(useButtonInput)
-	,pAddressWakeupResetCurrentOnEngine	// Enable current trip reset upon wakeup due to engine running
-	,pAddressWakeupResetCurrentOnMove	// Enable current trip reset upon wakeup due to vehicle movement
+	pAddressWakeupResetCurrentOnEngine,	// Enable current trip reset upon wakeup due to engine running
+	pAddressWakeupResetCurrentOnMove,	// Enable current trip reset upon wakeup due to vehicle movement
 #endif // defined(useButtonInput)
 #if defined(useLCDoutput)
-	,pAddressBrightness					// LCD Brightness
+	pAddressBrightness,					// LCD Brightness
 #if defined(useLCDcontrast)
-	,pAddressContrast					// LCD Contrast
+	pAddressContrast,					// LCD Contrast
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-	,pAddressLCDcolor					// LCD Backlight color
+	pAddressLCDcolor,					// LCD Backlight color
 #endif // defined(useAdafruitRGBLCDshield)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	,pAddressFuelUnitCost				// Price per unit volume of fuel
+	pAddressFuelUnitCost,				// Price per unit volume of fuel
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	,pAddressOutputPin1Mode				// Output Pin 1 mode
-	,pAddressOutputPin2Mode				// Output Pin 2 mode
+	pAddressOutputPin1Mode,				// Output Pin 1 mode
+	pAddressOutputPin2Mode,				// Output Pin 2 mode
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-	,pAddressVoltageOffset				// diode offset from V(alternator)
+	pAddressVoltageOffset,				// diode offset from V(alternator)
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-	,pAddressSerialDataLogging			// Serial Data Logging Enable
+	pAddressSerialDataLogging,			// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-	,pAddressJSONoutput					// JSON output Enable
+	pAddressJSONoutput,					// JSON output Enable
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-	,pAddressBluetoothOutput			// Bluetooth output Enable
+	pAddressBluetoothOutput,			// Bluetooth output Enable
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-	,pAddressFEvsTime					// Period Of FE over Time Bar Graph Bar (s)
+	pAddressFEvsTime,					// Period Of FE over Time Bar Graph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	,pAddressBarLowSpeedCutoff			// FE vs Speed Bargraph lower speed
-	,pAddressBarSpeedQuantumIdx			// FE vs Speed Bargraph speed bar size
+	pAddressBarLowSpeedCutoff,			// FE vs Speed Bargraph lower speed
+	pAddressBarSpeedQuantumIdx,			// FE vs Speed Bargraph speed bar size
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	,pAddressSysFuelPressure			// Fuel System Pressure (Pa or * 1000 psig)
+	pAddressSysFuelPressure,			// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	,pAddressRefFuelPressure			// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
-	,pAddressInjectorCount				// Fuel Injector Count
-	,pAddressInjectorSize				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
+	pAddressRefFuelPressure,			// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
+	pAddressInjectorCount,				// Fuel Injector Count
+	pAddressInjectorSize,				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
 #if defined(useChryslerMAPCorrection)
-	,pAddressMAPsensorFloor				// MAP Sensor Floor * 1000 (V)
-	,pAddressMAPsensorCeiling			// MAP Sensor Ceiling * 1000 (V)
-	,pAddressMAPsensorRange				// MAP Sensor Range (Pa or * 1000 psig)
-	,pAddressMAPsensorOffset			// MAP Sensor Offset (Pa or * 1000 psia)
+	pAddressMAPsensorFloor,				// MAP Sensor Floor * 1000 (V)
+	pAddressMAPsensorCeiling,			// MAP Sensor Ceiling * 1000 (V)
+	pAddressMAPsensorRange,				// MAP Sensor Range (Pa or * 1000 psig)
+	pAddressMAPsensorOffset,			// MAP Sensor Offset (Pa or * 1000 psia)
 #if defined(useChryslerBaroSensor)
-	,pAddressBaroSensorFloor			// Barometric Sensor Floor * 1000 (V)
-	,pAddressBaroSensorCeiling			// Barometric Sensor Ceiling * 1000 (V)
-	,pAddressBaroSensorRange			// Barometric Sensor Range (Pa or * 1000 psig)
-	,pAddressBaroSensorOffset			// Barometric Sensor Offset (Pa or * 1000 psia)
+	pAddressBaroSensorFloor,			// Barometric Sensor Floor * 1000 (V)
+	pAddressBaroSensorCeiling,			// Barometric Sensor Ceiling * 1000 (V)
+	pAddressBaroSensorRange,			// Barometric Sensor Range (Pa or * 1000 psig)
+	pAddressBaroSensorOffset,			// Barometric Sensor Offset (Pa or * 1000 psia)
 #else // defined(useChryslerBaroSensor)
-	,pAddressBarometricPressure			// Reference Barometric Pressure
+	pAddressBarometricPressure,			// Reference Barometric Pressure
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	,pAddressVehicleMass				// Vehicle Weight/Mass (lbs or kg)
+	pAddressVehicleMass,				// Vehicle Weight/Mass (lbs or kg)
 #if defined(useCoastDownCalculator)
-	,pAddressVehicleFrontalArea			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
-	,pAddressLocustDensity				// Air density (lb/yd^3 or kg/m^3)
-	,pAddressCoefficientD				// Vehicle C(d) * 1000
-	,pAddressCoefficientV				// Vehicle C(v) * 1000
-	,pAddressCoefficientRR				// Vehicle C(rr) * 1000
-	,pAddressCoastdownSamplePeriod		// Sample Period in seconds
+	pAddressVehicleFrontalArea,			// Vehicle Frontal Area * 1000 (ft^2 or m^2)
+	pAddressLocustDensity,				// Air density (lb/yd^3 or kg/m^3)
+	pAddressCoefficientD,				// Vehicle C(d) * 1000
+	pAddressCoefficientV,				// Vehicle C(v) * 1000
+	pAddressCoefficientRR,				// Vehicle C(rr) * 1000
+	pAddressCoastdownSamplePeriod,		// Sample Period in seconds
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	,pAddressDragSpeed					// Drag speed cutoff (MPH or kph) * 1000
-	,pAddressDragDistance				// Drag distance cutoff (miles or km) * 1000
-	,pAddressDragAutoFlag				// Drag automatic retrigger on vehicle stop
+	pAddressDragSpeed,					// Drag speed cutoff (MPH or kph) * 1000
+	pAddressDragDistance,				// Drag distance cutoff (miles or km) * 1000
+	pAddressDragAutoFlag,				// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #if defined(useSavedTrips)
-	,pAddressAutoSaveActive				// Autosave Active Trip Data Enable
+	pAddressAutoSaveActive,				// Autosave Active Trip Data Enable
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
-	,pAddressRefuelSize					// Partial Refuel amount * 1000 (gal or L)
+	pAddressRefuelSize,					// Partial Refuel amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
 
 #if defined(useButtonInput)
-	,pAddressDisplayIdx					// current display index
+	pAddressDisplayIdx,					// current display index
 #if LCDcharHeight == 4
-	,pAddressBottomDisplayIdx			// bottom display index
-	,pAddressBottomCursorIdx			// bottom display cursor position
+	pAddressBottomDisplayIdx,			// bottom display index
+	pAddressBottomCursorIdx,			// bottom display cursor position
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 #if defined(useEEPROMtripStorage)
 #if defined(usePartialRefuel)
-	,pAddressRefuelSaveSizeIdx			// Partial Refuel save amount * 1000 (gal or L)
+	pAddressRefuelSaveSizeIdx,			// Partial Refuel save amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
-	,pAddressCurrTripSignatureIdx		// Current Trip signature byte
-	,pAddressTankTripSignatureIdx		// Tank Trip signature byte
-	,pAddressCurrTripVSSpulseIdx		// Current Trip VSS pulse count storage
-	,pAddressCurrTripVSScycleIdx		// Current Trip VSS cycle accumulator storage
-	,pAddressCurrTripInjPulseIdx		// Current Trip injector pulse count storage
-	,pAddressCurrTripInjCycleIdx		// Current Trip injector open cycle accumulator storage
-	,pAddressCurrTripEngCycleIdx		// Current Trip engine revolution cycle accumulator storage
-	,pAddressTankTripVSSpulseIdx		// Tank Trip VSS pulse count storage
-	,pAddressTankTripVSScycleIdx		// Tank Trip VSS cycle accumulator storage
-	,pAddressTankTripInjPulseIdx		// Tank Trip injector pulse count storage
-	,pAddressTankTripInjCycleIdx		// Tank Trip injector open cycle accumulator storage
-	,pAddressTankTripEngCycleIdx		// Tank Trip engine revolution cycle accumulator storage
+	pAddressCurrTripSignatureIdx,		// Current Trip signature byte
+	pAddressTankTripSignatureIdx,		// Tank Trip signature byte
+	pAddressCurrTripVSSpulseIdx,		// Current Trip VSS pulse count storage
+	pAddressCurrTripVSScycleIdx,		// Current Trip VSS cycle accumulator storage
+	pAddressCurrTripInjPulseIdx,		// Current Trip injector pulse count storage
+	pAddressCurrTripInjCycleIdx,		// Current Trip injector open cycle accumulator storage
+	pAddressCurrTripEngCycleIdx,		// Current Trip engine revolution cycle accumulator storage
+	pAddressTankTripVSSpulseIdx,		// Tank Trip VSS pulse count storage
+	pAddressTankTripVSScycleIdx,		// Tank Trip VSS cycle accumulator storage
+	pAddressTankTripInjPulseIdx,		// Tank Trip injector pulse count storage
+	pAddressTankTripInjCycleIdx,		// Tank Trip injector open cycle accumulator storage
+	pAddressTankTripEngCycleIdx,		// Tank Trip engine revolution cycle accumulator storage
 #if defined(trackIdleEOCdata)
-	,pAddressCurrIEOCvssPulseIdx		// Current Idle/EOC Trip VSS pulse count storage
-	,pAddressCurrIEOCvssCycleIdx		// Current Idle/EOC Trip VSS cycle accumulator storage
-	,pAddressCurrIEOCinjPulseIdx		// Current Idle/EOC Trip injector pulse count storage
-	,pAddressCurrIEOCinjCycleIdx		// Current Idle/EOC Trip injector open cycle accumulator storage
-	,pAddressCurrIEOCengCycleIdx		// Current Idle/EOC Trip engine revolution cycle accumulator storage
-	,pAddressTankIEOCvssPulseIdx		// Tank Idle/EOC Trip VSS pulse count storage
-	,pAddressTankIEOCvssCycleIdx		// Tank Idle/EOC Trip VSS cycle accumulator storage
-	,pAddressTankIEOCinjPulseIdx		// Tank Idle/EOC Trip injector pulse count storage
-	,pAddressTankIEOCinjCycleIdx		// Tank Idle/EOC Trip injector open cycle accumulator storage
-	,pAddressTankIEOCengCycleIdx		// Tank Idle/EOC Trip engine revolution cycle accumulator storage
+	pAddressCurrIEOCvssPulseIdx,		// Current Idle/EOC Trip VSS pulse count storage
+	pAddressCurrIEOCvssCycleIdx,		// Current Idle/EOC Trip VSS cycle accumulator storage
+	pAddressCurrIEOCinjPulseIdx,		// Current Idle/EOC Trip injector pulse count storage
+	pAddressCurrIEOCinjCycleIdx,		// Current Idle/EOC Trip injector open cycle accumulator storage
+	pAddressCurrIEOCengCycleIdx,		// Current Idle/EOC Trip engine revolution cycle accumulator storage
+	pAddressTankIEOCvssPulseIdx,		// Tank Idle/EOC Trip VSS pulse count storage
+	pAddressTankIEOCvssCycleIdx,		// Tank Idle/EOC Trip VSS cycle accumulator storage
+	pAddressTankIEOCinjPulseIdx,		// Tank Idle/EOC Trip injector pulse count storage
+	pAddressTankIEOCinjCycleIdx,		// Tank Idle/EOC Trip injector open cycle accumulator storage
+	pAddressTankIEOCengCycleIdx,		// Tank Idle/EOC Trip engine revolution cycle accumulator storage
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 };
@@ -1355,117 +1355,117 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 static const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 24) + ((uint32_t)(eePtrEnd) << 16) + (uint32_t)(eeAdrSettingsEnd);
 
 static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
-	 newEEPROMsignature	// EEPROM MPGuino signature long word
-	,0					// Display Mode (0 - US Display, 1 - Metric Display)
-	,0					// 0 - MPG or L/100km, 1 - G/100mile or km/L
-	,133262651			// Microseconds per US gallon
-	,0					// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	,550				// Fuel Injector Response Delay Time (us)
-	,1					// Fuel Injector Event Count for every 2 Crankshaft Revolutions
-	,40					// Minimum Engine Speed For Engine On (RPM)
-	,10000				// VSS Pulses (per mile or per km)
-	,0					// VSS Pause Debounce Count (ms)
-	,300				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
-	,18000				// Tank Capacity * 1000 (gal or L)
-	,2200				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
-	,15					// Engine Idle Timeout (s)
-	,2					// Engine-Off Coasting Timeout (s)
-	,5					// Button Press Activity Timeout (s)
-	,5					// Vehicle Parked (engine off, no movement) Timeout (s)
-	,120				// Activity (engine off, no movement, no button press) Timeout (s)
-	,0					// Scratchpad Memory
+	newEEPROMsignature,	// EEPROM MPGuino signature long word
+	0,					// Display Mode (0 - US Display, 1 - Metric Display)
+	0,					// 0 - MPG or L/100km, 1 - G/100mile or km/L
+	133262651,			// Microseconds per US gallon
+	0,					// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
+	550,				// Fuel Injector Response Delay Time (us)
+	1,					// Fuel Injector Event Count for every 2 Crankshaft Revolutions
+	40,					// Minimum Engine Speed For Engine On (RPM)
+	10000,				// VSS Pulses (per mile or per km)
+	0,					// VSS Pause Debounce Count (ms)
+	300,				// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	18000,				// Tank Capacity * 1000 (gal or L)
+	2200,				// Bingo Fuel (Reserve Fuel) Capacity * 1000 (gal or L)
+	15,					// Engine Idle Timeout (s)
+	2,					// Engine-Off Coasting Timeout (s)
+	5,					// Button Press Activity Timeout (s)
+	5,					// Vehicle Parked (engine off, no movement) Timeout (s)
+	120,				// Activity (engine off, no movement, no button press) Timeout (s)
+	0,					// Scratchpad Memory
 
 #if defined(useButtonInput)
-	,1					// Enable current trip reset upon wakeup due to engine running
-	,0					// Enable current trip reset upon wakeup due to button press
+	1,					// Enable current trip reset upon wakeup due to engine running
+	0,					// Enable current trip reset upon wakeup due to button press
 #endif // defined(useButtonInput)
 #if defined(useLCDoutput)
 #if defined(useBinaryLCDbrightness)
-	,1					// LCD Brightness
+	1,					// LCD Brightness
 #else // defined(useBinaryLCDbrightness)
-	,2					// LCD Brightness
+	2,					// LCD Brightness
 #endif // defined(useBinaryLCDbrightness)
 #if defined(useLCDcontrast)
-	,55					// LCD Contrast
+	55,					// LCD Contrast
 #endif // defined(useLCDcontrast)
 #if defined(useAdafruitRGBLCDshield)
-	,3					// LCD Backlight color
+	3,					// LCD Backlight color
 #endif // defined(useAdafruitRGBLCDshield)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	,2710259			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
+	2710259,			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	,0					// Output pin 1 mode
-	,0					// Output pin 2 mode
+	0,					// Output pin 1 mode
+	0,					// Output pin 2 mode
 #endif // defined(useOutputPins)
 #if defined(useCarVoltageOutput)
-	,700				// diode offset from V(alternator) (via meelis11)
+	700,				// diode offset from V(alternator) (via meelis11)
 #endif // defined(useCarVoltageOutput)
 #if defined(useDataLoggingOutput)
-	,1					// Serial Data Logging Enable
+	1,					// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-	,1					// JSON output Enable
+	1,					// JSON output Enable
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-	,1					// Bluetooth output Enable
+	1,					// Bluetooth output Enable
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-	,60					// Length Of BarGraph Bar (s)
+	60,					// Length Of BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	,25000				// FE vs Speed Bargraph lower speed
-	,5000				// FE vs Speed Bargraph speed bar size
+	25000,				// FE vs Speed Bargraph lower speed
+	5000,				// FE vs Speed Bargraph speed bar size
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	,43500				// Fuel System Pressure (Pa or * 1000 psig)
+	43500,				// Fuel System Pressure (Pa or * 1000 psig)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
-	,43500				// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
-	,6					// Fuel Injector Count
-	,246000				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
+	43500,				// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
+	6,					// Fuel Injector Count
+	246000,				// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
 #if defined(useChryslerMAPCorrection)
-	,500				// MAP Sensor Floor * 1000 (V)
-	,4000				// MAP Sensor Ceiling * 1000 (V)
-	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
-	,551				// MAP Sensor Offset (Pa or * 1000 psia)
+	500,				// MAP Sensor Floor * 1000 (V)
+	4000,				// MAP Sensor Ceiling * 1000 (V)
+	14145,				// Barometric Sensor Range (Pa or * 1000 psig)
+	551,				// MAP Sensor Offset (Pa or * 1000 psia)
 #if defined(useChryslerBaroSensor)
-	,500				// Barometric Sensor Floor * 1000 (V)
-	,4000				// Barometric Sensor Ceiling * 1000 (V)
-	,14145				// Barometric Sensor Range (Pa or * 1000 psig)
-	,551				// Barometric Sensor Offset (Pa or * 1000 psia)
+	500,				// Barometric Sensor Floor * 1000 (V)
+	4000,				// Barometric Sensor Ceiling * 1000 (V)
+	14145,				// Barometric Sensor Range (Pa or * 1000 psig)
+	551,				// Barometric Sensor Offset (Pa or * 1000 psia)
 #else // defined(useChryslerBaroSensor)
-	,14696				// Reference Barometric Pressure
+	14696,				// Reference Barometric Pressure
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	,4000				// Vehicle Weight/Mass (lbs or kg)
+	4000,				// Vehicle Weight/Mass (lbs or kg)
 #if defined(useCoastDownCalculator)
-	,25400				// Vehicle Frontal Area (ft^2 or m^2)
-	,2065				// Air density (lb/yd^3 or kg/m^3)
-	,346				// C(d)
-	,1					// C(v)
-	,8					// C(rr)
-	,3					// Sample Period in seconds
+	25400,				// Vehicle Frontal Area (ft^2 or m^2)
+	2065,				// Air density (lb/yd^3 or kg/m^3)
+	346,				// C(d)
+	1,					// C(v)
+	8,					// C(rr)
+	3,					// Sample Period in seconds
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	,60000				// Drag speed cutoff (MPH or kph) * 1000
-	,250				// Drag distance cutoff (miles or km) * 1000
-	,0					// Drag automatic retrigger on vehicle stop
+	60000,				// Drag speed cutoff (MPH or kph) * 1000
+	250,				// Drag distance cutoff (miles or km) * 1000
+	0,					// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #if defined(useSavedTrips)
-	,1					// Autosave Active Trip Data Enable
+	1,					// Autosave Active Trip Data Enable
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
-	,0					// Partial Refuel amount * 1000 (gal or L)
+	0,					// Partial Refuel amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
 #if defined(useButtonInput)
-	,mainDisplayIdx
+	mainDisplayIdx,
 #if LCDcharHeight == 4
-	,mainDisplayIdx
+	mainDisplayIdx,
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 };

@@ -7,7 +7,7 @@ namespace TFT /* TFT hardware support section prototype */
 
 };
 
-interfaceDevice devLCD; // this will be used to emulate LCD output on the TFT screen
+device_t devLCD; // this will be used to emulate LCD output on the TFT screen
 
 #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
 

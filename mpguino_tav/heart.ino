@@ -104,11 +104,12 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		thisTime = timer0_overflow_count | TCNT0; // calculate current cycle count
 
 #if defined(useCPUreading)
-		volatileVariables[(uint16_t)(vSystemCycleIdx)]++; // systemcycles
+		volatileVariables[(uint16_t)(vSystemCycleIdx)]++; // update systemcycles
 
 #endif // defined(useCPUreading)
 #if defined(useSoftwareClock)
-		volatileVariables[(uint16_t)(vClockCycleIdx)]++; // clockcycles
+		// update clockcycles - if clockcycles goes past day length in timer0 ticks, roll back to 0
+		if ((++volatileVariables[(uint16_t)(vClockCycleIdx)]) >= volatileVariables[(uint16_t)(vClockCycleDayLengthIdx)]) volatileVariables[(uint16_t)(vClockCycleIdx)] = 0;
 
 #endif // defined(useSoftwareClock)
 	}
@@ -2508,6 +2509,20 @@ static void heart::changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAN
 	cli(); // disable interrupts
 
 	flagRegister = (flagRegister & ~(maskAND)) | (maskOR); // go perform atomic status flag change
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void heart::changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR)
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	bitFlags[(uint16_t)(bitFlagIdx)] = ((bitFlags[(uint16_t)(bitFlagIdx)] & ~(maskAND)) | (maskOR)); // go perform atomic status flag change
 
 	SREG = oldSREG; // restore interrupt flag status
 

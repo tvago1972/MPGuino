@@ -121,10 +121,10 @@ ISR( ADC_vect )
  /* ADC voltage display section */
 
 static const uint16_t analogReadPageFormats[4] PROGMEM = {
-	 (analog0Idx << 8 ) |			(tAnalogChannel)	// Voltages
-	,(analog1Idx << 8 ) |			(tAnalogChannel)
-	,(analog2Idx << 8 ) |			(tAnalogChannel)
-	,(analog3Idx << 8 ) |			(tAnalogChannel)
+	(analog0Idx << 8 ) |			(tAnalogChannel),	// Voltages
+	(analog1Idx << 8 ) |			(tAnalogChannel),
+	(analog2Idx << 8 ) |			(tAnalogChannel),
+	(analog3Idx << 8 ) |			(tAnalogChannel),
 };
 
 static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)

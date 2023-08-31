@@ -22,7 +22,7 @@ namespace bluetooth /* Bluetooth interface terminal section prototype */
 }
 
 #if defined(useBluetoothAdaFruitSPI)
-interfaceDevice devBluetooth;
+device_t devBluetooth;
 
 #endif // defined(useBluetoothAdaFruitSPI)
 /*
@@ -110,34 +110,34 @@ static const char btOutputList[] PROGMEM = { // any undefined letters simply get
 };
 
 static const bluetoothFunction btFunctionList[] PROGMEM = {
-	 {'A',	((instantIdx << 8 ) |					(tSpeed))}
+	{'A',	((instantIdx << 8 ) |					(tSpeed))},
 #if defined(useCarVoltageOutput)
-	,{'B',	(										(tAlternatorChannel))}
+	{'B',	(										(tAlternatorChannel))},
 #endif // defined(useCarVoltageOutput)
-	,{'C',	((tankIdx << 8 ) |						(tFuelUsed))}
-	,{'D',	((currentIdx << 8 ) |					(tDistance))}
-	,{'E',	((tankIdx << 8 ) |						(tDistance))}
-	,{'F',	((tankIdx << 8 ) |						(tDistanceToEmpty))}
-	,{'G',	((instantIdx << 8 ) |					(tEngineSpeed))}
-	,{'H',	((instantIdx << 8 ) |					(tFuelEcon))}
-	,{'I',	((currentIdx << 8 ) |					(tFuelEcon))}
-	,{'J',	((tankIdx << 8 ) |						(tFuelEcon))}
-	,{'L',	((currentIdx << 8 ) |					(tFuelUsed))}
-	,{'!',	((mpBluetoothMainValue << 8 ) |			(tFetchMainProgramValue))}
+	{'C',	((tankIdx << 8 ) |						(tFuelUsed))},
+	{'D',	((currentIdx << 8 ) |					(tDistance))},
+	{'E',	((tankIdx << 8 ) |						(tDistance))},
+	{'F',	((tankIdx << 8 ) |						(tDistanceToEmpty))},
+	{'G',	((instantIdx << 8 ) |					(tEngineSpeed))},
+	{'H',	((instantIdx << 8 ) |					(tFuelEcon))},
+	{'I',	((currentIdx << 8 ) |					(tFuelEcon))},
+	{'J',	((tankIdx << 8 ) |						(tFuelEcon))},
+	{'L',	((currentIdx << 8 ) |					(tFuelUsed))},
+	{'!',	((mpBluetoothMainValue << 8 ) |			(tFetchMainProgramValue))},
 
 #if defined(usePartialRefuel)
-	,{'@',	((pRefuelSizeIdx << 8 ) |				(tGetBTparameterValue))}
+	{'@',	((pRefuelSizeIdx << 8 ) |				(tGetBTparameterValue))},
 #endif // defined(usePartialRefuel)
-	,{'R',	((pPulsesPerDistanceIdx << 8 ) |		(tGetBTparameterValue))}
-	,{'S',	((pMicroSecondsPerGallonIdx << 8 ) |	(tGetBTparameterValue))}
-	,{'T',	((pInjPer2CrankRevIdx << 8 ) |			(tGetBTparameterValue))}
-	,{'U',	((pMetricModeIdx << 8 ) |				(tGetBTparameterValue))}
-	,{'V',	((pTankSizeIdx << 8 ) |					(tGetBTparameterValue))}
-	,{'W',	((pInjectorSettleTimeIdx << 8 ) |		(tGetBTparameterValue))}
-	,{'X',	((pVSSpauseIdx << 8 ) |					(tGetBTparameterValue))}
-	,{'Y',	((pInjEdgeTriggerIdx << 8 ) |			(tGetBTparameterValue))}
+	{'R',	((pPulsesPerDistanceIdx << 8 ) |		(tGetBTparameterValue))},
+	{'S',	((pMicroSecondsPerGallonIdx << 8 ) |	(tGetBTparameterValue))},
+	{'T',	((pInjPer2CrankRevIdx << 8 ) |			(tGetBTparameterValue))},
+	{'U',	((pMetricModeIdx << 8 ) |				(tGetBTparameterValue))},
+	{'V',	((pTankSizeIdx << 8 ) |					(tGetBTparameterValue))},
+	{'W',	((pInjectorSettleTimeIdx << 8 ) |		(tGetBTparameterValue))},
+	{'X',	((pVSSpauseIdx << 8 ) |					(tGetBTparameterValue))},
+	{'Y',	((pInjEdgeTriggerIdx << 8 ) |			(tGetBTparameterValue))},
 #if defined(useCarVoltageOutput)
-	,{'Z',	((pVoltageOffset << 8 ) |				(tGetBTparameterValue))}
+	{'Z',	((pVoltageOffset << 8 ) |				(tGetBTparameterValue))},
 #endif // defined(useCarVoltageOutput)
 };
 

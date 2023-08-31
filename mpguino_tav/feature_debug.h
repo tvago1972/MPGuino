@@ -55,10 +55,10 @@ static const unsigned long debugFIPresetLength = (unsigned long)(ceil)((4ul * F_
 
 #if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
-	 (instantIdx << 8 ) |		(tInjectorTotalTime) 		// Debug
-	,(instantIdx << 8 ) |		(tVSStotalTime)
-	,(instantIdx << 8 ) |		(tInjectorPulseCount)
-	,(instantIdx << 8 ) |		(tVSSpulseCount)
+	(instantIdx << 8 ) |		(tInjectorTotalTime), 		// Debug
+	(instantIdx << 8 ) |		(tVSStotalTime),
+	(instantIdx << 8 ) |		(tInjectorPulseCount),
+	(instantIdx << 8 ) |		(tVSSpulseCount),
 };
 
 static const char debugScreenFuncNames[] PROGMEM = {
@@ -70,115 +70,115 @@ static const char debugScreenFuncNames[] PROGMEM = {
 
 #endif // defined(useButtonInput)
 static const uint16_t debugVSSvalues[] PROGMEM = {
- 65535
-,2258
-,1128
-,752
-,564
-,451
-,375
-,322
-,281
-,250
-,225
-,204
-,187
-,173
-,160
-,150
-,140
-,132
-,124
-,118
-,112
-,107
-,102
-,97
-,93
-,89
-,86
-,83
-,80
-,77
-,74
-,72
-,70
-,67
-,65
-,64
-,62
-,60
-,58
-,57
-,55
-,54
-,53
-,52
-,50
-,49
-,48
-,47
-,46
-,45
-,44
+	65535,
+	2258,
+	1128,
+	752,
+	564,
+	451,
+	375,
+	322,
+	281,
+	250,
+	225,
+	204,
+	187,
+	173,
+	160,
+	150,
+	140,
+	132,
+	124,
+	118,
+	112,
+	107,
+	102,
+	97,
+	93,
+	89,
+	86,
+	83,
+	80,
+	77,
+	74,
+	72,
+	70,
+	67,
+	65,
+	64,
+	62,
+	60,
+	58,
+	57,
+	55,
+	54,
+	53,
+	52,
+	50,
+	49,
+	48,
+	47,
+	46,
+	45,
+	44,
 };
 
 static const uint16_t debugFIPvalues[] PROGMEM = {
- 313
-,326
-,341
-,358
-,375
-,395
-,417
-,442
-,470
-,501
-,537
-,578
-,626
-,683
-,752
-,836
-,940
-,1075
-,1254
-,1505
-,1881
-,2509
-,3764
-,7528
-,18823
-,65535
+	313,
+	326,
+	341,
+	358,
+	375,
+	395,
+	417,
+	442,
+	470,
+	501,
+	537,
+	578,
+	626,
+	683,
+	752,
+	836,
+	940,
+	1075,
+	1254,
+	1505,
+	1881,
+	2509,
+	3764,
+	7528,
+	18823,
+	65535,
 };
 
 static const uint16_t debugFIPWvalues[] PROGMEM = {
- 22
-,22
-,23
-,23
-,23
-,24
-,24
-,24
-,25
-,26
-,26
-,27
-,28
-,29
-,30
-,32
-,34
-,36
-,39
-,44
-,51
-,63
-,86
-,156
-,365
-,0
+	22,
+	22,
+	23,
+	23,
+	23,
+	24,
+	24,
+	24,
+	25,
+	26,
+	26,
+	27,
+	28,
+	29,
+	30,
+	32,
+	34,
+	36,
+	39,
+	44,
+	51,
+	63,
+	86,
+	156,
+	365,
+	0,
 };
 
 static const uint8_t debugVSSlength = ( sizeof(debugVSSvalues) / sizeof(uint16_t) );

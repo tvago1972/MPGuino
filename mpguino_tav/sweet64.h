@@ -195,8 +195,8 @@ matrix_x - coastdown sample storage
 matrix_e - coastdown energy value storage
 matrix_c - coastdown coefficient matrix (what we are trying to solve for)
     [ pCoefficientDidx
-	  pCoefficientVidx
-	  pCoefficientRRidx ]
+      pCoefficientVidx
+      pCoefficientRRidx ]
 
 for useFuelParamCalculator -
 
@@ -208,15 +208,15 @@ raw injector open time - measured by MPGuino
 
 matrix_x
     [ fillup amount 1      injector open count 1
-	  fillup amount 2      injector open count 2 ]
+      fillup amount 2      injector open count 2 ]
 
 matrix_e
 	[ raw injector open time 1
-	  raw injector open time 2 ]
+      raw injector open time 2 ]
 
 matrix_c - fuel injector coefficient matrix (what we are trying to solve for)
     [ pMicroSecondsPerGallonIdx
-	  pInjectorSettleTimeIdx ]
+      pInjectorSettleTimeIdx ]
 
 for both cases -
 
@@ -514,239 +514,239 @@ static const char opcodeList[] PROGMEM = {
 #define instrBranchIfGT				instrBranchIfCset					// provided as a convenience for aspiring SWEET64 coders
 
 static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM = {
-	 r04 | p00 | s00	// instrTestReg
-	,r00 | p00 | s00	// instrTestIndex
-	,r04 | p00 | s00	// instrCmpXtoY
-	,r00 | p01 | s00	// instrCmpIndex
-	,r00 | p00 | s01	// instrBranchIfVclear
-	,r00 | p00 | s01	// instrBranchIfVset
-	,r00 | p00 | s01	// instrBranchIfMclear
-	,r00 | p00 | s01	// instrBranchIfMset
-	,r00 | p00 | s01	// instrBranchIfZclear
-	,r00 | p00 | s01	// instrBranchIfZset
-	,r00 | p00 | s01	// instrBranchIfCclear
-	,r00 | p00 | s01	// instrBranchIfCset
-	,r00 | p00 | s01	// instrBranchIfLT
-	,r00 | p00 | s01	// instrBranchIfGTorE
-	,r00 | p00 | s01	// instrBranchIfMetricMode
-	,r00 | p00 | s01	// instrBranchIfSAEmode
-	,r00 | p00 | s01	// instrBranchIfFuelOverDist
-	,r00 | p00 | s01	// instrBranchIfDistOverFuel
-	,r00 | p00 | s01	// instrSkip
-	,r00 | p00 | s01	// instrCall
-	,r00 | p00 | s03	// instrCallImplied
-	,r00 | p00 | s01	// instrJump
-	,r01 | p00 | s00	// instrLdReg
-	,r01 | p02 | s00	// instrLdRegByteFromIndex
-	,r01 | p01 | s00	// instrLdRegByte
-	,r01 | p01 | s00	// instrLdRegByteFromY
-	,r04 | p01 | s01	// instrLdRegTripVar
-	,r04 | p02 | s01	// instrLdRegTripVarIndexed
-	,r04 | p03 | s01	// instrLdRegTripVarOffset
-	,r04 | p01 | s02	// instrLdRegTripVarIndexedRV
-	,r01 | p02 | s01	// instrStRegTripVarIndexed
-	,r01 | p01 | s02	// instrStRegTripVarIndexedRV
-	,r01 | p01 | s00	// instrLdRegConst
-	,r07 | p01 | s00	// instrLdRegConstMetric
-	,r01 | p02 | s00	// instrLdRegConstIndexed
-	,r01 | p01 | s00	// instrDoBCDadjust
-	,r01 | p01 | s00	// instrLdRegEEPROM
-	,r01 | p02 | s00	// instrLdRegEEPROMindexed
-	,r01 | p01 | s00	// instrLdRegEinit
-	,r01 | p02 | s00	// instrLdRegEinitIndexed
-	,r01 | p01 | s00	// instrStRegEEPROM
-	,r01 | p02 | s00	// instrStRegEEPROMindexed
-	,r01 | p01 | s00	// instrLdRegMain
-	,r01 | p02 | s00	// instrLdRegMainIndexed
-	,r01 | p03 | s00	// instrLdRegMainOffset
-	,r01 | p01 | s00	// instrStRegMain
-	,r01 | p02 | s00	// instrStRegMainIndexed
-	,r01 | p01 | s00	// instrLdRegVolatile
-	,r01 | p02 | s00	// instrLdRegVolatileIndexed
-	,r01 | p01 | s00	// instrStRegVolatile
-	,r01 | p02 | s00	// instrStRegVolatileIndexed
-	,r00 | p01 | s00	// instrLxdI
-	,r00 | p01 | s00	// instrLxdIEEPROM
-	,r00 | p03 | s00	// instrLxdIEEPROMoffset
-	,r00 | p01 | s00	// instrLxdIParamLength
-	,r00 | p02 | s00	// instrLxdIParamLengthIndexed
-	,r01 | p00 | s00	// instrSwapReg
-	,r04 | p00 | s00	// instrSubYfromX
-	,r06 | p01 | s00	// instrSubByteFromX
-	,r06 | p01 | s00	// instrSubMainFromX
-	,r04 | p00 | s00	// instrAddYtoX
-	,r05 | p00 | s00	// instrAdjustQuotient
-	,r06 | p01 | s00	// instrAddByteToX
-	,r06 | p01 | s00	// instrAddConstToX
-	,r06 | p01 | s00	// instrAddEEPROMtoX
-	,r06 | p01 | s00	// instrAddMainToX
-	,r06 | p02 | s00	// instrAddIndexToX
-	,r03 | p00 | s00	// instrMul2by1
-	,r02 | p01 | s00	// instrMul2byByte
-	,r02 | p01 | s00	// instrMul2byConst
-	,r02 | p01 | s00	// instrMul2byEEPROM
-	,r02 | p01 | s00	// instrMul2byMain
-	,r02 | p01 | s00	// instrMul2byVolatile
-	,r02 | p02 | s01	// instrMul2byTripVarIndexed
-	,r03 | p00 | s00	// instrDiv2by1
-	,r02 | p01 | s00	// instrDiv2byConst
-	,r02 | p01 | s00	// instrDiv2byEEPROM
-	,r02 | p01 | s00	// instrDiv2byMain
-	,r02 | p02 | s01	// instrDiv2byTripVarIndexed
-	,r02 | p01 | s00	// instrDiv2byByte
-	,r01 | p00 | s00	// instrShiftRegLeft
-	,r01 | p00 | s00	// instrShiftRegRight
-	,r00 | p03 | s00	// instrAddIndex
-	,r00 | p00 | s00	// instrTraceOn
-	,r00 | p00 | s00	// instrTraceOff
-	,r00 | p00 | s00	// instrTraceSave
-	,r00 | p00 | s00	// instrTraceRestore
-	,r00 | p00 | s00	// instrTraceDone
-	,r00 | p02 | s00	// instrLdJumpReg
-	,r00 | p01 | s00	// instrClearFlag
-	,r00 | p01 | s00	// instrSetFlag
+	r04 | p00 | s00,	// instrTestReg
+	r00 | p00 | s00,	// instrTestIndex
+	r04 | p00 | s00,	// instrCmpXtoY
+	r00 | p01 | s00,	// instrCmpIndex
+	r00 | p00 | s01,	// instrBranchIfVclear
+	r00 | p00 | s01,	// instrBranchIfVset
+	r00 | p00 | s01,	// instrBranchIfMclear
+	r00 | p00 | s01,	// instrBranchIfMset
+	r00 | p00 | s01,	// instrBranchIfZclear
+	r00 | p00 | s01,	// instrBranchIfZset
+	r00 | p00 | s01,	// instrBranchIfCclear
+	r00 | p00 | s01,	// instrBranchIfCset
+	r00 | p00 | s01,	// instrBranchIfLT
+	r00 | p00 | s01,	// instrBranchIfGTorE
+	r00 | p00 | s01,	// instrBranchIfMetricMode
+	r00 | p00 | s01,	// instrBranchIfSAEmode
+	r00 | p00 | s01,	// instrBranchIfFuelOverDist
+	r00 | p00 | s01,	// instrBranchIfDistOverFuel
+	r00 | p00 | s01,	// instrSkip
+	r00 | p00 | s01,	// instrCall
+	r00 | p00 | s03,	// instrCallImplied
+	r00 | p00 | s01,	// instrJump
+	r01 | p00 | s00,	// instrLdReg
+	r01 | p02 | s00,	// instrLdRegByteFromIndex
+	r01 | p01 | s00,	// instrLdRegByte
+	r01 | p01 | s00,	// instrLdRegByteFromY
+	r04 | p01 | s01,	// instrLdRegTripVar
+	r04 | p02 | s01,	// instrLdRegTripVarIndexed
+	r04 | p03 | s01,	// instrLdRegTripVarOffset
+	r04 | p01 | s02,	// instrLdRegTripVarIndexedRV
+	r01 | p02 | s01,	// instrStRegTripVarIndexed
+	r01 | p01 | s02,	// instrStRegTripVarIndexedRV
+	r01 | p01 | s00,	// instrLdRegConst
+	r07 | p01 | s00,	// instrLdRegConstMetric
+	r01 | p02 | s00,	// instrLdRegConstIndexed
+	r01 | p01 | s00,	// instrDoBCDadjust
+	r01 | p01 | s00,	// instrLdRegEEPROM
+	r01 | p02 | s00,	// instrLdRegEEPROMindexed
+	r01 | p01 | s00,	// instrLdRegEinit
+	r01 | p02 | s00,	// instrLdRegEinitIndexed
+	r01 | p01 | s00,	// instrStRegEEPROM
+	r01 | p02 | s00,	// instrStRegEEPROMindexed
+	r01 | p01 | s00,	// instrLdRegMain
+	r01 | p02 | s00,	// instrLdRegMainIndexed
+	r01 | p03 | s00,	// instrLdRegMainOffset
+	r01 | p01 | s00,	// instrStRegMain
+	r01 | p02 | s00,	// instrStRegMainIndexed
+	r01 | p01 | s00,	// instrLdRegVolatile
+	r01 | p02 | s00,	// instrLdRegVolatileIndexed
+	r01 | p01 | s00,	// instrStRegVolatile
+	r01 | p02 | s00,	// instrStRegVolatileIndexed
+	r00 | p01 | s00,	// instrLxdI
+	r00 | p01 | s00,	// instrLxdIEEPROM
+	r00 | p03 | s00,	// instrLxdIEEPROMoffset
+	r00 | p01 | s00,	// instrLxdIParamLength
+	r00 | p02 | s00,	// instrLxdIParamLengthIndexed
+	r01 | p00 | s00,	// instrSwapReg
+	r04 | p00 | s00,	// instrSubYfromX
+	r06 | p01 | s00,	// instrSubByteFromX
+	r06 | p01 | s00,	// instrSubMainFromX
+	r04 | p00 | s00,	// instrAddYtoX
+	r05 | p00 | s00,	// instrAdjustQuotient
+	r06 | p01 | s00,	// instrAddByteToX
+	r06 | p01 | s00,	// instrAddConstToX
+	r06 | p01 | s00,	// instrAddEEPROMtoX
+	r06 | p01 | s00,	// instrAddMainToX
+	r06 | p02 | s00,	// instrAddIndexToX
+	r03 | p00 | s00,	// instrMul2by1
+	r02 | p01 | s00,	// instrMul2byByte
+	r02 | p01 | s00,	// instrMul2byConst
+	r02 | p01 | s00,	// instrMul2byEEPROM
+	r02 | p01 | s00,	// instrMul2byMain
+	r02 | p01 | s00,	// instrMul2byVolatile
+	r02 | p02 | s01,	// instrMul2byTripVarIndexed
+	r03 | p00 | s00,	// instrDiv2by1
+	r02 | p01 | s00,	// instrDiv2byConst
+	r02 | p01 | s00,	// instrDiv2byEEPROM
+	r02 | p01 | s00,	// instrDiv2byMain
+	r02 | p02 | s01,	// instrDiv2byTripVarIndexed
+	r02 | p01 | s00,	// instrDiv2byByte
+	r01 | p00 | s00,	// instrShiftRegLeft
+	r01 | p00 | s00,	// instrShiftRegRight
+	r00 | p03 | s00,	// instrAddIndex
+	r00 | p00 | s00,	// instrTraceOn
+	r00 | p00 | s00,	// instrTraceOff
+	r00 | p00 | s00,	// instrTraceSave
+	r00 | p00 | s00,	// instrTraceRestore
+	r00 | p00 | s00,	// instrTraceDone
+	r00 | p02 | s00,	// instrLdJumpReg
+	r00 | p01 | s00,	// instrClearFlag
+	r00 | p01 | s00,	// instrSetFlag
 #if defined(useIsqrt)
-	,r01 | p00 | s00	// instrIsqrt
+	r01 | p00 | s00,	// instrIsqrt
 #endif // defined(useIsqrt)
 #if defined(useAnalogRead)
-	,r01 | p01 | s00	// instrLdRegVoltage
-	,r01 | p02 | s00	// instrLdRegVoltageIndexed
+	r01 | p01 | s00,	// instrLdRegVoltage
+	r01 | p02 | s00,	// instrLdRegVoltageIndexed
 #endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
-	,r04 | p02 | s01	// instrLdRegTripFEvTindexed
+	r04 | p02 | s01,	// instrLdRegTripFEvTindexed
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarGraph)
-	,r01 | p02 | s00	// instrStRegBGdataIndexed
+	r01 | p02 | s00,	// instrStRegBGdataIndexed
 #endif // defined(useBarGraph)
 #if defined(useMatrixMath)
-	,r01 | p01 | s02	// instrLdRegXColIndexedRow
-	,r01 | p01 | s02	// instrStRegXColIndexedRow
-	,r01 | p01 | s02	// instrLdRegRColIndexedRow
-	,r01 | p01 | s02	// instrStRegRColIndexedRow
-	,r01 | p00 | s02	// instrLdRegEIndexedRow
-	,r01 | p00 | s02	// instrStRegEIndexedRow
-	,r01 | p00 | s02	// instrLdRegCIndexedRow
-	,r01 | p00 | s02	// instrStRegCIndexedRow
+	r01 | p01 | s02,	// instrLdRegXColIndexedRow
+	r01 | p01 | s02,	// instrStRegXColIndexedRow
+	r01 | p01 | s02,	// instrLdRegRColIndexedRow
+	r01 | p01 | s02,	// instrStRegRColIndexedRow
+	r01 | p00 | s02,	// instrLdRegEIndexedRow
+	r01 | p00 | s02,	// instrStRegEIndexedRow
+	r01 | p00 | s02,	// instrLdRegCIndexedRow
+	r01 | p00 | s02,	// instrStRegCIndexedRow
 #endif // defined(useMatrixMath)
-	,r00 | p00 | s00	// instrDone
+	r00 | p00 | s00,	// instrDone
 };
 
 static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM = {
-	 m04 | i00			// instrTestReg
-	,e18				// instrTestIndex
-	,m03 | i00			// instrCmpXtoY
-	,e25				// instrCmpIndex
-	,e08				// instrBranchIfVclear
-	,e09				// instrBranchIfVset
-	,e06				// instrBranchIfMclear
-	,e07				// instrBranchIfMset
-	,e04				// instrBranchIfZclear
-	,e05				// instrBranchIfZset
-	,e03				// instrBranchIfCclear
-	,e02				// instrBranchIfCset
-	,e10				// instrBranchIfLT
-	,e01				// instrBranchIfGTorE
-	,e11				// instrBranchIfMetricMode
-	,e12				// instrBranchIfSAEmode
-	,e13				// instrBranchIfFuelOverDist
-	,e14				// instrBranchIfDistOverFuel
-	,e15				// instrSkip
-	,e27				// instrCall
-	,e27				// instrCallImplied
-	,e28				// instrJump
-	,m00 | i01			// instrLdReg
-	,m00 | i10			// instrLdRegByteFromIndex
-	,m00 | i10			// instrLdRegByte
-	,m00 | i09			// instrLdRegByteFromY
-	,m04 | i18			// instrLdRegTripVar
-	,m04 | i18			// instrLdRegTripVarIndexed
-	,m04 | i18			// instrLdRegTripVarOffset
-	,m04 | i18			// instrLdRegTripVarIndexedRV
-	,m00 | i19			// instrStRegTripVarIndexed
-	,m00 | i19			// instrStRegTripVarIndexedRV
-	,m00 | i14			// instrLdRegConst
-	,m00 | i14			// instrLdRegConstMetric
-	,m00 | i14			// instrLdRegConstIndexed
-	,m00 | i31			// instrDoBCDadjust
-	,m00 | i03			// instrLdRegEEPROM
-	,m00 | i03			// instrLdRegEEPROMindexed
-	,m00 | i15			// instrLdRegEinit
-	,m00 | i15			// instrLdRegEinitIndexed
-	,m00 | i04			// instrStRegEEPROM
-	,m00 | i04			// instrStRegEEPROMindexed
-	,m00 | i05			// instrLdRegMain
-	,m00 | i05			// instrLdRegMainIndexed
-	,m00 | i05			// instrLdRegMainOffset
-	,m00 | i06			// instrStRegMain
-	,m00 | i06			// instrStRegMainIndexed
-	,m00 | i07			// instrLdRegVolatile
-	,m00 | i07			// instrLdRegVolatileIndexed
-	,m00 | i08			// instrStRegVolatile
-	,m00 | i08			// instrStRegVolatileIndexed
-	,e23				// instrLxdI
-	,e24				// instrLxdIEEPROM
-	,e24				// instrLxdIEEPROMoffset
-	,e26				// instrLxdIParamLength
-	,e26				// instrLxdIParamLengthIndexed
-	,m00 | i02			// instrSwapReg
-	,m02 | i00			// instrSubYfromX
-	,m02 | i10			// instrSubByteFromX
-	,m02 | i05			// instrSubMainFromX
-	,m01 | i00			// instrAddYtoX
-	,m01 | i00			// instrAdjustQuotient
-	,m01 | i10			// instrAddByteToX
-	,m01 | i14			// instrAddConstToX
-	,m01 | i03			// instrAddEEPROMtoX
-	,m01 | i05			// instrAddMainToX
-	,m01 | i10			// instrAddIndexToX
-	,m05 | i01			// instrMul2by1
-	,m05 | i10			// instrMul2byByte
-	,m05 | i14			// instrMul2byConst
-	,m05 | i03			// instrMul2byEEPROM
-	,m05 | i05			// instrMul2byMain
-	,m05 | i07			// instrMul2byVolatile
-	,m05 | i18			// instrMul2byTripVarIndexed
-	,m06 | i01			// instrDiv2by1
-	,m06 | i14			// instrDiv2byConst
-	,m06 | i03			// instrDiv2byEEPROM
-	,m06 | i05			// instrDiv2byMain
-	,m06 | i18			// instrDiv2byTripVarIndexed
-	,m06 | i10			// instrDiv2byByte
-	,m00 | i29			// instrShiftRegLeft
-	,m00 | i30			// instrShiftRegRight
-	,e23				// instrAddIndex
-	,e20				// instrTraceOn
-	,e22				// instrTraceOff
-	,e21				// instrTraceSave
-	,e19				// instrTraceRestore
-	,e17				// instrTraceDone
-	,e29				// instrLdJumpReg
-	,e30				// instrClearFlag
-	,e31				// instrSetFlag
+	m04 | i00,			// instrTestReg
+	e18,				// instrTestIndex
+	m03 | i00,			// instrCmpXtoY
+	e25,				// instrCmpIndex
+	e08,				// instrBranchIfVclear
+	e09,				// instrBranchIfVset
+	e06,				// instrBranchIfMclear
+	e07,				// instrBranchIfMset
+	e04,				// instrBranchIfZclear
+	e05,				// instrBranchIfZset
+	e03,				// instrBranchIfCclear
+	e02,				// instrBranchIfCset
+	e10,				// instrBranchIfLT
+	e01,				// instrBranchIfGTorE
+	e11,				// instrBranchIfMetricMode
+	e12,				// instrBranchIfSAEmode
+	e13,				// instrBranchIfFuelOverDist
+	e14,				// instrBranchIfDistOverFuel
+	e15,				// instrSkip
+	e27,				// instrCall
+	e27,				// instrCallImplied
+	e28,				// instrJump
+	m00 | i01,			// instrLdReg
+	m00 | i10,			// instrLdRegByteFromIndex
+	m00 | i10,			// instrLdRegByte
+	m00 | i09,			// instrLdRegByteFromY
+	m04 | i18,			// instrLdRegTripVar
+	m04 | i18,			// instrLdRegTripVarIndexed
+	m04 | i18,			// instrLdRegTripVarOffset
+	m04 | i18,			// instrLdRegTripVarIndexedRV
+	m00 | i19,			// instrStRegTripVarIndexed
+	m00 | i19,			// instrStRegTripVarIndexedRV
+	m00 | i14,			// instrLdRegConst
+	m00 | i14,			// instrLdRegConstMetric
+	m00 | i14,			// instrLdRegConstIndexed
+	m00 | i31,			// instrDoBCDadjust
+	m00 | i03,			// instrLdRegEEPROM
+	m00 | i03,			// instrLdRegEEPROMindexed
+	m00 | i15,			// instrLdRegEinit
+	m00 | i15,			// instrLdRegEinitIndexed
+	m00 | i04,			// instrStRegEEPROM
+	m00 | i04,			// instrStRegEEPROMindexed
+	m00 | i05,			// instrLdRegMain
+	m00 | i05,			// instrLdRegMainIndexed
+	m00 | i05,			// instrLdRegMainOffset
+	m00 | i06,			// instrStRegMain
+	m00 | i06,			// instrStRegMainIndexed
+	m00 | i07,			// instrLdRegVolatile
+	m00 | i07,			// instrLdRegVolatileIndexed
+	m00 | i08,			// instrStRegVolatile
+	m00 | i08,			// instrStRegVolatileIndexed
+	e23,				// instrLxdI
+	e24,				// instrLxdIEEPROM
+	e24,				// instrLxdIEEPROMoffset
+	e26,				// instrLxdIParamLength
+	e26,				// instrLxdIParamLengthIndexed
+	m00 | i02,			// instrSwapReg
+	m02 | i00,			// instrSubYfromX
+	m02 | i10,			// instrSubByteFromX
+	m02 | i05,			// instrSubMainFromX
+	m01 | i00,			// instrAddYtoX
+	m01 | i00,			// instrAdjustQuotient
+	m01 | i10,			// instrAddByteToX
+	m01 | i14,			// instrAddConstToX
+	m01 | i03,			// instrAddEEPROMtoX
+	m01 | i05,			// instrAddMainToX
+	m01 | i10,			// instrAddIndexToX
+	m05 | i01,			// instrMul2by1
+	m05 | i10,			// instrMul2byByte
+	m05 | i14,			// instrMul2byConst
+	m05 | i03,			// instrMul2byEEPROM
+	m05 | i05,			// instrMul2byMain
+	m05 | i07,			// instrMul2byVolatile
+	m05 | i18,			// instrMul2byTripVarIndexed
+	m06 | i01,			// instrDiv2by1
+	m06 | i14,			// instrDiv2byConst
+	m06 | i03,			// instrDiv2byEEPROM
+	m06 | i05,			// instrDiv2byMain
+	m06 | i18,			// instrDiv2byTripVarIndexed
+	m06 | i10,			// instrDiv2byByte
+	m00 | i29,			// instrShiftRegLeft
+	m00 | i30,			// instrShiftRegRight
+	e23,				// instrAddIndex
+	e20,				// instrTraceOn
+	e22,				// instrTraceOff
+	e21,				// instrTraceSave
+	e19,				// instrTraceRestore
+	e17,				// instrTraceDone
+	e29,				// instrLdJumpReg
+	e30,				// instrClearFlag
+	e31,				// instrSetFlag
 #if defined(useIsqrt)
-	,m00 | i28			// instrIsqrt
+	m00 | i28,			// instrIsqrt
 #endif // defined(useIsqrt)
 #if defined(useAnalogRead)
-	,m00 | i16			// instrLdRegVoltage
-	,m00 | i16			// instrLdRegVoltageIndexed
+	m00 | i16,			// instrLdRegVoltage
+	m00 | i16,			// instrLdRegVoltageIndexed
 #endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
-	,m04 | i17			// instrLdRegTripFEvTindexed
+	m04 | i17,			// instrLdRegTripFEvTindexed
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarGraph)
-	,m00 | i11			// instrStRegBGdataIndexed
+	m00 | i11,			// instrStRegBGdataIndexed
 #endif // defined(useBarGraph)
 #if defined(useMatrixMath)
-	,m00 | i20			// instrLdRegXColIndexedRow
-	,m00 | i21			// instrStRegXColIndexedRow
-	,m00 | i22			// instrLdRegRColIndexedRow
-	,m00 | i23			// instrStRegRColIndexedRow
-	,m00 | i24			// instrLdRegEIndexedRow
-	,m00 | i25			// instrStRegEIndexedRow
-	,m00 | i26			// instrLdRegCIndexedRow
-	,m00 | i27			// instrStRegCIndexedRow
+	m00 | i20,			// instrLdRegXColIndexedRow
+	m00 | i21,			// instrStRegXColIndexedRow
+	m00 | i22,			// instrLdRegRColIndexedRow
+	m00 | i23,			// instrStRegRColIndexedRow
+	m00 | i24,			// instrLdRegEIndexedRow
+	m00 | i25,			// instrStRegEIndexedRow
+	m00 | i26,			// instrLdRegCIndexedRow
+	m00 | i27,			// instrStRegCIndexedRow
 #endif // defined(useMatrixMath)
-	,e16				// instrDone
+	e16,				// instrDone
 };
 
 // indexes into SWEET64 constant number value table
@@ -939,16 +939,16 @@ static const uint32_t correctionFactor =	4096ul;
 //    proper functioning of the autoranging feature of ull2str
 //
 static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
-	 10ul							// idxTen
+	10ul,							// idxTen
 
-	,100ul							// idxOneHundred
+	100ul,							// idxOneHundred
 
-	,1000ul							// idxOneThousand
+	1000ul,							// idxOneThousand
 									// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
 
-	,10000ul						// idxTenThousand
+	10000ul,						// idxTenThousand
 
-	,100000ul						// idxOneHundredThousand
+	100000ul,						// idxOneHundredThousand
 									// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
 #if defined(useCoastDownCalculator)
 									// idxNumerDensity - numerator to convert SAE density to metric density
@@ -957,61 +957,61 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 									// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
 
-	,1000000ul						// idxOneMillion
+	1000000ul,						// idxOneMillion
 									// idxMicroSecondsPerSecond - microseconds per second
 									// idxDenomDistance - denominator to convert miles to kilometers
 
-	,10000000ul						// idxTenMillion
+	10000000ul,						// idxTenMillion
 #if defined(usePressure)
 									// idxDenomPressure - denominator to convert psig to kPa
 #endif // defined(usePressure)
 
-	,100000000ul					// idxOneHundredMillion
+	100000000ul,					// idxOneHundredMillion
 									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
 #if defined(useCoastDownCalculator)
 									// idxDenomArea - denominator to convert square feet to square meters
 #endif // defined(useCoastDownCalculator)
 
-	,1000000000ul					// idxOneBillion
+	1000000000ul,					// idxOneBillion
 									// idxDenomVolume - denominator to convert US gallons to liters
 #if defined(useVehicleParameters)
 									// idxNumerMass - numerator to convert pounds to kilograms
 #endif // defined(useVehicleParameters)
 
-	,t0CyclesPerSecond						// idxCycles0PerSecond - timer0 clock cycles per second
-	,256ul									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-	,t0TicksPerSecond						// idxTicksPerSecond - timer0 clock ticks per second
-	,1609344ul								// idxNumerDistance - numerator to convert miles to kilometers
-	,3785411784ul							// idxNumerVolume - numerator to convert US gallons to liters
-	,3600ul									// idxSecondsPerHour - seconds per hour
+	t0CyclesPerSecond,						// idxCycles0PerSecond - timer0 clock cycles per second
+	256ul,									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
+	t0TicksPerSecond,						// idxTicksPerSecond - timer0 clock ticks per second
+	1609344ul,								// idxNumerDistance - numerator to convert miles to kilometers
+	3785411784ul,							// idxNumerVolume - numerator to convert US gallons to liters
+	3600ul,									// idxSecondsPerHour - seconds per hour
 #if defined(useClockDisplay)
-	,86400ul								// idxSecondsPerDay - number of seconds in a day
+	86400ul,								// idxSecondsPerDay - number of seconds in a day
 #endif // defined(useClockDisplay)
 #if defined(usePressure)
-	,68947573ul								// idxNumerPressure - numerator to convert psig to kPa
-	,correctionFactor						// idxCorrectionFactor - correction factor used for fuel calculations
-	,correctionFactor * correctionFactor	// idxCorrectionFactor2 - correction factor squared for square root function
+	68947573ul,								// idxNumerPressure - numerator to convert psig to kPa
+	correctionFactor,						// idxCorrectionFactor - correction factor used for fuel calculations
+	correctionFactor * correctionFactor,	// idxCorrectionFactor2 - correction factor squared for square root function
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
-	,1024ul									// idxNumerVoltage - numerator to convert volts DC to ADC steps
-	,5000ul									// idxDenomVoltage - denominator to convert volts DC to ADC steps
+	1024ul,									// idxNumerVoltage - numerator to convert volts DC to ADC steps
+	5000ul,									// idxDenomVoltage - denominator to convert volts DC to ADC steps
 #endif // defined(useAnalogRead)
 #if defined(useCarVoltageOutput)
-	,9600ul									// idxResistanceR5 - resistor next to ground (via meelis11)
-	,27000ul								// idxResistanceR6 - resistor next to diode  (via meelis11)
+	9600ul,									// idxResistanceR5 - resistor next to ground (via meelis11)
+	27000ul,								// idxResistanceR6 - resistor next to diode  (via meelis11)
 #endif // defined(useCarVoltageOutput)
 #if defined(useVehicleParameters)
-	,2204622621ul							// idxDenomMass - denominator to convert pounds to kilograms
+	2204622621ul,							// idxDenomMass - denominator to convert pounds to kilograms
 #if defined(useCoastDownCalculator)
-	,9290304ul								// idxNumerArea - numerator to convert square feet to square meters
-	,168555ul								// idxDenomDensity - denominator to convert SAE density to metric density
+	9290304ul,								// idxNumerArea - numerator to convert square feet to square meters
+	168555ul,								// idxDenomDensity - denominator to convert SAE density to metric density
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	,22840ul								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+	22840ul,								// idxPowerFactor - 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
-	,454609ul								// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
+	454609ul,								// idxNumerImperialGallon - numerator to convert Imperial gallons to liters
 #endif // useImperialGallon
 };
 
@@ -1023,38 +1023,38 @@ static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
 
 const uint8_t s64BCDformatList[] PROGMEM = {
 	// 10 digit number format
-	 0x08		// total entry length
-	,' '		// leading zero character
-	,0x05		// total BCD byte length / offset into 64-bit register for BCD LSB
-	,0x04		// divisor string length
-	,100		// 10s and 100s
-	,100		// 1000s and 10000s
-	,100		// 100000s and 1000000s
-	,100		// 10000000s and 100000000s
+	0x08,		// total entry length
+	' ',		// leading zero character
+	0x05,		// total BCD byte length / offset into 64-bit register for BCD LSB
+	0x04,		// divisor string length
+	100,		// 10s and 100s
+	100,		// 1000s and 10000s
+	100,		// 100000s and 1000000s
+	100,		// 10000000s and 100000000s
 
 	// hhmmss number format
-	,0x07		// total entry length
-	,'0'		// leading zero character
-	,0x03		// total BCD byte length / offset into 64-bit register for BCD LSB
-	,0x03		// divisor string length
-	,60			// seconds
-	,60			// minutes
-	,24			// hours
+	0x07,		// total entry length
+	'0',		// leading zero character
+	0x03,		// total BCD byte length / offset into 64-bit register for BCD LSB
+	0x03,		// divisor string length
+	60,			// seconds
+	60,			// minutes
+	24,			// hours
 
 	// h9mmss number format
-	,0x07		// total entry length
-	,'0'		// leading zero character
-	,0x03		// total BCD byte length / offset into 64-bit register for BCD LSB
-	,0x03		// divisor string length
-	,60			// seconds
-	,60			// minutes
-	,100		// hours
+	0x07,		// total entry length
+	'0',		// leading zero character
+	0x03,		// total BCD byte length / offset into 64-bit register for BCD LSB
+	0x03,		// divisor string length
+	60,			// seconds
+	60,			// minutes
+	100,		// hours
 
 	// overflow number format
-	,0x03		// total entry length
-	,0x00		// leading zero character
-	,0xFF		// total BCD byte length // overflow signal
+	0x03,		// total entry length
+	0x00,		// leading zero character
+	0xFF,		// total BCD byte length // overflow signal
 
-	,0x00		// total entry length == 0 for end of list
+	0x00,		// total entry length == 0 for end of list
 };
 

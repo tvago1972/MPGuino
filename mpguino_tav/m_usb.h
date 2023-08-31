@@ -18,7 +18,7 @@ namespace usbDevice
 
 };
 
-interfaceDevice devUSB;
+device_t devUSB;
 
 // the time remaining before we transmit any partially full
 // packet, or send a zero length packet.
@@ -59,9 +59,9 @@ static const uint8_t EP_TYPE_ISOCHRONOUS_OUT =	0x40;
 static const uint8_t EP_SINGLE_BUFFER =			0x02;
 static const uint8_t EP_DOUBLE_BUFFER =			0x06;
 #define EP_SIZE(s)	((s) == 64 ? 0x30 :	\
-			((s) == 32 ? 0x20 :	\
-			((s) == 16 ? 0x10 :	\
-			             0x00)))
+			((s) == 32 ?	0x20 :	\
+			((s) == 16 ?	0x10 :	\
+							0x00)))
 
 #define MAX_ENDPOINT		4
 

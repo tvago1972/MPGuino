@@ -2,11 +2,11 @@
 static void doOutputDataLog(void);
 
 static const uint16_t dataLogTripCalcFormats[] PROGMEM = {
-	 ((instantIdx << 8) |	 	tFuelEcon)				// average fuel economy  for the past loop
-	,((instantIdx << 8) |	 	tSpeed)					// average vehicle speed for the past loop
-	,((instantIdx << 8) |	 	tInjectorOpenTime)		// fuel injector raw open time for the past loop
-	,((instantIdx << 8) |	 	tInjectorPulseCount)	// fuel injector pulse count for the past loop
-	,((instantIdx << 8) |	 	tVSSpulseCount)			// vss pulse count for the past loop
+	((instantIdx << 8) |		tFuelEcon),				// average fuel economy  for the past loop
+	((instantIdx << 8) |		tSpeed),				// average vehicle speed for the past loop
+	((instantIdx << 8) |		tInjectorOpenTime),		// fuel injector raw open time for the past loop
+	((instantIdx << 8) |		tInjectorPulseCount),	// fuel injector pulse count for the past loop
+	((instantIdx << 8) |		tVSSpulseCount),		// vss pulse count for the past loop
 };
 
 static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_t));
@@ -16,17 +16,17 @@ static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_
 namespace JSONsupport /* JSON formatting support section prototype */
 {
 
-	static void init(interfaceDevice &dev);
-	static void openElement(interfaceDevice &dev, uint8_t elementType);
-	static void openKey(interfaceDevice &dev, const char * str, uint8_t elementType);
-	static void closeElement(interfaceDevice &dev);
-	static void closeElementInternal(interfaceDevice &dev);
-	static void outputElementStart(interfaceDevice &dev, uint8_t elementType);
-	static void outputElementNext(interfaceDevice &dev, uint8_t elementType);
-	static void outputElementEnd(interfaceDevice &dev);
-	static void outputNumber(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx);
-	static void outputNumber(interfaceDevice &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces);
-	static void outputNumber(interfaceDevice &dev, uint32_t an, uint8_t decimalPlaces);
+	static void init(device_t &dev);
+	static void openElement(device_t &dev, uint8_t elementType);
+	static void openKey(device_t &dev, const char * str, uint8_t elementType);
+	static void closeElement(device_t &dev);
+	static void closeElementInternal(device_t &dev);
+	static void outputElementStart(device_t &dev, uint8_t elementType);
+	static void outputElementNext(device_t &dev, uint8_t elementType);
+	static void outputElementEnd(device_t &dev);
+	static void outputNumber(device_t &dev, uint8_t tripIdx, uint8_t calcIdx);
+	static void outputNumber(device_t &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces);
+	static void outputNumber(device_t &dev, uint32_t an, uint8_t decimalPlaces);
 
 };
 

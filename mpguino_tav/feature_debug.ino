@@ -416,12 +416,12 @@ static const char terminalButtonChars[] PROGMEM = {
 };
 
 static const uint8_t terminalButtonValues[] PROGMEM = {
-	 btnShortPressL
-	,btnShortPressC
-	,btnShortPressR
-	,btnLongPressL
-	,btnLongPressC
-	,btnLongPressR
+	btnShortPressL,
+	btnShortPressC,
+	btnShortPressR,
+	btnLongPressL,
+	btnLongPressC,
+	btnLongPressR,
 };
 
 #else // defined(useLegacyButtons)
@@ -432,16 +432,16 @@ static const char terminalButtonChars[] PROGMEM = {
 };
 
 static const uint8_t terminalButtonValues[] PROGMEM = {
-	 btnShortPressL
-	,btnShortPressC
-	,btnShortPressR
-	,btnShortPressU
-	,btnShortPressD
-	,btnLongPressL
-	,btnLongPressC
-	,btnLongPressR
-	,btnLongPressU
-	,btnLongPressD
+	btnShortPressL,
+	btnShortPressC,
+	btnShortPressR,
+	btnShortPressU,
+	btnShortPressD,
+	btnLongPressL,
+	btnLongPressC,
+	btnLongPressR,
+	btnLongPressU,
+	btnLongPressD,
 };
 
 #endif // defined(useLegacyButtons)

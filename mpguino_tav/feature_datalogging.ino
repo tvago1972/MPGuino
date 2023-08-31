@@ -21,7 +21,7 @@ static void doOutputDataLog(void)
 #if defined(useJSONoutput)
 /* JSON formatting support section */
 
-static void JSONsupport::init(interfaceDevice &dev)
+static void JSONsupport::init(device_t &dev)
 {
 
 	JSONlevel = 0;
@@ -31,7 +31,7 @@ static void JSONsupport::init(interfaceDevice &dev)
 
 }
 
-static void JSONsupport::openElement(interfaceDevice &dev, uint8_t elementType)
+static void JSONsupport::openElement(device_t &dev, uint8_t elementType)
 {
 
 	outputElementNext(dev, elementType);
@@ -45,7 +45,7 @@ static void JSONsupport::openElement(interfaceDevice &dev, uint8_t elementType)
 
 }
 
-static void JSONsupport::openKey(interfaceDevice &dev, const char * str, uint8_t elementType)
+static void JSONsupport::openKey(device_t &dev, const char * str, uint8_t elementType)
 {
 
 	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) closeElementInternal(dev);
@@ -62,7 +62,7 @@ static void JSONsupport::openKey(interfaceDevice &dev, const char * str, uint8_t
 
 }
 
-static void JSONsupport::closeElement(interfaceDevice &dev)
+static void JSONsupport::closeElement(device_t &dev)
 {
 
 	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) closeElementInternal(dev);
@@ -71,7 +71,7 @@ static void JSONsupport::closeElement(interfaceDevice &dev)
 
 }
 
-static void JSONsupport::closeElementInternal(interfaceDevice &dev)
+static void JSONsupport::closeElementInternal(device_t &dev)
 {
 
 	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagKey) outputElementEnd(dev);
@@ -86,7 +86,7 @@ static void JSONsupport::closeElementInternal(interfaceDevice &dev)
 
 }
 
-static void JSONsupport::outputElementStart(interfaceDevice &dev, uint8_t elementType)
+static void JSONsupport::outputElementStart(device_t &dev, uint8_t elementType)
 {
 
 	if (elementType & JSONflagArray) text::charOut(dev, '[');
@@ -97,7 +97,7 @@ static void JSONsupport::outputElementStart(interfaceDevice &dev, uint8_t elemen
 
 }
 
-static void JSONsupport::outputElementNext(interfaceDevice &dev, uint8_t elementType)
+static void JSONsupport::outputElementNext(device_t &dev, uint8_t elementType)
 {
 
 	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagString)
@@ -122,7 +122,7 @@ static void JSONsupport::outputElementNext(interfaceDevice &dev, uint8_t element
 
 }
 
-static void JSONsupport::outputElementEnd(interfaceDevice &dev)
+static void JSONsupport::outputElementEnd(device_t &dev)
 {
 
 	if (JSONflag[(uint16_t)(JSONlevel)] & JSONflagArray) text::charOut(dev, ']');
@@ -131,7 +131,7 @@ static void JSONsupport::outputElementEnd(interfaceDevice &dev)
 
 }
 
-static void JSONsupport::outputNumber(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx)
+static void JSONsupport::outputNumber(device_t &dev, uint8_t tripIdx, uint8_t calcIdx)
 {
 
 	outputElementNext(dev, 0);
@@ -139,7 +139,7 @@ static void JSONsupport::outputNumber(interfaceDevice &dev, uint8_t tripIdx, uin
 
 }
 
-static void JSONsupport::outputNumber(interfaceDevice &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces)
+static void JSONsupport::outputNumber(device_t &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces)
 {
 
 	outputElementNext(dev, 0);
@@ -148,7 +148,7 @@ static void JSONsupport::outputNumber(interfaceDevice &dev, const uint8_t * sche
 
 }
 
-static void JSONsupport::outputNumber(interfaceDevice &dev, uint32_t an, uint8_t decimalPlaces)
+static void JSONsupport::outputNumber(device_t &dev, uint32_t an, uint8_t decimalPlaces)
 {
 
 	outputElementNext(dev, 0);

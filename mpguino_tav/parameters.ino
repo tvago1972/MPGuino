@@ -28,6 +28,12 @@ static const uint8_t prgmInitEEPROM[] PROGMEM = {
 };
 
 static const uint8_t prgmInitMPGuino[] PROGMEM = {
+#if defined(useSoftwareClock)
+	instrLdRegConst, 0x02, idxSecondsPerDay,			// load the number of seconds per day
+	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrStRegVolatile, 0x02, vClockCycleDayLengthIdx,	// store the day length in timer0 ticks
+
+#endif // defined(useSoftwareClock)
 	instrLdRegEEPROM, 0x02, pIdleTimeoutIdx,			// load idle timeout value in seconds
 	instrMul2byConst, idxTicksPerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVolatile, 0x02, vVehicleStopTimeoutIdx,	// store idle timeout value in timer0 ticks

@@ -35,24 +35,24 @@ static const char barFEvTfuncNames[] PROGMEM = {
 };
 
 static const uint8_t barFEvTdisplayFuncs[] PROGMEM = {
-	 tFuelUsed
-	,tDistance
-	,tFuelEcon
-	,tFuelEcon
+	tFuelUsed,
+	tDistance,
+	tFuelEcon,
+	tFuelEcon,
 };
 
 static const uint8_t barFEvTgraphFuncs[] PROGMEM = {
-	 tFEvTgetConsumedFuel
-	,tFEvTgetDistance
-	,tFEvTgetFuelEconomy
-	,tFEvTgetFuelEconomy
+	tFEvTgetConsumedFuel,
+	tFEvTgetDistance,
+	tFEvTgetFuelEconomy,
+	tFEvTgetFuelEconomy,
 };
 
 static const uint8_t barFEvTdiffFuncs[] PROGMEM = {
-	 0
-	,0
-	,0
-	,1
+	0,
+	0,
+	0,
+	1,
 };
 
 #endif // defined(useBarFuelEconVsTime)
@@ -103,15 +103,15 @@ static const char barFEvSfuncNames[] PROGMEM = {
 };
 
 static const uint8_t barFEvSdisplayFuncs[] PROGMEM = {
-	 tFuelEcon
-	,tFuelUsed
-	,tDistance
+	tFuelEcon,
+	tFuelUsed,
+	tDistance,
 };
 
 static const uint8_t barFEvSgraphFuncs[] PROGMEM = {
-	 tFEvSgetFuelEconomy
-	,tFEvSgetConsumedFuel
-	,tFEvSgetDistance
+	tFEvSgetFuelEconomy,
+	tFEvSgetConsumedFuel,
+	tFEvSgetDistance,
 };
 
 #endif // defined(useBarFuelEconVsSpeed)

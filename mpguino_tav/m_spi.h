@@ -40,7 +40,7 @@ namespace blefriend /* AdaFruit BLE Friend support section prototype */
 
 };
 
-interfaceDevice devBLEfriend;
+device_t devBLEfriend;
 
 static uint8_t SPIconfigBluetooth;
 
