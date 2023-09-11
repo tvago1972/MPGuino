@@ -46,7 +46,7 @@ static void button::init(void)
 
 #endif // defined(useTWIbuttons)
 #if defined(useAnalogButtons)
-	heart::changeBitFlags(timer0Command, 0, t0cEnableAnalogButtons); // enable analog button sampling
+	heart::changeBitFlagBits(bfTimer0Command, 0, t0cEnableAnalogButtons); // enable analog button sampling
 
 #endif // defined(useAnalogButtons)
 }
@@ -59,7 +59,7 @@ static void button::shutdown(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useAnalogButtons)
-	heart::changeBitFlags(timer0Command, t0cEnableAnalogButtons, 0); // disable analog button sampling
+	heart::changeBitFlagBits(bfTimer0Command, t0cEnableAnalogButtons, 0); // disable analog button sampling
 
 #endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)
@@ -109,7 +109,7 @@ static void button::inject(uint8_t buttonValue)
 	cli(); // disable interrupts to make the next operations atomic
 
 	thisButtonState = buttonValue;
-	timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
+	bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -122,7 +122,7 @@ static void cursor::screenLevelEntry(const char * str, uint8_t newScreenLevel)
 {
 
 	moveAbsolute(newScreenLevel, 255);
-	text::statusOut(devLCD, str);
+	text::statusOut(devIdxLCD, str);
 
 }
 
@@ -130,7 +130,7 @@ static void cursor::screenLevelEntry(const char * str, uint8_t strIdx, uint8_t n
 {
 
 	moveAbsolute(newScreenLevel, 255);
-	text::statusOut(devLCD, str, strIdx);
+	text::statusOut(devIdxLCD, str, strIdx);
 
 }
 
@@ -289,7 +289,7 @@ static void cursor::doCommand(void)
 
 	}
 
-	text::gotoXY(devLCD, 0, 0);
+	text::gotoXY(devIdxLCD, 0, 0);
 	((bdFunc)pgm_read_word(&(bpPtr->buttonCommand)))(); // go perform action
 
 }
@@ -297,11 +297,11 @@ static void cursor::doCommand(void)
 static void cursor::noSupport(void)
 {
 
-	text::initStatus(devLCD);
-	text::stringOut(devLCD, PSTR("Btn 0x"));
-	text::hexByteOut(devLCD, buttonPress);
-	text::stringOut(devLCD, PSTR(" Pressed"));
-	text::commitStatus(devLCD);
+	text::initStatus(devIdxLCD);
+	text::stringOut(devIdxLCD, PSTR("Btn 0x"));
+	text::hexByteOut(devIdxLCD, buttonPress);
+	text::stringOut(devIdxLCD, PSTR(" Pressed"));
+	text::commitStatus(devIdxLCD);
 
 }
 
@@ -321,7 +321,7 @@ static void cursor::doNextBright(void)
 	EEPROM::writeByte(pBrightnessIdx, i); // save new LCD brightness index
 	LCD::setBrightness(i);
 
-	text::statusOut(devLCD, brightMsg, brightString, i); // send status message 
+	text::statusOut(devIdxLCD, brightMsg, brightString, i); // send status message 
 
 }
 
@@ -383,7 +383,7 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 
 	cursorPos = displayCursor[(uint16_t)(thisDisplayIdx)];
 
-	text::gotoXY(devLCD, 0, 0);
+	text::gotoXY(devIdxLCD, 0, 0);
 
 	// call indexed support section screen refresh function
 	callingDisplayIdx = thisDisplayIdx;
@@ -431,14 +431,14 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 		if (outFlg)
 		{
 
-			devLCD.controlFlags |= (odvFlagDoubleHeight);
+			bitFlags[(uint16_t)(devIdxLCD)] |= (odvFlagDoubleHeight);
 
-			text::gotoXY(devLCD, 0, 0);
+			text::gotoXY(devIdxLCD, 0, 0);
 
 			// call indexed support section screen refresh function
 			((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(callingDisplayIdx)].displayHandlerPtr))(cmd, bottomCursorPos);
 
-			devLCD.controlFlags &= ~(odvFlagDoubleHeight);
+			bitFlags[(uint16_t)(devIdxLCD)] &= ~(odvFlagDoubleHeight);
 			lineCount += 2;
 
 		}
@@ -448,8 +448,8 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 	while (lineCount < LCDcharHeight)
 	{
 
-		text::gotoXY(devLCD, 0, lineCount++);
-		text::newLine(devLCD);
+		text::gotoXY(devIdxLCD, 0, lineCount++);
+		text::newLine(devIdxLCD);
 
 	}
 
@@ -514,7 +514,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			while (displayLine < LCDcharHeight)
 			{
 
-				text::gotoXY(devLCD, 0, displayLine);
+				text::gotoXY(devIdxLCD, 0, displayLine);
 				menuLine = i + menuTop;
 
 				if (menuLine >= menuLength) menuLine -= menuLength;
@@ -524,7 +524,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 				if (allowOutput < 2)
 				{
 
-					if (displayHeight > 1) text::charOut(devLCD, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
+					if (displayHeight > 1) text::charOut(devIdxLCD, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
 
 					menuHandlerPtr(menuFirstLineOutIdx, menuLine); // output menu element
 
@@ -537,7 +537,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 						if (flg)
 						{
 
-							text::gotoXY(devLCD, 0, ++displayLine);
+							text::gotoXY(devIdxLCD, 0, ++displayLine);
 							menuHandlerPtr(menuSecondLineOutIdx, menuLine);
 
 						}
@@ -545,7 +545,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 					}
 
 				}
-				else text::newLine(devLCD); // clear the line
+				else text::newLine(devIdxLCD); // clear the line
 
 				displayLine++;
 				i++;

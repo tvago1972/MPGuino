@@ -29,10 +29,10 @@ ISR( ADC_vect )
 	rawValue->u8[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
 	rawValue->u8[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
 
-	if (analogCommand & acSampleGround)
+	if (bitFlags[(uint16_t)(bfAnalogCommand)] & acSampleGround)
 	{
 
-		analogCommand &= ~(acSampleGround); // signal that internal ground was read
+		bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleGround); // signal that internal ground was read
 
 		flag = 1;
 		analogChannelMask = acSampleChannel0; // start with highest priority channel
@@ -41,7 +41,7 @@ ISR( ADC_vect )
 		while ((flag) && (analogChannelMask))
 		{
 
-			if (analogCommand & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
+			if (bitFlags[(uint16_t)(bfAnalogCommand)] & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
 			else
 			{
 
@@ -55,17 +55,17 @@ ISR( ADC_vect )
 		if (analogChannelMask)
 		{
 
-			analogStatus &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
+			bitFlags[(uint16_t)(bfAnalogStatus)] &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
 			analogValueIdx = analogChannelIdx; // save the analog index value
 			analogBitmask = analogChannelMask; // save the analog bitmask
-			analogCommand &= ~(analogChannelMask); // clear the relevant bit in analog command status
+			bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(analogChannelMask); // clear the relevant bit in analog command status
 			flag = 1;
 
 		}
 		else
 		{
 
-			analogCommand &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+			bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 			flag = 0;
 
 		}
@@ -75,11 +75,11 @@ ISR( ADC_vect )
 	{
 
 		analogValue[(uint16_t)(analogValueIdx)] = rawRead; // save the value just read in
-		analogStatus |= (analogBitmask); // signal to main program that an analog channel was read in
-		if (analogCommand & acSampleChannelActive)
+		bitFlags[(uint16_t)(bfAnalogStatus)] |= (analogBitmask); // signal to main program that an analog channel was read in
+		if (bitFlags[(uint16_t)(bfAnalogCommand)] & acSampleChannelActive)
 		{
 
-			analogCommand |= (acSampleGround); // signal that next read is for internal ground
+			bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleGround); // signal that next read is for internal ground
 			analogChannelIdx = analogGroundIdx;
 			flag = 1;
 
@@ -98,8 +98,8 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogStatus |= (asHardwareReady);
-		analogCommand &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+		bitFlags[(uint16_t)(bfAnalogStatus)] |= (asHardwareReady);
+		bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 		ADCSRA |= (1 << ADIF);
 		ADCSRA &= ~(1 << ADIE); // shut off analog interrupt and clear analog interrupt flag
 
@@ -111,7 +111,7 @@ ISR( ADC_vect )
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -135,7 +135,7 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
+			text::statusOut(devIdxLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);

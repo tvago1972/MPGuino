@@ -7,33 +7,34 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 namespace text /* text support section prototype */
 {
 
-	static uint8_t charIn(device_t &dev);
+	static void initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void));
+	static void initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t));
+	static uint8_t chrIn(uint8_t devIdx);
 
-	static void gotoXY(device_t &dev, uint8_t x, uint8_t y);
-	static void newLine(device_t &dev);
-	static uint8_t charOut(device_t &dev, uint8_t chr, uint8_t chrCount);
-	static uint8_t charOut(device_t &dev, uint8_t chr);
+	static void gotoXY(uint8_t devIdx, uint8_t x, uint8_t y);
+	static void newLine(uint8_t devIdx);
+	static uint8_t charOut(uint8_t devIdx, uint8_t chr, uint8_t chrCount);
+	static uint8_t charOut(uint8_t devIdx, uint8_t chr);
 
-	static void statusOut(device_t &dev, const char * sList, uint8_t strIdx, const char * str);
-	static void statusOut(device_t &dev, const char * str, const char * sList, uint8_t strIdx);
-	static void statusOut(device_t &dev, const char * sList, uint8_t strIdx);
-	static void statusOut(device_t &dev, const char * str);
-	static void initStatus(device_t &dev);
-	static void commitStatus(device_t &dev);
-	static void stringOut(device_t &dev, const char * str, uint8_t strIdx);
-	static void stringOut(device_t &dev, const char * str);
-	static void stringOut(device_t &dev, char * str);
-	static void stringOutIf(device_t &dev, uint8_t condition, const char * str, uint8_t strIdx);
-	static void stringOutIf(device_t &dev, uint8_t condition, const char * str);
-	static void hexNybbleOut(device_t &dev, uint8_t val);
+	static void statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, const char * str);
+	static void statusOut(uint8_t devIdx, const char * str, const char * sList, uint8_t strIdx);
+	static void statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx);
+	static void statusOut(uint8_t devIdx, const char * str);
+	static void initStatus(uint8_t devIdx);
+	static void commitStatus(uint8_t devIdx);
+	static void stringOut(uint8_t devIdx, const char * str, uint8_t strIdx);
+	static void stringOut(uint8_t devIdx, const char * str);
+	static void stringOut(uint8_t devIdx, char * str);
+	static void stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx);
+	static void stringOutIf(uint8_t devIdx, uint8_t condition, const char * str);
+	static void hexNybbleOut(uint8_t devIdx, uint8_t val);
 	static uint8_t nybble(uint8_t val);
-	static void hexByteOut(device_t &dev, uint8_t val);
-	static void hexWordOut(device_t &dev, uint16_t val);
-	static void hexDWordOut(device_t &dev, uint32_t val);
-	static void hexLWordOut(device_t &dev, uint64_t * val);
-	static void tripFunctionOut(device_t &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
-	static void tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
-	static void numberOut(device_t &dev, uint8_t decimalFlag);
+	static void hexByteOut(uint8_t devIdx, uint8_t val);
+	static void hexWordOut(uint8_t devIdx, uint16_t val);
+	static void hexLWordOut(uint8_t devIdx, uint64_t * val);
+	static void tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
+	static void tripFunctionOut(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
+	static void numberOut(uint8_t devIdx, uint8_t decimalFlag);
 
 };
 

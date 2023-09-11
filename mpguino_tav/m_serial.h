@@ -11,8 +11,6 @@ namespace serial0
 
 };
 
-device_t devSerial0;
-
 #endif // defined(useSerial0Port)
 #if defined(useSerial1Port)
 namespace serial1
@@ -26,8 +24,6 @@ namespace serial1
 #endif // defined(useSerial1PortInput)
 
 };
-
-device_t devSerial1;
 
 #endif // defined(useSerial1Port)
 #if defined(useSerial2Port)
@@ -43,8 +39,6 @@ namespace serial2
 
 };
 
-device_t devSerial2;
-
 #endif // defined(useSerial2Port)
 #if defined(useSerial3Port)
 namespace serial3
@@ -58,7 +52,5 @@ namespace serial3
 #endif // defined(useSerial3PortInput)
 
 };
-
-device_t devSerial3;
 
 #endif // defined(useSerial3Port)

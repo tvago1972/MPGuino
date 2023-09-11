@@ -48,17 +48,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // defined(useTWIbuttons)
 	uint32_t thisTime;
 
-	if (timer0Command & t0cResetTimer)
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cResetTimer)
 	{
 
-		timer0Command &= ~(t0cResetTimer);
+		bitFlags[(uint16_t)(bfTimer0Command)] &= ~(t0cResetTimer);
 		timer0_overflow_count = 0; // initialize timer 0 overflow counter
-		timer0DelayFlags = 0;
-		timer0DisplayDelayFlags = 0;
+		bitFlags[(uint16_t)(bfTimer0Delay)] = 0;
+		bitFlags[(uint16_t)(bfTimer0DisplayDelay)] = 0;
 		thisTime = TCNT0;
-		timer0Status = 0;
+		bitFlags[(uint16_t)(bfTimer0Status)] = 0;
 		loopCount = delay0TickSampleLoop;
-		awakeFlags = 0;
+		bitFlags[(uint16_t)(bfAwake)] = 0;
 #if defined(useBluetoothAdaFruitSPI)
 		BLEtimeoutCount = 0;
 #endif // defined(useBluetoothAdaFruitSPI)
@@ -66,9 +66,9 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		internalFlags = 0;
 #endif // defined(useButtonInput)
 		mainLoopHeartBeat = 1;
-		dirty &= ~(dGoodVehicleDrive);
+		bitFlags[(uint16_t)(bfDirty)] &= ~(dGoodVehicleDrive);
 		activityTimeoutCount = volatileVariables[(uint16_t)(vActivityTimeoutIdx)];
-		activityFlags = (afActivityCheckFlags | afSwapFEwithFCR);
+		bitFlags[(uint16_t)(bfActivity)] = (afActivityCheckFlags | afSwapFEwithFCR);
 		previousActivity = (afActivityCheckFlags);
 #if defined(useTWIbuttons)
 		TWIsampleCount = delay0TickTWIsample;
@@ -78,7 +78,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		bluetoothPeriodCount = delay0TickSampleLoop;
 #endif // defined(useBluetooth)
 #if defined(useAnalogRead)
-		analogStatus = asHardwareReady;
+		bitFlags[(uint16_t)(bfAnalogStatus)] = asHardwareReady;
 #if defined(useAnalogButtons)
 		analogSampleCount = delay0TickAnalogSample;
 #endif // defined(useAnalogButtons)
@@ -87,7 +87,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		buttonDebounceCount = 0;
 #endif // defined(useLegacyButtons)
 #if defined(useBarFuelEconVsTime)
-		timer0Command |= (t0cResetFEvTime);
+		bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cResetFEvTime);
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useButtonInput)
 		buttonLongPressCount = 0;
@@ -114,7 +114,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // defined(useSoftwareClock)
 	}
 
-	if (awakeFlags & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
+	if (bitFlags[(uint16_t)(bfAwake)] & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
 	{
 
 		if (watchdogInjectorCount) // if the fuel injector watchdog timer is running on minimum good engine speed
@@ -123,11 +123,11 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			watchdogInjectorCount--; // cycle fuel injector watchdog timer down
 
 #if defined(useChryslerMAPCorrection)
-			if (dirty & dSampleADC) // if injector monitor commanded an analog engine sensor read
+			if (bitFlags[(uint16_t)(bfDirty)] & dSampleADC) // if injector monitor commanded an analog engine sensor read
 			{
 
-				dirty &= ~(dSampleADC); // acknowledge the command
-				analogCommand |= (acSampleChrysler);
+				bitFlags[(uint16_t)(bfDirty)] &= ~(dSampleADC); // acknowledge the command
+				bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleChrysler);
 
 			}
 
@@ -136,8 +136,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // fuel injector watchdog timer has timed out
 		{
 
-			awakeFlags &= ~(aAwakeOnInjector); // signal that MPGuino is not awake any more due to no detected injector event during injector watchdog period
-			dirty &= ~(dGoodEngineRun); // reset all fuel injector measurement flags
+			bitFlags[(uint16_t)(bfAwake)] &= ~(aAwakeOnInjector); // signal that MPGuino is not awake any more due to no detected injector event during injector watchdog period
+			bitFlags[(uint16_t)(bfDirty)] &= ~(dGoodEngineRun); // reset all fuel injector measurement flags
 			watchdogInjectorCount = volatileVariables[(uint16_t)(vEngineOffTimeoutIdx)]; // start the fuel injector watchdog for engine off mode
 
 		}
@@ -146,15 +146,15 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else // MPGuino is no longer awake due to no detected fuel injector events
 	{
 
-		if (awakeFlags & aAwakeEngineRunning) // if MPGuino is still awake due to running engine
+		if (bitFlags[(uint16_t)(bfAwake)] & aAwakeEngineRunning) // if MPGuino is still awake due to running engine
 		{
 
 			if (watchdogInjectorCount) watchdogInjectorCount--; // cycle fuel injector watchdog timer down for engine off flag mode
 			else
 			{
 
-				activityFlags |= (afEngineOffFlag); // flag engine as being off
-				awakeFlags &= ~(aAwakeEngineRunning); // MPGuino is no longer awake due to engine running
+				bitFlags[(uint16_t)(bfActivity)] |= (afEngineOffFlag); // flag engine as being off
+				bitFlags[(uint16_t)(bfAwake)] &= ~(aAwakeEngineRunning); // MPGuino is no longer awake due to engine running
 
 			}
 
@@ -170,7 +170,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (awakeFlags & aAwakeOnVSS) // if MPGuino is awake on detected VSS pulse event
+	if (bitFlags[(uint16_t)(bfAwake)] & aAwakeOnVSS) // if MPGuino is awake on detected VSS pulse event
 	{
 
 		if (watchdogVSSCount) // if the VSS watchdog timer is running on minimum good vehicle speed
@@ -182,8 +182,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // VSS watchdog timer has timed out on minimum good vehicle speed
 		{
 
-			awakeFlags &= ~(aAwakeOnVSS); // signal that MPGuino is no longer awake due to no detected VSS pulse event during VSS watchdog period
-			dirty &= ~(dGoodVehicleMotion); // reset all VSS measurement flags
+			bitFlags[(uint16_t)(bfAwake)] &= ~(aAwakeOnVSS); // signal that MPGuino is no longer awake due to no detected VSS pulse event during VSS watchdog period
+			bitFlags[(uint16_t)(bfDirty)] &= ~(dGoodVehicleMotion); // reset all VSS measurement flags
 			watchdogVSSCount = volatileVariables[(uint16_t)(vVehicleStopTimeoutIdx)]; // start the VSS watchdog for vehicle stopped mode
 			swapFEwithFCRcount = delay0Tick3000ms; // reset swap timer counter
 
@@ -193,34 +193,34 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else // MPGuino is no longer awake due to no detected VSS pulse events
 	{
 
-		if (awakeFlags & aAwakeVehicleMoving) // if MPGuino is awake due to detected vehicle movement
+		if (bitFlags[(uint16_t)(bfAwake)] & aAwakeVehicleMoving) // if MPGuino is awake due to detected vehicle movement
 		{
 
 			if (watchdogVSSCount) watchdogVSSCount--;// cycle VSS watchdog timer down for vehicle stopped flag mode
 			else
 			{
 
-				activityFlags |= (afVehicleStoppedFlag); // flag vehicle as stopped
-				awakeFlags &= ~(aAwakeVehicleMoving); // vehicle is no longer awake on detected vehicle movement
+				bitFlags[(uint16_t)(bfActivity)] |= (afVehicleStoppedFlag); // flag vehicle as stopped
+				bitFlags[(uint16_t)(bfAwake)] &= ~(aAwakeVehicleMoving); // vehicle is no longer awake on detected vehicle movement
 
 #if defined(useDragRaceFunction)
-				if (accelerationFlags & accelTestActive) // if accel test function is active
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestActive) // if accel test function is active
 				{
 
-					accelerationFlags &= ~(accelTestClearFlags); // reset accel test capture flags
-					accelerationFlags |= (accelTestCompleteFlags); // signal that accel test is cancelled
-					timer0Status |= (t0sAccelTestFlag);
+					bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestClearFlags); // reset accel test capture flags
+					bitFlags[(uint16_t)(bfAccelerationFlags)] |= (accelTestCompleteFlags); // signal that accel test is cancelled
+					bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 
 				}
 
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-				if (coastdownFlags & cdTestInProgress) // if coastdown test has started
+				if (bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestInProgress) // if coastdown test has started
 				{
 
-					coastdownFlags &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
-					coastdownFlags |= (cdTestCompleteFlags); // signal that coastdown test is cancelled
-					timer0Status |= (t0sCoastdownTestFlag);
+					bitFlags[(uint16_t)(bfCoastdownStatus)] &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+					bitFlags[(uint16_t)(bfCoastdownStatus)] |= (cdTestCompleteFlags); // signal that coastdown test is cancelled
+					bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sCoastdownTestFlag);
 
 				}
 
@@ -229,18 +229,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-		if ((activityFlags & afSwapFEwithFCR) == 0) // if not yet showing fuel consumption rate instead of fuel economy
+		if ((bitFlags[(uint16_t)(bfActivity)] & afSwapFEwithFCR) == 0) // if not yet showing fuel consumption rate instead of fuel economy
 		{
 
 			if (swapFEwithFCRcount) swapFEwithFCRcount--; // cycle down fuel display watchdog until it zeroes out
-			else activityFlags |= (afSwapFEwithFCR); // output fuel consumption rate function instead of fuel economy
+			else bitFlags[(uint16_t)(bfActivity)] |= (afSwapFEwithFCR); // output fuel consumption rate function instead of fuel economy
 
 		}
 
 	}
 
 #if defined(useBarFuelEconVsTime)
-	if (timer0Command & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx; // initialize fuel econ vs time trip index variable
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx; // initialize fuel econ vs time trip index variable
 	else
 	{
 
@@ -248,7 +248,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else
 		{
 
-			timer0Command |= (t0cResetFEvTime);
+			bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cResetFEvTime);
 			FEvTperiodIdx++;
 			if (FEvTperiodIdx > FEvsTimeEndIdx) FEvTperiodIdx -= bgDataSize;
 
@@ -256,10 +256,10 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0Command & t0cResetFEvTime)
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cResetFEvTime)
 	{
 
-		timer0Command &= ~(t0cResetFEvTime);
+		bitFlags[(uint16_t)(bfTimer0Command)] &= ~(t0cResetFEvTime);
 		tripVar::reset(FEvTperiodIdx); // reset source trip variable
 		FEvTimeCount = volatileVariables[(uint16_t)(vFEvsTimePeriodTimeoutIdx)];
 
@@ -267,22 +267,22 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useCoastDownCalculator)
-	if (coastdownFlags & cdTestTriggered) // if coastdown test has been requested
+	if (bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestTriggered) // if coastdown test has been requested
 	{
 
-		timer0Status |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
-		coastdownFlags &= ~(cdTestTriggered | cdTestSampleTaken); // clear coastdown test state
-		coastdownFlags |= (cdTestActive); // mark coastdown test as active
+		bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		bitFlags[(uint16_t)(bfCoastdownStatus)] &= ~(cdTestTriggered | cdTestSampleTaken); // clear coastdown test state
+		bitFlags[(uint16_t)(bfCoastdownStatus)] |= (cdTestActive); // mark coastdown test as active
 		coastdownCount = volatileVariables[(uint16_t)(vCoastdownPeriodIdx)]; // reset coastdown timer
 		coastdownState = vCoastdownMeasurement1Idx; // reset coastdown state
 
 	}
 
-	if (coastdownFlags & cdTestSampleTaken)
+	if (bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestSampleTaken)
 	{
 
-		timer0Status |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
-		coastdownFlags &= ~(cdTestSampleTaken);
+		bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		bitFlags[(uint16_t)(bfCoastdownStatus)] &= ~(cdTestSampleTaken);
 		coastdownState++;
 
 		if (coastdownState < vCoastdownPeriodIdx) // if coastdown state is still valid
@@ -294,18 +294,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // otherwise, signal that coastdown test ended normally
 		{
 
-			coastdownFlags &= ~(cdTestActive); // make coastdown test no longer active
-			coastdownFlags |= cdTestFinished; // signal that coastdown test finished normally
+			bitFlags[(uint16_t)(bfCoastdownStatus)] &= ~(cdTestActive); // make coastdown test no longer active
+			bitFlags[(uint16_t)(bfCoastdownStatus)] |= cdTestFinished; // signal that coastdown test finished normally
 
 		}
 
 	}
 
-	if (coastdownFlags & cdTestActive) // if coastdown test is active
+	if (bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestActive) // if coastdown test is active
 	{
 
 		if (coastdownCount) coastdownCount--; // if coastdown timer hasn't elapsed
-		else if ((coastdownFlags & cdTestSampleTaken) == 0) coastdownFlags |= (cdTestTakeSample); // otherwise, signal VSS handler to take a coastdown sample
+		else if ((bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestSampleTaken) == 0) bitFlags[(uint16_t)(bfCoastdownStatus)] |= (cdTestTakeSample); // otherwise, signal VSS handler to take a coastdown sample
 
 	}
 
@@ -316,7 +316,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		TWIsampleCount--;
 
-		if ((twiStatusFlags & twiOpenMain) == twiBlockMainProgram) // if TWI section is finished processing
+		if ((bitFlags[(uint16_t)(bfTWIstatus)] & twiOpenMain) == twiBlockMainProgram) // if TWI section is finished processing
 			switch (TWIsampleState)
 			{
 
@@ -340,16 +340,16 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 					break;
 
 				case 2:
-					if ((twiStatusFlags & twiErrorFlag) == 0)
+					if ((bitFlags[(uint16_t)(bfTWIstatus)] & twiErrorFlag) == 0)
 					{
 
 						thisButtonState = (twiDataBuffer[0] & buttonMask); // fetch button state that was just read in
-						timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
+						bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 					}
 
 				default:
-					twiStatusFlags &= ~(twiBlockMainProgram); // allow main program to utilize TWI
+					bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiBlockMainProgram); // allow main program to utilize TWI
 					break;
 
 		}
@@ -360,14 +360,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		TWIsampleCount = delay0TickTWIsample;
 
-		if (twiStatusFlags & twiAllowISRactivity)
+		if (bitFlags[(uint16_t)(bfTWIstatus)] & twiAllowISRactivity)
 		{
 
-			twiStatusFlags |= (twiBlockMainProgram); // block main program from making any TWI requests
+			bitFlags[(uint16_t)(bfTWIstatus)] |= (twiBlockMainProgram); // block main program from making any TWI requests
 			TWIsampleState = 0; // initialize TWI button read state machine
 
 		}
-		else twiStatusFlags &= ~(twiBlockMainProgram);
+		else bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiBlockMainProgram);
 
 	}
 
@@ -378,7 +378,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		analogSampleCount = delay0TickAnalogSample;
-		if (timer0Command & t0cEnableAnalogButtons) analogCommand |= (acSampleButtonChannel); // go sample analog button channel
+		if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cEnableAnalogButtons) bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleButtonChannel); // go sample analog button channel
 
 	}
 
@@ -393,7 +393,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			thisButtonState = (lastPINxState & buttonMask) ^ buttonMask; // strip out all but relevant button bits
-			timer0Command |= (t0cProcessButton); // send timer0 notification that a button was just read in
+			bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 		}
 
@@ -416,10 +416,10 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0Command & t0cProcessButton) // if button hardware reports reading in a button
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cProcessButton) // if button hardware reports reading in a button
 	{
 
-		timer0Command &= ~(t0cProcessButton); // ack
+		bitFlags[(uint16_t)(bfTimer0Command)] &= ~(t0cProcessButton); // ack
 		if (thisButtonState != lastButtonState) // if there was a button state change since the last button was read in
 		{
 
@@ -449,14 +449,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		internalFlags &= ~(internalOutputButton);
 		internalFlags &= ~(internalProcessButtonsUp);
-		awakeFlags |= (aAwakeOnInput); // set awake status on button pressed
-		timer0DelayFlags &= ~(timer0DisplayDelayFlags); // reset all display delays in progress
-		timer0DisplayDelayFlags = 0;
-		if (activityFlags & afActivityTimeoutFlag) timer0Status |= (t0sUpdateDisplay); // simply update the display if MPGuino was asleep
-		else timer0Status |= (t0sReadButton | t0sShowCursor | t0sUpdateDisplay); // otherwise, force cursor show bit, and signal that keypress was detected
+		bitFlags[(uint16_t)(bfAwake)] |= (aAwakeOnInput); // set awake status on button pressed
+		bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(bitFlags[(uint16_t)(bfTimer0DisplayDelay)]); // reset all display delays in progress
+		bitFlags[(uint16_t)(bfTimer0DisplayDelay)] = 0;
+		if (bitFlags[(uint16_t)(bfActivity)] & afActivityTimeoutFlag) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // simply update the display if MPGuino was asleep
+		else bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sReadButton | t0sShowCursor | t0sUpdateDisplay); // otherwise, force cursor show bit, and signal that keypress was detected
 		buttonLongPressCount = 0; // reset button long-press timer
 		cursorCount = delay0Tick500ms; // reset cursor count
-		activityFlags &= ~(afUserInputFlag | afActivityTimeoutFlag);
+		bitFlags[(uint16_t)(bfActivity)] &= ~(afUserInputFlag | afActivityTimeoutFlag);
 		inputTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
 
 	}
@@ -467,14 +467,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		timer0Status |= t0sJSONchangeSubtitle; // signal to JSON output routine to display next round of subtitles
+		bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sJSONchangeSubtitle); // signal to JSON output routine to display next round of subtitles
 		JSONtimeoutCount = delay0Tick1600ms; // restart JSON output timeout count
 
 	}
 
 #endif // defined(useJSONoutput)
 #if defined(useBluetoothAdaFruitSPI)
-	if (timer0Command & t0cEnableBLEsample)
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cEnableBLEsample)
 	{
 
 		if (BLEtimeoutCount) BLEtimeoutCount--;
@@ -482,7 +482,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			BLEtimeoutCount = delay0Tick100ms;
-			awakeFlags |= (aAwakeSampleBLEfriend);
+			bitFlags[(uint16_t)(bfAwake)] |= (aAwakeSampleBLEfriend);
 
 		}
 
@@ -493,16 +493,16 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
-		timer0Status |= (t0sUpdateDisplay | t0sTakeSample | t0sOutputLogging); // signal to main program that a sampling should occur, and to update display
-#else // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
-		timer0Status |= (t0sUpdateDisplay | t0sTakeSample); // signal to main program that a sampling should occur, and to update display
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
+#if defined(usePeriodicOutput)
+		bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay | t0sTakeSample | t0sPeriodicOutput); // signal to main program that a sampling should occur, and to update display
+#else // defined(usePeriodicOutput)
+		bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay | t0sTakeSample); // signal to main program that a sampling should occur, and to update display
+#endif // defined(usePeriodicOutput)
 		loopCount = delay0TickSampleLoop; // restart loop count
 		mainLoopHeartBeat <<= 1; // cycle the heartbeat bit
 		if (mainLoopHeartBeat == 0) mainLoopHeartBeat = 1; // wrap around the heartbeat bit, if necessary
 #if defined(useAnalogRead)
-		analogCommand |= (acSampleChannelInit); // go sample all non-critical channels
+		bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleChannelInit); // go sample all non-critical channels
 #endif // useAnalogRead
 
 	}
@@ -512,23 +512,23 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		cursorCount = delay0Tick500ms; // reset cursor count
-		timer0Status ^= t0sShowCursor; // toggle cursor show bit
+		bitFlags[(uint16_t)(bfTimer0Status)] ^= t0sShowCursor; // toggle cursor show bit
 
 	}
 
-	if (timer0DelayFlags & 0x01)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x01)
 	{
 
 		if (timer0DelayCount[0]) timer0DelayCount[0]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x01); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x01) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x01); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x01) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x01); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x01); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -536,19 +536,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x02)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x02)
 	{
 
 		if (timer0DelayCount[1]) timer0DelayCount[1]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x02); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x02) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x02); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x02) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x02); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x02); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -556,19 +556,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x04)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x04)
 	{
 
 		if (timer0DelayCount[2]) timer0DelayCount[2]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x04); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x04) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x04); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x04) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x04); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x04); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -576,19 +576,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x08)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x08)
 	{
 
 		if (timer0DelayCount[3]) timer0DelayCount[3]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x08); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x08) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x08); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x08) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x08); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x08); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -596,19 +596,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x10)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x10)
 	{
 
 		if (timer0DelayCount[4]) timer0DelayCount[4]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x10); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x10) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x10); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x10) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x10); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x10); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -616,19 +616,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x20)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x20)
 	{
 
 		if (timer0DelayCount[5]) timer0DelayCount[5]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x20); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x20) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x20); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x20) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x20); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x20); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -636,19 +636,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x40)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x40)
 	{
 
 		if (timer0DelayCount[6]) timer0DelayCount[6]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x40); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x40) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x40); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x40) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x40); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x40); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -656,19 +656,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0DelayFlags & 0x80)
+	if (bitFlags[(uint16_t)(bfTimer0Delay)] & 0x80)
 	{
 
 		if (timer0DelayCount[7]) timer0DelayCount[7]--; // bump timer delay value down by one tick
 		else
 		{
 
-			timer0DelayFlags &= ~(0x80); // signal to main program that delay timer has completed main program request
-			if (timer0DisplayDelayFlags & 0x80) // if this was a display delay
+			bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(0x80); // signal to main program that delay timer has completed main program request
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] & 0x80) // if this was a display delay
 			{
 
-				timer0DisplayDelayFlags &= ~(0x80); // clear display delay flag
-				if (timer0DisplayDelayFlags == 0) timer0Status |= (t0sUpdateDisplay); // signal to main program to update display
+				bitFlags[(uint16_t)(bfTimer0DisplayDelay)] &= ~(0x80); // clear display delay flag
+				if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sUpdateDisplay); // signal to main program to update display
 
 			}
 
@@ -676,49 +676,49 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (timer0Command & t0cInputReceived)
+	if (bitFlags[(uint16_t)(bfTimer0Command)] & t0cInputReceived)
 	{
 
-		timer0Command &= ~(t0cInputReceived);
-		awakeFlags |= (aAwakeOnInput);
+		bitFlags[(uint16_t)(bfTimer0Command)] &= ~(t0cInputReceived);
+		bitFlags[(uint16_t)(bfAwake)] |= (aAwakeOnInput);
 		inputTimeoutCount = volatileVariables[(uint16_t)(vButtonTimeoutIdx)];
-		activityFlags &= ~(afUserInputFlag | afActivityTimeoutFlag);
+		bitFlags[(uint16_t)(bfActivity)] &= ~(afUserInputFlag | afActivityTimeoutFlag);
 
 	}
 
-	if (awakeFlags & aAwakeOnInput)
+	if (bitFlags[(uint16_t)(bfAwake)] & aAwakeOnInput)
 	{
 
 		if (inputTimeoutCount) inputTimeoutCount--;
 		else
 		{
 
-			awakeFlags &= ~(aAwakeOnInput);
-			activityFlags |= (afUserInputFlag);
+			bitFlags[(uint16_t)(bfAwake)] &= ~(aAwakeOnInput);
+			bitFlags[(uint16_t)(bfActivity)] |= (afUserInputFlag);
 
 		}
 
 	}
 
-	if ((activityFlags & afParkCheckFlags) == afNotParkedFlags) // if MPGuino has engine stop and vehicle stop flags set, but is not yet parked
+	if ((bitFlags[(uint16_t)(bfActivity)] & afParkCheckFlags) == afNotParkedFlags) // if MPGuino has engine stop and vehicle stop flags set, but is not yet parked
 	{
 
 		if (parkTimeoutCount) parkTimeoutCount--; // run down park watchdog timer until it expires
-		else activityFlags |= (afParkFlag); // set vehicle parked flag
+		else bitFlags[(uint16_t)(bfActivity)] |= (afParkFlag); // set vehicle parked flag
 
 	}
 
-	if ((activityFlags & afValidFlags) == afActivityCheckFlags) // if there is no activity but the activity watchdog hasn't timed out yet
+	if ((bitFlags[(uint16_t)(bfActivity)] & afValidFlags) == afActivityCheckFlags) // if there is no activity but the activity watchdog hasn't timed out yet
 	{
 
 		if (activityTimeoutCount) activityTimeoutCount--; // cycle down the activity timeout watchdog
-		else activityFlags |= (afActivityTimeoutFlag); // signal that MPGuino is in a period of inactivity
+		else bitFlags[(uint16_t)(bfActivity)] |= (afActivityTimeoutFlag); // signal that MPGuino is in a period of inactivity
 
 	}
 
-	previousActivity ^= (activityFlags & afValidFlags); // detect any activity change since last timer0 tick
+	previousActivity ^= (bitFlags[(uint16_t)(bfActivity)] & afValidFlags); // detect any activity change since last timer0 tick
 
-	if (previousActivity) activityChangeFlags |= (previousActivity); // if there was any activity change at all, signal that the display needs updating
+	if (previousActivity) bitFlags[(uint16_t)(bfActivityChange)] |= (previousActivity); // if there was any activity change at all, signal that the display needs updating
 
 	// reset activity timeout watchdog if any of the fuel injector, VSS pulse, button press, or park flags have changed
 	if (previousActivity & afActivityCheckFlags) activityTimeoutCount = volatileVariables[(uint16_t)(vActivityTimeoutIdx)];
@@ -726,17 +726,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	// reset park timeout watchdog if any of the fuel injector or VSS pulse flags have changed
 	if (previousActivity & afNotParkedFlags) parkTimeoutCount = volatileVariables[(uint16_t)(vParkTimeoutIdx)];
 
-	previousActivity = (activityFlags & afValidFlags); // save for next timer0 tick
+	previousActivity = (bitFlags[(uint16_t)(bfActivity)] & afValidFlags); // save for next timer0 tick
 
 #if defined(useAnalogRead)
-	if (analogCommand & acSampleChannelActive)
+	if (bitFlags[(uint16_t)(bfAnalogCommand)] & acSampleChannelActive)
 	{
 
-		if (analogStatus & asHardwareReady)
+		if (bitFlags[(uint16_t)(bfAnalogStatus)] & asHardwareReady)
 		{
 
-			analogCommand |= (acSampleGround); // signal to ADC interrupt that the last requested conversion was for internal ground
-			analogStatus &= ~(asHardwareReady);
+			bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleGround); // signal to ADC interrupt that the last requested conversion was for internal ground
+			bitFlags[(uint16_t)(bfAnalogStatus)] &= ~(asHardwareReady);
 
 			ADMUX = pgm_read_byte(&analogChannelValue[(uint16_t)(analogGroundIdx)]);
 			ADCSRA |= ((1 << ADSC) | (1 << ADIF) | (1 << ADIE)); // start ADC read, enable interrupt, and clear interrupt flag, because this crappy hardware allows the ADC interrupt to alway do free running mode
@@ -747,7 +747,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 #endif // useAnalogRead
 #if defined(useDebugCPUreading)
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += TCNT0;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += TCNT0;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -785,11 +785,11 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 #endif // defined(useDebugCPUreading)
 
-	if (timer1Command & t1cResetTimer)
+	if (bitFlags[(uint16_t)(bfTimer1Command)] & t1cResetTimer)
 	{
 
-		timer1Command &= ~(t1cResetTimer);
-		timer1Status = 0;
+		bitFlags[(uint16_t)(bfTimer1Command)] &= ~(t1cResetTimer);
+		bitFlags[(uint16_t)(bfTimer1Status)] = 0;
 #if defined(useBluetoothAdaFruitSPI)
 		chipSelectState = 0;
 		resetState = 0;
@@ -805,42 +805,42 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	}
 
 #if defined(useBluetoothAdaFruitSPI)
-	if (bleStatus & bleReset) // if main program requests bluetooth hardware reset
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & bleReset) // if main program requests bluetooth hardware reset
 	{
 
-		bleStatus &= ~(bleReset | bleAssertFlags | blePacketWaitFlags); // clear any in-progress lesser waiting tasks
+		bitFlags[(uint16_t)(bfBLEstatus)] &= ~(bleReset | bleAssertFlags | blePacketWaitFlags); // clear any in-progress lesser waiting tasks
 		resetState = 1; // initialize reset state machine
 		chipSelectState = 0; // halt CS state machine
 
 	}
 
-	if (bleStatus & bleAssert) // if main program requests to assert /CS
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & bleAssert) // if main program requests to assert /CS
 	{
 
-		if ((bleStatus & bleResetting) == 0) // wait until reset is complete
+		if ((bitFlags[(uint16_t)(bfBLEstatus)] & bleResetting) == 0) // wait until reset is complete
 		{
 
-			bleStatus &= ~(bleAssert); // acknowledge main program command
+			bitFlags[(uint16_t)(bfBLEstatus)] &= ~(bleAssert); // acknowledge main program command
 			chipSelectState = 1; // initialize CS state machine
 
 		}
 
 	}
 
-	if (bleStatus & blePacketWait) // if main program requests waiting for a SDEP packet wait delay
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWait) // if main program requests waiting for a SDEP packet wait delay
 	{
 
-		if ((bleStatus & bleResetting) == 0) // wait until reset is complete
+		if ((bitFlags[(uint16_t)(bfBLEstatus)] & bleResetting) == 0) // wait until reset is complete
 		{
 
-			bleStatus &= ~(blePacketWait); // acknowledge main program command
+			bitFlags[(uint16_t)(bfBLEstatus)] &= ~(blePacketWait); // acknowledge main program command
 			responseDelay = delay1Tick250ms; // initialize response delay wait counter
 
 		}
 
 	}
 
-	if (bleStatus & bleResetting) // if hardware reset is in progress
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & bleResetting) // if hardware reset is in progress
 	{
 
 		switch (resetState)
@@ -882,14 +882,14 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 				break;
 
 			default: // catch invalid reset states
-				bleStatus &= ~(bleResetting); // mark hardware reset as completed
+				bitFlags[(uint16_t)(bfBLEstatus)] &= ~(bleResetting); // mark hardware reset as completed
 				break;
 
 		}
 
 	}
 
-	if (bleStatus & bleAsserting) // if /CS assertion is in progress
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & bleAsserting) // if /CS assertion is in progress
 	{
 
 		switch (chipSelectState)
@@ -920,21 +920,21 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 				break;
 
 			default: // catch invalid chip select states
-				bleStatus &= ~(bleAsserting); // mark chip select assert as completed
+				bitFlags[(uint16_t)(bfBLEstatus)] &= ~(bleAsserting); // mark chip select assert as completed
 				break;
 
 		}
 
 	}
 
-	if (bleStatus & blePacketWaiting) // if response delay is in progress
+	if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) // if response delay is in progress
 	{
 
 		if (responseDelay) responseDelay--; // if response delay counter still valid, bump down by one
 		else
 		{
 
-			bleStatus &= ~(blePacketWaiting); // otherwise, signal that response delay timed out
+			bitFlags[(uint16_t)(bfBLEstatus)] &= ~(blePacketWaiting); // otherwise, signal that response delay timed out
 			blefriend::releaseCS();
 
 		}
@@ -943,10 +943,10 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useSimulatedFIandVSS)
-	if (timer1Command & t1cEnableDebug)
+	if (bitFlags[(uint16_t)(bfTimer1Command)] & t1cEnableDebug)
 	{
 
-		if ((debugFlags & debugVSreadyFlags) == debugVSreadyFlags) // if VSS simulator is ready to output
+		if ((bitFlags[(uint16_t)(bfSignalSimModeFlags)] & debugVSreadyFlags) == debugVSreadyFlags) // if VSS simulator is ready to output
 		{
 
 			if (debugVSScount) debugVSScount--;
@@ -968,7 +968,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 		}
 
-		if (debugFlags & debugVSSflag) // if VSS simulator is enabled
+		if (bitFlags[(uint16_t)(bfSignalSimModeFlags)] & debugVSSflag) // if VSS simulator is enabled
 		{
 
 			if (debugVSSresetCount) debugVSSresetCount--;
@@ -976,13 +976,13 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 			{
 
 				debugVSSresetCount = debugVSSresetLength;
-				timer1Status |= (t1sDebugUpdateVSS);
+				bitFlags[(uint16_t)(bfTimer1Status)] |= (t1sDebugUpdateVSS);
 
 			}
 
 		}
 
-		if ((debugFlags & debugFIreadyFlags) == debugFIreadyFlags) // if fuel injector simulator is ready to output
+		if ((bitFlags[(uint16_t)(bfSignalSimModeFlags)] & debugFIreadyFlags) == debugFIreadyFlags) // if fuel injector simulator is ready to output
 		{
 
 			if (debugFIPcount)
@@ -1031,7 +1031,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 		}
 
-		if (debugFlags & debugInjectorFlag) // if injector simulator is enabled
+		if (bitFlags[(uint16_t)(bfSignalSimModeFlags)] & debugInjectorFlag) // if injector simulator is enabled
 		{
 
 			if (debugFIPresetCount) debugFIPresetCount--;
@@ -1039,7 +1039,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 			{
 
 				debugFIPresetCount = debugFIPresetLength;
-				timer1Status |= (t1sDebugUpdateFIP);
+				bitFlags[(uint16_t)(bfTimer1Status)] |= (t1sDebugUpdateFIP);
 
 			}
 
@@ -1049,7 +1049,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useLCDoutput)
-	if (timer1Command & t1cDelayLCD)
+	if (bitFlags[(uint16_t)(bfTimer1Command)] & t1cDelayLCD)
 	{
 
 		if (lcdDelayCount) lcdDelayCount--;
@@ -1062,11 +1062,11 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #if defined(useTWI4BitLCD)
 				// if buffer is not empty and TWI hardware is ready
-				if ((twiStatusFlags & twiOpenMain) == 0)
+				if ((bitFlags[(uint16_t)(bfTWIstatus)] & twiOpenMain) == 0)
 				{
 
-					timer1Status &= ~(t1sDoOutputTWI); // reset TWI master transmission in progress flag
-					timer1Status |= (t1sLoopFlag); // set loop flag
+					bitFlags[(uint16_t)(bfTimer1Status)] &= ~(t1sDoOutputTWI); // reset TWI master transmission in progress flag
+					bitFlags[(uint16_t)(bfTimer1Status)] |= (t1sLoopFlag); // set loop flag
 
 					do
 					{
@@ -1076,14 +1076,14 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 						if (value & lcdSendNybble) // if this nybble is to be sent out
 						{
 
-							if ((timer1Status & t1sDoOutputTWI) == 0) // if this is the first nybble to be output
+							if ((bitFlags[(uint16_t)(bfTimer1Status)] & t1sDoOutputTWI) == 0) // if this is the first nybble to be output
 							{
 
 								TWI::openChannel(lcdAddress, TW_WRITE); // open TWI as master transmitter
 #if defined(useAdafruitRGBLCDshield)
 								TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
 #endif // defined(useAdafruitRGBLCDshield)
-								timer1Status |= (t1sDoOutputTWI); // signal to complete TWI master transmission
+								bitFlags[(uint16_t)(bfTimer1Status)] |= (t1sDoOutputTWI); // signal to complete TWI master transmission
 
 							}
 
@@ -1097,19 +1097,19 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 							if ((value & lcdSendFlags) == lcdSendNybble) // if sending an ordinary data nybble, check if we can continue looping
 							{
 
-								if ((twiDataBufferSize - twiDataBufferLen) < 5) timer1Status &= ~(t1sLoopFlag); // if TWI send buffer is getting low, signal end of loop
-								if (ringBuffer::isBufferEmpty(rbIdxLCD)) timer1Status &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
+								if ((twiDataBufferSize - twiDataBufferLen) < 5) bitFlags[(uint16_t)(bfTimer1Status)] &= ~(t1sLoopFlag); // if TWI send buffer is getting low, signal end of loop
+								if (ringBuffer::isBufferEmpty(rbIdxLCD)) bitFlags[(uint16_t)(bfTimer1Status)] &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
 
 							}
-							else timer1Status &= ~(t1sLoopFlag); // otherwise, this is a special (command or reset) nybble, so signal end of loop
+							else bitFlags[(uint16_t)(bfTimer1Status)] &= ~(t1sLoopFlag); // otherwise, this is a special (command or reset) nybble, so signal end of loop
 
 						}
-						else timer1Status &= ~(t1sLoopFlag); // otherwise, this is just a delay request, so signal end of loop
+						else bitFlags[(uint16_t)(bfTimer1Status)] &= ~(t1sLoopFlag); // otherwise, this is just a delay request, so signal end of loop
 
 					}
-					while (timer1Status & t1sLoopFlag);
+					while (bitFlags[(uint16_t)(bfTimer1Status)] & t1sLoopFlag);
 
-					if (timer1Status & t1sDoOutputTWI) TWI::transmitChannel(TWI_STOP); // commit LCD port expander write, if required
+					if (bitFlags[(uint16_t)(bfTimer1Status)] & t1sDoOutputTWI) TWI::transmitChannel(TWI_STOP); // commit LCD port expander write, if required
 
 				}
 
@@ -1121,12 +1121,12 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(usePort4BitLCD)
 			}
-			else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
+			else bitFlags[(uint16_t)(bfTimer1Command)] &= ~(t1cDelayLCD); // turn off LCD delay
 
 		}
 
 #else // defined(useLCDbufferedOutput)
-		else timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
+		else bitFlags[(uint16_t)(bfTimer1Command)] &= ~(t1cDelayLCD); // turn off LCD delay
 
 #endif // defined(useLCDbufferedOutput)
 	}
@@ -1138,7 +1138,7 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -1190,13 +1190,13 @@ ISR( INT0_vect )
 
 	thisInjectorOpenStart = timer0_overflow_count + (unsigned long)(a);
 
-	if (dirty & dGoodEngineRotationOpen) thisEnginePeriodOpen = heart::findCycle0Length(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
+	if (bitFlags[(uint16_t)(bfDirty)] & dGoodEngineRotationOpen) thisEnginePeriodOpen = heart::findCycle0Length(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
 	else thisEnginePeriodOpen = 0;
 
 #if defined(useChryslerMAPCorrection)
-	dirty |= (dGoodEngineRotationOpen | dInjectorReadInProgress | dSampleADC);
+	bitFlags[(uint16_t)(bfDirty)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress | dSampleADC);
 #else // defined(useChryslerMAPCorrection)
-	dirty |= (dGoodEngineRotationOpen | dInjectorReadInProgress);
+	bitFlags[(uint16_t)(bfDirty)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress);
 #endif // defined(useChryslerMAPCorrection)
 
 	lastInjectorOpenStart = thisInjectorOpenStart;
@@ -1207,7 +1207,7 @@ ISR( INT0_vect )
 	b = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) b = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += b - a;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += b - a;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -1248,15 +1248,15 @@ ISR( INT1_vect )
 
 	thisInjectorCloseStart = timer0_overflow_count + (unsigned long)(a);
 
-	if (dirty & dGoodEngineRotationClose) thisEnginePeriodClose = heart::findCycle0Length(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
+	if (bitFlags[(uint16_t)(bfDirty)] & dGoodEngineRotationClose) thisEnginePeriodClose = heart::findCycle0Length(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
 	else thisEnginePeriodClose = 0;
 
-	if (dirty & dInjectorReadInProgress) // if there was a fuel injector open pulse detected, there's now a fuel injector pulse width to be measured
+	if (bitFlags[(uint16_t)(bfDirty)] & dInjectorReadInProgress) // if there was a fuel injector open pulse detected, there's now a fuel injector pulse width to be measured
 	{
 
-		dirty &= ~(dInjectorReadInProgress);
+		bitFlags[(uint16_t)(bfDirty)] &= ~(dInjectorReadInProgress);
 
-		b = (dirty & dGoodEngineRotation);
+		b = (bitFlags[(uint16_t)(bfDirty)] & dGoodEngineRotation);
 
 		switch (b)
 		{
@@ -1290,8 +1290,8 @@ ISR( INT1_vect )
 		// if this pulse is larger than the maximum good pulse that could happen at the minimum valid engine speed, reject it
 		// 1 - pulse could be narrower than vInjectorOpenDelayIdx
 		// 2 - pulse could be wider than the maximum allowable pulse width for minimum good engine speed
-		if (thisInjectorPulseLength > volatileVariables[(uint16_t)(vInjectorValidMaxWidthIdx)]) dirty &= ~(dGoodInjectorWidth | dGoodInjectorRead);
-		else dirty |= (dGoodInjectorWidth);
+		if (thisInjectorPulseLength > volatileVariables[(uint16_t)(vInjectorValidMaxWidthIdx)]) bitFlags[(uint16_t)(bfDirty)] &= ~(dGoodInjectorWidth | dGoodInjectorRead);
+		else bitFlags[(uint16_t)(bfDirty)] |= (dGoodInjectorWidth);
 
 		if (b) // if we have an engine rotation period measurement
 		{
@@ -1299,20 +1299,20 @@ ISR( INT1_vect )
 			// calculate good maximum fuel injector open time for injector pulse width sanity check
 			goodInjectorPulseLength = engineRotationPeriod - volatileVariables[(uint16_t)(vInjectorOpenDelayIdx)];
 
-			if (thisInjectorPulseLength > goodInjectorPulseLength) dirty &= ~(dGoodInjectorRead); // if measured pulse is larger than largest good pulse, signal that last injector read may be bad
-			else dirty |= (dGoodInjectorRead); // signal that last injector read is good
+			if (thisInjectorPulseLength > goodInjectorPulseLength) bitFlags[(uint16_t)(bfDirty)] &= ~(dGoodInjectorRead); // if measured pulse is larger than largest good pulse, signal that last injector read may be bad
+			else bitFlags[(uint16_t)(bfDirty)] |= (dGoodInjectorRead); // signal that last injector read is good
 
 			// if measured engine speed is greater than the specified minimum good engine speed
 			if (engineRotationPeriod < volatileVariables[(uint16_t)(vMaximumEnginePeriodIdx)])
 			{
 
-				activityFlags &= ~(afEngineOffFlag | afParkFlag | afActivityTimeoutFlag); // signal that engine is running, and vehicle is therefore no longer parked
-				awakeFlags |= (aAwakeEngineRunning); // MPGuino is awake due to engine running
+				bitFlags[(uint16_t)(bfActivity)] &= ~(afEngineOffFlag | afParkFlag | afActivityTimeoutFlag); // signal that engine is running, and vehicle is therefore no longer parked
+				bitFlags[(uint16_t)(bfAwake)] |= (aAwakeEngineRunning); // MPGuino is awake due to engine running
 
 			}
 
 #if defined(trackIdleEOCdata)
-			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving
+			if (bitFlags[(uint16_t)(bfAwake)] & aAwakeVehicleMoving) // if vehicle is moving
 				// add to raw fuel injector total cycle accumulator
 				tripVar::update64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx);
 			else // if vehicle is not moving
@@ -1325,17 +1325,17 @@ ISR( INT1_vect )
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-			if (accelerationFlags & accelTestActive)
+			if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestActive)
 			{
 
 				// add to raw accel test distance fuel injector total cycle accumulator
-				if (accelerationFlags & accelTestDistance) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestDistance) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
 
 				// add to raw accel test full speed fuel injector total cycle accumulator
-				if (accelerationFlags & accelTestFullSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawFullSpeedIdx);
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestFullSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawFullSpeedIdx);
 
 				// add to raw accel test half speed fuel injector total cycle accumulator
-				if (accelerationFlags & accelTestHalfSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawHalfSpeedIdx);
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestHalfSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawHalfSpeedIdx);
 
 			}
 
@@ -1343,10 +1343,10 @@ ISR( INT1_vect )
 		}
 
 		// if the injector pulse width is valid
-		if (dirty & dGoodInjectorWidth)
+		if (bitFlags[(uint16_t)(bfDirty)] & dGoodInjectorWidth)
 		{
 
-			awakeFlags |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
+			bitFlags[(uint16_t)(bfAwake)] |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
 
 #if defined(useChryslerMAPCorrection)
 			thisInjectorPulseLength *= volatileVariables[(uint16_t)(vInjectorCorrectionIdx)]; // multiply by differential fuel pressure correction factor numerator
@@ -1354,7 +1354,7 @@ ISR( INT1_vect )
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(trackIdleEOCdata)
-			if (awakeFlags & aAwakeVehicleMoving) // if vehicle is moving
+			if (bitFlags[(uint16_t)(bfAwake)] & aAwakeVehicleMoving) // if vehicle is moving
 				// update fuel injector open cycle accumulator, and fuel injector pulse count
 				tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, curRawTripIdx);
 			else // if vehicle is not moving
@@ -1367,19 +1367,19 @@ ISR( INT1_vect )
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-			if (accelerationFlags & accelTestActive)
+			if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestActive)
 			{
 
 				// update raw accel test distance fuel injector open cycle accumulator, and raw accel test distance fuel injector pulse count
-				if (accelerationFlags & accelTestDistance)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestDistance)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawDistanceIdx);
 
 				// update raw accel test full speed fuel injector open cycle accumulator, and raw accel test full speed fuel injector pulse count
-				if (accelerationFlags & accelTestFullSpeed)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestFullSpeed)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawFullSpeedIdx);
 
 				// update raw accel test half speed fuel injector open cycle accumulator, and raw accel test half speed fuel injector pulse count
-				if (accelerationFlags & accelTestHalfSpeed)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestHalfSpeed)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawHalfSpeedIdx);
 
 			}
@@ -1389,7 +1389,7 @@ ISR( INT1_vect )
 
 	}
 
-	dirty |= (dGoodEngineRotationClose);
+	bitFlags[(uint16_t)(bfDirty)] |= (dGoodEngineRotationClose);
 	lastInjectorCloseStart = thisInjectorCloseStart;
 
 	watchdogInjectorCount = volatileVariables[(uint16_t)(vDetectEngineOffIdx)]; // reset minimum engine speed watchdog timer
@@ -1398,7 +1398,7 @@ ISR( INT1_vect )
 	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c - a;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c - a;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -1465,7 +1465,7 @@ ISR( PCINT1_vect )
 	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c - a;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c - a;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -1520,7 +1520,7 @@ static void ringBuffer::pushMain(uint8_t ringBufferIdx, uint8_t value)
 
 	uint8_t oldSREG;
 
-	while (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) idleProcess(); // wait for calling routine's buffer to become not full
+	while (ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsFull) idleMainProcess(); // wait for calling routine's buffer to become not full
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
@@ -1585,7 +1585,7 @@ static uint16_t ringBuffer::freeMain(uint8_t ringBufferIdx)
 static void ringBuffer::flush(uint8_t ringBufferIdx)
 {
 
-	while ((ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) == 0) idleProcess(); // wait for calling routine's buffer to become empty
+	while ((ringBufferDef[(uint16_t)(ringBufferIdx)].status & bufferIsEmpty) == 0) idleMainProcess(); // wait for calling routine's buffer to become empty
 
 }
 
@@ -1690,29 +1690,29 @@ static void heart::updateVSS(uint32_t thisVSStime)
 #endif // defined(useDragRaceFunction)
 	static uint32_t cycleLength;
 
-	if (dirty & dGoodVSSsignal) // if a valid VSS signal had previously been read in
+	if (bitFlags[(uint16_t)(bfDirty)] & dGoodVSSsignal) // if a valid VSS signal had previously been read in
 	{
 
-		dirty |= (dGoodVSSRead); // mark valid VSS pulse measurement
-		awakeFlags |= (aAwakeOnVSS); // MPGuino is awake on valid VSS pulse measurement
+		bitFlags[(uint16_t)(bfDirty)] |= (dGoodVSSRead); // mark valid VSS pulse measurement
+		bitFlags[(uint16_t)(bfAwake)] |= (aAwakeOnVSS); // MPGuino is awake on valid VSS pulse measurement
 
 		cycleLength = heart::findCycle0Length(lastVSStime, thisVSStime); // calculate VSS pulse length
 
 		if (cycleLength < volatileVariables[(uint16_t)(vMaximumVSSperiodIdx)]) // if VSS period is less than that for minimum good vehicle speed
 		{
 
-			if (activityFlags & afVehicleStoppedFlag) // if vehicle has been previously flagged as not moving
+			if (bitFlags[(uint16_t)(bfActivity)] & afVehicleStoppedFlag) // if vehicle has been previously flagged as not moving
 			{
 
-				activityFlags &= ~(afVehicleStoppedFlag | afSwapFEwithFCR | afParkFlag | afActivityTimeoutFlag); // signal that vehicle is moving, and vehicle is therefore no longer parked
-				awakeFlags |= (aAwakeVehicleMoving); // MPGuino is awake on vehicle movement
+				bitFlags[(uint16_t)(bfActivity)] &= ~(afVehicleStoppedFlag | afSwapFEwithFCR | afParkFlag | afActivityTimeoutFlag); // signal that vehicle is moving, and vehicle is therefore no longer parked
+				bitFlags[(uint16_t)(bfAwake)] |= (aAwakeVehicleMoving); // MPGuino is awake on vehicle movement
 
 			}
 
 		}
 
 #if defined(trackIdleEOCdata)
-		if (awakeFlags & aAwakeEngineRunning) // if the engine is running
+		if (bitFlags[(uint16_t)(bfAwake)] & aAwakeEngineRunning) // if the engine is running
 			// update raw VSS cycle accumulator, and raw VSS pulse count
 			tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawTripIdx);
 		else // if the engine is not running
@@ -1725,27 +1725,27 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useCoastDownCalculator)
-		if (coastdownFlags & cdTestTakeSample) // if coastdown test is active, and a sample is requested
+		if (bitFlags[(uint16_t)(bfCoastdownStatus)] & cdTestTakeSample) // if coastdown test is active, and a sample is requested
 		{
 
-			coastdownFlags &= ~(cdTestTakeSample); // acknowledge sample request
-			coastdownFlags |= (cdTestSampleTaken); // signal that a sample has been taken
+			bitFlags[(uint16_t)(bfCoastdownStatus)] &= ~(cdTestTakeSample); // acknowledge sample request
+			bitFlags[(uint16_t)(bfCoastdownStatus)] |= (cdTestSampleTaken); // signal that a sample has been taken
 			volatileVariables[(uint16_t)(coastdownState)] = cycleLength; // take sample
 
 		}
 
 #endif // defined(useCoastDownCalculator)
 #if defined(useVehicleParameters)
-		if (awakeFlags & aAwakeVehicleMoving) // if vehicle is considered to be moving
+		if (bitFlags[(uint16_t)(bfAwake)] & aAwakeVehicleMoving) // if vehicle is considered to be moving
 		{
 
 #if defined(useDragRaceFunction)
-			if (accelerationFlags & accelTestTriggered) // if accel test function is triggered
+			if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestTriggered) // if accel test function is triggered
 			{
 
-				accelerationFlags &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
-				accelerationFlags |= (accelTestActive);
-				timer0Status |= (t0sAccelTestFlag);
+				bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
+				bitFlags[(uint16_t)(bfAccelerationFlags)] |= (accelTestActive);
+				bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 
 				// initialize trap distance variables
 				accelTestDistanceCount = volatileVariables[(uint16_t)(vAccelDistanceValueIdx)];
@@ -1753,10 +1753,10 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 			}
 
-			if (accelerationFlags & accelTestActive) // if accel test function is active
+			if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestActive) // if accel test function is active
 			{
 
-				if (accelerationFlags & accelTestDistance)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestDistance)
 				{
 
 					if (accelTestDistanceCount)
@@ -1779,8 +1779,8 @@ static void heart::updateVSS(uint32_t thisVSStime)
 					else
 					{
 
-						accelerationFlags &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
-						timer0Status |= (t0sAccelTestFlag);
+						bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
+						bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 						volatileVariables[(uint16_t)(vDragRawInstantSpeedIdx)] = accelTestVSStime; // store maximum recorded speed
 						volatileVariables[(uint16_t)(vDragRawTrapSpeedIdx)] = cycleLength; // store trap speed
 
@@ -1788,14 +1788,14 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if (accelerationFlags & accelTestHalfSpeed)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestHalfSpeed)
 				{
 
 					if (cycleLength < volatileVariables[(uint16_t)(vAccelHalfPeriodValueIdx)])
 					{
 
-						accelerationFlags &= ~(accelTestHalfSpeed); // mark drag function half speed measurement as complete
-						timer0Status |= (t0sAccelTestFlag);
+						bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestHalfSpeed); // mark drag function half speed measurement as complete
+						bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 
 					}
 					else
@@ -1804,14 +1804,14 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if (accelerationFlags & accelTestFullSpeed)
+				if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestFullSpeed)
 				{
 
 					if (cycleLength < volatileVariables[(uint16_t)(vAccelFullPeriodValueIdx)])
 					{
 
-						accelerationFlags &= ~(accelTestFullSpeed); // mark drag function full speed measurement as complete
-						timer0Status |= (t0sAccelTestFlag);
+						bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestFullSpeed); // mark drag function full speed measurement as complete
+						bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 
 					}
 					else
@@ -1820,12 +1820,12 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if ((accelerationFlags & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
+				if ((bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
 				{
 
-					accelerationFlags &= ~(accelTestActive); // switch status from 'active' to 'finished'
-					accelerationFlags |= (accelTestFinished);
-					timer0Status |= (t0sAccelTestFlag);
+					bitFlags[(uint16_t)(bfAccelerationFlags)] &= ~(accelTestActive); // switch status from 'active' to 'finished'
+					bitFlags[(uint16_t)(bfAccelerationFlags)] |= (accelTestFinished);
+					bitFlags[(uint16_t)(bfTimer0Status)] |= (t0sAccelTestFlag);
 
 				}
 
@@ -1837,7 +1837,7 @@ static void heart::updateVSS(uint32_t thisVSStime)
 #endif // defined(useVehicleParameters)
 	}
 
-	dirty |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read
+	bitFlags[(uint16_t)(bfDirty)] |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read
 	watchdogVSSCount = volatileVariables[(uint16_t)(vDetectVehicleStopIdx)]; // reset minimum engine speed watchdog timer
 	lastVSStime = thisVSStime;
 
@@ -1974,9 +1974,9 @@ static void heart::initCore(void)
 	ACSR |= (1 << ACD); // disable analog comparator module
 	ADCSRB &= ~(1 << ACME); // disable analog comparator multiplexer
 
-	timer0Command = t0cResetTimer;
+	bitFlags[(uint16_t)(bfTimer0Command)] = t0cResetTimer;
 #if defined(useTimer1Interrupt)
-	timer1Command = t1cResetTimer;
+	bitFlags[(uint16_t)(bfTimer1Command)] = t1cResetTimer;
 #endif // defined(useTimer1Interrupt)
 
 	SREG = oldSREG; // restore interrupt flag status
@@ -2295,7 +2295,7 @@ static void heart::doGoDeepSleep(void)
 #if defined(useActivityLED)
 	activityLED::shutdown();
 #endif // defined(useActivityLED)
-	heart::changeBitFlags(timer0DelayFlags, 0xFF, 0); // cancel any timer0 delays in progress
+	heart::changeBitFlagBits(bfTimer0Delay, 0xFF, 0); // cancel any timer0 delays in progress
 #if defined(useTFToutput)
 	TFT::shutdown(); // shut down the TFT display
 #endif // defined(useTFToutput)
@@ -2440,7 +2440,7 @@ static void heart::wait0(uint16_t ms)
 static void heart::doDelay0(uint8_t delay0Channel)
 {
 
-	while (timer0DelayFlags & delay0Channel) idleProcess(); // wait for delay timeout
+	while (bitFlags[(uint16_t)(bfTimer0Delay)] & delay0Channel) idleMainProcess(); // wait for delay timeout
 
 }
 
@@ -2451,7 +2451,7 @@ static uint8_t heart::delay0(uint16_t ms)
 	uint8_t delay0Channel;
 	uint8_t i;
 
-	while (timer0DelayFlags == 0xFF) idleProcess(); // wait for an available timer0 channel to become available
+	while (bitFlags[(uint16_t)(bfTimer0Delay)] == 0xFF) idleMainProcess(); // wait for an available timer0 channel to become available
 
 	delay0Channel = 0x01;
 	i = 0;
@@ -2459,7 +2459,7 @@ static uint8_t heart::delay0(uint16_t ms)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	while (timer0DelayFlags & delay0Channel)
+	while (bitFlags[(uint16_t)(bfTimer0Delay)] & delay0Channel)
 	{
 
 		i++;
@@ -2469,8 +2469,8 @@ static uint8_t heart::delay0(uint16_t ms)
 
 	timer0DelayCount[(uint16_t)(i)] = ms; // request a set number of timer tick delays per millisecond
 
-	if (ms) timer0DelayFlags |= (delay0Channel); // signal request to timer
-	else timer0DelayFlags &= ~(delay0Channel);
+	if (ms) bitFlags[(uint16_t)(bfTimer0Delay)] |= (delay0Channel); // signal request to timer
+	else bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(delay0Channel);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -2486,12 +2486,36 @@ static void heart::delayS(uint16_t ms)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	timer0DelayFlags &= ~(timer0DisplayDelayFlags); // turn off all active display delays in progress
-	timer0DisplayDelayFlags = 0;
+	bitFlags[(uint16_t)(bfTimer0Delay)] &= ~(bitFlags[(uint16_t)(bfTimer0DisplayDelay)]); // turn off all active display delays in progress
+	bitFlags[(uint16_t)(bfTimer0DisplayDelay)] = 0;
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	if (ms) heart::changeBitFlags(timer0DisplayDelayFlags, 0, delay0(ms));
+	if (ms) heart::changeBitFlagBits(bfTimer0DisplayDelay, 0, delay0(ms));
+
+}
+
+static uint8_t heart::testAndResetBitFlagBit(uint8_t bitFlagIdx, uint8_t maskAND)
+{
+
+	uint8_t oldSREG;
+	uint8_t retVal;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	if (bitFlags[(uint16_t)(bitFlagIdx)] & maskAND)
+	{
+
+		bitFlags[(uint16_t)(bitFlagIdx)] &= ~(maskAND);
+		retVal = 1;
+
+	}
+	else retVal = 0;
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	return retVal;
 
 }
 
@@ -2500,20 +2524,6 @@ static void heart::delayS(uint16_t ms)
 //    be treated as atomic (!) because only one side or the other is supposed to change said variables
 // however, status flag registers are obviously an exception, and status flag changes are common
 //    enough to warrant an explicit function definition
-static void heart::changeBitFlags(volatile uint8_t &flagRegister, uint8_t maskAND, uint8_t maskOR)
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	flagRegister = (flagRegister & ~(maskAND)) | (maskOR); // go perform atomic status flag change
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
 static void heart::changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR)
 {
 

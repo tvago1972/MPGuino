@@ -27,22 +27,7 @@ static const uint8_t accelTestParamList[] PROGMEM = {
 	pVehicleMassIdx,
 };
 
-#if defined(useDebugTerminal)
-const char terminalAccelerationFlagStr[] PROGMEM = {
-	"accelerationFlags: " tcEOS
-	"ACTIVE" tcOTOG "dormant" tcEOS
-	"TRIGGERED" tcOTOG "0" tcEOS
-	"CANCELLED" tcOTOG "0" tcEOS
-	"FINISHED" tcOTOG "0" tcEOS
-	"FULL-SPEED" tcOTOG "fsreached" tcEOS
-	"HALF-SPEED" tcOTOG "hsreached" tcEOS
-	"DISTANCE" tcOTOG "distancereached" tcEOS
-	"1" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useDebugTerminal)
-static volatile uint8_t accelerationFlags;
-
+// bit flags for use with bfAccelerationFlags
 static const uint8_t accelTestActive =				0b10000000;
 static const uint8_t accelTestTriggered =			0b01000000;
 static const uint8_t accelTestCancelled =			0b00100000;

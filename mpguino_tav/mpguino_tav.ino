@@ -449,7 +449,7 @@ static const char dateMPGuino[] PROGMEM = {
 	"2023-AUG-14" tcEOSCR
 };
 
-static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
+static void idleMainProcess(void); // place all time critical main program internal functionality here - no I/O!
 int main(void);
 
 #include "configs.h"
@@ -495,42 +495,41 @@ int main(void);
 //
 // said internal operations would hopelessly bog down interrupt handlers, were they loaded with these internal operations
 //
-static void idleProcess(void)
+static void idleMainProcess(void)
 {
 
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	uint32_t idleStart;
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(0);
 
 #endif // defined(useActivityLED)
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	idleStart = heart::cycles0(); // record starting time
+#if defined(useDebugCPUreading)
+	mainProgramVariables[(uint16_t)(mpDbgWorkingIdleStartIdx)] = heart::cycles0(); // record starting time
 
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+#endif // defined(useDebugCPUreading)
 	heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	idleTimerLength += heart::findCycle0Length(idleStart);
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
-	idleStart = heart::cycles0(); // record starting time
+	systemInfo::transferCycle0Length(mpDbgWorkingSleepModeIdx, mpDbgWorkingIdleStartIdx);
 
 #endif // defined(useDebugCPUreading)
 #if defined(useActivityLED)
 	activityLED::output(1);
 
 #endif // defined(useActivityLED)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	mainProgramVariables[(uint16_t)(mpCPUworkingIdleStartIdx)] = heart::cycles0(); // record starting time
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	// this is the part of the main loop that only executes twice a second (or what is defined by loopsPerSecond), to collect and process readings
-	if (timer0Status & t0sTakeSample) // if main timer has commanded a sample be taken
+	if (heart::testAndResetBitFlagBit(bfTimer0Status, t0sTakeSample)) // if main timer has commanded a sample be taken
 	{
 
-		heart::changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
-
 #if defined(useCPUreading) || defined(useDebugCPUreading)
+		systemInfo::transferCycle0Length(mpCPUworkingIdleProcessIdx, mpCPUworkingIdleStartIdx);
+#if defined(useDebugCPUreading)
+		systemInfo::transferCycle0Length(mpDbgWorkingIdleSampleIdx, mpDbgWorkingIdleStartIdx);
+#endif // defined(useDebugCPUreading)
+
 		systemInfo::idleProcess();
 
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
@@ -538,34 +537,22 @@ static void idleProcess(void)
 
 	}
 
+#if defined(useDebugCPUreading)
+	systemInfo::transferCycle0Length(mpDbgWorkingIdleSampleIdx, mpDbgWorkingIdleStartIdx);
+
+#endif // defined(useDebugCPUreading)
 #if defined(useAnalogRead)
 #if defined(useChryslerMAPCorrection)
-	if (analogStatus & asReadMAPchannel)
-	{
-
-		heart::changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
-
-		SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
-
-	}
+	if (heart::testAndResetBitFlagBit(bfAnalogStatus, asReadMAPchannel)) SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useChryslerBaroSensor)
-	if (analogStatus & asReadBaroChannel)
-	{
-
-		heart::changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
-
-		SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
-
-	}
+	if (heart::testAndResetBitFlagBit(bfAnalogStatus, asReadBaroChannel)) SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
 
 #endif // defined(useChryslerBaroSensor)
 #if defined(useAnalogButtons)
-	if (analogStatus & asReadButtonChannel)
+	if (heart::testAndResetBitFlagBit(bfAnalogStatus, asReadButtonChannel))
 	{
-
-		heart::changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
 
 		for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 		{
@@ -586,42 +573,35 @@ static void idleProcess(void)
 	}
 
 #endif // defined(useAnalogButtons)
-#endif // useAnalogRead
-#if defined(useDragRaceFunction)
-	if (timer0Status & t0sAccelTestFlag)
-	{
-
-		heart::changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
-
-		accelerationTest::idleProcess();
-
-	}
-
-#endif // defined(useDragRaceFunction)
-#if defined(useSimulatedFIandVSS)
-	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
-	{
-
-		heart::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
-
-		signalSim::idleProcessFuel();
-
-	}
-
-	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
-	{
-
-		heart::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
-
-		signalSim::idleProcessVSS();
-
-	}
-
-#endif // defined(useSimulatedFIandVSS)
+#if defined(useChryslerMAPCorrection) || defined(useChryslerBaroSensor) || defined(useAnalogButtons)
 #if defined(useDebugCPUreading)
-	idleProcessTimerLength += heart::findCycle0Length(idleStart);
+	systemInfo::transferCycle0Length(mpDbgWorkingIdleAnalogIdx, mpDbgWorkingIdleStartIdx);
 
 #endif // defined(useDebugCPUreading)
+#endif // defined(useChryslerMAPCorrection) || defined(useChryslerBaroSensor) || defined(useAnalogButtons)
+#endif // defined(useAnalogRead)
+#if defined(useDragRaceFunction)
+	if (heart::testAndResetBitFlagBit(bfTimer0Status, t0sAccelTestFlag)) accelerationTest::idleProcess();
+
+#if defined(useDebugCPUreading)
+	systemInfo::transferCycle0Length(mpDbgWorkingAccelTestIdx, mpDbgWorkingIdleStartIdx);
+
+#endif // defined(useDebugCPUreading)
+#endif // defined(useDragRaceFunction)
+#if defined(useSimulatedFIandVSS)
+	if (heart::testAndResetBitFlagBit(bfTimer1Status, t1sDebugUpdateFIP)) signalSim::idleProcessFuel();
+
+	if (heart::testAndResetBitFlagBit(bfTimer1Status, t1sDebugUpdateVSS)) signalSim::idleProcessVSS();
+
+#if defined(useDebugCPUreading)
+	systemInfo::transferCycle0Length(mpDbgWorkingSignalSimIdx, mpDbgWorkingIdleStartIdx);
+
+#endif // defined(useDebugCPUreading)
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	mainProgramVariables[(uint16_t)(mpCPUworkingIdleProcessIdx)] += heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpCPUworkingIdleStartIdx)]);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 }
 
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
@@ -631,9 +611,6 @@ int main(void)
 
 	uint8_t i;
 	uint8_t j;
-#if defined(useDebugCPUreading)
-	uint32_t displayStart;
-#endif // defined(useDebugCPUreading)
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
@@ -644,7 +621,7 @@ int main(void)
 	tripSupport::init(); // go initialize trip variable storage
 
 #if defined(useSimulatedFIandVSS)
-	debugFlags = (debugVSSflag | debugInjectorFlag);
+	bitFlags[(uint16_t)(bfSignalSimModeFlags)] = (debugVSSflag | debugInjectorFlag);
 	signalSim::configurePorts();
 
 #endif // defined(useSimulatedFIandVSS)
@@ -663,21 +640,22 @@ int main(void)
 
 #endif // defined(useSavedTrips)
 #if defined(useLCDoutput)
-	text::gotoXY(devLCD, 0, 0);
-	text::stringOut(devLCD, titleMPGuino);
-	text::stringOut(devLCD, dateMPGuino);
+	text::gotoXY(devIdxLCD, 0, 0);
+	text::stringOut(devIdxLCD, titleMPGuino);
+	text::stringOut(devIdxLCD, dateMPGuino);
 
 #endif // defined(useLCDoutput)
 #if defined(outputLoggingSplash)
-	text::stringOut(devLogOutput, titleMPGuino);
-	text::stringOut(devLogOutput, dateMPGuino);
+	text::stringOut(devIdxLogOutput, titleMPGuino);
+	text::stringOut(devIdxLogOutput, dateMPGuino);
 
 #endif // defined(outputLoggingSplash)
 #if defined(outputDebugTerminalSplash)
-	text::stringOut(devDebugTerminal, titleMPGuino);
-	text::stringOut(devDebugTerminal, dateMPGuino);
+	text::stringOut(devIdxDebugTerminal, titleMPGuino);
+	text::stringOut(devIdxDebugTerminal, dateMPGuino);
 
-	terminalState = 0;
+	terminalState = tsInitInput;
+	decWindow = 10;
 
 #endif // defined(outputDebugTerminalSplash)
 	heart::doDelay0(j); // show splash screen for 1.5 seconds
@@ -703,35 +681,24 @@ int main(void)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 #if defined(useLCDoutput)
-	if (i) text::statusOut(devLCD, PSTR("AutoRestore Done"));
+	if (i) text::statusOut(devIdxLCD, PSTR("AutoRestore Done"));
 
 #endif // defined(useLCDoutput)
 #endif // defined(useSavedTrips)
-#if defined(useCPUreading)
-	mainStart = heart::cycles0();
-	idleTimerLength = 0;
-
-#endif // defined(useCPUreading)
-#if defined(useDebugCPUreading)
-	idleProcessTimerLength = 0;
-	monitorState = 0;
-	displayTimerLength = 0;
-	SWEET64timerLength = 0;
-
-#endif // defined(useDebugCPUreading)
 	while (true)
 	{
 
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+		mainProgramVariables[(uint16_t)(mpCPUworkingMainStartIdx)] = heart::cycles0();
 #if defined(useDebugCPUreading)
-		displayStart = heart::cycles0();
-
+		mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)] = heart::cycles0();
 #endif // defined(useDebugCPUreading)
-		if (activityChangeFlags & afActivityTimeoutFlag)
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+		if (heart::testAndResetBitFlagBit(bfActivityChange, afActivityTimeoutFlag))
 		{
 
-			heart::changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
-
-			if (activityFlags & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+			if (bitFlags[(uint16_t)(bfActivity)] & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
 			{
 
 #ifdef useDeepSleep
@@ -772,42 +739,36 @@ int main(void)
 
 		}
 
-		if (activityChangeFlags & afEngineOffFlag)
+		if (heart::testAndResetBitFlagBit(bfActivityChange, afEngineOffFlag))
 		{
-
-			heart::changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
 
 #if defined(useButtonInput)
 			// if engine start is detected
-			if (((activityFlags & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
+			if (((bitFlags[(uint16_t)(bfActivity)] & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 		}
 
-		if (activityChangeFlags & afVehicleStoppedFlag)
+		if (heart::testAndResetBitFlagBit(bfActivityChange, afVehicleStoppedFlag))
 		{
-
-			heart::changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
 
 #if defined(useButtonInput)
 			// if vehicle movement is detected
-			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
+			if (((bitFlags[(uint16_t)(bfActivity)] & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
 			// if vehicle is stopped
-			if ((activityFlags & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
+			if ((bitFlags[(uint16_t)(bfActivity)] & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
 
 #endif // defined(useDragRaceFunction)
 		}
 
 #if defined(useWindowTripFilter) || defined(useSavedTrips)
-		if (activityChangeFlags & afParkFlag)
+		if (heart::testAndResetBitFlagBit(bfActivityChange, afParkFlag))
 		{
 
-			heart::changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
-
-			if (activityFlags & afParkFlag) // if MPGuino is commanded to go park
+			if (bitFlags[(uint16_t)(bfActivity)] & afParkFlag) // if MPGuino is commanded to go park
 			{
 
 #if defined(useButtonInput)
@@ -832,7 +793,7 @@ int main(void)
 #if defined(useSavedTrips)
 				i = tripSave::doAutoAction(taaModeWrite);
 #if defined(useLCDoutput)
-				if (i) text::statusOut(devLCD, PSTR("AutoSave Done"));
+				if (i) text::statusOut(devIdxLCD, PSTR("AutoSave Done"));
 #endif // defined(useLCDoutput)
 
 #endif // defined(useSavedTrips)
@@ -850,29 +811,34 @@ int main(void)
 
 #endif // defined(useBluetooth)
 #if defined(useButtonInput)
-		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
-		{
-
-			heart::changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
-
-			cursor::doCommand(); // go perform button action
-
-		}
+		if (heart::testAndResetBitFlagBit(bfTimer0Status, t0sReadButton)) cursor::doCommand(); // if any buttons were pressed, go perform button action
 
 #endif // defined(useButtonInput)
-#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
-		// this part of the main loop handles logging data output
-		if (timer0Status & t0sOutputLogging)
+#if defined(usePeriodicOutput)
+#if defined(useDebugCPUreading)
+		mainProgramVariables[(uint16_t)(mpDbgWorkingMainProcessIdx)] =+ heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)]);
+		mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)] = heart::cycles0();
+
+#endif // defined(useDebugCPUreading)
+		// this part of the main loop handles periodic data output that does not immediately respond to user input
+		if (heart::testAndResetBitFlagBit(bfTimer0Status, t0sPeriodicOutput))
 		{
 
-			heart::changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
+#if defined(useBarFuelEconVsSpeed)
+			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
 
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useOutputPins)
+			outputPin::setOutputPin1(0);
+			outputPin::setOutputPin2(1);
+
+#endif // defined(useOutputPins)
 #if defined(useDataLoggingOutput)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
 
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-			if ((awakeFlags & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
+			if ((bitFlags[(uint16_t)(bfAwake)] & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
 
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
@@ -881,23 +847,17 @@ int main(void)
 #endif // defined(useBluetooth)
 		}
 
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth)
+#endif // defined(usePeriodicOutput)
+#if defined(useDebugCPUreading)
+		mainProgramVariables[(uint16_t)(mpDbgWorkingPeriodicProcessIdx)] =+ heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)]);
+		mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)] = heart::cycles0();
+
+#endif // defined(useDebugCPUreading)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
-		if (timer0Status & t0sUpdateDisplay)
+		if (heart::testAndResetBitFlagBit(bfTimer0Status, t0sUpdateDisplay))
 		{
 
-			heart::changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
-
-#if defined(useOutputPins)
-			outputPin::setOutputPin1(0);
-			outputPin::setOutputPin2(1);
-
-#endif // defined(useOutputPins)
-#if defined(useBarFuelEconVsSpeed)
-			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
-
-#endif // defined(useBarFuelEconVsSpeed)
 			// this section handles all MPGuino activity modes
 			// engine running and vehicle in motion and a button being pressed
 			// engine not running and vehicle in motion (Engine Off Coasting) and a button being pressed
@@ -919,7 +879,7 @@ int main(void)
 			// sleep mode is exited once MPGuino detects that the engine runs OR the vehicle is in motion OR a button press occurs
 			//
 			// if the park timer setting in stored parameters is larger than the activity timer, MPGuino will skip parked mode
-			i = activityFlags & afValidFlags; // fetch a local copy of activity flags
+			i = bitFlags[(uint16_t)(bfActivity)] & afValidFlags; // fetch a local copy of activity flags
 
 			switch (i)
 			{
@@ -951,7 +911,7 @@ int main(void)
 
 				default: // handle unexpected cases
 #if defined(useLCDoutput)
-					text::hexByteOut(devLCD, i);
+					text::hexByteOut(devIdxLCD, i);
 #endif // defined(useLCDoutput)
 					break;
 
@@ -959,11 +919,14 @@ int main(void)
 
 		}
 
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
-		displayTimerLength =+ heart::findCycle0Length(displayStart);
-
+		mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayProcessIdx)] =+ heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingDisplayStartIdx)]);
 #endif // defined(useDebugCPUreading)
-		idleProcess(); // all functions are completed at this point, so wait for an interrupt to occur
+		mainProgramVariables[(uint16_t)(mpCPUworkingMainWorkingIdx)] =+ heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpCPUworkingMainStartIdx)]);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+		idleMainProcess(); // all functions are completed at this point, so wait for an interrupt to occur
 
 	}
 

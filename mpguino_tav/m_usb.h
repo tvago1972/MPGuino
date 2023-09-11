@@ -18,8 +18,6 @@ namespace usbDevice
 
 };
 
-device_t devUSB;
-
 // the time remaining before we transmit any partially full
 // packet, or send a zero length packet.
 static volatile uint8_t transmit_flush_timer;

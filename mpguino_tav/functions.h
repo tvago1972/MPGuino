@@ -146,7 +146,9 @@ static const uint8_t tParseCharacterToReg =			nextAllowedValue;
 #define nextAllowedValue tParseCharacterToReg + 1
 #endif //defined(useDebugTerminal)
 
-#if defined(useDebugTerminalLabels) || defined(useSWEET64trace)
+static const uint8_t dfMaxValTotalCount =			nextAllowedValue;				// maximum index for all indexed programs
+
+#if defined(useDebugTerminalLabels)
 static const char terminalTripFuncNames[] PROGMEM = {
 	"tEngineRunTime" tcEOS				// engine runtime (hhmmss)
 	"tRangeTime" tcEOS					// estimated total runtime from full tank (hhmmss)
@@ -210,9 +212,41 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tDragSpeed" tcEOS					// acceleration test maximum vehicle speed (SI/SAE)
 	"tTrapSpeed" tcEOS					// acceleration test vehicle speed at defined distance (SI/SAE)
 #endif // defined(useDragRaceFunction)
+#if defined(useBluetooth)
+	"tGetBTparameterValue" tcEOS
+	"tFetchMainProgramValue" tcEOS
+#endif // defined(useBluetooth)
+	"tCalculateRemainingTank" tcEOS		// calculate estimated remaining fuel quantity in injector open cycles
+	"tCalculateRemainingReserve" tcEOS	// calculate estimated remaining fuel reserve value in injector open cycles
+	"tCalculateBingoFuel" tcEOS			// calculate estimated fuel bingo value in injector open cycles
+	"tConvertToMicroSeconds" tcEOS
+	"tCalculateFuelQuantity" tcEOS
+	"tCalculateFuelDistance" tcEOS
+	"tCalculateFuelTime" tcEOS
+	"tCalculateSpeed" tcEOS
+	"tFormatToHHMMSStime" tcEOS
+	"tFormatToH9MMSStime" tcEOS
+	"tFormatToNumber" tcEOS
+	"tRoundOffNumber" tcEOS
+	"tLoadTrip" tcEOS
+	"tSaveTrip" tcEOS
+	"tReadTicksToSeconds" tcEOS
+#if defined(useBarFuelEconVsTime)
+	"tFEvTgetDistance" tcEOS
+	"tFEvTgetConsumedFuel" tcEOS
+	"tFEvTgetFuelEconomy" tcEOS
+#endif // defined(useBarFuelEconVsTime)
+#if defined(useBarFuelEconVsSpeed)
+	"tFEvSgetDistance" tcEOS
+	"tFEvSgetConsumedFuel" tcEOS
+	"tFEvSgetFuelEconomy" tcEOS
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useDebugTerminal)
+	"tParseCharacterToReg" tcEOS
+#endif // defined(useDebugTerminal)
 };
 
-#endif // defined(useDebugTerminalLabels) || defined(useSWEET64trace)
+#endif // defined(useDebugTerminalLabels)
 static const uint8_t prgmEngineSpeed[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse time into register 2
 	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of injector fire events per 2 crank revolutions
@@ -290,22 +324,37 @@ static const uint8_t prgmDistance[] PROGMEM = {
 };
 
 static const uint8_t prgmSpeed[] PROGMEM = {			// tSpeed - vehicle speed (SI/SAE)
-	instrLdRegTripVarIndexed, 0x01, rvVSSpulseIdx,		// load VSS pulse count
+	instrLdRegTripVarIndexed, 0x03, rvVSSpulseIdx,		// load VSS pulse count
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrJump, tCalculateSpeed							// go calculate speed
 };
 
 static const uint8_t prgmCalculateSpeed[] PROGMEM = {	// tCalculateSpeed - 
-	instrBranchIfZero, 11,								// if speed measurement is zero, exit to caller
+	instrBranchIfZero, 16,								// if speed measurement is zero, exit to caller
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// set up to convert pulses per unit distance
-	instrSwapReg, 0x21,									// save denominator term for later, load numerator
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
-	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
-	instrMul2byConst, idxSecondsPerHour,				// set up to convert VSS time in seconds to time in hours
+	instrCmpXtoMain, 0x02, mpLargeSpeedFactorIdx,		// compare denominator to large speed factor
+	instrBranchIfGT, 10,								// if numerator is larger, perform second round of checking
+	instrDiv2byConst, idxCycles0PerHour,				// divide by timer0 clock cycles per hour
+	instrSwapReg, 0x23,									// save denominator term for later, load numerator
+	instrMul2byConst, idxDecimalPoint,					// adjust numerator by decimal formatting term
+	instrSwapReg, 0x31,									// swap denominator term to denominator
 	instrDiv2by1,										// divide to obtain unit distance per hour
+//cont0:
+	instrDone,											// exit to caller
 
 //cont:
-	instrDone											// exit to caller
+	instrCmpXtoConst, 0x02, idxCycles0PerHour,			// compare denominator to timer0 clock cycles per hour
+	instrBranchIfGT, 10,								// if numerator is larger, perform second round of checking
+	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycle0s per second
+	instrSwapReg, 0x23,									// save denominator term for later, load numerator
+	instrMul2byConst, idxSecondsPerHour,				// adjust numerator by seconds per hour
+	instrMul2byConst, idxDecimalPoint,					// adjust numerator by decimal formatting term
+	instrSkip, 237,										// go perform divide
+
+//cont2:
+	instrSwapReg, 0x23,									// save denominator term for later, load numerator
+	instrMul2byMain, mpLargeSpeedFactorIdx,				// adjust numerator by large speed factor
+	instrSkip, 231										// go perform divide
 };
 
 static const uint8_t prgmFuelUsed[] PROGMEM = {			// tFuelUsed - fuel quantity used (SI/SAE)
@@ -952,14 +1001,14 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
 static const uint8_t prgmDragSpeed[] PROGMEM = {		// tDragSpeed - acceleration test maximum vehicle speed (SI/SAE)
-	instrLdRegByte, 0x01, 1,							// load 1 pulse into numerator term
+	instrLdRegByte, 0x03, 1,							// load 1 pulse into numerator term
 	instrLdRegVolatile, 0x02, vDragInstantSpeedIdx,		// load instantaneous drag speed measurement into denominator term
 	instrTestReg, 0x02,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
 };
 
 static const uint8_t prgmTrapSpeed[] PROGMEM = {		// tTrapSpeed - acceleration test vehicle speed at defined distance (SI/SAE)
-	instrLdRegByte, 0x01, 1,							// load 1 pulse into numerator term
+	instrLdRegByte, 0x03, 1,							// load 1 pulse into numerator term
 	instrLdRegVolatile, 0x02, vDragTrapSpeedIdx,		// load instantaneous trap speed measurement into denominator term
 	instrTestReg, 0x02,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
@@ -1104,7 +1153,7 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	prgmFEvSgetFuelEconomy,						// tFEvSgetFuelEconomy
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useDebugTerminal)
-	prgmParseCharacterToReg,
+	prgmParseCharacterToReg,					// tParseCharacterToReg
 #endif //defined(useDebugTerminal)
 };
 
@@ -1209,9 +1258,9 @@ static const char calcFormatLabels[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 
 	"MPG" tcEOS						// SAE fuel economy
-	"L/100km" tcEOS					// SI fuel economy
+	"KPL" tcEOS						// alternate SI fuel economy
 	"gal/100miles" tcEOS			// alternate SAE fuel economy
-	"LPK" tcEOS						// alternate SI fuel economy
+	"L/100km" tcEOS					// SI fuel economy
 };
 
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
@@ -1255,9 +1304,9 @@ static const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PR
 #endif // defined(useDragRaceFunction)
 
 	(2 << 4) |	1,	// SAE fuel economy
-	(2 << 4) |	1,	// SI fuel economy
-	(2 << 4) |	1,	// alternate SAE fuel economy
 	(2 << 4) |	1,	// alternate SI fuel economy
+	(2 << 4) |	1,	// alternate SAE fuel economy
+	(2 << 4) |	1,	// SI fuel economy
 };
 
 static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
@@ -1300,9 +1349,9 @@ static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGME
 #endif // defined(useDragRaceFunction)
 
 	'E',	// SAE fuel economy
-	'E',	// SI fuel economy
-	'E',	// alternate SAE fuel economy
 	'E',	// alternate SI fuel economy
+	'E',	// alternate SAE fuel economy
+	'E',	// SI fuel economy
 };
 
 static const uint8_t isValidTripIdx =	0b10100000;
@@ -1425,17 +1474,17 @@ static const uint8_t calcFormatLabelCGRAM[(uint16_t)(calcFormatListCount)][16] P
 	{0b00011011, 0b00010101, 0b00010101, 0b00000000, 0b00000110, 0b00000101, 0b00000110, 0b00000100
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010100, 0b00001100},
 
-	// liters per 100 km
-	{0b00010000, 0b00010000, 0b00011001, 0b00000010, 0b00000100, 0b00001001, 0b00000001, 0b00000001
-	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011111, 0b00010101, 0b00011111},
+	// km per liter
+	{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
+	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00010000, 0b00011100},
 
 	// gallons per 100 miles
 	{0b00001100, 0b00010000, 0b00010100, 0b00001101, 0b00000010, 0b00000101, 0b00001001, 0b00000001
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011111, 0b00010101, 0b00011111},
 
-	// km per liter
-	{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
-	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00010000, 0b00011100},
+	// liters per 100 km
+	{0b00010000, 0b00010000, 0b00011001, 0b00000010, 0b00000100, 0b00001001, 0b00000001, 0b00000001
+	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011111, 0b00010101, 0b00011111},
 };
 
 #endif // defined(useSpiffyTripLabels)

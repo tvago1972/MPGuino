@@ -345,7 +345,7 @@ static void tripSupport::idleProcess(void)
 #endif // defined(trackIdleEOCdata)
 
 #if defined(useWindowTripFilter)
-	if (awakeFlags & aAwakeOnVehicle)
+	if (bitFlags[(uint16_t)(bfAwake)] & aAwakeOnVehicle)
 	{
 
 		wtpCurrentIdx++;
@@ -454,7 +454,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
+			text::stringOut(devIdxLCD, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -484,15 +484,15 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (thisCursorPos == tsfAddPartialIdx)
 			{
 
-				text::stringOut(devLCD, pBuff); // output supplementary information
-				text::newLine(devLCD); // clear to the end of the line
+				text::stringOut(devIdxLCD, pBuff); // output supplementary information
+				text::newLine(devIdxLCD); // clear to the end of the line
 
 			}
 
 #endif //  defined(usePartialRefuel)
 #if defined(useSavedTrips)
 			if ((thisCursorPos == tsfCurrentLoadIdx) || (thisCursorPos == tsfTankLoadIdx))
-				text::stringOutIf(devLCD, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
+				text::stringOutIf(devIdxLCD, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
 
 #endif //  defined(useSavedTrips)
 			break;
@@ -510,9 +510,9 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 					break;
 
 				case tsfZeroPartialIdx:
-					SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-					parameterEdit::onEEPROMchange(prgmWriteParameterValue, numberEditObj.parameterIdx);
-					text::statusOut(devLCD, PSTR("PartialFuel RST"));
+					SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
+					EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx);
+					text::statusOut(devIdxLCD, PSTR("PartialFuel RST"));
 					break;
 
 #endif //  defined(usePartialRefuel)
@@ -520,14 +520,14 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 				case tsfCurrentSaveIdx:
 				case tsfTankSaveIdx:
 					doWriteTrip(thisTripSlot);
-					text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
+					text::statusOut(devIdxLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
 					break;
 
 				case tsfCurrentLoadIdx:
 				case tsfTankLoadIdx:
 					i = doReadTrip(thisTripSlot);
-					if (i) text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
-					else text::statusOut(devLCD, PSTR("Nothing to load"));
+					if (i) text::statusOut(devIdxLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
+					else text::statusOut(devIdxLCD, PSTR("Nothing to load"));
 					break;
 
 				case tsfCurrentResetIdx: // current trip reset
@@ -611,12 +611,12 @@ static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 {
 
-	metricFlag &= ~(EEPROMbulkChangeFlag);
+	bitFlags[(uint16_t)(bfEEPROMchangeStatus)] &= ~(ecsEEPROMchangeDetected);
 
 	if (tripSlot) SWEET64::runPrgm(prgmSaveTankToEEPROM, 0);
 	else SWEET64::runPrgm(prgmSaveCurrentToEEPROM, 0);
 
-	return (metricFlag & EEPROMbulkChangeFlag);
+	return (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsEEPROMchangeDetected);
 
 }
 
@@ -642,7 +642,7 @@ static void tripSupport::resetTank(void)
 static void tripSupport::outputResetStatus(uint8_t tripSlot)
 {
 
-	text::statusOut(devLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
+	text::statusOut(devIdxLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
 
 }
 
@@ -714,7 +714,7 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
+			text::statusOut(devIdxLCD, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0);

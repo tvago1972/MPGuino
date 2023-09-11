@@ -5,7 +5,7 @@ static void LCD::init(void)
 {
 
 #if defined(useSerialLCD)
-	devLCDserial.controlFlags &= ~(odvFlagCRLF);
+	bitFlags[(uint16_t)(devIdxLCDserial)] &= ~(odvFlagCRLF);
 
 	heart::wait0(delay0Tick100ms); // wait for 100 ms to allow serial LCD to initialize
 
@@ -16,11 +16,10 @@ static void LCD::init(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	devLCD.chrOut = LCD::writeData;
-	devLCD.controlFlags |= (odvFlagEnableOutput);
+	text::initDev(devIdxLCD, (odvFlagEnableOutput), writeData);
 
 	lcdDelayCount = 0; // reset LCD delay count
-	timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
+	bitFlags[(uint16_t)(bfTimer1Command)] &= ~(t1cDelayLCD); // turn off LCD delay
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -511,9 +510,9 @@ static void LCD::writeData(uint8_t value)
 
 		case 0x0D: // carriage return with clreol
 #if defined(blankScreenOnMessage)
-			if (timer0DisplayDelayFlags == 0)
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0)
 #else // defined(blankScreenOnMessage)
-			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
+			if ((bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
 			{
 
@@ -553,7 +552,7 @@ static void LCD::writeData(uint8_t value)
 			value &= 0x7F;
 			LCDaddressY = value / 20;
 			LCDaddressX = value % 20;
-			if (devLCD.controlFlags & odvFlagDoubleHeight) LCDaddressY += 2;
+			if (bitFlags[(uint16_t)(devIdxLCD)] & odvFlagDoubleHeight) LCDaddressY += 2;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -581,9 +580,9 @@ static void LCD::writeData(uint8_t value)
 		case 0x00 ... 0x07: // print defined CGRAM characters 0 through 7
 		case 0x20 ... 0x7F: // print normal characters
 #if defined(blankScreenOnMessage)
-			if (timer0DisplayDelayFlags == 0)
+			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0)
 #else // defined(blankScreenOnMessage)
-			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
+			if ((bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) || (LCDaddressY))
 #endif // defined(blankScreenOnMessage)
 			{
 
@@ -679,7 +678,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 	uint8_t oldSREG;
 
 #endif // defined(usePort4BitLCD)
-	while (timer1Command & t1cDelayLCD) idleProcess(); // wait for LCD timer delay to complete
+	while (bitFlags[(uint16_t)(bfTimer1Command)] & t1cDelayLCD) idleMainProcess(); // wait for LCD timer delay to complete
 
 #if defined(useTWI4BitLCD)
 	if (flags & lcdSendNybble)
@@ -720,7 +719,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 #endif // defined(useTWI4BitLCD)
 #endif // defined(useLCDbufferedOutput)
 
-	heart::changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
+	heart::changeBitFlagBits(bfTimer1Command, 0, t1cDelayLCD); // enable LCD delay
 
 }
 

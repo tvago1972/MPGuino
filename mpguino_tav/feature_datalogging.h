@@ -16,17 +16,17 @@ static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_
 namespace JSONsupport /* JSON formatting support section prototype */
 {
 
-	static void init(device_t &dev);
-	static void openElement(device_t &dev, uint8_t elementType);
-	static void openKey(device_t &dev, const char * str, uint8_t elementType);
-	static void closeElement(device_t &dev);
-	static void closeElementInternal(device_t &dev);
-	static void outputElementStart(device_t &dev, uint8_t elementType);
-	static void outputElementNext(device_t &dev, uint8_t elementType);
-	static void outputElementEnd(device_t &dev);
-	static void outputNumber(device_t &dev, uint8_t tripIdx, uint8_t calcIdx);
-	static void outputNumber(device_t &dev, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces);
-	static void outputNumber(device_t &dev, uint32_t an, uint8_t decimalPlaces);
+	static void init(uint8_t devIdx);
+	static void openElement(uint8_t devIdx, uint8_t elementType);
+	static void openKey(uint8_t devIdx, const char * str, uint8_t elementType);
+	static void closeElement(uint8_t devIdx);
+	static void closeElementInternal(uint8_t devIdx);
+	static void outputElementStart(uint8_t devIdx, uint8_t elementType);
+	static void outputElementNext(uint8_t devIdx, uint8_t elementType);
+	static void outputElementEnd(uint8_t devIdx);
+	static void outputNumber(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx);
+	static void outputNumber(uint8_t devIdx, const uint8_t * sched, uint8_t tripIdx, uint8_t decimalPlaces);
+	static void outputNumber(uint8_t devIdx, uint32_t an, uint8_t decimalPlaces);
 
 };
 

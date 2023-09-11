@@ -18,7 +18,7 @@
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
 #define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
-#define useBluetooth true					// bluetooth interface with Android phone
+//#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
 //   - if useDataLoggingOutput is not selected, the below output port options will be ignored
@@ -26,7 +26,7 @@
 //
 //#define useLoggingSerialPort0 true			// select logging output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
 //#define useLoggingSerialPort1 true			// select logging output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
-//#define useLoggingSerialPort2 true			// select logging output on serial port channel 2 (ATmega2560 board)
+#define useLoggingSerialPort2 true			// select logging output on serial port channel 2 (ATmega2560 board)
 //#define useLoggingSerialPort3 true			// select logging output on serial port channel 3 (ATmega2560 board)
 //#define useLoggingSerialUSB true			// select logging output on USB CDC output (TinkerKit! LCD module)
 
@@ -35,7 +35,7 @@
 //   - if useJSONoutput is selected, choose only one of the below output port options, or an error will result
 //
 //#define useJSONserialPort0 true			// select JSON output on serial port channel 0 (most Arduino boards, excluding TinkerKit! LCD module)
-//#define useJSONserialPort1 true			// select JSON output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
+#define useJSONserialPort1 true			// select JSON output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useJSONserialPort2 true			// select JSON output on serial port channel 2 (ATmega2560 board)
 //#define useJSONserialPort3 true			// select JSON output on serial port channel 3 (ATmega2560 board)
 //#define useJSONserialUSB true			// select JSON output on USB CDC output (TinkerKit! LCD module)
@@ -62,7 +62,7 @@
 
 // options for debugging terminal interface between PC and MPGuino
 //   - mainly used to conserve space on ATmega328/128 and ATmega32U4 boards
-//   - useDebugTerminalHelp and useDebugTerminalLabels will automatically be chosen for ATmega2560 boards
+//   - useDebugTerminalHelp, useDebugTerminalLabels, and useDebugTerminalSWEET64 will automatically be chosen for ATmega2560 boards
 //   - if a hardware button option is already selected, useDebugButtonInjection will also be automatically chosen for ATmega2560 boards
 //   - an LCD display option must be selected with useDebugButtonInjection, or a configuration error will result
 //
@@ -70,7 +70,7 @@
 //#define useDebugTerminalLabels true			// nice labels for various terminal interface output lists
 //#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading
-//#define useSWEET64trace true				// (inw) Ability to view real-time 64-bit calculations from SWEET64 kernel - requires useDebugTerminal
+//#define useDebugTerminalSWEET64 true		// support for listing and tracing indexed SWEET64-defined functions
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //
@@ -383,6 +383,10 @@
 #define useLCDgraphics true
 #endif // defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
 
+#if defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth) || defined(useOutputPins) || defined(useBarFuelEconVsSpeed)
+#define usePeriodicOutput true
+#endif // defined(useDataLoggingOutput) || defined(useJSONoutput) || defined(useBluetooth) || defined(useOutputPins) || defined(useBarFuelEconVsSpeed)
+
 #ifdef useCalculatedFuelFactor
 #define useIsqrt true
 #define usePressure true
@@ -479,6 +483,7 @@
 #if defined(__AVR_ATmega2560__)
 #define useDebugTerminalHelp true
 #define useDebugTerminalLabels true
+#define useDebugTerminalSWEET64 true
 #define useIsqrt true
 #define usePressure true
 #define useBuffering true
@@ -492,10 +497,10 @@
 #undef useDebugTerminalSerialUSB
 #undef useDebugTerminalBufferedOutput
 #undef useDebugButtonInjection
-#undef useDebugTerminalLabels
 #undef useDebugTerminalHelp
+#undef useDebugTerminalLabels
+#undef useDebugTerminalSWEET64
 #undef useDebugCPUreading
-#undef useSWEET64trace
 #endif // defined(useDebugTerminal)
 
 #if defined(useLCDserialPort0)
@@ -507,7 +512,7 @@
 #endif // !defined(useLCDserialBaudRate)
 #define useSerial0Port true
 #define serial0BaudRate useLCDserialBaudRate
-#define devLCDserial devSerial0
+#define devIdxLCDserial devIdxSerial0
 #define LCDserialPort serial0
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
@@ -528,7 +533,7 @@
 #endif // !defined(useLCDserialBaudRate)
 #define useSerial1Port true
 #define serial1BaudRate useLCDserialBaudRate
-#define devLCDserial devSerial1
+#define devIdxLCDserial devIdxSerial1
 #define LCDserialPort serial1
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
@@ -549,7 +554,7 @@
 #endif // !defined(useLCDserialBaudRate)
 #define useSerial2Port true
 #define serial2BaudRate useLCDserialBaudRate
-#define devLCDserial devSerial2
+#define devIdxLCDserial devIdxSerial2
 #define LCDserialPort serial2
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
@@ -570,7 +575,7 @@
 #endif // !defined(useLCDserialBaudRate)
 #define useSerial3Port true
 #define serial3BaudRate useLCDserialBaudRate
-#define devLCDserial devSerial3
+#define devIdxLCDserial devIdxSerial3
 #define LCDserialPort serial3
 #if defined(useLCDbufferedOutput)
 #undef useLCDbufferedOutput
@@ -589,7 +594,7 @@
 #define useSerial0Port true
 #define useSerial0PortInput true
 #define serial0BaudRate useBluetoothSerialBaudRate
-#define devBluetooth devSerial0
+#define devIdxBluetooth devIdxSerial0
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial0Port true
 #define rbIdxBluetoothSerial rbIdxSerial0Out
@@ -609,7 +614,7 @@
 #define useSerial1Port true
 #define useSerial1PortInput true
 #define serial1BaudRate useBluetoothSerialBaudRate
-#define devBluetooth devSerial1
+#define devIdxBluetooth devIdxSerial1
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial1Port true
 #define rbIdxBluetoothSerial rbIdxSerial1Out
@@ -629,7 +634,7 @@
 #define useSerial2Port true
 #define useSerial2PortInput true
 #define serial2BaudRate useBluetoothSerialBaudRate
-#define devBluetooth devSerial2
+#define devIdxBluetooth devIdxSerial2
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial2Port true
 #define rbIdxBluetoothSerial rbIdxSerial2Out
@@ -649,7 +654,7 @@
 #define useSerial3Port true
 #define useSerial3PortInput true
 #define serial3BaudRate useBluetoothSerialBaudRate
-#define devBluetooth devSerial3
+#define devIdxBluetooth devIdxSerial3
 #if defined(useBluetoothBufferedOutput)
 #define useBufferedSerial3Port true
 #define rbIdxBluetoothSerial rbIdxSerial3Out
@@ -671,7 +676,7 @@
 #endif // !defined(useLoggingSerialBaudRate)
 #define useSerial0Port true
 #define serial0BaudRate useLoggingSerialBaudRate
-#define devLogOutput devSerial0
+#define devIdxLogOutput devIdxSerial0
 #define outputLoggingSplash true
 #if defined(useLoggingBufferedOutput)
 #define useBufferedSerial0Port true
@@ -690,7 +695,7 @@
 #endif // !defined(useLoggingSerialBaudRate)
 #define useSerial1Port true
 #define serial1BaudRate useLoggingSerialBaudRate
-#define devLogOutput devSerial1
+#define devIdxLogOutput devIdxSerial1
 #define outputLoggingSplash true
 #if defined(useLoggingBufferedOutput)
 #define useBufferedSerial1Port true
@@ -709,7 +714,7 @@
 #endif // !defined(useLoggingSerialBaudRate)
 #define useSerial2Port true
 #define serial2BaudRate useLoggingSerialBaudRate
-#define devLogOutput devSerial2
+#define devIdxLogOutput devIdxSerial2
 #define outputLoggingSplash true
 #if defined(useLoggingBufferedOutput)
 #define useBufferedSerial2Port true
@@ -728,7 +733,7 @@
 #endif // !defined(useLoggingSerialBaudRate)
 #define useSerial3Port true
 #define serial3BaudRate useLoggingSerialBaudRate
-#define devLogOutput devSerial3
+#define devIdxLogOutput devIdxSerial3
 #define outputLoggingSplash true
 #if defined(useLoggingBufferedOutput)
 #define useBufferedSerial3Port true
@@ -743,7 +748,7 @@
 #error *** Cannot use ATmega2560 hardware and useLoggingSerialUSB!!! ***
 #endif // defined(__AVR_ATmega2560__)
 #define useUSBserial true
-#define devLogOutput devUSB
+#define devIdxLogOutput devIdxUSB
 #define outputLoggingSplash true
 #endif // defined(useLoggingSerialUSB)
 
@@ -756,7 +761,7 @@
 #endif // !defined(useJSONserialBaudRate)
 #define useSerial0Port true
 #define serial0BaudRate useJSONserialBaudRate
-#define devJSONoutput devSerial0
+#define devIdxJSONoutput devIdxSerial0
 #if defined(useJSONbufferedOutput)
 #define useBufferedSerial0Port true
 #endif // defined(useJSONbufferedOutput)
@@ -774,7 +779,7 @@
 #endif // !defined(useJSONserialBaudRate)
 #define useSerial1Port true
 #define serial1BaudRate useJSONserialBaudRate
-#define devJSONoutput devSerial1
+#define devIdxJSONoutput devIdxSerial1
 #if defined(useJSONbufferedOutput)
 #define useBufferedSerial1Port true
 #endif // defined(useJSONbufferedOutput)
@@ -792,7 +797,7 @@
 #endif // !defined(useJSONserialBaudRate)
 #define useSerial2Port true
 #define serial2BaudRate useJSONserialBaudRate
-#define devJSONoutput devSerial2
+#define devIdxJSONoutput devIdxSerial2
 #if defined(useJSONbufferedOutput)
 #define useBufferedSerial2Port true
 #endif // defined(useJSONbufferedOutput)
@@ -810,7 +815,7 @@
 #endif // !defined(useJSONserialBaudRate)
 #define useSerial3Port true
 #define serial3BaudRate useJSONserialBaudRate
-#define devJSONoutput devSerial3
+#define devIdxJSONoutput devIdxSerial3
 #if defined(useJSONbufferedOutput)
 #define useBufferedSerial3Port true
 #endif // defined(useJSONbufferedOutput)
@@ -824,7 +829,7 @@
 #error *** Cannot use ATmega2560 hardware and useJSONserialUSB!!! ***
 #endif // defined(__AVR_ATmega2560__)
 #define useUSBserial true
-#define devJSONoutput devUSB
+#define devIdxJSONoutput devIdxUSB
 #endif // defined(useJSONserialUSB)
 
 #if defined(useDebugTerminalSerialPort0)
@@ -837,7 +842,7 @@
 #define useSerial0Port true
 #define useSerial0PortInput true
 #define serial0BaudRate useDebugTerminalSerialBaudRate
-#define devDebugTerminal devSerial0
+#define devIdxDebugTerminal devIdxSerial0
 #define outputDebugTerminalSplash true
 #if defined(useDebugTerminalBufferedOutput)
 #define useBufferedSerial0Port true
@@ -857,7 +862,7 @@
 #define useSerial1Port true
 #define useSerial1PortInput true
 #define serial1BaudRate useDebugTerminalSerialBaudRate
-#define devDebugTerminal devSerial1
+#define devIdxDebugTerminal devIdxSerial1
 #define outputDebugTerminalSplash true
 #if defined(useDebugTerminalBufferedOutput)
 #define useBufferedSerial1Port true
@@ -877,7 +882,7 @@
 #define useSerial2Port true
 #define useSerial2PortInput true
 #define serial2BaudRate useDebugTerminalSerialBaudRate
-#define devDebugTerminal devSerial2
+#define devIdxDebugTerminal devIdxSerial2
 #define outputDebugTerminalSplash true
 #if defined(useDebugTerminalBufferedOutput)
 #define useBufferedSerial2Port true
@@ -897,7 +902,7 @@
 #define useSerial3Port true
 #define useSerial3PortInput true
 #define serial3BaudRate useDebugTerminalSerialBaudRate
-#define devDebugTerminal devSerial3
+#define devIdxDebugTerminal devIdxSerial3
 #define outputDebugTerminalSplash true
 #if defined(useDebugTerminalBufferedOutput)
 #define useBufferedSerial3Port true
@@ -912,7 +917,7 @@
 #error *** Cannot use ATmega2560 hardware and useDebugTerminalSerialUSB!!! ***
 #endif // defined(__AVR_ATmega2560__)
 #define useUSBserial true
-#define devDebugTerminal devUSB
+#define devIdxDebugTerminal devIdxUSB
 #define outputDebugTerminalSplash true
 #endif // defined(useDebugTerminalSerialUSB)
 

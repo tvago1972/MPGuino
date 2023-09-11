@@ -1,46 +1,63 @@
 /* text support section */
 
-static uint8_t text::charIn(device_t &dev)
+static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void))
+{
+
+	deviceDefs[(uint16_t)(devIdx)].chrOut = charOut;
+	deviceDefs[(uint16_t)(devIdx)].chrIn = charIn;
+	bitFlags[(uint16_t)(devIdx)] |= (devStatus);
+
+}
+
+static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t))
+{
+
+	deviceDefs[(uint16_t)(devIdx)].chrOut = charOut;
+	bitFlags[(uint16_t)(devIdx)] |= (devStatus);
+
+}
+
+static uint8_t text::chrIn(uint8_t devIdx)
 {
 
 	uint8_t retVal;
 
-	if (dev.chrIn) retVal = dev.chrIn();
+	if (deviceDefs[(uint16_t)(devIdx)].chrIn) retVal = deviceDefs[(uint16_t)(devIdx)].chrIn();
 	else retVal = 0;
 
 	return retVal;
 
 }
 
-static void text::gotoXY(device_t &dev, uint8_t xPos, uint8_t yPos)
+static void text::gotoXY(uint8_t devIdx, uint8_t xPos, uint8_t yPos)
 {
 
-	charOut(dev, 0x80 + yPos * 20 + xPos);
+	charOut(devIdx, 0x80 + yPos * 20 + xPos);
 
 }
 
-static uint8_t text::charOut(device_t &dev, uint8_t chr, uint8_t chrCount)
+static uint8_t text::charOut(uint8_t devIdx, uint8_t chr, uint8_t chrCount)
 {
 
-	while (chrCount--) charOut(dev, chr);
+	while (chrCount--) charOut(devIdx, chr);
 
 }
 
-static void text::newLine(device_t &dev)
+static void text::newLine(uint8_t devIdx)
 {
 
-	charOut(dev, 0x0D);
+	charOut(devIdx, 0x0D);
 
 }
 
-static uint8_t text::charOut(device_t &dev, uint8_t chr)
+static uint8_t text::charOut(uint8_t devIdx, uint8_t chr)
 {
 
 	uint8_t retVal;
 
 	retVal = 1;
 
-	if (dev.chrOut)
+	if (deviceDefs[(uint16_t)(devIdx)].chrOut)
 	{
 
 		switch (chr)
@@ -49,38 +66,38 @@ static uint8_t text::charOut(device_t &dev, uint8_t chr)
 			case 0x00:	// tcEOS, end-of-string
 				retVal = 0;
 			case 0xED:	// tcOON, enable device output
-				dev.controlFlags |= (odvFlagEnableOutput);
+				bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEB:	// tcOMOFF, disable device output for metric mode
-				if (metricFlag & metricMode) dev.controlFlags &= ~(odvFlagEnableOutput);
-				else dev.controlFlags |= (odvFlagEnableOutput);
+				if (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric) bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
+				else bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEC:	// tcOTOG, toggle device output enable
-				dev.controlFlags ^= (odvFlagEnableOutput);
+				bitFlags[(uint16_t)(devIdx)] ^= (odvFlagEnableOutput);
 				break;
 
 			case 0xEE:	// tcOOFF, disable device output
-				dev.controlFlags &= ~(odvFlagEnableOutput);
+				bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
 				break;
 
 			case 0x0D:	// tcEOSCR, output carriage return, defined as end of string
 				retVal = 0;
 			case 0xEF:	// tcCR, output carriage return not at end of string
-				dev.controlFlags |= (odvFlagEnableOutput);
-				dev.chrOut(0x0D);
-				if (dev.controlFlags & odvFlagCRLF) dev.chrOut(0x0A);
+				bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
+				deviceDefs[(uint16_t)(devIdx)].chrOut(0x0D);
+				if (bitFlags[(uint16_t)(devIdx)] & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx)].chrOut(0x0A);
 				break;
 
 			case 0xF0 ... 0xF7: // print CGRAM character
 				chr &= 0x07;
 			case 0x20 ... 0x7F: // print normal character
-				if (dev.controlFlags & odvFlagEnableOutput) dev.chrOut(chr);
+				if (bitFlags[(uint16_t)(devIdx)] & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx)].chrOut(chr);
 				break;
 
 			default:
-				dev.chrOut(chr);
+				deviceDefs[(uint16_t)(devIdx)].chrOut(chr);
 				break;
 
 		}
@@ -92,140 +109,140 @@ static uint8_t text::charOut(device_t &dev, uint8_t chr)
 
 }
 
-static void text::statusOut(device_t &dev, const char * sList, uint8_t strIdx, const char * str)
+static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, const char * str)
 {
 
-	initStatus(dev);
-	stringOut(dev, findStr(sList, strIdx));
-	stringOut(dev, str);
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, findStr(sList, strIdx));
+	stringOut(devIdx, str);
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, findStr(sList, strIdx));
-		stringOut(devDebugTerminal, str);
-		newLine(devDebugTerminal);
+		stringOut(devIdxDebugTerminal, findStr(sList, strIdx));
+		stringOut(devIdxDebugTerminal, str);
+		newLine(devIdxDebugTerminal);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(device_t &dev, const char * str, const char * sList, uint8_t strIdx)
+static void text::statusOut(uint8_t devIdx, const char * str, const char * sList, uint8_t strIdx)
 {
 
-	initStatus(dev);
-	stringOut(dev, str);
-	stringOut(dev, findStr(sList, strIdx));
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, str);
+	stringOut(devIdx, findStr(sList, strIdx));
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, str);
-		stringOut(devDebugTerminal, findStr(sList, strIdx));
-		newLine(devDebugTerminal);
+		stringOut(devIdxDebugTerminal, str);
+		stringOut(devIdxDebugTerminal, findStr(sList, strIdx));
+		newLine(devIdxDebugTerminal);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(device_t &dev, const char * sList, uint8_t strIdx)
+static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx)
 {
 
-	statusOut(dev, findStr(sList, strIdx));
+	statusOut(devIdx, findStr(sList, strIdx));
 
 }
 
-static void text::statusOut(device_t &dev, const char * str)
+static void text::statusOut(uint8_t devIdx, const char * str)
 {
 
-	initStatus(dev);
-	stringOut(dev, str);
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, str);
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, str);
-		newLine(devDebugTerminal);
+		stringOut(devIdxDebugTerminal, str);
+		newLine(devIdxDebugTerminal);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::initStatus(device_t &dev)
+static void text::initStatus(uint8_t devIdx)
 {
 
 	heart::delayS(0);
 
 #if defined(blankScreenOnMessage)
-	charOut(dev, 0x0C); // clear the entire screen
+	charOut(devIdx, 0x0C); // clear the entire screen
 #else // defined(blankScreenOnMessage)
-	gotoXY(dev, 0, 0); // go to the first line
+	gotoXY(devIdx, 0, 0); // go to the first line
 #endif // defined(blankScreenOnMessage)
 
 }
 
-static void text::commitStatus(device_t &dev)
+static void text::commitStatus(uint8_t devIdx)
 {
 
-	newLine(dev);
+	newLine(devIdx);
 	heart::delayS(delay0Tick2000ms);
 
 }
 
-static void text::stringOut(device_t &dev, const char * str, uint8_t strIdx)
+static void text::stringOut(uint8_t devIdx, const char * str, uint8_t strIdx)
 {
 
-	stringOut(dev, findStr(str, strIdx));
+	stringOut(devIdx, findStr(str, strIdx));
 
 }
 
-static void text::stringOut(device_t &dev, const char * str)
+static void text::stringOut(uint8_t devIdx, const char * str)
 {
 
-	while (charOut(dev, pgm_read_byte(str++))) ;
+	while (charOut(devIdx, pgm_read_byte(str++))) ;
 
 }
 
-static void text::stringOut(device_t &dev, char * str)
+static void text::stringOut(uint8_t devIdx, char * str)
 {
 
-	while (charOut(dev, * str++));
+	while (charOut(devIdx, * str++));
 
 }
 
-static void text::stringOutIf(device_t &dev, uint8_t condition, const char * str, uint8_t strIdx)
+static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
-	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
-	else dev.controlFlags &= ~(odvFlagEnableOutput);
+	if (condition) bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
+	else bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
 
-	stringOut(dev, str, strIdx);
+	stringOut(devIdx, str, strIdx);
 
 }
 
-static void text::stringOutIf(device_t &dev, uint8_t condition, const char * str)
+static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str)
 {
 
-	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
-	else dev.controlFlags &= ~(odvFlagEnableOutput);
+	if (condition) bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
+	else bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
 
-	stringOut(dev, str);
+	stringOut(devIdx, str);
 
 }
 
-static void text::hexNybbleOut(device_t &dev, uint8_t val)
+static void text::hexNybbleOut(uint8_t devIdx, uint8_t val)
 {
 
-	charOut(dev, nybble(val));
+	charOut(devIdx, nybble(val));
 
 }
 
@@ -239,51 +256,42 @@ static uint8_t text::nybble(uint8_t val)
 
 }
 
-static void text::hexByteOut(device_t &dev, uint8_t val)
+static void text::hexByteOut(uint8_t devIdx, uint8_t val)
 {
 
-	hexNybbleOut(dev, val >> 4);
-	hexNybbleOut(dev, val);
+	hexNybbleOut(devIdx, val >> 4);
+	hexNybbleOut(devIdx, val);
 
 }
 
-static void text::hexWordOut(device_t &dev, uint16_t val)
+static void text::hexWordOut(uint8_t devIdx, uint16_t val)
 {
 
-	union union_16 * vee = (union union_16 *) &val;
+	union union_16 * vee = (union union_16 *)(&val);
 
-	for (uint8_t i = 1; i < 2; i--) hexByteOut(dev, vee->u8[i]);
+	for (uint8_t i = 1; i < 2; i--) hexByteOut(devIdx, vee->u8[i]);
 
 }
 
-static void text::hexDWordOut(device_t &dev, uint32_t val)
+static void text::hexLWordOut(uint8_t devIdx, uint64_t * val)
 {
 
-	union union_32 * vee = (union union_32 *) &val;
+	union union_64 * vee = (union union_64 *)(val);
 
-	for (uint8_t i = 3; i < 4; i--) hexByteOut(dev, vee->u8[i]);
+	for (uint8_t i = 7; i < 8; i--) hexByteOut(devIdx, vee->u8[i]);
 
 }
 
-static void text::hexLWordOut(device_t &dev, uint64_t * val)
-{
-
-	union union_64 * vee = (union union_64 *) val;
-
-	for (uint8_t i = 7; i < 8; i--) hexByteOut(dev, vee->u8[i]);
-
-}
-
-static void text::tripFunctionOut(device_t &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
 
-	tripFunctionOut(dev, tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+	tripFunctionOut(devIdx, tC->u8[1], tC->u8[0], windowLength, decimalFlag);
 
 }
 
-static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	uint8_t i;
@@ -312,21 +320,21 @@ static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcId
 					if (decimalFlag & dfOutputSpiffyTag)
 					{
 
-						charOut(dev, 0xF0 + mainCalcFuncVar.labelIdx);
-						charOut(dev, 0xF1 + mainCalcFuncVar.labelIdx);
+						charOut(devIdx, 0xF0 + mainCalcFuncVar.labelIdx);
+						charOut(devIdx, 0xF1 + mainCalcFuncVar.labelIdx);
 
 					}
 					else
 					{
 
-						charOut(dev, mainCalcFuncVar.tripChar);
-						charOut(dev, mainCalcFuncVar.calcChar);
+						charOut(devIdx, mainCalcFuncVar.tripChar);
+						charOut(devIdx, mainCalcFuncVar.calcChar);
 
 					}
 
 #else // defined(useSpiffyTripLabels)
-					charOut(dev, mainCalcFuncVar.tripChar);
-					charOut(dev, mainCalcFuncVar.calcChar);
+					charOut(devIdx, mainCalcFuncVar.tripChar);
+					charOut(devIdx, mainCalcFuncVar.calcChar);
 
 #endif // defined(useSpiffyTripLabels)
 				}
@@ -335,8 +343,8 @@ static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcId
 			else
 			{
 
-				if (decimalFlag & dfBlinkCalc) charOut(dev, ' ', windowLength); // output blanks corresponding to number
-				else numberOut(dev, decimalFlag);
+				if (decimalFlag & dfBlinkCalc) charOut(devIdx, ' ', windowLength); // output blanks corresponding to number
+				else numberOut(devIdx, decimalFlag);
 
 			}
 
@@ -352,7 +360,7 @@ static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcId
 
 			if (decimalFlag & dfOutputTag) windowLength += 2;
 
-			charOut(dev, ' ', windowLength);
+			charOut(devIdx, ' ', windowLength);
 
 		}
 
@@ -360,7 +368,7 @@ static void text::tripFunctionOut(device_t &dev, uint8_t tripIdx, uint8_t calcId
 
 }
 
-static void text::numberOut(device_t &dev, uint8_t decimalFlag)
+static void text::numberOut(uint8_t devIdx, uint8_t decimalFlag)
 {
 
 	uint8_t c;
@@ -380,20 +388,20 @@ static void text::numberOut(device_t &dev, uint8_t decimalFlag)
 
 			if (((c >= '1') && (c <= '9')) || ((* strBuffer) == 0)) f = 1;
 
-			if ((c != '.') && (f)) c = charOut(dev, c);
+			if ((c != '.') && (f)) c = charOut(devIdx, c);
 
 		}
 		while (c);
 
 	}
-	else stringOut(dev, nBuff); // output the number
+	else stringOut(devIdx, nBuff); // output the number
 
 #if defined(useDebugTerminal) || defined(useJSONoutput)
 	if ((decimalFlag & dfOutputLabelCheck) == dfOutputLabel)
 	{
 
-		charOut(dev, ' ');
-		stringOut(dev, mainCalcFuncVar.calcFormatLabelPtr);
+		charOut(devIdx, ' ');
+		stringOut(devIdx, mainCalcFuncVar.calcFormatLabelPtr);
 
 	}
 
@@ -434,7 +442,7 @@ static unsigned long str2ull(char * strBuffer)
 	f = 1;
 	loopFlag = 1;
 
-	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
+	SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
 
 	while ((loopFlag) && (x < 17))
 	{
@@ -461,7 +469,7 @@ static unsigned long str2ull(char * strBuffer)
 
 	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
 
-	return ((union union_64 *)(&s64reg[s64reg2]))->ul[0];
+	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->ul[0];
 
 }
 
@@ -500,7 +508,7 @@ static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 {
 
-	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
+	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]);
 
 	uint8_t l;
 	uint8_t value;
@@ -568,27 +576,29 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 //
 // sample debug monitor outputs:
 //
-// ]6<2.0u (overflow='-', do not ignore decimal point)        ]6<2.c0u (overflow='9', ignore decimal point)
-// 00: 00 06 02                                               00: c0 06 02
-//     0000000000000005 -   0.01 -                                0000000000000005 -    0.01 -
-// 01: 0000000000000037 -   0.06 -                            01: 0000000000000037 -    0.06 -
-// 02: 000000000000022B -   0.56 -                            02: 000000000000022B -    0.56 -
-// 03: 00000000000015B3 -   5.56 -                            03: 00000000000015B3 -    5.56 -
-// 04: 000000000000D903 -  55.56 -                            04: 000000000000D903 -   55.56 -
-// 05: 0000000000087A23 - 555.56 -                            05: 0000000000087A23 -  555.56 -
-// 06: 000000000054C563 - 5555.6 -                            06: 000000000054C563 - 5555.56 -
-// 07: 00000000034FB5E3 -  55556 -                            07: 00000000034FB5E3 - 55555.6 -
-// 08: 00000000211D1AE3 - 555556 -                            08: 00000000211D1AE3 - 555556 -
-// 09: 000000014B230CE3 - ------ -                            09: 000000014B230CE3 - 999999 -
-// 0A: 0000000CEF5E80E3 - ------ -                            0A: 0000000CEF5E80E3 - 999999 -
-// 0B: 0000008159B108E3 - ------ -                            0B: 0000008159B108E3 - 999999 -
-// 0C: 0000050D80EA58E3 - ------ -                            0C: 0000050D80EA58E3 - 999999 -
-// 0D: 00003287092778E3 - ------ -                            0D: 00003287092778E3 - 999999 -
+// (overflow='-', do not ignore decimal point)                (overflow='9', ignore decimal point)
+// 
+// ]6<2.0u                                                    ]6<2.c0u
+// decimalFlags=00, windowLen=06, places=02                   decimalFlags=C0, windowLen=06, places=02
+// 00: 0000000000000005 -   0.01                              00: 0000000000000005 -    0.01
+// 01: 0000000000000037 -   0.06                              01: 0000000000000037 -    0.06
+// 02: 000000000000022B -   0.56                              02: 000000000000022B -    0.56
+// 03: 00000000000015B3 -   5.56                              03: 00000000000015B3 -    5.56
+// 04: 000000000000D903 -  55.56                              04: 000000000000D903 -   55.56
+// 05: 0000000000087A23 - 555.56                              05: 0000000000087A23 -  555.56
+// 06: 000000000054C563 - 5555.6                              06: 000000000054C563 - 5555.56
+// 07: 00000000034FB5E3 -  55556                              07: 00000000034FB5E3 - 55555.6
+// 08: 00000000211D1AE3 - 555556                              08: 00000000211D1AE3 - 555556
+// 09: 000000014B230CE3 - ------                              09: 000000014B230CE3 - 999999
+// 0A: 0000000CEF5E80E3 - ------                              0A: 0000000CEF5E80E3 - 999999
+// 0B: 0000008159B108E3 - ------                              0B: 0000008159B108E3 - 999999
+// 0C: 0000050D80EA58E3 - ------                              0C: 0000050D80EA58E3 - 999999
+// 0D: 00003287092778E3 - ------                              0D: 00003287092778E3 - 999999
 //
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag) // format number for output
 {
 
-	union union_64 * tmpPtr3 = (union union_64 *)(&s64reg[s64reg3]);
+	union union_64 * tmpPtr3 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_3)]);
 
 	uint8_t d;
 	uint8_t e;

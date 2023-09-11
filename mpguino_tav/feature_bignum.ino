@@ -26,13 +26,13 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-			text::charOut(devLCD, 0x0C);
+			text::charOut(devIdxLCD, 0x0C);
 
 			LCD::loadCGRAMfont(bigDigitFont);
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, PSTR("Clock"));
+			text::statusOut(devIdxLCD, PSTR("Clock"));
 		case displayOutputIdx:
 			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4, 0, 0);
 			break;
@@ -56,7 +56,7 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useSoftwareClock)
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (timer0Status & t0sShowCursor), cursorPos, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (bitFlags[(uint16_t)(bfTimer0Status)] & t0sShowCursor), cursorPos, 0, 0);
 
 		default:
 			break;
@@ -111,7 +111,7 @@ static void clockSet::set(void)
 		b = csBuff[(uint16_t)(x)] - '0';
 		b *= 10;
 		b += csBuff[(uint16_t)(x + 1)] - '0';
-		((union union_64 *)(&s64reg[s64reg3]))->u8[(uint16_t)(x)] = b;
+		((union union_64 *)(&s64reg[(uint16_t)(s64reg64_3)]))->u8[(uint16_t)(x)] = b;
 
 	}
 
@@ -172,10 +172,10 @@ static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
+			text::statusOut(devIdxLCD, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
 		case displayOutputIdx:
 			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
-			text::charOut(devLCD, ' ', (LCDcharWidth / 2));
+			text::charOut(devIdxLCD, ' ', (LCDcharWidth / 2));
 			mainDisplay::outputFunction(3, (instantIdx << 8 ) | (tFuelEcon), 136, 0);
 			break;
 
@@ -243,7 +243,7 @@ static void statusBar::outputStatusBar(uint16_t val) // takes an input number be
 
 			if (flg) writeStatusBarElement(oc, ei);
 
-			text::charOut(devLCD, oc);
+			text::charOut(devIdxLCD, oc);
 
 		}
 
@@ -253,14 +253,14 @@ static void statusBar::outputStatusBar(uint16_t val) // takes an input number be
 
 		LCD::loadCGRAMfont(statusBarOverflowFont); // load initial status bar overflow custom characters
 
-		text::charOut(devLCD, 0xF0);
-		text::charOut(devLCD, 0xF2, 14);
-		text::charOut(devLCD, 0xF1);
+		text::charOut(devIdxLCD, 0xF0);
+		text::charOut(devIdxLCD, 0xF2, 14);
+		text::charOut(devIdxLCD, 0xF1);
 	}
 
 	LCD::flushCGRAM(); // go output status bar custom characters
 
-	text::newLine(devLCD);
+	text::newLine(devIdxLCD);
 
 }
 
@@ -330,7 +330,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-			text::statusOut(devLCD, tripFormatReverseNames, cursorPos, str);
+			text::statusOut(devIdxLCD, tripFormatReverseNames, cursorPos, str);
 
 		case displayOutputIdx:
 			switch (callingDisplayIdx)
@@ -441,12 +441,12 @@ static void bigDigit::outputNumberString(uint8_t hPos, char * str, uint8_t curso
 		if (c == 240) c = 10;
 		else if (c > 9) c = 11;
 
-		text::gotoXY(devLCD, x, 1);
-		text::stringOut(devLCD, bigDigitChars2, c);
-		text::charOut(devLCD, d);
-		text::gotoXY(devLCD, x, 0);
-		text::stringOut(devLCD, bigDigitChars1, c);
-		text::charOut(devLCD, e);
+		text::gotoXY(devIdxLCD, x, 1);
+		text::stringOut(devIdxLCD, bigDigitChars2, c);
+		text::charOut(devIdxLCD, d);
+		text::gotoXY(devIdxLCD, x, 0);
+		text::stringOut(devIdxLCD, bigDigitChars1, c);
+		text::charOut(devIdxLCD, e);
 
 		x += 4;
 
@@ -455,10 +455,10 @@ static void bigDigit::outputNumberString(uint8_t hPos, char * str, uint8_t curso
 	if (((x + 4) <= LCDcharWidth) && (str))
 	{
 
-		text::gotoXY(devLCD, x, 1);
-		text::stringOut(devLCD, titleStr);
-		text::gotoXY(devLCD, x, 0);
-		text::stringOut(devLCD, tripFormatReverseNames, cursorPos);
+		text::gotoXY(devIdxLCD, x, 1);
+		text::stringOut(devIdxLCD, titleStr);
+		text::gotoXY(devIdxLCD, x, 0);
+		text::stringOut(devIdxLCD, tripFormatReverseNames, cursorPos);
 
 	}
 

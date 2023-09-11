@@ -31,13 +31,13 @@ ISR( TWI_vect )
 				TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK
 
 			}
-			else twiStatusFlags |= (twiFinished);
+			else bitFlags[(uint16_t)(bfTWIstatus)] |= (twiFinished);
 
 			break;
 
 		case TW_MR_DATA_NACK: // data received, nack sent
 			twiDataBuffer[(uint16_t)(twiDataBufferIdx++)] = TWDR; // put final byte into buffer
-			twiStatusFlags |= (twiFinished);
+			bitFlags[(uint16_t)(bfTWIstatus)] |= (twiFinished);
 			break;
 
 		case TW_MR_DATA_ACK: // data received, ACK sent
@@ -48,19 +48,19 @@ ISR( TWI_vect )
 			break;
 
 		case TW_MR_SLA_NACK: // address sent, NACK received
-			twiStatusFlags |= (twiFinished | twiClose);
+			bitFlags[(uint16_t)(bfTWIstatus)] |= (twiFinished | twiClose);
 			break;
 
 		case TW_MT_ARB_LOST: // lost bus arbitration (also handles TW_MR_ARB_LOST)
 			twiErrorCode = TW_MT_ARB_LOST;
 			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK
-			twiStatusFlags &= ~(twiOpen); // set TWI state to ready
+			bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiOpen); // set TWI state to ready
 			break;
 
 		case TW_MT_SLA_NACK:  // address sent, NACK received
 		case TW_MT_DATA_NACK: // data sent, NACK received
 		case TW_BUS_ERROR: // bus error, illegal stop/start
-			twiStatusFlags |= (twiErrorFlag | twiFinished | twiClose); // set error condition
+			bitFlags[(uint16_t)(bfTWIstatus)] |= (twiErrorFlag | twiFinished | twiClose); // set error condition
 			twiErrorCode = twiStatus;
 			break;
 
@@ -70,24 +70,24 @@ ISR( TWI_vect )
 
 	}
 
-	if (twiStatusFlags & twiFinished)
+	if (bitFlags[(uint16_t)(bfTWIstatus)] & twiFinished)
 	{
 
-		twiStatusFlags &= ~(twiOpen | twiFinished); // set TWI state to ready
+		bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiOpen | twiFinished); // set TWI state to ready
 
-		if (twiStatusFlags & twiClose)
+		if (bitFlags[(uint16_t)(bfTWIstatus)] & twiClose)
 		{
 
 			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO)); // send STOP condition
 			while (TWCR & (1 << TWSTO)); // wait for STOP condition to be executed on the TWI bus
 
-			twiStatusFlags &= ~(twiRemainOpen);
+			bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiRemainOpen);
 
 		}
 		else
 		{
 
-			twiStatusFlags |= (twiRemainOpen);	// keep the TWI channel open
+			bitFlags[(uint16_t)(bfTWIstatus)] |= (twiRemainOpen);	// keep the TWI channel open
 			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWSTA));
 
 		}
@@ -100,7 +100,7 @@ ISR( TWI_vect )
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -129,7 +129,7 @@ static void TWI::init(void) // this can be in either main program or interrupt c
 	TWBR = (uint8_t)(((unsigned int)(F_CPU / (twiFrequency * 1000UL)) - 16) / 2); // set TWI frequency
 	TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // enable TWI module, acks, and interrupt
 
-	twiStatusFlags = twiClose; // initialize TWI state to ready, default send stop, and no repeated start in progress
+	bitFlags[(uint16_t)(bfTWIstatus)] = twiClose; // initialize TWI state to ready, default send stop, and no repeated start in progress
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -140,7 +140,7 @@ static void TWI::shutdown(void) // this can be in either main program or interru
 
 	uint8_t oldSREG;
 
-	while (twiStatusFlags & twiOpenMain) idleProcess(); // wait for all TWI transactions to complete
+	while (bitFlags[(uint16_t)(bfTWIstatus)] & twiOpenMain) idleMainProcess(); // wait for all TWI transactions to complete
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
@@ -159,7 +159,7 @@ static void TWI::shutdown(void) // this can be in either main program or interru
 	PRR |= (1 << PRTWI); // turn off TWI module
 #endif // defined(__AVR_ATmega328P__)
 
-	twiStatusFlags = 0;
+	bitFlags[(uint16_t)(bfTWIstatus)] = 0;
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -170,7 +170,7 @@ static void TWI::openChannelMain(uint8_t address, uint8_t writeFlag) // this is 
 
 	uint8_t oldSREG;
 
-	while (twiStatusFlags & twiOpenMain) idleProcess(); // wait for TWI to become available
+	while (bitFlags[(uint16_t)(bfTWIstatus)] & twiOpenMain) idleMainProcess(); // wait for TWI to become available
 
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
@@ -187,8 +187,8 @@ static void TWI::openChannel(uint8_t address, uint8_t writeFlag) // this is in i
 	twiSlaveAddress = (address << 1); // initial slave address
 	twiSlaveAddress |= (writeFlag); // slap on direction
 
-	twiStatusFlags |= (twiOpen); // signal twi is in use
-	twiStatusFlags &= ~(twiErrorFlag); // clear error condition
+	bitFlags[(uint16_t)(bfTWIstatus)] |= (twiOpen); // signal twi is in use
+	bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiErrorFlag); // clear error condition
 	twiErrorCode = 0x00; // reset error state
 
 	twiDataBufferLen = 0; // initialize buffer length
@@ -209,7 +209,7 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	else
 	{
 
-		heart::changeBitFlags(twiStatusFlags, twiOpen, 0); // free up TWI for main program use
+		heart::changeBitFlagBits(bfTWIstatus, twiOpen, 0); // free up TWI for main program use
 		return 1; // signal buffer overflow
 
 	}
@@ -224,12 +224,12 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if ((twiSlaveAddress & TW_WRITE) && (twiDataBufferLen == 0)) twiStatusFlags &= ~(twiOpen);
+	if ((twiSlaveAddress & TW_WRITE) && (twiDataBufferLen == 0)) bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiOpen);
 	else
 	{
 
-		if (sendStop) twiStatusFlags |= (twiClose); // if stop was requested as end of transmission, remember it
-		else twiStatusFlags &= ~(twiClose); // otherwise, remember to do a repeated start
+		if (sendStop) bitFlags[(uint16_t)(bfTWIstatus)] |= (twiClose); // if stop was requested as end of transmission, remember it
+		else bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiClose); // otherwise, remember to do a repeated start
 
 		// if we're in the repeated start state, then we've already sent the start,
 		// and the TWI state machine is just waiting for the address byte.
@@ -238,10 +238,10 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 		// up. Also, don't enable the START interrupt. There may be one pending from the
 		// repeated start that we sent outselves, and that would really confuse things.
 
-		if (twiStatusFlags & twiRemainOpen) // if in repeated start state
+		if (bitFlags[(uint16_t)(bfTWIstatus)] & twiRemainOpen) // if in repeated start state
 		{
 
-			twiStatusFlags &= ~(twiRemainOpen); // clear repeated start state
+			bitFlags[(uint16_t)(bfTWIstatus)] &= ~(twiRemainOpen); // clear repeated start state
 			TWDR = twiSlaveAddress; // set data address to slave address
 			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE));  // send ACK
 
@@ -258,15 +258,15 @@ static void TWI::transmitChannel(uint8_t sendStop) // this can be in either main
 static void TWI::disableISRactivity(void)
 {
 
-	heart::changeBitFlags(twiStatusFlags, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
-	while (twiStatusFlags & twiBlockMainProgram) idleProcess(); // wait for any in-progress in-interrupt TWI activity to finish
+	heart::changeBitFlagBits(bfTWIstatus, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
+	while (bitFlags[(uint16_t)(bfTWIstatus)] & twiBlockMainProgram) idleMainProcess(); // wait for any in-progress in-interrupt TWI activity to finish
 
 }
 
 static void TWI::enableISRactivity(void)
 {
 
-	heart::changeBitFlags(twiStatusFlags, 0, twiAllowISRactivity); // re-enable ISR TWI activity
+	heart::changeBitFlagBits(bfTWIstatus, 0, twiAllowISRactivity); // re-enable ISR TWI activity
 
 }
 
@@ -279,17 +279,17 @@ void MCP23017portExpanderSupport::init(void)
 
 	uint16_t MCP23017registers;
 
-	adafruitRGBLCDflags = 0; // initially set all control register bits to 0
+	bitFlags[(uint16_t)(bfMCP23017status)] = 0; // initially set all control register bits to 0
 
 #if defined(useInterruptBasedTWI)
 	TWI::disableISRactivity(); // disable ISR-based TWI activity
 
 #endif // defined(useInterruptBasedTWI)
 	// we might have inadvertently entered into MCP23017 bank mode - if we didn't, we'll just end up disabling all of bank B's interrupt enable bits
-	writeRegister8Bit(MCP23017_B1_IOCON, adafruitRGBLCDflags); // write initialization value to IO control register
+	writeRegister8Bit(MCP23017_B1_IOCON, bitFlags[(uint16_t)(bfMCP23017status)]); // write initialization value to IO control register
 
 	// if we did happen to enter bank mode prior to initialization, we are now known to not be in bank mode
-	writeRegister8Bit(MCP23017_B0_IOCON, adafruitRGBLCDflags); // write initialization value to IO control register
+	writeRegister8Bit(MCP23017_B0_IOCON, bitFlags[(uint16_t)(bfMCP23017status)]); // write initialization value to IO control register
 
 	setTransferMode(adaTWItoggleMode);
 
@@ -332,7 +332,7 @@ void MCP23017portExpanderSupport::writeRegister16Bit(uint8_t registerAddress, ui
 void MCP23017portExpanderSupport::writeRegister16Bit(uint8_t registerAddress, uint8_t portAbyte, uint8_t portBbyte)
 {
 
-	if (adafruitRGBLCDflags & afRGBLCDbankMode) setTransferMode(adaTWItoggleMode); // if address mode isn't set to access 16-bit registers, configure as such
+	if (bitFlags[(uint16_t)(bfMCP23017status)] & afRGBLCDbankMode) setTransferMode(adaTWItoggleMode); // if address mode isn't set to access 16-bit registers, configure as such
 
 	TWI::openChannelMain(adafruitRGBLCDaddress, TW_WRITE); // open TWI as master transmitter
 	TWI::writeByte(registerAddress | MCP23017_B0_PORTA); // specify bank A register address
@@ -356,7 +356,7 @@ void MCP23017portExpanderSupport::setTransferMode(uint8_t mode)
 {
 
 	uint8_t address;
-	uint8_t newFlags = adafruitRGBLCDflags;
+	uint8_t newFlags = bitFlags[(uint16_t)(bfMCP23017status)];
 
 	switch (mode)
 	{
@@ -379,15 +379,15 @@ void MCP23017portExpanderSupport::setTransferMode(uint8_t mode)
 
 	}
 
-	if (adafruitRGBLCDflags != newFlags) // if a change was detected
+	if (bitFlags[(uint16_t)(bfMCP23017status)] != newFlags) // if a change was detected
 	{
 
-		if (adafruitRGBLCDflags & afRGBLCDbankMode) address = MCP23017_B1_IOCON;
+		if (bitFlags[(uint16_t)(bfMCP23017status)] & afRGBLCDbankMode) address = MCP23017_B1_IOCON;
 		else address = MCP23017_B0_IOCON;
 
 		writeRegister8Bit(address, newFlags); // write new value to IO control register
 
-		adafruitRGBLCDflags = newFlags; // changes take effect just as soon as IOCON is written
+		bitFlags[(uint16_t)(bfMCP23017status)] = newFlags; // changes take effect just as soon as IOCON is written
 
 	}
 

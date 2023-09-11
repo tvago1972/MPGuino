@@ -172,7 +172,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, labelList, cursorPos); // briefly display screen name
+			text::statusOut(devIdxLCD, labelList, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);
@@ -193,11 +193,11 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx)
 {
 
-	text::stringOut(devLCD, bgSpaces, lineNumber);
+	text::stringOut(devIdxLCD, bgSpaces, lineNumber);
 
-	text::tripFunctionOut(devLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
+	text::tripFunctionOut(devIdxLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
 
-	text::newLine(devLCD);
+	text::newLine(devIdxLCD);
 
 }
 

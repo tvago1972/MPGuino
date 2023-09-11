@@ -85,7 +85,7 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 static void accelerationTest::init(void)
 {
 
-	heart::changeBitFlags(accelerationFlags, accelTestClearFlags, 0);
+	heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, 0);
 
 	lastAccelTestStatus = 0;
 	accelTestStatus = 0;
@@ -105,7 +105,7 @@ static uint8_t accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			{
 
 				// display status message for new state
-				text::statusOut(devLCD, accelTestStateMsgs, accelTestState);
+				text::statusOut(devIdxLCD, accelTestStateMsgs, accelTestState);
 				accelTestState = 0;
 
 			}
@@ -142,7 +142,7 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, accelTestMenuTitles, cursorPos);
+			text::stringOut(devIdxLCD, accelTestMenuTitles, cursorPos);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -162,8 +162,8 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (cursorPos > 1)
 			{
 
-				text::stringOut(devLCD, pBuff); // output supplementary information
-				text::newLine(devLCD); // clear to the end of the line
+				text::stringOut(devIdxLCD, pBuff); // output supplementary information
+				text::newLine(devIdxLCD); // clear to the end of the line
 
 			}
 
@@ -206,11 +206,11 @@ static void accelerationTest::triggerTest(void)
 
 	uint8_t retVal;
 
-	if (accelerationFlags & accelTestInProgress)
+	if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestInProgress)
 	{
 
 		// reset accel test capture flags, and signal that accel test is cancelled
-		heart::changeBitFlags(accelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
+		heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
 		EEPROM::writeByte(pDragAutoFlagIdx, 0);
@@ -221,16 +221,16 @@ static void accelerationTest::triggerTest(void)
 	else
 	{
 
-		if (activityFlags & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
+		if (bitFlags[(uint16_t)(bfActivity)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
 		{
 
-			heart::changeBitFlags(accelerationFlags, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
+			heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
 
 			tripVar::reset(dragRawHalfSpeedIdx); // zero out acceleration 1/2 speed setpoint data
 			tripVar::reset(dragRawFullSpeedIdx); // zero out acceleration full speed setpoint data
 			tripVar::reset(dragRawDistanceIdx); // zero out acceleration distance setpoint data
 
-			heart::changeBitFlags(accelerationFlags, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in accelerationFlags register
+			heart::changeBitFlagBits(bfAccelerationFlags, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in bfAccelerationFlags register
 
 			retVal = attTriggerNormal;
 
@@ -244,7 +244,7 @@ static void accelerationTest::triggerTest(void)
 
 	}
 
-	text::statusOut(devLCD, accelTestTriggerMsgs, retVal);
+	text::statusOut(devIdxLCD, accelTestTriggerMsgs, retVal);
 
 }
 
@@ -257,7 +257,7 @@ static void accelerationTest::idleProcess(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	accelTestStatus = accelerationFlags; // copy accel test flag status to this loop
+	accelTestStatus = bitFlags[(uint16_t)(bfAccelerationFlags)]; // copy accel test flag status to this loop
 
 	SREG = oldSREG; // restore interrupt flag status
 

@@ -31,23 +31,9 @@ static const uint8_t coastdownTestParamList[] PROGMEM = {
 	pCoefficientRRidx,
 };
 
-#if defined(useDebugTerminal)
-const char terminalCoastdownFlagStr[] PROGMEM = {
-	"coastdownFlags: " tcEOS
-	"ACTIVE" tcOTOG "dormant" tcEOS
-	"TRIGGERED" tcOTOG "0" tcEOS
-	"CANCELLED" tcOTOG "0" tcEOS
-	"FINISHED" tcOTOG "0" tcEOS
-	"TAKESAMPLE" tcOTOG "0" tcEOS
-	"SAMPLED" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useDebugTerminal)
-static volatile uint8_t coastdownFlags;
 static volatile uint8_t coastdownState;
 
+// bit flags for use with bfCoastdownStatus
 static const uint8_t cdTestActive =				0b10000000;
 static const uint8_t cdTestTriggered =			0b01000000;
 static const uint8_t cdTestCanceled =			0b00100000;

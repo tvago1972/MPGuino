@@ -49,14 +49,25 @@ uint8_t wtpCurrentIdx;
 #define nextAllowedValue 0
 const uint8_t raw0tripIdx =				nextAllowedValue;
 const uint8_t raw1tripIdx =				raw0tripIdx + 1;
-const uint8_t instantIdx =				raw1tripIdx + 1;
+#define nextAllowedValue raw1tripIdx + 1
+#if defined(trackIdleEOCdata)
+const uint8_t raw0eocIdleTripIdx =		nextAllowedValue;
+const uint8_t raw1eocIdleTripIdx =		raw0eocIdleTripIdx + 1;
+#define nextAllowedValue raw1eocIdleTripIdx + 1
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+const uint8_t dragRawHalfSpeedIdx =		nextAllowedValue;
+const uint8_t dragRawFullSpeedIdx =		dragRawHalfSpeedIdx + 1;
+const uint8_t dragRawDistanceIdx =		dragRawFullSpeedIdx + 1;
+#define nextAllowedValue dragRawDistanceIdx + 1
+#endif // defined(useDragRaceFunction)
+
+const uint8_t instantIdx =				nextAllowedValue;
 const uint8_t currentIdx =				instantIdx + 1;
 const uint8_t tankIdx =					currentIdx + 1;
 #define nextAllowedValue tankIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t raw0eocIdleTripIdx =		nextAllowedValue;
-const uint8_t raw1eocIdleTripIdx =		raw0eocIdleTripIdx + 1;
-const uint8_t eocIdleInstantIdx =		raw1eocIdleTripIdx + 1;
+const uint8_t eocIdleInstantIdx =		nextAllowedValue;
 const uint8_t eocIdleCurrentIdx =		eocIdleInstantIdx + 1;
 const uint8_t eocIdleTankIdx =			eocIdleCurrentIdx + 1;
 #define nextAllowedValue eocIdleTankIdx + 1
@@ -68,10 +79,7 @@ const uint8_t terminalIdx =				nextAllowedValue;
 #endif // defined(useDebugTerminal)
 
 #if defined(useDragRaceFunction)
-const uint8_t dragRawHalfSpeedIdx =		nextAllowedValue;
-const uint8_t dragRawFullSpeedIdx =		dragRawHalfSpeedIdx + 1;
-const uint8_t dragRawDistanceIdx =		dragRawFullSpeedIdx + 1;
-const uint8_t dragHalfSpeedIdx =		dragRawDistanceIdx + 1;
+const uint8_t dragHalfSpeedIdx =		nextAllowedValue;
 const uint8_t dragFullSpeedIdx =		dragHalfSpeedIdx + 1;
 const uint8_t dragDistanceIdx =			dragFullSpeedIdx + 1;
 #define nextAllowedValue dragDistanceIdx + 1
@@ -113,12 +121,19 @@ const uint8_t tripSlotTotalCount =		nextAllowedValue;
 static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 	'0',
 	'1',
+#if defined(trackIdleEOCdata)
+	'\\',
+	'/',
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+	'h',
+	'f',
+	'd',
+#endif // defined(useDragRaceFunction)
 	'I',
 	'C',
 	'T',
 #if defined(trackIdleEOCdata)
-	'\\',
-	'/',
 	'i',
 	'c',
 	't',
@@ -127,9 +142,6 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 	']',
 #endif // defined(useDebugTerminal)
 #if defined(useDragRaceFunction)
-	'h',
-	'f',
-	'd',
 	'H',
 	'F',
 	'D',
@@ -266,25 +278,29 @@ volatile uint32_t collectedInjPulseCount[(uint16_t)(tripSlotFullCount)];
 volatile uint64_t collectedVSScycleCount[(uint16_t)(tripSlotFullCount)];
 volatile uint64_t collectedEngCycleCount[(uint16_t)(tripSlotFullCount)];
 
-#if defined(useDebugTerminal)
+#if defined(useDebugTerminalLabels)
 static const char terminalTripVarNames[] PROGMEM = {
 	"raw0tripIdx" tcEOS
 	"raw1tripIdx" tcEOS
+#if defined(trackIdleEOCdata)
+	"raw0eocIdleTripIdx" tcEOS
+	"raw1eocIdleTripIdx" tcEOS
+#endif // defined(trackIdleEOCdata)
+#if defined(useDragRaceFunction)
+	"dragRawHalfSpeedIdx" tcEOS
+	"dragRawFullSpeedIdx" tcEOS
+	"dragRawDistanceIdx" tcEOS
+#endif // defined(useDragRaceFunction)
 	"instantIdx" tcEOS
 	"currentIdx" tcEOS
 	"tankIdx" tcEOS
 #if defined(trackIdleEOCdata)
-	"raw0eocIdleTripIdx" tcEOS
-	"raw1eocIdleTripIdx" tcEOS
 	"eocIdleInstantIdx" tcEOS
 	"eocIdleCurrentIdx" tcEOS
 	"eocIdleTankIdx" tcEOS
 #endif // defined(trackIdleEOCdata)
 	"terminalIdx" tcEOS
 #if defined(useDragRaceFunction)
-	"dragRawHalfSpeedIdx" tcEOS
-	"dragRawFullSpeedIdx" tcEOS
-	"dragRawDistanceIdx" tcEOS
 	"dragHalfSpeedIdx" tcEOS
 	"dragFullSpeedIdx" tcEOS
 	"dragDistanceIdx" tcEOS
@@ -339,7 +355,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 #endif // defined(useEEPROMtripStorage)
 };
 
-#endif // defined(useDebugTerminal)
+#endif // defined(useDebugTerminalLabels)
 namespace tripSupport /* Trip save/restore/reset support section prototype */
 {
 

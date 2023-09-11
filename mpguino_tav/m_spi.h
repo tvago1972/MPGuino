@@ -40,8 +40,6 @@ namespace blefriend /* AdaFruit BLE Friend support section prototype */
 
 };
 
-device_t devBLEfriend;
-
 static uint8_t SPIconfigBluetooth;
 
 static const uint16_t SDEP_CMDTYPE_INITIALIZE =	0xBEEF;

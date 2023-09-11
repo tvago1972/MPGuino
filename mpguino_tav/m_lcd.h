@@ -45,8 +45,6 @@ namespace LCD /* LCD hardware support section prototype */
 
 };
 
-device_t devLCD;
-
 // these flags provide flow control for the LCD::writeData character output routine
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;

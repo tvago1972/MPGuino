@@ -17,12 +17,10 @@ static uint32_t iSqrt(uint32_t input);
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
-#if defined(useSWEET64trace)
-	static void listProgram(uint8_t calcIdx);
-#endif // defined(useSWEET64trace)
 	static uint32_t doCalculate(uint8_t tripIdx, uint8_t calcIdx);
 	static uint32_t runPrgm(const uint8_t * sched, uint8_t tripIdx);
-	static uint8_t fetchByte(const uint8_t * &prgmPtr);
+	static void fetchInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t * prgmReg8);
+	static void executeInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
 	static void copy64(union union_64 * an, union union_64 * ann);
 	static void swap64(union union_64 * an, union union_64 * ann);
 	static void shr64(union union_64 * an);
@@ -30,10 +28,10 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static void adc64(union union_64 * an, union union_64 * ann);
 	static void sbc64(union union_64 * an, union union_64 * ann, uint8_t sbcFlag);
 #ifndef useSWEET64mult
-	static void mult64(void);
+	static void mult64(uint64_t * prgmReg64);
 #endif // useSWEET64mult
 #ifndef useSWEET64div
-	static void div64(void);
+	static void div64(uint64_t * prgmReg64);
 #endif // useSWEET64div
 	static void init64byt(union union_64 * an, uint8_t byt);
 	static void init64(union union_64 * an, uint32_t dWordL);
@@ -42,6 +40,15 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static void registerTest64(union union_64 * an);
 
 }
+
+static const uint8_t s64vRegisterOperation =		0b10000000;
+static const uint8_t s64vReadInRegisterByte =		0b01000000;	// becomes de-facto "instruction is good" bit if instruction doesn't deal with 64-bit registers
+static const uint8_t s64vReadInOperandByte =		0b00100000;
+static const uint8_t s64vReadInExtraByte =			0b00010000;
+static const uint8_t s64vOperandIndexed =			0b00001000;
+static const uint8_t s64vExtraIndexed =				0b00000100;
+static const uint8_t s64vExtraJump =				0b00000010;
+static const uint8_t s64vRelativeOperand =			0b00000001;
 
 static const uint8_t r00 =	0;			// do not fetch register operand
 static const uint8_t r01 =	r00 + 32;	// fetch rX and rY from program
@@ -73,38 +80,42 @@ static const uint8_t s03 =	s02 + 1;	// fetch secondary operand from jump registe
 static const uint8_t sxxMask =	0b00000011;
 
 // operations where opcode prefix rxx = r00
-static const uint8_t e00 =	0;			// no operation
-static const uint8_t e01 =	e00 + 1;	// branch c=1 | z=1		(bgte)
-static const uint8_t e02 =	e01 + 1;	// branch c=1			(bgt)
-static const uint8_t e03 =	e02 + 1;	// branch c=0			(blte)
-static const uint8_t e04 =	e03 + 1;	// branch z=0			(bne)
-static const uint8_t e05 =	e04 + 1;	// branch z=1			(beq)
-static const uint8_t e06 =	e05 + 1;	// branch n=0			(bpl)
-static const uint8_t e07 =	e06 + 1;	// branch n=1			(bmi)
-static const uint8_t e08 =	e07 + 1;	// branch v=0			(bvc)
-static const uint8_t e09 =	e08 + 1;	// branch v=1			(bvs)
-static const uint8_t e10 =	e09 + 1;	// branch c=0 & z=0		(blt)
-static const uint8_t e11 =	e10 + 1;	// branch if metric mode
-static const uint8_t e12 =	e11 + 1;	// branch if SAE mode
-static const uint8_t e13 =	e12 + 1;	// branch if output is fuel/distance
-static const uint8_t e14 =	e13 + 1;	// branch if output is distance/fuel
-static const uint8_t e15 =	e14 + 1;	// branch always
-static const uint8_t e16 =	e15 + 1;	// return
-static const uint8_t e17 =	e16 + 1;	// return and restore trace flag
-static const uint8_t e18 =	e17 + 1;	// test index
-static const uint8_t e19 =	e18 + 1;	// trace restore
-static const uint8_t e20 =	e19 + 1;	// trace on
-static const uint8_t e21 =	e20 + 1;	// trace save
-static const uint8_t e22 =	e21 + 1;	// trace off
-static const uint8_t e23 =	e22 + 1;	// load index
-static const uint8_t e24 =	e23 + 1;	// load index EEPROM
-static const uint8_t e25 =	e24 + 1;	// compare index
-static const uint8_t e26 =	e25 + 1;	// load index EEPROM parameter length
-static const uint8_t e27 =	e26 + 1;	// call
-static const uint8_t e28 =	e27 + 1;	// jump
-static const uint8_t e29 =	e28 + 1;	// load jump register
-static const uint8_t e30 =	e29 + 1;	// clear register flag
-static const uint8_t e31 =	e30 + 1;	// set register flag
+#define nextAllowedValue 0
+static const uint8_t e01 =	nextAllowedValue;	// branch c=1 | z=1		(bgte)
+static const uint8_t e02 =	e01 + 1;			// branch c=1			(bgt)
+static const uint8_t e03 =	e02 + 1;			// branch c=0			(blte)
+static const uint8_t e04 =	e03 + 1;			// branch z=0			(bne)
+static const uint8_t e05 =	e04 + 1;			// branch z=1			(beq)
+static const uint8_t e06 =	e05 + 1;			// branch n=0			(bpl)
+static const uint8_t e07 =	e06 + 1;			// branch n=1			(bmi)
+static const uint8_t e08 =	e07 + 1;			// branch v=0			(bvc)
+static const uint8_t e09 =	e08 + 1;			// branch v=1			(bvs)
+static const uint8_t e10 =	e09 + 1;			// branch c=0 & z=0		(blt)
+static const uint8_t e11 =	e10 + 1;			// branch if metric mode
+static const uint8_t e12 =	e11 + 1;			// branch if SAE mode
+static const uint8_t e13 =	e12 + 1;			// branch if output is fuel/distance
+static const uint8_t e14 =	e13 + 1;			// branch if output is distance/fuel
+static const uint8_t e15 =	e14 + 1;			// branch always
+#define nextAllowedValue e15 + 1;
+
+static const uint8_t eMaxBranchInstrIdx =	nextAllowedValue;
+
+static const uint8_t e16 =	nextAllowedValue;	// return
+static const uint8_t e17 =	e16 + 1;			// return and restore trace flag
+static const uint8_t e18 =	e17 + 1;			// test index
+static const uint8_t e19 =	e18 + 1;			// trace restore
+static const uint8_t e20 =	e19 + 1;			// trace on
+static const uint8_t e21 =	e20 + 1;			// trace save
+static const uint8_t e22 =	e21 + 1;			// trace off
+static const uint8_t e23 =	e22 + 1;			// load index
+static const uint8_t e24 =	e23 + 1;			// load index EEPROM
+static const uint8_t e25 =	e24 + 1;			// compare index
+static const uint8_t e26 =	e25 + 1;			// load index EEPROM parameter length
+static const uint8_t e27 =	e26 + 1;			// call
+static const uint8_t e28 =	e27 + 1;			// jump
+static const uint8_t e29 =	e28 + 1;			// load jump register
+static const uint8_t e30 =	e29 + 1;			// clear register flag
+static const uint8_t e31 =	e30 + 1;			// set register flag
 
 // operations where opcode prefix rxx is not r00
 static const uint8_t m00 =	0;			// no operation
@@ -152,7 +163,8 @@ static const uint8_t i30 =	i29 + 8;	// shift rX right
 static const uint8_t i31 =	i30 + 8;	// BCD adjust
 
 static const uint8_t ixxMask = 0b11111000;
-uint8_t SWEET64processorFlags;
+
+static uint8_t SWEET64processorFlags;
 
 // x < y        - carry flag is clear, zero flag is clear
 // x == y       - carry flag is set, zero flag is set
@@ -161,33 +173,76 @@ uint8_t SWEET64processorFlags;
 // (x - y) >= 0 - minus flag is clear
 // (x - y) < 0	- minus flag is set
 //
-const uint8_t SWEET64carryFlag =			0b00000001;			// this is set for arithmetic and branch test operations
-const uint8_t SWEET64zeroFlag =				0b00000010;			// this is set for arithmetic and branch test operations
-const uint8_t SWEET64minusFlag =			0b00000100;			// this is set for arithmetic and branch test operations
-const uint8_t SWEET64overflowFlag =			0b00001000;			// this is set for arithmetic and branch test operations
+static const uint8_t SWEET64carryFlag =			0b00000001;			// this is set for arithmetic and branch test operations
+static const uint8_t SWEET64zeroFlag =			0b00000010;			// this is set for arithmetic and branch test operations
+static const uint8_t SWEET64minusFlag =			0b00000100;			// this is set for arithmetic and branch test operations
+static const uint8_t SWEET64overflowFlag =		0b00001000;			// this is set for arithmetic and branch test operations
 
-const uint8_t SWEET64traceCommandFlag =		0b01000000;			// this flag is ignored if #useSWEET64trace is not used
-const uint8_t SWEET64traceFlag =			0b10000000;			// this flag is ignored if #useSWEET64trace is not used
+static const uint8_t SWEET64traceSaveFlag =		0b00100000;			// last known trace state (for calls to SWEET64-based mul64 / div64)
+static const uint8_t SWEET64traceCommandFlag =	0b01000000;			// commands whether trace mode is on or off
+static const uint8_t SWEET64traceFlag =			0b10000000;
 
-const uint8_t SWEET64traceFlagGroup =	SWEET64traceCommandFlag | SWEET64traceFlag;
+static const uint8_t SWEET64traceFlagGroup =	SWEET64traceCommandFlag | SWEET64traceFlag;
 
 #define nextAllowedValue 0
-static const uint8_t s64reg1 = nextAllowedValue;	// general purpose
-static const uint8_t s64reg2 = s64reg1 + 1;			// output value / general purpose
-static const uint8_t s64reg3 = s64reg2 + 1;			// general purpose / temporary storage
-static const uint8_t s64reg4 = s64reg3 + 1;			// used in multiply, divide operations
-static const uint8_t s64reg5 = s64reg4 + 1;			// used in multiply, divide operations
-#define nextAllowedValue s64reg5 + 1
+static const uint8_t s64reg64_1 =		nextAllowedValue;		// general purpose
+static const uint8_t s64reg64_2 =		s64reg64_1 + 1;			// output value / general purpose
+static const uint8_t s64reg64_3 =		s64reg64_2 + 1;			// general purpose / temporary storage
+static const uint8_t s64reg64_4 =		s64reg64_3 + 1;			// used in multiply, divide operations
+static const uint8_t s64reg64_5 =		s64reg64_4 + 1;			// used in multiply, divide operations
+#define nextAllowedValue s64reg64_5 + 1
 #if defined(useDebugTerminal)
-static const uint8_t s64reg6 = nextAllowedValue;	// used for debug terminal
-static const uint8_t s64reg7 = s64reg6 + 1;			// used for debug terminal
-#define nextAllowedValue s64reg7 + 1
+static const uint8_t s64reg64_6 =		nextAllowedValue;		// used for debug terminal
+static const uint8_t s64reg64_7 =		s64reg64_6 + 1;			// used for debug terminal
+#define nextAllowedValue s64reg64_7 + 1
 #endif // defined(useDebugTerminal)
 
-static const uint8_t s64regCount = nextAllowedValue;
+static const uint8_t s64reg64count =	nextAllowedValue;
 
-uint64_t s64reg[(uint16_t)(s64regCount)];
+static uint64_t s64reg[(uint16_t)(s64reg64count)];
 
+static const uint8_t * s64stack[16];
+
+#define nextAllowedValue 0
+static const uint8_t s64oprRegXY =			nextAllowedValue;
+static const uint8_t s64oprRegRS =			s64oprRegXY + 1;
+static const uint8_t s64oprPrimary =		s64oprRegRS + 1;
+static const uint8_t s64oprExtra =			s64oprPrimary + 1;
+#define nextAllowedValue s64oprExtra + 1
+
+static const uint8_t s64oprCount =			nextAllowedValue;
+
+static uint8_t s64operands[(uint16_t)(s64oprCount)];
+
+#define nextAllowedValue 0
+static const uint8_t si64reg8flags =		nextAllowedValue;
+static const uint8_t si64reg8valid =		si64reg8flags + 1;
+static const uint8_t si64reg8trip =			si64reg8valid + 1;
+static const uint8_t si64reg8spnt =			si64reg8trip + 1;
+static const uint8_t si64reg8jump =			si64reg8spnt + 1;
+#define nextAllowedValue si64reg8jump + 1;
+
+static const uint8_t si64reg8count =		nextAllowedValue;
+
+static uint8_t s64reg8[(uint16_t)(si64reg8count)];
+
+#if defined(useDebugTerminalLabels)
+static const char terminalSWEET64registerLabels[] PROGMEM = {
+	"s64reg64_1" tcEOS
+	"s64reg64_2" tcEOS
+	"s64reg64_3" tcEOS
+	"s64reg64_4" tcEOS
+	"s64reg64_5" tcEOS
+	"s64reg64_6" tcEOS
+	"s64reg64_7" tcEOS
+	"si64reg8flags" tcEOS
+	"si64reg8valid" tcEOS
+	"si64reg8trip" tcEOS
+	"si64reg8spnt" tcEOS
+	"si64reg8jump" tcEOS
+};
+
+#endif // defined(useDebugTerminalLabels)
 #if defined(useMatrixMath)
 /*
 for useCoastDownCalculator -
@@ -246,7 +301,9 @@ uint64_t matrix_c[3];
 static const uint8_t instrTestReg =					nextAllowedValue;						// tests 64-bit register for zero condition or high bit set
 static const uint8_t instrTestIndex =				instrTestReg + 1;						// tests primary index for zero condition or high bit set
 static const uint8_t instrCmpXtoY =					instrTestIndex + 1;						// compares 64-bit register Y from 64-bit register X
-static const uint8_t instrCmpIndex =				instrCmpXtoY + 1;						// compares primary index from operand
+static const uint8_t instrCmpXtoMain =				instrCmpXtoY + 1;						// compares main program register value from 64-bit register X
+static const uint8_t instrCmpXtoConst =				instrCmpXtoMain + 1;						// compares stored constant value from 64-bit register X
+static const uint8_t instrCmpIndex =				instrCmpXtoConst + 1;					// compares primary index from operand
 
 static const uint8_t instrBranchIfVclear =			instrCmpIndex + 1;						// branches if result[0..63] is not all 1s
 static const uint8_t instrBranchIfVset =			instrBranchIfVclear + 1;				// branches if result[0..63] is all 1s
@@ -386,121 +443,131 @@ static const uint8_t instrDone =					nextAllowedValue;						// return to caller 
 
 static const uint8_t maxValidSWEET64instr =			nextAllowedValue;
 
-#if defined(useSWEET64trace)
-static const char opcodeList[] PROGMEM = {
-	"instrTestReg" tcEOSCR
-	"instrTestIndex" tcEOSCR
-	"instrCmpXtoY" tcEOSCR
-	"instrCmpIndex" tcEOSCR
-	"instrBranchIfMclear" tcEOSCR
-	"instrBranchIfMset" tcEOSCR
-	"instrBranchIfZclear" tcEOSCR
-	"instrBranchIfZset" tcEOSCR
-	"instrBranchIfCclear" tcEOSCR
-	"instrBranchIfCset" tcEOSCR
-	"instrBranchIfLT" tcEOSCR
-	"instrBranchIfGTorE" tcEOSCR
-	"instrBranchIfMetricMode" tcEOSCR
-	"instrBranchIfSAEmode" tcEOSCR
-	"instrBranchIfFuelOverDist" tcEOSCR
-	"instrBranchIfDistOverFuel" tcEOSCR
-	"instrSkip" tcEOSCR
-	"instrLdReg" tcEOSCR
-	"instrLdRegByteFromIndex" tcEOSCR
-	"instrLdRegByte" tcEOSCR
-	"instrLdRegByteFromY" tcEOSCR
-	"instrLdRegTripVar" tcEOSCR
-	"instrLdRegTripVarIndexed" tcEOSCR
-	"instrLdRegTripVarOffset" tcEOSCR
-	"instrLdRegTripVarIndexedRV" tcEOSCR
-	"instrStRegTripVarIndexed" tcEOSCR
-	"instrStRegTripVarIndexedRV" tcEOSCR
-	"instrLdRegConst" tcEOSCR
-	"instrDoBCDadjust" tcEOSCR
-	"instrLdRegEEPROM" tcEOSCR
-	"instrLdRegEEPROMindexed" tcEOSCR
-	"instrLdRegEinit" tcEOSCR
-	"instrLdRegEinitIndexed" tcEOSCR
-	"instrStRegEEPROM" tcEOSCR
-	"instrStRegEEPROMindexed" tcEOSCR
-	"instrLdRegMain" tcEOSCR
-	"instrLdRegMainIndexed" tcEOSCR
-	"instrLdRegMainOffset" tcEOSCR
-	"instrStRegMain" tcEOSCR
-	"instrStRegMainIndexed" tcEOSCR
-	"instrLdRegVolatile" tcEOSCR
-	"instrLdRegVolatileIndexed" tcEOSCR
-	"instrStRegVolatile" tcEOSCR
-	"instrStRegVolatileIndexed" tcEOSCR
-	"instrLxdI" tcEOSCR
-	"instrLxdIEEPROM" tcEOSCR
-	"instrLxdIEEPROMindexed" tcEOSCR
-	"instrLxdIParamLength" tcEOSCR
-	"instrLxdIParamLengthIndexed" tcEOSCR
-	"instrCall" tcEOSCR
-	"instrJump" tcEOSCR
-	"instrSwapReg" tcEOSCR
-	"instrSubYfromX" tcEOSCR
-	"instrSubByteFromX" tcEOSCR
-	"instrSubMainFromX" tcEOSCR
-	"instrAddYtoX" tcEOSCR
-	"instrAdjustQuotient" tcEOSCR
-	"instrAddByteToX" tcEOSCR
-	"instrAddConstToX" tcEOSCR
-	"instrAddEEPROMtoX" tcEOSCR
-	"instrAddMainToX" tcEOSCR
-	"instrAddIndexToX" tcEOSCR
-	"instrMul2by1" tcEOSCR
-	"instrMul2byByte" tcEOSCR
-	"instrMul2byConst" tcEOSCR
-	"instrMul2byEEPROM" tcEOSCR
-	"instrMul2byMain" tcEOSCR
-	"instrMul2byVolatile" tcEOSCR
-	"instrMul2byTripVarIndexed" tcEOSCR
-	"instrDiv2by1" tcEOSCR
-	"instrDiv2byConst" tcEOSCR
-	"instrDiv2byEEPROM" tcEOSCR
-	"instrDiv2byMain" tcEOSCR
-	"instrDiv2byTripVarIndexed" tcEOSCR
-	"instrDiv2byByte" tcEOSCR
-	"instrShiftRegLeft" tcEOSCR
-	"instrShiftRegRight" tcEOSCR
-	"instrAddIndex" tcEOSCR
-	"instrTraceOn" tcEOSCR
-	"instrTraceOff" tcEOSCR
-	"instrTraceSave" tcEOSCR
-	"instrTraceRestore" tcEOSCR
-	"instrTraceDone" tcEOSCR
-	"instrLdJumpReg" tcEOSCR
-	"instrClearFlag" tcEOSCR
-	"instrSetFlag" tcEOSCR
+#if defined(useDebugTerminalSWEET64)
+static const char opCodeList[] PROGMEM = {
+	"TestReg" tcEOS
+	"TestIndex" tcEOS
+	"CmpXtoY" tcEOS
+	"CmpXtoMain" tcEOS
+	"CmpXtoConst" tcEOS
+	"CmpIndex" tcEOS
+
+	"BranchIfVclear" tcEOS
+	"BranchIfVset" tcEOS
+	"BranchIfMclear" tcEOS
+	"BranchIfMset" tcEOS
+	"BranchIfZclear" tcEOS
+	"BranchIfZset" tcEOS
+	"BranchIfCclear" tcEOS
+	"BranchIfCset" tcEOS
+	"BranchIfLT" tcEOS
+	"BranchIfGTorE" tcEOS
+	"BranchIfMetricMode" tcEOS
+	"BranchIfSAEmode" tcEOS
+	"BranchIfFuelOverDist" tcEOS
+	"BranchIfDistOverFuel" tcEOS
+
+	"Skip" tcEOS
+	"Call" tcEOS
+	"CallImplied" tcEOS
+	"Jump" tcEOS
+
+	"LdReg" tcEOS
+	"LdRegByteFromIndex" tcEOS
+	"LdRegByte" tcEOS
+	"LdRegByteFromY" tcEOS
+	"LdRegTripVar" tcEOS
+	"LdRegTripVarIndexed" tcEOS
+	"LdRegTripVarOffset" tcEOS
+	"LdRegTripVarIndexedRV" tcEOS
+	"StRegTripVarIndexed" tcEOS
+	"StRegTripVarIndexedRV" tcEOS
+	"LdRegConst" tcEOS
+	"LdRegConstMetric" tcEOS
+	"LdRegConstIndexed" tcEOS
+	"DoBCDadjust" tcEOS
+	"LdRegEEPROM" tcEOS
+	"LdRegEEPROMindexed" tcEOS
+	"LdRegEinit" tcEOS
+	"LdRegEinitIndexed" tcEOS
+	"StRegEEPROM" tcEOS
+	"StRegEEPROMindexed" tcEOS
+	"LdRegMain" tcEOS
+	"LdRegMainIndexed" tcEOS
+	"LdRegMainOffset" tcEOS
+	"StRegMain" tcEOS
+	"StRegMainIndexed" tcEOS
+	"LdRegVolatile" tcEOS
+	"LdRegVolatileIndexed" tcEOS
+	"StRegVolatile" tcEOS
+	"StRegVolatileIndexed" tcEOS
+	"LxdI" tcEOS
+	"LxdIEEPROM" tcEOS
+	"LxdIEEPROMoffset" tcEOS
+	"LxdIParamLength" tcEOS
+	"LxdIParamLengthIndexed" tcEOS
+	"SwapReg" tcEOS
+	"SubYfromX" tcEOS
+	"SubByteFromX" tcEOS
+	"SubMainFromX" tcEOS
+	"AddYtoX" tcEOS
+	"AdjustQuotient" tcEOS
+	"AddByteToX" tcEOS
+	"AddConstToX" tcEOS
+	"AddEEPROMtoX" tcEOS
+	"AddMainToX" tcEOS
+	"AddIndexToX" tcEOS
+	"Mul2by1" tcEOS
+	"Mul2byByte" tcEOS
+	"Mul2byConst" tcEOS
+	"Mul2byEEPROM" tcEOS
+	"Mul2byMain" tcEOS
+	"Mul2byVolatile" tcEOS
+	"Mul2byTripVarIndexed" tcEOS
+	"Div2by1" tcEOS
+	"Div2byConst" tcEOS
+	"Div2byEEPROM" tcEOS
+	"Div2byMain" tcEOS
+	"Div2byTripVarIndexed" tcEOS
+	"Div2byByte" tcEOS
+	"ShiftRegLeft" tcEOS
+	"ShiftRegRight" tcEOS
+	"AddIndex" tcEOS
+	"TraceOn" tcEOS
+	"TraceOff" tcEOS
+	"TraceSave" tcEOS
+	"TraceRestore" tcEOS
+	"TraceDone" tcEOS
+	"LdJumpReg" tcEOS
+	"ClearFlag" tcEOS
+	"SetFlag" tcEOS
 #if defined(useIsqrt)
-	"instrIsqrt" tcEOSCR
+	"Isqrt" tcEOS
 #endif // defined(useIsqrt)
 #if defined(useAnalogRead)
-	"instrLdRegVoltage" tcEOSCR
-	"instrLdRegVoltageIndexed" tcEOSCR
+	"LdRegVoltage" tcEOS
+	"LdRegVoltageIndexed" tcEOS
 #endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
-	"instrLdRegTripFEvTindexed" tcEOSCR
+	"LdRegTripFEvTindexed" tcEOS
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarGraph)
-	"instrStRegBGdataIndexed" tcEOSCR
+	"StRegBGdataIndexed" tcEOS
 #endif // defined(useBarGraph)
 #if defined(useMatrixMath)
-	"instrLdRegXColIndexedRow" tcEOSCR
-	"instrStRegXColIndexedRow" tcEOSCR
-	"instrLdRegRColIndexedRow" tcEOSCR
-	"instrStRegRColIndexedRow" tcEOSCR
-	"instrLdRegEIndexedRow" tcEOSCR
-	"instrStRegEIndexedRow" tcEOSCR
-	"instrLdRegCIndexedRow" tcEOSCR
-	"instrStRegCIndexedRow" tcEOSCR
+	"LdRegXColIndexedRow" tcEOS
+	"StRegXColIndexedRow" tcEOS
+	"LdRegRColIndexedRow" tcEOS
+	"StRegRColIndexedRow" tcEOS
+	"LdRegEIndexedRow" tcEOS
+	"StRegEIndexedRow" tcEOS
+	"LdRegCIndexedRow" tcEOS
+	"StRegCIndexedRow" tcEOS
 #endif // defined(useMatrixMath)
-	"instrDone" tcEOSCR
+	"Done" tcEOS
 };
 
-#endif // defined(useSWEET64trace)
+#endif // defined(useDebugTerminalSWEET64)
 // these #defines can optionally be used to generate SWEET64 bytecodes
 //
 #define instrBranchIfOverflow		instrBranchIfVset					// provided as a convenience for aspiring SWEET64 coders
@@ -513,240 +580,125 @@ static const char opcodeList[] PROGMEM = {
 #define instrBranchIfLTorE			instrBranchIfCclear					// provided as a convenience for aspiring SWEET64 coders
 #define instrBranchIfGT				instrBranchIfCset					// provided as a convenience for aspiring SWEET64 coders
 
-static const uint8_t opcodeFetchPrefix[(uint16_t)(maxValidSWEET64instr)] PROGMEM = {
-	r04 | p00 | s00,	// instrTestReg
-	r00 | p00 | s00,	// instrTestIndex
-	r04 | p00 | s00,	// instrCmpXtoY
-	r00 | p01 | s00,	// instrCmpIndex
-	r00 | p00 | s01,	// instrBranchIfVclear
-	r00 | p00 | s01,	// instrBranchIfVset
-	r00 | p00 | s01,	// instrBranchIfMclear
-	r00 | p00 | s01,	// instrBranchIfMset
-	r00 | p00 | s01,	// instrBranchIfZclear
-	r00 | p00 | s01,	// instrBranchIfZset
-	r00 | p00 | s01,	// instrBranchIfCclear
-	r00 | p00 | s01,	// instrBranchIfCset
-	r00 | p00 | s01,	// instrBranchIfLT
-	r00 | p00 | s01,	// instrBranchIfGTorE
-	r00 | p00 | s01,	// instrBranchIfMetricMode
-	r00 | p00 | s01,	// instrBranchIfSAEmode
-	r00 | p00 | s01,	// instrBranchIfFuelOverDist
-	r00 | p00 | s01,	// instrBranchIfDistOverFuel
-	r00 | p00 | s01,	// instrSkip
-	r00 | p00 | s01,	// instrCall
-	r00 | p00 | s03,	// instrCallImplied
-	r00 | p00 | s01,	// instrJump
-	r01 | p00 | s00,	// instrLdReg
-	r01 | p02 | s00,	// instrLdRegByteFromIndex
-	r01 | p01 | s00,	// instrLdRegByte
-	r01 | p01 | s00,	// instrLdRegByteFromY
-	r04 | p01 | s01,	// instrLdRegTripVar
-	r04 | p02 | s01,	// instrLdRegTripVarIndexed
-	r04 | p03 | s01,	// instrLdRegTripVarOffset
-	r04 | p01 | s02,	// instrLdRegTripVarIndexedRV
-	r01 | p02 | s01,	// instrStRegTripVarIndexed
-	r01 | p01 | s02,	// instrStRegTripVarIndexedRV
-	r01 | p01 | s00,	// instrLdRegConst
-	r07 | p01 | s00,	// instrLdRegConstMetric
-	r01 | p02 | s00,	// instrLdRegConstIndexed
-	r01 | p01 | s00,	// instrDoBCDadjust
-	r01 | p01 | s00,	// instrLdRegEEPROM
-	r01 | p02 | s00,	// instrLdRegEEPROMindexed
-	r01 | p01 | s00,	// instrLdRegEinit
-	r01 | p02 | s00,	// instrLdRegEinitIndexed
-	r01 | p01 | s00,	// instrStRegEEPROM
-	r01 | p02 | s00,	// instrStRegEEPROMindexed
-	r01 | p01 | s00,	// instrLdRegMain
-	r01 | p02 | s00,	// instrLdRegMainIndexed
-	r01 | p03 | s00,	// instrLdRegMainOffset
-	r01 | p01 | s00,	// instrStRegMain
-	r01 | p02 | s00,	// instrStRegMainIndexed
-	r01 | p01 | s00,	// instrLdRegVolatile
-	r01 | p02 | s00,	// instrLdRegVolatileIndexed
-	r01 | p01 | s00,	// instrStRegVolatile
-	r01 | p02 | s00,	// instrStRegVolatileIndexed
-	r00 | p01 | s00,	// instrLxdI
-	r00 | p01 | s00,	// instrLxdIEEPROM
-	r00 | p03 | s00,	// instrLxdIEEPROMoffset
-	r00 | p01 | s00,	// instrLxdIParamLength
-	r00 | p02 | s00,	// instrLxdIParamLengthIndexed
-	r01 | p00 | s00,	// instrSwapReg
-	r04 | p00 | s00,	// instrSubYfromX
-	r06 | p01 | s00,	// instrSubByteFromX
-	r06 | p01 | s00,	// instrSubMainFromX
-	r04 | p00 | s00,	// instrAddYtoX
-	r05 | p00 | s00,	// instrAdjustQuotient
-	r06 | p01 | s00,	// instrAddByteToX
-	r06 | p01 | s00,	// instrAddConstToX
-	r06 | p01 | s00,	// instrAddEEPROMtoX
-	r06 | p01 | s00,	// instrAddMainToX
-	r06 | p02 | s00,	// instrAddIndexToX
-	r03 | p00 | s00,	// instrMul2by1
-	r02 | p01 | s00,	// instrMul2byByte
-	r02 | p01 | s00,	// instrMul2byConst
-	r02 | p01 | s00,	// instrMul2byEEPROM
-	r02 | p01 | s00,	// instrMul2byMain
-	r02 | p01 | s00,	// instrMul2byVolatile
-	r02 | p02 | s01,	// instrMul2byTripVarIndexed
-	r03 | p00 | s00,	// instrDiv2by1
-	r02 | p01 | s00,	// instrDiv2byConst
-	r02 | p01 | s00,	// instrDiv2byEEPROM
-	r02 | p01 | s00,	// instrDiv2byMain
-	r02 | p02 | s01,	// instrDiv2byTripVarIndexed
-	r02 | p01 | s00,	// instrDiv2byByte
-	r01 | p00 | s00,	// instrShiftRegLeft
-	r01 | p00 | s00,	// instrShiftRegRight
-	r00 | p03 | s00,	// instrAddIndex
-	r00 | p00 | s00,	// instrTraceOn
-	r00 | p00 | s00,	// instrTraceOff
-	r00 | p00 | s00,	// instrTraceSave
-	r00 | p00 | s00,	// instrTraceRestore
-	r00 | p00 | s00,	// instrTraceDone
-	r00 | p02 | s00,	// instrLdJumpReg
-	r00 | p01 | s00,	// instrClearFlag
-	r00 | p01 | s00,	// instrSetFlag
-#if defined(useIsqrt)
-	r01 | p00 | s00,	// instrIsqrt
-#endif // defined(useIsqrt)
-#if defined(useAnalogRead)
-	r01 | p01 | s00,	// instrLdRegVoltage
-	r01 | p02 | s00,	// instrLdRegVoltageIndexed
-#endif // defined(useAnalogRead)
-#if defined(useBarFuelEconVsTime)
-	r04 | p02 | s01,	// instrLdRegTripFEvTindexed
-#endif // defined(useBarFuelEconVsTime)
-#if defined(useBarGraph)
-	r01 | p02 | s00,	// instrStRegBGdataIndexed
-#endif // defined(useBarGraph)
-#if defined(useMatrixMath)
-	r01 | p01 | s02,	// instrLdRegXColIndexedRow
-	r01 | p01 | s02,	// instrStRegXColIndexedRow
-	r01 | p01 | s02,	// instrLdRegRColIndexedRow
-	r01 | p01 | s02,	// instrStRegRColIndexedRow
-	r01 | p00 | s02,	// instrLdRegEIndexedRow
-	r01 | p00 | s02,	// instrStRegEIndexedRow
-	r01 | p00 | s02,	// instrLdRegCIndexedRow
-	r01 | p00 | s02,	// instrStRegCIndexedRow
-#endif // defined(useMatrixMath)
-	r00 | p00 | s00,	// instrDone
-};
+static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM = {
+	(((r04 | p00 | s00) << 8) |			(m04 | i00)),			// instrTestReg
+	(((r00 | p00 | s00) << 8) |			(e18)),					// instrTestIndex
+	(((r04 | p00 | s00) << 8) |			(m03 | i00)),			// instrCmpXtoY
+	(((r06 | p01 | s00) << 8) |			(m03 | i05)),			// instrCmpXtoMain
+	(((r06 | p01 | s00) << 8) |			(m03 | i14)),			// instrCmpXtoConst
+	(((r00 | p01 | s00) << 8) |			(e25)),					// instrCmpIndex
 
-static const uint8_t opcodeFetchSuffix[(uint16_t)(maxValidSWEET64instr)] PROGMEM = {
-	m04 | i00,			// instrTestReg
-	e18,				// instrTestIndex
-	m03 | i00,			// instrCmpXtoY
-	e25,				// instrCmpIndex
-	e08,				// instrBranchIfVclear
-	e09,				// instrBranchIfVset
-	e06,				// instrBranchIfMclear
-	e07,				// instrBranchIfMset
-	e04,				// instrBranchIfZclear
-	e05,				// instrBranchIfZset
-	e03,				// instrBranchIfCclear
-	e02,				// instrBranchIfCset
-	e10,				// instrBranchIfLT
-	e01,				// instrBranchIfGTorE
-	e11,				// instrBranchIfMetricMode
-	e12,				// instrBranchIfSAEmode
-	e13,				// instrBranchIfFuelOverDist
-	e14,				// instrBranchIfDistOverFuel
-	e15,				// instrSkip
-	e27,				// instrCall
-	e27,				// instrCallImplied
-	e28,				// instrJump
-	m00 | i01,			// instrLdReg
-	m00 | i10,			// instrLdRegByteFromIndex
-	m00 | i10,			// instrLdRegByte
-	m00 | i09,			// instrLdRegByteFromY
-	m04 | i18,			// instrLdRegTripVar
-	m04 | i18,			// instrLdRegTripVarIndexed
-	m04 | i18,			// instrLdRegTripVarOffset
-	m04 | i18,			// instrLdRegTripVarIndexedRV
-	m00 | i19,			// instrStRegTripVarIndexed
-	m00 | i19,			// instrStRegTripVarIndexedRV
-	m00 | i14,			// instrLdRegConst
-	m00 | i14,			// instrLdRegConstMetric
-	m00 | i14,			// instrLdRegConstIndexed
-	m00 | i31,			// instrDoBCDadjust
-	m00 | i03,			// instrLdRegEEPROM
-	m00 | i03,			// instrLdRegEEPROMindexed
-	m00 | i15,			// instrLdRegEinit
-	m00 | i15,			// instrLdRegEinitIndexed
-	m00 | i04,			// instrStRegEEPROM
-	m00 | i04,			// instrStRegEEPROMindexed
-	m00 | i05,			// instrLdRegMain
-	m00 | i05,			// instrLdRegMainIndexed
-	m00 | i05,			// instrLdRegMainOffset
-	m00 | i06,			// instrStRegMain
-	m00 | i06,			// instrStRegMainIndexed
-	m00 | i07,			// instrLdRegVolatile
-	m00 | i07,			// instrLdRegVolatileIndexed
-	m00 | i08,			// instrStRegVolatile
-	m00 | i08,			// instrStRegVolatileIndexed
-	e23,				// instrLxdI
-	e24,				// instrLxdIEEPROM
-	e24,				// instrLxdIEEPROMoffset
-	e26,				// instrLxdIParamLength
-	e26,				// instrLxdIParamLengthIndexed
-	m00 | i02,			// instrSwapReg
-	m02 | i00,			// instrSubYfromX
-	m02 | i10,			// instrSubByteFromX
-	m02 | i05,			// instrSubMainFromX
-	m01 | i00,			// instrAddYtoX
-	m01 | i00,			// instrAdjustQuotient
-	m01 | i10,			// instrAddByteToX
-	m01 | i14,			// instrAddConstToX
-	m01 | i03,			// instrAddEEPROMtoX
-	m01 | i05,			// instrAddMainToX
-	m01 | i10,			// instrAddIndexToX
-	m05 | i01,			// instrMul2by1
-	m05 | i10,			// instrMul2byByte
-	m05 | i14,			// instrMul2byConst
-	m05 | i03,			// instrMul2byEEPROM
-	m05 | i05,			// instrMul2byMain
-	m05 | i07,			// instrMul2byVolatile
-	m05 | i18,			// instrMul2byTripVarIndexed
-	m06 | i01,			// instrDiv2by1
-	m06 | i14,			// instrDiv2byConst
-	m06 | i03,			// instrDiv2byEEPROM
-	m06 | i05,			// instrDiv2byMain
-	m06 | i18,			// instrDiv2byTripVarIndexed
-	m06 | i10,			// instrDiv2byByte
-	m00 | i29,			// instrShiftRegLeft
-	m00 | i30,			// instrShiftRegRight
-	e23,				// instrAddIndex
-	e20,				// instrTraceOn
-	e22,				// instrTraceOff
-	e21,				// instrTraceSave
-	e19,				// instrTraceRestore
-	e17,				// instrTraceDone
-	e29,				// instrLdJumpReg
-	e30,				// instrClearFlag
-	e31,				// instrSetFlag
-#if defined(useIsqrt)
-	m00 | i28,			// instrIsqrt
-#endif // defined(useIsqrt)
-#if defined(useAnalogRead)
-	m00 | i16,			// instrLdRegVoltage
-	m00 | i16,			// instrLdRegVoltageIndexed
+	(((r00 | p00 | s01) << 8) |			(e08)),					// instrBranchIfVclear
+	(((r00 | p00 | s01) << 8) |			(e09)),					// instrBranchIfVset
+	(((r00 | p00 | s01) << 8) |			(e06)),					// instrBranchIfMclear
+	(((r00 | p00 | s01) << 8) |			(e07)),					// instrBranchIfMset
+	(((r00 | p00 | s01) << 8) |			(e04)),					// instrBranchIfZclear
+	(((r00 | p00 | s01) << 8) |			(e05)),					// instrBranchIfZset
+	(((r00 | p00 | s01) << 8) |			(e03)),					// instrBranchIfCclear
+	(((r00 | p00 | s01) << 8) |			(e02)),					// instrBranchIfCset
+	(((r00 | p00 | s01) << 8) |			(e10)),					// instrBranchIfLT
+	(((r00 | p00 | s01) << 8) |			(e01)),					// instrBranchIfGTorE
+	(((r00 | p00 | s01) << 8) |			(e11)),					// instrBranchIfMetricMode
+	(((r00 | p00 | s01) << 8) |			(e12)),					// instrBranchIfSAEmode
+	(((r00 | p00 | s01) << 8) |			(e13)),					// instrBranchIfFuelOverDist
+	(((r00 | p00 | s01) << 8) |			(e14)),					// instrBranchIfDistOverFuel
+	(((r00 | p00 | s01) << 8) |			(e15)),					// instrSkip
+	(((r00 | p00 | s01) << 8) |			(e27)),					// instrCall
+	(((r00 | p00 | s03) << 8) |			(e27)),					// instrCallImplied
+	(((r00 | p00 | s01) << 8) |			(e28)),					// instrJump
+	(((r01 | p00 | s00) << 8) |			(m00 | i01)),			// instrLdReg
+	(((r01 | p02 | s00) << 8) |			(m00 | i10)),			// instrLdRegByteFromIndex
+	(((r01 | p01 | s00) << 8) |			(m00 | i10)),			// instrLdRegByte
+	(((r01 | p01 | s00) << 8) |			(m00 | i09)),			// instrLdRegByteFromY
+	(((r04 | p01 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVar
+	(((r04 | p02 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVarIndexed
+	(((r04 | p03 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVarOffset
+	(((r04 | p01 | s02) << 8) |			(m04 | i18)),			// instrLdRegTripVarIndexedRV
+	(((r01 | p02 | s01) << 8) |			(m00 | i19)),			// instrStRegTripVarIndexed
+	(((r01 | p01 | s02) << 8) |			(m00 | i19)),			// instrStRegTripVarIndexedRV
+	(((r01 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegConst
+	(((r07 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegConstMetric
+	(((r01 | p02 | s00) << 8) |			(m00 | i14)),			// instrLdRegConstIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i31)),			// instrDoBCDadjust
+	(((r01 | p01 | s00) << 8) |			(m00 | i03)),			// instrLdRegEEPROM
+	(((r01 | p02 | s00) << 8) |			(m00 | i03)),			// instrLdRegEEPROMindexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i15)),			// instrLdRegEinit
+	(((r01 | p02 | s00) << 8) |			(m00 | i15)),			// instrLdRegEinitIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i04)),			// instrStRegEEPROM
+	(((r01 | p02 | s00) << 8) |			(m00 | i04)),			// instrStRegEEPROMindexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i05)),			// instrLdRegMain
+	(((r01 | p02 | s00) << 8) |			(m00 | i05)),			// instrLdRegMainIndexed
+	(((r01 | p03 | s00) << 8) |			(m00 | i05)),			// instrLdRegMainOffset
+	(((r01 | p01 | s00) << 8) |			(m00 | i06)),			// instrStRegMain
+	(((r01 | p02 | s00) << 8) |			(m00 | i06)),			// instrStRegMainIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i07)),			// instrLdRegVolatile
+	(((r01 | p02 | s00) << 8) |			(m00 | i07)),			// instrLdRegVolatileIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i08)),			// instrStRegVolatile
+	(((r01 | p02 | s00) << 8) |			(m00 | i08)),			// instrStRegVolatileIndexed
+	(((r00 | p01 | s00) << 8) |			(e23)),					// instrLxdI
+	(((r00 | p01 | s00) << 8) |			(e24)),					// instrLxdIEEPROM
+	(((r00 | p03 | s00) << 8) |			(e24)),					// instrLxdIEEPROMoffset
+	(((r00 | p01 | s00) << 8) |			(e26)),					// instrLxdIParamLength
+	(((r00 | p02 | s00) << 8) |			(e26)),					// instrLxdIParamLengthIndexed
+	(((r01 | p00 | s00) << 8) |			(m00 | i02)),			// instrSwapReg
+	(((r04 | p00 | s00) << 8) |			(m02 | i00)),			// instrSubYfromX
+	(((r06 | p01 | s00) << 8) |			(m02 | i10)),			// instrSubByteFromX
+	(((r06 | p01 | s00) << 8) |			(m02 | i05)),			// instrSubMainFromX
+	(((r04 | p00 | s00) << 8) |			(m01 | i00)),			// instrAddYtoX
+	(((r05 | p00 | s00) << 8) |			(m01 | i00)),			// instrAdjustQuotient
+	(((r06 | p01 | s00) << 8) |			(m01 | i10)),			// instrAddByteToX
+	(((r06 | p01 | s00) << 8) |			(m01 | i14)),			// instrAddConstToX
+	(((r06 | p01 | s00) << 8) |			(m01 | i03)),			// instrAddEEPROMtoX
+	(((r06 | p01 | s00) << 8) |			(m01 | i05)),			// instrAddMainToX
+	(((r06 | p02 | s00) << 8) |			(m01 | i10)),			// instrAddIndexToX
+	(((r03 | p00 | s00) << 8) |			(m05 | i01)),			// instrMul2by1
+	(((r02 | p01 | s00) << 8) |			(m05 | i10)),			// instrMul2byByte
+	(((r02 | p01 | s00) << 8) |			(m05 | i14)),			// instrMul2byConst
+	(((r02 | p01 | s00) << 8) |			(m05 | i03)),			// instrMul2byEEPROM
+	(((r02 | p01 | s00) << 8) |			(m05 | i05)),			// instrMul2byMain
+	(((r02 | p01 | s00) << 8) |			(m05 | i07)),			// instrMul2byVolatile
+	(((r02 | p02 | s01) << 8) |			(m05 | i18)),			// instrMul2byTripVarIndexed
+	(((r03 | p00 | s00) << 8) |			(m06 | i01)),			// instrDiv2by1
+	(((r02 | p01 | s00) << 8) |			(m06 | i14)),			// instrDiv2byConst
+	(((r02 | p01 | s00) << 8) |			(m06 | i03)),			// instrDiv2byEEPROM
+	(((r02 | p01 | s00) << 8) |			(m06 | i05)),			// instrDiv2byMain
+	(((r02 | p02 | s01) << 8) |			(m06 | i18)),			// instrDiv2byTripVarIndexed
+	(((r02 | p01 | s00) << 8) |			(m06 | i10)),			// instrDiv2byByte
+	(((r01 | p00 | s00) << 8) |			(m00 | i29)),			// instrShiftRegLeft
+	(((r01 | p00 | s00) << 8) |			(m00 | i30)),			// instrShiftRegRight
+	(((r00 | p03 | s00) << 8) |			(e23)),					// instrAddIndex
+	(((r00 | p00 | s00) << 8) |			(e20)),					// instrTraceOn
+	(((r00 | p00 | s00) << 8) |			(e22)),					// instrTraceOff
+	(((r00 | p00 | s00) << 8) |			(e21)),					// instrTraceSave
+	(((r00 | p00 | s00) << 8) |			(e19)),					// instrTraceRestore
+	(((r00 | p00 | s00) << 8) |			(e17)),					// instrTraceDone
+	(((r00 | p02 | s00) << 8) |			(e29)),					// instrLdJumpReg
+	(((r00 | p01 | s00) << 8) |			(e30)),					// instrClearFlag
+	(((r00 | p01 | s00) << 8) |			(e31)),					// instrSetFlag
+#if defined(useIsqrt)           
+	(((r01 | p00 | s00) << 8) |			(m00 | i28)),			// instrIsqrt
+#endif // defined(useIsqrt)     
+#if defined(useAnalogRead)      
+	(((r01 | p01 | s00) << 8) |			(m00 | i16)),			// instrLdRegVoltage
+	(((r01 | p02 | s00) << 8) |			(m00 | i16)),			// instrLdRegVoltageIndexed
 #endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
-	m04 | i17,			// instrLdRegTripFEvTindexed
+	(((r04 | p02 | s01) << 8) |			(m04 | i17)),			// instrLdRegTripFEvTindexed
 #endif // defined(useBarFuelEconVsTime)
-#if defined(useBarGraph)
-	m00 | i11,			// instrStRegBGdataIndexed
-#endif // defined(useBarGraph)
-#if defined(useMatrixMath)
-	m00 | i20,			// instrLdRegXColIndexedRow
-	m00 | i21,			// instrStRegXColIndexedRow
-	m00 | i22,			// instrLdRegRColIndexedRow
-	m00 | i23,			// instrStRegRColIndexedRow
-	m00 | i24,			// instrLdRegEIndexedRow
-	m00 | i25,			// instrStRegEIndexedRow
-	m00 | i26,			// instrLdRegCIndexedRow
-	m00 | i27,			// instrStRegCIndexedRow
+#if defined(useBarGraph)        
+	(((r01 | p02 | s00) << 8) |			(m00 | i11)),			// instrStRegBGdataIndexed
+#endif // defined(useBarGraph)  
+#if defined(useMatrixMath)      
+	(((r01 | p01 | s02) << 8) |			(m00 | i20)),			// instrLdRegXColIndexedRow
+	(((r01 | p01 | s02) << 8) |			(m00 | i21)),			// instrStRegXColIndexedRow
+	(((r01 | p01 | s02) << 8) |			(m00 | i22)),			// instrLdRegRColIndexedRow
+	(((r01 | p01 | s02) << 8) |			(m00 | i23)),			// instrStRegRColIndexedRow
+	(((r01 | p00 | s02) << 8) |			(m00 | i24)),			// instrLdRegEIndexedRow
+	(((r01 | p00 | s02) << 8) |			(m00 | i25)),			// instrStRegEIndexedRow
+	(((r01 | p00 | s02) << 8) |			(m00 | i26)),			// instrLdRegCIndexedRow
+	(((r01 | p00 | s02) << 8) |			(m00 | i27)),			// instrStRegCIndexedRow
 #endif // defined(useMatrixMath)
-	e16,				// instrDone
+	(((r00 | p00 | s00) << 8) |			(e16)),					// instrDone
 };
 
 // indexes into SWEET64 constant number value table
@@ -802,7 +754,8 @@ const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock tic
 const uint8_t idxNumerDistance =			idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
 const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
 const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
-#define nextAllowedValue idxSecondsPerHour + 1
+const uint8_t idxCycles0PerHour =			idxSecondsPerHour + 1;			// timer0 clock cycles per hour
+#define nextAllowedValue idxCycles0PerHour + 1
 #if defined(useClockDisplay)
 const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in a day
 #define nextAllowedValue idxSecondsPerDay + 1
@@ -899,6 +852,7 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerDistance" tcEOS
 	"idxNumerVolume" tcEOS
 	"idxSecondsPerHour" tcEOS
+	"idxCycles0PerHour" tcEOS
 #if defined(useClockDisplay)
 	"idxSecondsPerDay" tcEOS
 #endif // defined(useClockDisplay)
@@ -984,6 +938,7 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 	1609344ul,								// idxNumerDistance - numerator to convert miles to kilometers
 	3785411784ul,							// idxNumerVolume - numerator to convert US gallons to liters
 	3600ul,									// idxSecondsPerHour - seconds per hour
+	3600ul * t0CyclesPerSecond,				// idxCycles0PerHour - timer0 clock cycles per hour
 #if defined(useClockDisplay)
 	86400ul,								// idxSecondsPerDay - number of seconds in a day
 #endif // defined(useClockDisplay)

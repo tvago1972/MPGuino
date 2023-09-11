@@ -21,10 +21,6 @@ namespace bluetooth /* Bluetooth interface terminal section prototype */
 
 }
 
-#if defined(useBluetoothAdaFruitSPI)
-device_t devBluetooth;
-
-#endif // defined(useBluetoothAdaFruitSPI)
 /*
 
 list of commands sent from MPGuino Blue android app

@@ -43,11 +43,11 @@ static void serial0::init(void)
 	UCSR0B |= (1 << TXEN0); // enable USART0 transmitter
 #endif // defined(useSerial0PortInput)
 
-	devSerial0.chrOut = chrOut;
 #if defined(useSerial0PortInput)
-	devSerial0.chrIn = chrIn;
+	text::initDev(devIdxSerial0, (odvFlagCRLF | odvFlagEnableOutput), chrOut, chrIn);
+#else // defined(useSerial0PortInput)
+	text::initDev(devIdxSerial0, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 #endif // defined(useSerial0PortInput)
-	devSerial0.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -73,7 +73,7 @@ static void serial0::chrOut(uint8_t chr)
 	ringBuffer::pushMain(rbIdxSerial0Out, chr);
 	UCSR0B |= (1 << UDRIE0); // enable data register empty interrupt
 #else // defined(useBufferedSerial0Port)
-	while ((UCSR0A & (1 << UDRE0)) == 0) idleProcess(); // wait until USART0 data buffer is empty
+	while ((UCSR0A & (1 << UDRE0)) == 0) idleMainProcess(); // wait until USART0 data buffer is empty
 
 	UCSR0A &= ~(1 << TXC0); // clear transmit complete flag
 	UDR0 = chr; //send the data
@@ -109,7 +109,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR0A & ((1 << FE0) | (1 << DOR0) | (1 << UPE0)));
-	devSerial0.controlFlags |= errFlags;
+	bitFlags[(uint16_t)(devIdxSerial0)] |= errFlags;
 
 	chr = UDR0; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial0In, chr);
@@ -120,7 +120,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -153,7 +153,7 @@ ISR( USART_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -200,11 +200,11 @@ static void serial1::init(void)
 	UCSR1B |= (1 << TXEN1); // enable USART1 transmitter
 #endif // defined(useSerial1PortInput)
 
-	devSerial1.chrOut = chrOut;
 #if defined(useSerial1PortInput)
-	devSerial1.chrIn = chrIn;
+	text::initDev(devIdxSerial1, (odvFlagCRLF | odvFlagEnableOutput), chrOut, chrIn);
+#else // defined(useSerial1PortInput)
+	text::initDev(devIdxSerial1, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 #endif // defined(useSerial1PortInput)
-	devSerial1.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -225,7 +225,7 @@ static void serial1::chrOut(uint8_t chr)
 	ringBuffer::pushMain(rbIdxSerial1Out, chr);
 	UCSR1B |= (1 << UDRIE1); // enable data register empty interrupt
 #else // defined(useBufferedSerial1Port)
-	while ((UCSR1A & (1 << UDRE1)) == 0) idleProcess(); // wait until USART1 data buffer is empty
+	while ((UCSR1A & (1 << UDRE1)) == 0) idleMainProcess(); // wait until USART1 data buffer is empty
 
 	UCSR1A &= ~(1 << TXC1); // clear transmit complete flag
 	UDR1 = chr; //send the data
@@ -256,7 +256,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR1A & ((1 << FE1) | (1 << DOR1) | (1 << UPE1)));
-	devSerial1.controlFlags |= errFlags;
+	bitFlags[(uint16_t)(devIdxSerial1)] |= errFlags;
 
 	chr = UDR1; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial1In, chr);
@@ -267,7 +267,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -300,7 +300,7 @@ ISR( USART1_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -347,11 +347,11 @@ static void serial2::init(void)
 	UCSR2B |= (1 << TXEN2); // enable USART2 transmitter
 #endif // defined(useSerial2PortInput)
 
-	devSerial2.chrOut = chrOut;
 #if defined(useSerial2PortInput)
-	devSerial2.chrIn = chrIn;
+	text::initDev(devIdxSerial2, (odvFlagCRLF | odvFlagEnableOutput), chrOut, chrIn);
+#else // defined(useSerial2PortInput)
+	text::initDev(devIdxSerial2, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 #endif // defined(useSerial2PortInput)
-	devSerial2.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -372,7 +372,7 @@ static void serial2::chrOut(uint8_t chr)
 	ringBuffer::pushMain(rbIdxSerial2Out, chr);
 	UCSR2B |= (1 << UDRIE2); // enable data register empty interrupt
 #else // defined(useBufferedSerial2Port)
-	while ((UCSR2A & (1 << UDRE2)) == 0) idleProcess(); // wait until USART2 data buffer is empty
+	while ((UCSR2A & (1 << UDRE2)) == 0) idleMainProcess(); // wait until USART2 data buffer is empty
 
 	UCSR2A &= ~(1 << TXC2); // clear transmit complete flag
 	UDR2 = chr; //send the data
@@ -403,7 +403,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR2A & ((1 << FE2) | (1 << DOR2) | (1 << UPE2)));
-	devSerial2.controlFlags |= errFlags;
+	bitFlags[(uint16_t)(devIdxSerial2)] |= errFlags;
 
 	chr = UDR2; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial2In, chr);
@@ -414,7 +414,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -442,7 +442,7 @@ ISR( USART2_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -489,11 +489,11 @@ static void serial3::init(void)
 	UCSR3B |= (1 << TXEN3); // enable USART3 transmitter
 #endif // defined(useSerial3PortInput)
 
-	devSerial3.chrOut = chrOut;
 #if defined(useSerial3PortInput)
-	devSerial3.chrIn = chrIn;
+	text::initDev(devIdxSerial3, (odvFlagCRLF | odvFlagEnableOutput), chrOut, chrIn);
+#else defined(useSerial3PortInput)
+	text::initDev(devIdxSerial3, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 #endif // defined(useSerial3PortInput)
-	devSerial3.controlFlags |= (odvFlagCRLF | odvFlagEnableOutput);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -514,7 +514,7 @@ static void serial3::chrOut(uint8_t chr)
 	ringBuffer::pushMain(rbIdxSerial3Out, chr);
 	UCSR3B |= (1 << UDRIE3); // enable data register empty interrupt
 #else // defined(useBufferedSerial3Port)
-	while ((UCSR3A & (1 << UDRE3)) == 0) idleProcess(); // wait until USART3 data buffer is empty
+	while ((UCSR3A & (1 << UDRE3)) == 0) idleMainProcess(); // wait until USART3 data buffer is empty
 
 	UCSR3A &= ~(1 << TXC3); // clear transmit complete flag
 	UDR3 = chr; //send the data
@@ -545,7 +545,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR3A & ((1 << FE3) | (1 << DOR3) | (1 << UPE3)));
-	devSerial3.controlFlags |= errFlags;
+	bitFlags[(uint16_t)(devIdxSerial3)] |= errFlags;
 
 	chr = UDR3; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial3In, chr);
@@ -556,7 +556,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -584,7 +584,7 @@ ISR( USART3_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }

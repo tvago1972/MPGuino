@@ -10,7 +10,7 @@ static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, settingsMenuTitles, cursorPos);
+			text::stringOut(devIdxLCD, settingsMenuTitles, cursorPos);
 			break;
 
 		case menuDoSelectionIdx:
@@ -78,202 +78,6 @@ static const uint8_t prgmCompareWithMaximumParamValue[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
-	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert minimum good speed value in (distance) / (time)
-	instrLdRegConstMetric, 0x21, idxDenomDistance,
-	instrMul2byEEPROM, pMinGoodSpeedidx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pMinGoodSpeedidx,
-
-	instrLdRegConstMetric, 0x12, idxDenomDistance,		// convert pulses per distance value in (count) / (distance)
-	instrLdRegConstMetric, 0x21, idxNumerDistance,
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pPulsesPerDistanceIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert total tank size value in (volume)
-	instrLdRegConstMetric, 0x21, idxDenomVolume,
-	instrMul2byEEPROM, pTankSizeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pTankSizeIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert bingo tank size value in (volume)
-	instrLdRegConstMetric, 0x21, idxDenomVolume,
-	instrMul2byEEPROM, pTankBingoSizeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pTankBingoSizeIdx,
-
-#if defined(usePartialRefuel)
-	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert refuel quantity value in (volume)
-	instrLdRegConstMetric, 0x21, idxDenomVolume,
-	instrMul2byEEPROM, pRefuelSizeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pRefuelSizeIdx,
-
-#if defined(useEEPROMtripStorage)
-	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert saved refuel quantity value in (volume)
-	instrLdRegConstMetric, 0x21, idxDenomVolume,
-	instrMul2byEEPROM, pRefuelSaveSizeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pRefuelSaveSizeIdx,
-
-#endif // defined(useEEPROMtripStorage)
-#endif // defined(usePartialRefuel)
-#if defined(useFuelCost)
-	instrLdRegConstMetric, 0x12, idxDenomVolume,		// convert fuel cost value in (cost) / (volume)
-	instrLdRegConstMetric, 0x21, idxNumerVolume,
-	instrMul2byEEPROM, pCostPerQuantity,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pCostPerQuantity,
-
-#endif // defined(useFuelCost)
-#if defined(useChryslerMAPCorrection)
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure range value in (force) / (area * volt)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pMAPsensorRangeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pMAPsensorRangeIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure offset value in (force) / (area * volt)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pMAPsensorOffsetIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pMAPsensorOffsetIdx,
-
-#if defined(useChryslerBaroSensor)
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure range value in (force) / (area * volt)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pBaroSensorRangeIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pBaroSensorRangeIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure offset value in (force) / (area * volt)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pBaroSensorOffsetIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pBaroSensorOffsetIdx,
-
-#else // defined(useChryslerBaroSensor)
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference barometric pressure value in (force) / (area)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pBarometricPressureIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pBarometricPressureIdx,
-
-#endif // defined(useChryslerBaroSensor)
-#endif // defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsSpeed)
-	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph minimum speed value in (distance) / (time)
-	instrLdRegConstMetric, 0x21, idxDenomDistance,
-	instrMul2byEEPROM, pBarLowSpeedCutoffIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph bar width value in (distance) / (time)
-	instrLdRegConstMetric, 0x21, idxDenomDistance,
-	instrMul2byEEPROM, pBarSpeedQuantumIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pBarSpeedQuantumIdx,
-
-#endif // defined(useBarFuelEconVsSpeed)
-#if defined(useVehicleParameters)
-	instrLdRegConstMetric, 0x12, idxNumerMass,		// convert vehicle mass (weight) value in (mass)
-	instrLdRegConstMetric, 0x21, idxDenomMass,
-	instrMul2byEEPROM, pVehicleMassIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pVehicleMassIdx,
-
-#if defined(useCoastDownCalculator)
-	instrLdRegConstMetric, 0x12, idxNumerArea,		// convert frontal area value in (area)
-	instrLdRegConstMetric, 0x21, idxDenomArea,
-	instrMul2byEEPROM, pVehicleFrontalAreaIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pVehicleFrontalAreaIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerDensity,	// convert vehicle mass (weight) value in (mass) / (volume)
-	instrLdRegConstMetric, 0x21, idxDenomDensity,
-	instrMul2byEEPROM, pLocustDensityIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pLocustDensityIdx,
-
-#endif // defined(useCoastDownCalculator)
-#if defined(useDragRaceFunction)
-	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined speed value in (distance) / (time)
-	instrLdRegConstMetric, 0x21, idxDenomDistance,
-	instrMul2byEEPROM, pDragSpeedIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pDragSpeedIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined distance value value in (distance)
-	instrLdRegConstMetric, 0x21, idxDenomDistance,
-	instrMul2byEEPROM, pDragDistanceIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pDragDistanceIdx,
-
-#endif // defined(useDragRaceFunction)
-#endif // defined(useVehicleParameters)
-#ifdef useCalculatedFuelFactor
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert system fuel pressure value in (force) / (area)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pSysFuelPressureIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pSysFuelPressureIdx,
-
-	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference fuel injector pressure value in (force) / (area)
-	instrLdRegConstMetric, 0x21, idxDenomPressure,
-	instrMul2byEEPROM, pRefFuelPressureIdx,
-	instrDiv2by1,
-	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pRefFuelPressureIdx,
-
-#endif // useCalculatedFuelFactor
-	instrDone											// return to caller
-};
-
-#ifdef useCalculatedFuelFactor
-static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
-	instrLdRegConst, 0x02, idxCorrectionFactor2,		// obtain reference correction factor
-	instrMul2byEEPROM, pSysFuelPressureIdx,				// multiply by this vehicle's stored fuel system absolute pressure
-	instrDiv2byEEPROM, pRefFuelPressureIdx,				// divide by the fuel injector reference absolute pressure
-	instrIsqrt, 0x02,									// perform square root on result
-	instrMul2byEEPROM, pInjectorCountIdx,				// multiply by stored number of fuel injectors for this engine
-	instrMul2byEEPROM, pInjectorSizeIdx,				// multiply by injector size in cc/minute * decimal formatting factor (L/min * decimal formatting factor * 1000)
-	instrLdReg, 0x21,									// save denominator term for later
-	instrLdRegByte, 0x02, 60,							// load seconds per minute into register 2
-	instrMul2byConst, idxMicroSecondsPerSecond,			// multiply by microseconds per second into register 1
-	instrMul2byConst, idxOneThousand,					// multiply by number of cc's per liter into register 1
-	instrMul2byConst, idxDecimalPoint,					// set numerator up to cancel reference correction factor in denominator
-	instrMul2byConst, idxCorrectionFactor,				// set numerator up to cancel reference correction factor in denominator
-	instrDiv2by1,										// perform comversion for injector flow
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrMul2byConst, idxNumerVolume,					// set up denominator to convert injector flow in liters to US gallons
-	instrDiv2byConst, idxDenomVolume,					// perform conversion of injector flow in liters to US gallons
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,
-	instrDone											// return to caller
-};
-
-#endif // useCalculatedFuelFactor
 static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 {
 
@@ -313,68 +117,6 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 
 }
 
-static uint8_t parameterEdit::onEEPROMchange(const uint8_t * sched, uint8_t parameterIdx)
-{
-
-	uint8_t retVal;
-
-	retVal = 0;
-
-	metricFlag &= ~(detectEEPROMchangeFlag);
-
-	SWEET64::runPrgm(sched, parameterIdx);
-
-#ifdef useCalculatedFuelFactor
-	if (metricFlag & calculateFuelParamFlag) SWEET64::runPrgm(prgmCalculateFuelFactor, 0); // calculate and store microseconds per US gallon factor
-
-#endif // useCalculatedFuelFactor
-	if (metricFlag & metricConversionFlag) SWEET64::runPrgm(prgmDoEEPROMmetricConversion, 0); // if metric flag has changed
-
-	if (metricFlag & changeDisplayFlag)
-	{
-
-		if (parameterIdx == pAlternateFEidx)
-			if (EEPROM::readByte(pAlternateFEidx)) metricFlag |= (alternateFEmode);
-			else metricFlag &= ~(alternateFEmode);
-
-#if defined(useButtonInput)
-#if LCDcharHeight == 4
-		if ((parameterIdx == pSizeDisplayIdx) || (parameterIdx == pSizeBottomDisplayIdx))
-#else // LCDcharHeight == 4
-		if (parameterIdx == pSizeDisplayIdx)
-#endif // LCDcharHeight == 4
-		{
-
-			workingDisplayIdx = EEPROM::readByte(pDisplayIdx);
-			cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
-
-		}
-
-#endif // defined(useButtonInput)
-#if defined(useLCDoutput)
-		if (parameterIdx == pBrightnessIdx) LCD::setBrightness(EEPROM::readByte(pBrightnessIdx)); // adjust brightness
-
-#if defined(useLCDcontrast)
-		if (parameterIdx == pContrastIdx) LCD::setContrast(EEPROM::readByte(pContrastIdx)); // adjust contrast
-
-#endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
-		if (parameterIdx == pLCDcolorIdx) LCD::setRGBcolor(EEPROM::readByte(pLCDcolorIdx)); // adjust backlight color
-
-#endif // defined(useAdafruitRGBLCDshield)
-#endif // defined(useLCDoutput)
-	}
-
-	if (metricFlag & hardInitGuinoFlag) EEPROM::initGuinoHardware();
-
-	if (metricFlag & softInitGuinoFlag) EEPROM::initGuinoSoftware();
-
-	if (metricFlag & detectEEPROMchangeFlag) retVal = 1; // if the setting has changed
-
-	return retVal;
-
-}
-
 #if defined(useButtonInput)
 static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 {
@@ -385,7 +127,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, settingsSubMenuTitles, cursorPos + menuTitlesOffset);
+			text::stringOut(devIdxLCD, settingsSubMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuInitialEntryIdx:
@@ -400,8 +142,8 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuSecondLineOutIdx:
-			text::stringOut(devLCD, pBuff); // output supplementary information
-			text::newLine(devLCD); // clear to the end of the line
+			text::stringOut(devIdxLCD, pBuff); // output supplementary information
+			text::newLine(devIdxLCD); // clear to the end of the line
 			break;
 
 		case menuDoSelectionIdx:
@@ -475,7 +217,7 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			c = pBuff[(uint16_t)(cursorPos)]; // save existing character
 
-			if (timer0Status & t0sShowCursor)
+			if (bitFlags[(uint16_t)(bfTimer0Status)] & t0sShowCursor)
 			{
 
 				if (cursorPos < 10) pBuff[(uint16_t)(cursorPos)] = '_'; // replace character with an underscore
@@ -542,7 +284,7 @@ static void parameterEdit::readMaxValue(void)
 static void parameterEdit::readMinValue(void)
 {
 
-	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0);
+	SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0);
 	sharedFunctionCall(nesLoadValue);
 
 }
@@ -631,7 +373,7 @@ static void parameterEdit::save(void)
 #if defined(usePartialRefuel)
 			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
-			retVal = onEEPROMchange(prgmWriteParameterValue, numberEditObj.parameterIdx); // go save parameter and do any required housekeeping
+			retVal = EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx); // go save parameter and do any required housekeeping
 
 			cursor::screenLevelEntry(numberEditObj.neStatusMessage, retVal, numberEditObj.callingDisplayIdx);
 			break;

@@ -387,7 +387,6 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 {
 
 	static uint8_t sharedFunctionCall(uint8_t cmd);
-	static uint8_t onEEPROMchange(const uint8_t * sched, uint8_t parameterIdx);
 #if defined(useButtonInput)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);

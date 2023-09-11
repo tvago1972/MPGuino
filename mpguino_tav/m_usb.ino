@@ -85,10 +85,9 @@ static void usbDevice::init(void)
 
 	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
 
-	devUSB.chrOut = chrOut;
-	devUSB.chrIn = chrIn;
-
 	SREG = oldSREG; // restore interrupt flag status
+
+	text::initDev(devIdxUSB, 0, chrOut, chrIn);
 
 }
 

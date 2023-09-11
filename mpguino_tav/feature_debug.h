@@ -3,6 +3,10 @@ namespace systemInfo /* CPU loading and RAM availability support section prototy
 {
 
 	static void idleProcess(void);
+	static void transferCycle0Length(uint8_t workingIdx, uint8_t startIdx);
+#if defined(useDebugCPUreading)
+	static void transferResetCycle0Length(uint8_t sampledIdx, uint8_t workingIdx);
+#endif // defined(useDebugCPUreading)
 #if defined(useCPUreading)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
@@ -11,21 +15,11 @@ namespace systemInfo /* CPU loading and RAM availability support section prototy
 
 };
 
-static uint32_t mainStart;
-static uint32_t idleTimerLength;
-
 #if defined(useCPUreading)
 extern char __bss_end;
 extern char *__brkval;
 
 #endif // defined(useCPUreading)
-#if defined(useDebugCPUreading)
-static uint8_t monitorState;
-static uint32_t idleProcessTimerLength;
-static uint32_t displayTimerLength;
-static uint32_t SWEET64timerLength;
-
-#endif // defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useSimulatedFIandVSS)
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
@@ -41,10 +35,11 @@ namespace signalSim /* VSS / fuel injector on-board simulator support section pr
 
 }
 
-static const uint8_t debugVSSflag =				0b00000001;
-static const uint8_t debugInjectorFlag =		0b00000010;
-static const uint8_t debugFIPready =			0b00000100;
-static const uint8_t debugVSSready =			0b00001000;
+// bit flags for use with bfSignalSimModeFlags
+static const uint8_t debugVSSflag =				0b10000000;
+static const uint8_t debugInjectorFlag =		0b01000000;
+static const uint8_t debugFIPready =			0b00100000;
+static const uint8_t debugVSSready =			0b00010000;
 
 static const uint8_t debugEnableFlags =			debugVSSflag | debugInjectorFlag;
 static const uint8_t debugVSreadyFlags =		debugVSSready | debugVSSflag;
@@ -192,8 +187,6 @@ static volatile uint16_t debugVSScount;
 static volatile uint16_t debugFIPcount;
 static volatile uint16_t debugFIPWcount;
 
-static volatile uint8_t debugFlags;
-
 static uint8_t debugVSSidx;
 static uint8_t debugFIPidx;
 
@@ -209,7 +202,7 @@ namespace terminal /* debug terminal section prototype */
 {
 
 	static void mainProcess(void);
-	static void outputFlags(uint8_t flagRegister, const char * flagStr);
+	static void outputBitFlagRegisterValue(uint8_t lineNumber);
 	static void outputTripFunctionValue(uint8_t lineNumber);
 	static void outputConstantValue(uint8_t lineNumber);
 	static void outputParameterValue(uint8_t lineNumber);
@@ -220,13 +213,115 @@ namespace terminal /* debug terminal section prototype */
 	static void outputTripVarMeasuredExtra(uint8_t lineNumber);
 	static void outputDecimalValue(uint8_t lineNumber);
 	static void outputDecimalExtra(uint8_t lineNumber);
+	static void dumpSWEET64information(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+#if defined(useDebugTerminalSWEET64)
+	static void outputSWEET64registerContents(uint8_t lineNumber);
+	static void outputSWEET64registerExtra(uint8_t lineNumber);
+	static void outputSWEET64byte(uint8_t byt);
+	static void outputSWEET64operand(uint8_t flag, uint8_t &byt);
+	static void outputSWEET64opcode(uint8_t lineNumber);
+#if defined(useDebugTerminalLabels)
+	static void outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t byt, uint8_t labelIdx);
+#else // defined(useDebugTerminalLabels)
+	static void outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t byt);
+#endif // defined(useDebugTerminalLabels)
+	static void outputSWEET64prgmLine(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t traceFlag);
+#endif // defined(useDebugTerminalSWEET64)
 	static void processMath(uint8_t cmd);
+	static void outputDecimalSettings(void);
 #if defined(useBluetoothAdaFruitSPI)
 	static void outputBluetoothResponse(void);
 #endif // defined(useBluetoothAdaFruitSPI)
 
 }
 
+#define nextAllowedValue 0
+static const uint8_t tsError =				nextAllowedValue;
+static const uint8_t tsBell =				tsError + 1;
+static const uint8_t tsInitInput =			tsBell + 1;
+static const uint8_t tsUserInput =			tsInitInput + 1;
+static const uint8_t tsInitTerminalCmd =	tsUserInput + 1;
+static const uint8_t tsInitProcessing =		tsInitTerminalCmd + 1;
+static const uint8_t tsProcessCommand =		tsInitProcessing + 1;
+static const uint8_t tsInitListDecimal =	tsProcessCommand + 1;
+static const uint8_t tsInitListReadOnly =	tsInitListDecimal + 1;
+static const uint8_t tsInitList =			tsInitListReadOnly + 1;
+static const uint8_t tsProcessList =		tsInitList + 1;
+#define nextAllowedValue tsProcessList + 1;
+#if defined(useDebugTerminalHelp)
+static const uint8_t tsOutputHelpLine =		nextAllowedValue;
+#define nextAllowedValue tsOutputHelpLine + 1;
+#endif // defined(useDebugTerminalHelp)
+#if defined(useDebugButtonInjection)
+static const uint8_t tsInjectButtonPress =	nextAllowedValue;
+static const uint8_t tsInjectButtonsUp =	tsInjectButtonPress + 1;
+#define nextAllowedValue tsInjectButtonsUp + 1;
+#endif // defined(useDebugButtonInjection)
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t tsOutputSWEET64line =	nextAllowedValue;
+static const uint8_t tsTraceSWEET64line =	tsOutputSWEET64line + 1;
+#define nextAllowedValue tsTraceSWEET64line + 1;
+#endif // defined(useDebugTerminalSWEET64)
+#if defined(useBluetoothAdaFruitSPI)
+static const uint8_t tsOutputBLEfriend =	nextAllowedValue;
+#define nextAllowedValue tsOutputBLEfriend + 1;
+#endif // defined(useBluetoothAdaFruitSPI)
+
+#define nextAllowedValue 0
+static const uint8_t tseIdxLineCancel =		nextAllowedValue;
+static const uint8_t tseIdxSyntax =			tseIdxLineCancel + 1;
+static const uint8_t tseIdxState =			tseIdxSyntax + 1;
+static const uint8_t tseIdxSourceVal =		tseIdxState + 1;
+static const uint8_t tseIdxTargetVal =		tseIdxSourceVal + 1;
+static const uint8_t tseIdxAddressVal =		tseIdxTargetVal + 1;
+static const uint8_t tseIdxBadIndex =		tseIdxAddressVal + 1;
+static const uint8_t tseIdxNoAddress =		tseIdxBadIndex + 1;
+#define nextAllowedValue tseIdxNoAddress + 1
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t tseIdxBadSWEET64addr =	nextAllowedValue;
+#define nextAllowedValue tseIdxBadSWEET64addr + 1;
+#endif // defined(useDebugTerminalSWEET64)
+
+static uint8_t errIdx;
+
+static const char tseErrorStringList[] PROGMEM = {
+	"\\" tcEOSCR
+	tcCR "syntax" tcEOS
+	tcCR "bad state" tcEOS
+	tcCR "bad source" tcEOS
+	tcCR "bad target" tcEOS
+	tcCR "bad address" tcEOS
+	tcCR "bad index value" tcEOS
+	tcCR "no address" tcEOS
+#if defined(useDebugTerminalSWEET64)
+	tcCR "nope" tcEOS
+#endif // defined(useDebugTerminalSWEET64)
+};
+
+static const char tseBadAddress[] PROGMEM = {
+	tcCR "No Index" tcEOSCR
+};
+
+#if defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels)
+typedef struct
+{
+
+	const uint8_t * labelStringPointer;
+	uint8_t labelLength;
+
+} dS64label_t;
+
+static const dS64label_t debugSWEET64labelList[] PROGMEM = {
+	{terminalConstIdxNames,			idxMaxConstant},
+	{terminalParameterNames, 		eePtrEnd},
+	{terminalMainProgramVarLabels, 	mpVariableMaxIdx},
+	{terminalVolatileVarLabels, 	vVariableMaxIdx},
+	{terminalTripVarNames, 			tripSlotTotalCount},
+	{terminalTripVarLabels, 		rvMeasuredCount},
+	{terminalTripFuncNames, 		dfMaxValTotalCount},
+};
+
+#endif // defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels)
 static const uint8_t tmByteReadIn =			0x80;
 static const uint8_t tmSourceReadIn =		0x40;
 static const uint8_t tmTargetReadIn =		0x20;
@@ -236,31 +331,71 @@ static const uint8_t tmDecimalInput =		0x04;
 static const uint8_t tmButtonInput =		0x02;
 static const uint8_t tmInitInput =			0x01;
 
-static const uint8_t tmInputMask =			(tmHexInput | tmDecimalInput | tmButtonInput | tmInitInput);
+static const uint8_t tmReadInMask =			(tmByteReadIn | tmSourceReadIn | tmTargetReadIn | tmAddressReadIn);
+static const uint8_t tmInputMask =			(tmHexInput | tmDecimalInput | tmButtonInput | tmByteReadIn);
 static const uint8_t tmInitHex =			(tmInitInput | tmHexInput);
 static const uint8_t tmInitDecimal =		(tmInitInput | tmDecimalInput);
 static const uint8_t tmInitButton =			(tmInitInput | tmButtonInput);
+static const uint8_t tmButtonReadIn =		(tmButtonInput | tmByteReadIn);
 
-#if defined(useBluetoothAdaFruitSPI)
-static uint8_t tmOutputBluetooth;
-
-#endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugTerminalHelp)
 static const char terminalHelp[] PROGMEM = {
-	"    [y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
-	"    [y].[x]V - list volatile variables, optionally between [y] and [x]" tcEOSCR
-	"    [y].[x]M - list main program variables, optionally between [y] and [x]" tcEOSCR
-	"    [y].[x]T - list terminal trip variable values, optionally between [y] and [x]" tcEOSCR
+	"       [y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
+	"xP:y [y] [y]... - store one or more y values, starting at stored parameter x" tcCR tcEOSCR
+
+	"       [y].[x]V - list volatile variables, optionally between [y] and [x]" tcEOSCR
+	"xV:y [y] [y]... - store one or more y values, starting at volatile variable x" tcCR tcEOSCR
+
+	"       [y].[x]M - list main program variables, optionally between [y] and [x]" tcEOSCR
+	"xM:y [y] [y]... - store one or more y values, starting at main program" tcEOSCR
+	"                  variable x" tcCR tcEOSCR
+
+	"       [y].[x]T - list terminal trip variable values, optionally between [y]" tcEOSCR
+	"                  and [x]" tcEOSCR
+	"xT:y [y] [y]... - store one or more y values, starting at terminal trip" tcEOSCR
+	"                  variable x" tcCR tcEOSCR
+
+	"       [y].[x]S - list status and command bitflags, optionally between [y]" tcEOSCR
+	"                  and [x]" tcEOSCR
+	"xS:y            - store new bitflag value y into bitflag register x" tcCR tcEOSCR
+
+#if defined(useDebugTerminalSWEET64)
+	"      [y].[x]^E - list SWEET64 register contents, optionally between [y]" tcEOSCR
+	"                  and [x]" tcEOSCR
+	"x^E:y           - store one or more y values, starting at SWEET64 register x" tcCR tcEOSCR
+
+#endif // defined(useDebugTerminalSWEET64)
 	"    [y].[x]O - list program constants, optionally between [y] and [x]" tcEOSCR
-	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]" tcEOSCR
+	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally" tcEOSCR
+	"               between [y] and [x]" tcEOSCR
 	"                [z] - decimal window length (optional)" tcEOSCR
 	"[z]<[y].[x]U - list decimal number sample for output" tcEOSCR
 	"                [z] - decimal window length (optional)" tcEOSCR
 	"                [y] - decimal digit count (optional)" tcEOSCR
-	"                [x] - decimal processing flag (optional)" tcEOSCR
-#if defined(useSWEET64trace)
-	"              x^L - list SWEET64 source code for trip function" tcEOSCR
-#endif // defined(useSWEET64trace)
+	"                [x] - decimal processing flag (optional)" tcCR tcEOSCR
+#if defined(useDebugTerminalSWEET64)
+	"   [y].[x]^I - list SWEET64 instructions, along with their operands, optionally" tcEOSCR
+	"               between [y] and [x]" tcEOSCR
+#if defined(useDebugTerminalLabels)
+	"   [y].[x]^F - list all available SWEET64 functions, optionally between [y]" tcEOSCR
+	"               and [x]" tcEOSCR
+#endif // defined(useDebugTerminalLabels)
+	"       [x]^L - list 20 lines of SWEET64 program code, optionally beginning at" tcEOSCR
+	"               trip function [x]" tcEOSCR
+	"   [y]<[x]^T - trace execution of [x] lines of SWEET64 program code, optionally" tcEOSCR
+	"               beginning at trip function [y]" tcEOSCR
+	"               if [x] is omitted, traces 1 line" tcEOSCR
+	"               if [x] is explicitly set to 0, traces until program completes" tcCR tcEOSCR
+
+#endif // defined(useDebugTerminalSWEET64)
+	"    [y]<[x]R - read trip variable x into trip variable y" tcEOSCR
+	"                default for x and y is terminal trip variable" tcEOSCR
+#if defined(useDebugTerminalLabels)
+	"                if no x or y specified, lists available trip variables" tcCR tcEOSCR
+#else // defined(useDebugTerminalLabels)
+	"                either or both of x or y must be specified" tcCR tcEOSCR
+#endif // defined(useDebugTerminalLabels)
+
 	"   [z]<[y].x - enters a number x into the 64-bit math accumulator" tcEOSCR
 	"                [z] - decimal window length (optional)" tcEOSCR
 	"                [y] - decimal digit count (optional)" tcEOSCR
@@ -272,13 +407,7 @@ static const char terminalHelp[] PROGMEM = {
 #endif // defined(useIsqrt)
 	"          /x - divides math accumulator by x" tcEOSCR
 	"          =x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
-	"  x:Py [y] [y]... - store one or more y values, starting at stored parameter x" tcEOSCR
-	"  x:Vy [y] [y]... - store one or more y values, starting at volatile variable x" tcEOSCR
-	"  x:My [y] [y]... - store one or more y values, starting at main program variable x" tcEOSCR
-	"  x:Ty [y] [y]... - store one or more y values, starting at terminal trip variable x" tcCR tcEOSCR
-	"    [y]<[x]R - read trip variable x into trip variable y" tcEOSCR
-	"                default for x and y is terminal trip variable" tcEOSCR
-	"                if no x or y specified, lists available trip variables" tcEOSCR
+
 #if defined(useDebugButtonInjection)
 	"           I - inject button press" tcEOSCR
 #if defined(useLegacyButtons)
@@ -289,15 +418,33 @@ static const char terminalHelp[] PROGMEM = {
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
+
 #if defined(useBluetoothAdaFruitSPI)
 	"           Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
 #endif // defined(useBluetoothAdaFruitSPI)
-	"           S - toggles display status line echo to terminal" tcEOSCR
+	"          ^S - displays supplemental system information" tcEOSCR
 	"           ? - displays this help" tcEOSCR
 	tcEOS
 };
 
 #endif // defined(useDebugTerminalHelp)
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t * terminalListSched;
+static const uint8_t * terminalExecSched;
+
+static const uint8_t * terminalStack[16];
+
+static uint8_t terminalS64reg8[(uint16_t)(si64reg8count)];
+
+static uint64_t terminalS64reg64[(uint16_t)(s64reg64count)];
+
+static const char prgmLoadByteValue[] PROGMEM = {
+	instrLdRegByteFromIndex, 0x02,						// load byte value
+	instrMul2byConst, idxDecimalPoint,					// multiply by decimal formatting term
+	instrDone											// exit to caller
+};
+
+#endif // defined(useDebugTerminalSWEET64)
 static uint8_t terminalState;
 static uint8_t nextTerminalState;
 static uint8_t terminalCmd;
@@ -307,7 +454,6 @@ static uint8_t terminalByte;
 static uint8_t terminalSource;
 static uint8_t terminalTarget;
 
-static uint8_t peek;
 static uint8_t terminalAddress;
 static uint8_t terminalLine;
 static uint8_t maxLine;
@@ -315,7 +461,9 @@ static uint8_t decPlace;
 static uint8_t decWindow;
 static uint8_t decMode;
 
+#if defined(useDebugTerminalLabels)
 static const char * labelList;
+#endif // defined(useDebugTerminalLabels)
 static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
@@ -328,100 +476,13 @@ static const char terminalSecondarySeparator[] PROGMEM = {
 	" - " tcEOS
 };
 
-static const char terminalActivityFlagStr[] PROGMEM = {
-	"activityFlags: " tcEOS
-	"EngOff" tcOTOG "0" tcEOS
-	"VehStop" tcOTOG "0" tcEOS
-	"NoButtons" tcOTOG "0" tcEOS
-	"Parked" tcOTOG "0" tcEOS
-	"Inactive" tcOTOG "0" tcEOS
-	"FuelRate" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-};
-
+// bit flags for use with bfPeek
 static const uint8_t peekStatusMessage =		0b10000000;
 static const uint8_t peekBluetoothInput =		0b01000000;
 static const uint8_t peekBluetoothOutput =		0b00100000;
 static const uint8_t peekBLEfriendEcho =		0b00010000;
+static const uint8_t peekEnableCPUread =		0b00001000;
 
-static const char terminalPeekStr[] PROGMEM = {
-	"peek: " tcEOS
-	"STATUS" tcOTOG "0" tcEOS
-#if defined(useBluetooth)
-	"BTinp" tcOTOG "0" tcEOS
-	"BTout" tcOTOG "0" tcEOS
-#else // defined(useBluetooth)
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-#endif // defined(useBluetooth)
-#if defined(useBluetoothAdaFruitSPI)
-	"BLEecho" tcOTOG "0" tcEOS
-#else // defined(useBluetoothAdaFruitSPI)
-	"1" tcOTOG "0" tcEOS
-#endif // defined(useBluetoothAdaFruitSPI)
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-};
-
-#if defined(useSerial0Port)
-static const char serial0ControlFlagsStr[] PROGMEM = {
-	"devSerial0.controlFlags: " tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"CRLF" tcOTOG "0" tcEOS
-	"FE0" tcOTOG "0" tcEOS
-	"DOR0" tcOTOG "0" tcEOS
-	"UPE0" tcOTOG "0" tcEOS
-	"DH" tcOTOG "0" tcEOS
-	"OUTPUT" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useSerial0Port)
-#if defined(useSerial1Port)
-static const char serial1ControlFlagsStr[] PROGMEM = {
-	"devSerial1.controlFlags: " tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"CRLF" tcOTOG "0" tcEOS
-	"FE1" tcOTOG "0" tcEOS
-	"DOR1" tcOTOG "0" tcEOS
-	"UPE1" tcOTOG "0" tcEOS
-	"DH" tcOTOG "0" tcEOS
-	"OUTPUT" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useSerial1Port)
-#if defined(useSerial2Port)
-static const char serial2ControlFlagsStr[] PROGMEM = {
-	"devSerial2.controlFlags: " tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"CRLF" tcOTOG "0" tcEOS
-	"FE2" tcOTOG "0" tcEOS
-	"DOR2" tcOTOG "0" tcEOS
-	"UPE2" tcOTOG "0" tcEOS
-	"DH" tcOTOG "0" tcEOS
-	"OUTPUT" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useSerial2Port)
-#if defined(useSerial3Port)
-static const char serial3ControlFlagsStr[] PROGMEM = {
-	"devSerial3.controlFlags: " tcEOS
-	"1" tcOTOG "0" tcEOS
-	"1" tcOTOG "0" tcEOS
-	"CRLF" tcOTOG "0" tcEOS
-	"FE3" tcOTOG "0" tcEOS
-	"DOR3" tcOTOG "0" tcEOS
-	"UPE3" tcOTOG "0" tcEOS
-	"DH" tcOTOG "0" tcEOS
-	"OUTPUT" tcOTOG "0" tcEOS
-};
-
-#endif // defined(useSerial3Port)
 #endif // defined(useDebugTerminal)
 #if defined(useTestButtonValues)
 namespace buttonView /* Button input value viewer section prototype */

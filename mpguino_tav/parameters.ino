@@ -91,36 +91,40 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 
 	instrLdRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,	// fetch injector cycle time in microseconds per US gallon
 #ifdef useImperialGallon
-	instrBranchIfMetricMode, 5,							// if metric mode set, skip ahead to cycles conversion
+	instrBranchIfMetricMode, 5,							// if metric mode set, skip ahead to cycle0s conversion
 	instrMul2byConst, idxNumerImperialGallon,			// perform conversion from microseconds per liter into microseconds per Imperial gallon
 	instrDiv2byConst, idxDenomImperialGallon,
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //tankcont0:
 #else	// useImperialGallon
-	instrBranchIfSAEmode, 5,							// if metric mode not set, skip ahead to cycles conversion
+	instrBranchIfSAEmode, 5,							// if metric mode not set, skip ahead to cycle0s conversion
 #endif	// useImperialGallon
 	instrMul2byConst, idxDenomVolume,					// perform conversion from microseconds per US gallon into microseconds per liter
 	instrDiv2byConst, idxNumerVolume,
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //tankcont:
-	instrMul2byConst, idxCycles0PerSecond,				// multiply to get cycles-microseconds per unit volume-second value
-	instrDiv2byConst, idxMicroSecondsPerSecond,			// convert to get cycles per unit volume value
+	instrMul2byConst, idxCycles0PerSecond,				// multiply to get cycle0s-microseconds per unit volume-second value
+	instrDiv2byConst, idxMicroSecondsPerSecond,			// convert to get cycle0s per unit volume value
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegMain, 0x02, mpCyclesPerVolumeIdx,			// save cycles per unit volume value
+	instrStRegMain, 0x02, mpCyclesPerVolumeIdx,			// save cycle0s per unit volume value
 
 	instrLdRegEEPROM, 0x02, pTankSizeIdx,				// fetch tank size in unit volume * formatting factor
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume value to get tank size in cycles * formatting factor
-	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get tank size in cycles
+	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycle0s per unit volume value to get tank size in cycle0s * formatting factor
+	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get tank size in cycle0s
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegMain, 0x02, mpTankSizeIdx,				// save tank size in cycles
+	instrStRegMain, 0x02, mpTankSizeIdx,				// save tank size in cycle0s
 
 	instrLdRegEEPROM, 0x02, pTankBingoSizeIdx,			// fetch bingo tank size in unit volume
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume value to get tank size in cycles * formatting factor
-	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get bingo tank size in cycles
+	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycle0s per unit volume value to get tank size in cycle0s * formatting factor
+	instrDiv2byConst, idxDecimalPoint,					// remove formatting factor to get bingo tank size in cycle0s
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegMain, 0x02, mpBingoTankSizeIdx,			// save bingo tank size in cycles
+	instrStRegMain, 0x02, mpBingoTankSizeIdx,			// save bingo tank size in cycle0s
+
+	instrLdRegConst, 0x02, idxCycles0PerHour,			// load timer0 clock cycles per hour
+	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrStRegMain, 0x02, mpLargeSpeedFactorIdx,		// save large speed factor
 
 #if defined(usePartialRefuel)
 	instrLdRegEEPROM, 0x02, pRefuelSizeIdx,				// fetch partial refuel tank size in unit volume
@@ -201,24 +205,35 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
 	instrLdRegByte, 0x02, 0,
-	instrStRegMain, 0x02, mpMainLoopAccumulatorIdx,		// initialize the cpu utilization stopwatch timer values
-	instrStRegMain, 0x02, mpIdleAccumulatorIdx,
-
-#endif	// defined(useCPUreading) || defined(useDebugCPUreading)
+	instrStRegMain, 0x02, mpCPUsampledMainLoopIdx,		// initialize the cpu utilization stopwatch timer values
+	instrStRegMain, 0x02, mpCPUworkingMainWorkingIdx,
+	instrStRegMain, 0x02, mpCPUsampledMainWorkingIdx,
 #if defined(useDebugCPUreading)
-	instrLdRegByte, 0x02, 0,
-	instrStRegVolatile, 0x02, vInterruptAccumulatorIdx,
-	instrStRegMain, 0x02, mpDebugAccMainLoopIdx,
-	instrStRegMain, 0x02, mpDebugAccIdleIdx,
-	instrStRegMain, 0x02, mpDebugAccIdleProcessIdx,
-	instrStRegMain, 0x02, mpDebugAccInterruptIdx,
-	instrStRegMain, 0x02, mpDebugAccDisplayIdx,
-	instrStRegMain, 0x02, mpDebugAccSWEET64idx,
+	instrStRegVolatile, 0x02, vWorkingInterruptProcessIdx,
+	instrStRegMain, 0x02, mpDbgSampledInterruptProcessIdx,
+	instrStRegMain, 0x02, mpDbgWorkingSleepModeIdx,
+	instrStRegMain, 0x02, mpDbgSampledSleepModeIdx,
+	instrStRegMain, 0x02, mpCPUworkingIdleProcessIdx,
+	instrStRegMain, 0x02, mpCPUsampledIdleProcessIdx,
+	instrStRegMain, 0x02, mpDbgWorkingMainProcessIdx,
+	instrStRegMain, 0x02, mpDbgSampledMainProcessIdx,
+	instrStRegMain, 0x02, mpDbgWorkingPeriodicProcessIdx,
+	instrStRegMain, 0x02, mpDbgSampledPeriodicProcessIdx,
+	instrStRegMain, 0x02, mpDbgWorkingDisplayProcessIdx,
+	instrStRegMain, 0x02, mpDbgSampledDisplayProcessIdx,
+	instrStRegMain, 0x02, mpDbgWorkingS64processIdx,
+	instrStRegMain, 0x02, mpDbgSampledS64processIdx,
 	instrStRegMain, 0x02, mpDebugAccS64multIdx,
 	instrStRegMain, 0x02, mpDebugCountS64multIdx,
 	instrStRegMain, 0x02, mpDebugAccS64divIdx,
 	instrStRegMain, 0x02, mpDebugCountS64divIdx,
+#if defined(useIsqrt)
+	instrStRegMain, 0x02, mpDebugAccS64sqrtIdx,
+	instrStRegMain, 0x02, mpDebugCountS64sqrtIdx,
+#endif // defined(useIsqrt)
 #endif // defined(useDebugCPUreading)
+#endif	// defined(useCPUreading) || defined(useDebugCPUreading)
+
 
 #if defined(useDragRaceFunction)
 	instrLdRegEEPROM, 0x02, pDragSpeedIdx,				// load acceleration test full speed parameter in (distance)(* 1000) / (hour)
@@ -244,6 +259,202 @@ static const uint8_t prgmInitMPGuino[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
+static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert minimum good speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pMinGoodSpeedidx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMinGoodSpeedidx,
+
+	instrLdRegConstMetric, 0x12, idxDenomDistance,		// convert pulses per distance value in (count) / (distance)
+	instrLdRegConstMetric, 0x21, idxNumerDistance,
+	instrMul2byEEPROM, pPulsesPerDistanceIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pPulsesPerDistanceIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert total tank size value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pTankSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pTankSizeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert bingo tank size value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pTankBingoSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pTankBingoSizeIdx,
+
+#if defined(usePartialRefuel)
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert refuel quantity value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pRefuelSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefuelSizeIdx,
+
+#if defined(useEEPROMtripStorage)
+	instrLdRegConstMetric, 0x12, idxNumerVolume,		// convert saved refuel quantity value in (volume)
+	instrLdRegConstMetric, 0x21, idxDenomVolume,
+	instrMul2byEEPROM, pRefuelSaveSizeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefuelSaveSizeIdx,
+
+#endif // defined(useEEPROMtripStorage)
+#endif // defined(usePartialRefuel)
+#if defined(useFuelCost)
+	instrLdRegConstMetric, 0x12, idxDenomVolume,		// convert fuel cost value in (cost) / (volume)
+	instrLdRegConstMetric, 0x21, idxNumerVolume,
+	instrMul2byEEPROM, pCostPerQuantity,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pCostPerQuantity,
+
+#endif // defined(useFuelCost)
+#if defined(useChryslerMAPCorrection)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure range value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pMAPsensorRangeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMAPsensorRangeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert MAP sensor pressure offset value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pMAPsensorOffsetIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pMAPsensorOffsetIdx,
+
+#if defined(useChryslerBaroSensor)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure range value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBaroSensorRangeIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBaroSensorRangeIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert barometric sensor pressure offset value in (force) / (area * volt)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBaroSensorOffsetIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBaroSensorOffsetIdx,
+
+#else // defined(useChryslerBaroSensor)
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference barometric pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pBarometricPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarometricPressureIdx,
+
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useBarFuelEconVsSpeed)
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph minimum speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pBarLowSpeedCutoffIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert FEvSpeed histograph bar width value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pBarSpeedQuantumIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pBarSpeedQuantumIdx,
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useVehicleParameters)
+	instrLdRegConstMetric, 0x12, idxNumerMass,			// convert vehicle mass (weight) value in (mass)
+	instrLdRegConstMetric, 0x21, idxDenomMass,
+	instrMul2byEEPROM, pVehicleMassIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pVehicleMassIdx,
+
+#if defined(useCoastDownCalculator)
+	instrLdRegConstMetric, 0x12, idxNumerArea,			// convert frontal area value in (area)
+	instrLdRegConstMetric, 0x21, idxDenomArea,
+	instrMul2byEEPROM, pVehicleFrontalAreaIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pVehicleFrontalAreaIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDensity,		// convert vehicle mass (weight) value in (mass) / (volume)
+	instrLdRegConstMetric, 0x21, idxDenomDensity,
+	instrMul2byEEPROM, pLocustDensityIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pLocustDensityIdx,
+
+#endif // defined(useCoastDownCalculator)
+#if defined(useDragRaceFunction)
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined speed value in (distance) / (time)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pDragSpeedIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pDragSpeedIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerDistance,		// convert accel test defined distance value value in (distance)
+	instrLdRegConstMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pDragDistanceIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pDragDistanceIdx,
+
+#endif // defined(useDragRaceFunction)
+#endif // defined(useVehicleParameters)
+#ifdef useCalculatedFuelFactor
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert system fuel pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pSysFuelPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pSysFuelPressureIdx,
+
+	instrLdRegConstMetric, 0x12, idxNumerPressure,		// convert reference fuel injector pressure value in (force) / (area)
+	instrLdRegConstMetric, 0x21, idxDenomPressure,
+	instrMul2byEEPROM, pRefFuelPressureIdx,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pRefFuelPressureIdx,
+
+#endif // useCalculatedFuelFactor
+	instrDone											// return to caller
+};
+
+#ifdef useCalculatedFuelFactor
+static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
+	instrLdRegConst, 0x02, idxCorrectionFactor2,		// obtain reference correction factor
+	instrMul2byEEPROM, pSysFuelPressureIdx,				// multiply by this vehicle's stored fuel system absolute pressure
+	instrDiv2byEEPROM, pRefFuelPressureIdx,				// divide by the fuel injector reference absolute pressure
+	instrIsqrt, 0x02,									// perform square root on result
+	instrMul2byEEPROM, pInjectorCountIdx,				// multiply by stored number of fuel injectors for this engine
+	instrMul2byEEPROM, pInjectorSizeIdx,				// multiply by injector size in cc/minute * decimal formatting factor (L/min * decimal formatting factor * 1000)
+	instrLdReg, 0x21,									// save denominator term for later
+	instrLdRegByte, 0x02, 60,							// load seconds per minute into register 2
+	instrMul2byConst, idxMicroSecondsPerSecond,			// multiply by microseconds per second into register 1
+	instrMul2byConst, idxOneThousand,					// multiply by number of cc's per liter into register 1
+	instrMul2byConst, idxDecimalPoint,					// set numerator up to cancel reference correction factor in denominator
+	instrMul2byConst, idxCorrectionFactor,				// set numerator up to cancel reference correction factor in denominator
+	instrDiv2by1,										// perform comversion for injector flow
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrMul2byConst, idxNumerVolume,					// set up denominator to convert injector flow in liters to US gallons
+	instrDiv2byConst, idxDenomVolume,					// perform conversion of injector flow in liters to US gallons
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrStRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,
+	instrDone											// return to caller
+};
+
+#endif // useCalculatedFuelFactor
 static uint8_t EEPROM::powerUpCheck(void)
 {
 
@@ -261,7 +472,8 @@ static uint8_t EEPROM::powerUpCheck(void)
 	}
 
 #endif // defined(useScreenEditor)
-	initGuino();
+	initGuinoHardware();
+	initGuinoSoftware();
 
 	return b;
 
@@ -365,16 +577,12 @@ static void EEPROM::initGuinoSoftware(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (readByte(pMetricModeIdx)) metricFlag |= (metricMode);
-	else metricFlag &= ~(metricMode);
-
-	if (readByte(pAlternateFEidx)) metricFlag |= (alternateFEmode);
-	else metricFlag &= ~(alternateFEmode);
+	setMetricDisplayMode();
 
 	SWEET64::runPrgm(prgmInitMPGuino, 0); // calculate multiple MPGuino system values for use within code
 
 #if defined(useBarFuelEconVsTime)
-	timer0Command |= (t0cResetFEvTime); // reset fuel economy vs time bargraph mechanism
+	bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cResetFEvTime); // reset fuel economy vs time bargraph mechanism
 
 #endif // defined(useBarFuelEconVsTime)
 	SREG = oldSREG; // restore interrupt flag status
@@ -389,18 +597,75 @@ static void EEPROM::initGuinoSoftware(void)
 #endif // defined(useWindowTripFilter)
 }
 
-static void EEPROM::initGuino(void) // initialize MPGuino base hardware and basic system settings
+static void EEPROM::setMetricDisplayMode(void)
 {
 
-	uint8_t oldSREG;
+	if (readByte(pMetricModeIdx)) bitFlags[(uint16_t)(bfMetricModeFlags)] |= (mmFuelEconOutputFlags);
+	else bitFlags[(uint16_t)(bfMetricModeFlags)] &= ~(mmFuelEconOutputFlags);
 
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	if (readByte(pAlternateFEidx)) bitFlags[(uint16_t)(bfMetricModeFlags)] ^= (mmDisplayAlternateFE);
 
-	initGuinoHardware();
-	initGuinoSoftware();
+}
 
-	SREG = oldSREG; // restore interrupt flag status
+static uint8_t EEPROM::onChange(const uint8_t * sched, uint8_t parameterIdx)
+{
+
+	uint8_t retVal;
+
+	retVal = 0;
+
+	bitFlags[(uint16_t)(bfEEPROMchangeStatus)] &= ~(ecsEEPROMchangeFlags); // clear all bit flags
+
+	SWEET64::runPrgm(sched, parameterIdx); // perform initial SWEET64 call to store EEPROM parameter
+
+#ifdef useCalculatedFuelFactor
+	// calculate and store microseconds per US gallon factor (this will trigger ecsDoMPGuinoInitSoftware)
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsCalculateFuelParam) SWEET64::runPrgm(prgmCalculateFuelFactor, 0);
+
+#endif // useCalculatedFuelFactor
+	// perform conversion between metric mode and SAE mode (this will trigger ecsDoMPGuinoInitSoftware)
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsDoMetricConversion) SWEET64::runPrgm(prgmDoEEPROMmetricConversion, 0);
+
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsChangeDisplay)
+	{
+
+		if (parameterIdx == pAlternateFEidx) setMetricDisplayMode(); // ensure alternate FE mode is correctly handled
+
+#if defined(useButtonInput)
+#if LCDcharHeight == 4
+		if ((parameterIdx == pSizeDisplayIdx) || (parameterIdx == pSizeBottomDisplayIdx))
+#else // LCDcharHeight == 4
+		if (parameterIdx == pSizeDisplayIdx)
+#endif // LCDcharHeight == 4
+		{
+
+			workingDisplayIdx = readByte(pDisplayIdx);
+			cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
+
+		}
+
+#endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+		if (parameterIdx == pBrightnessIdx) LCD::setBrightness(readByte(pBrightnessIdx)); // adjust brightness
+
+#if defined(useLCDcontrast)
+		if (parameterIdx == pContrastIdx) LCD::setContrast(readByte(pContrastIdx)); // adjust contrast
+
+#endif // defined(useLCDcontrast)
+#if defined(useAdafruitRGBLCDshield)
+		if (parameterIdx == pLCDcolorIdx) LCD::setRGBcolor(readByte(pLCDcolorIdx)); // adjust backlight color
+
+#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useLCDoutput)
+	}
+
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsDoMPGuinoInitHardware) initGuinoHardware();
+
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsDoMPGuinoInitSoftware) initGuinoSoftware();
+
+	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsEEPROMchangeDetected) retVal = 1; // if the setting has changed
+
+	return retVal;
 
 }
 
@@ -505,7 +770,7 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 		if (eByt != rByt)
 		{
 
-			metricFlag |= (EEPROMbulkChangeFlag);
+			bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsEEPROMchangeDetected);
 			b = 1;
 			eeprom_write_byte((uint8_t *)(x), rByt);
 
@@ -520,23 +785,23 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 		{
 
 			case pfSoftwareInitMPGuino:
-				metricFlag |= (softInitGuinoFlag);
+				bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsDoMPGuinoInitSoftware);
 				break;
 
 			case pfHardwareInitMPGuino:
-				metricFlag |= (hardInitGuinoFlag);
+				bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsDoMPGuinoInitHardware);
 				break;
 
 			case pfDoMetricModeConversion:
-				metricFlag |= (metricConversionFlag);
+				bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsDoMetricConversion);
 				break;
 
 			case pfChangeDisplay:
-				metricFlag |= (changeDisplayFlag);
+				bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsChangeDisplay);
 				break;
 
 			case pfCalculateFuelParams:
-				metricFlag |= (calculateFuelParamFlag);
+				bitFlags[(uint16_t)(bfEEPROMchangeStatus)] |= (ecsCalculateFuelParam);
 				break;
 
 		}
