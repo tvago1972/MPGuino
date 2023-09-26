@@ -309,7 +309,7 @@ static void tripSupport::init(void)
 
 }
 
-static void tripSupport::idleProcess(void)
+static void tripSupport::mainProcess(void)
 {
 
 	uint8_t oldSREG;
@@ -345,7 +345,7 @@ static void tripSupport::idleProcess(void)
 #endif // defined(trackIdleEOCdata)
 
 #if defined(useWindowTripFilter)
-	if (bitFlags[(uint16_t)(bfAwake)] & aAwakeOnVehicle)
+	if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnVehicle)
 	{
 
 		wtpCurrentIdx++;
@@ -454,7 +454,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
+			text::stringOut(m8DevLCDidx, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -484,15 +484,15 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (thisCursorPos == tsfAddPartialIdx)
 			{
 
-				text::stringOut(devIdxLCD, pBuff); // output supplementary information
-				text::newLine(devIdxLCD); // clear to the end of the line
+				text::stringOut(m8DevLCDidx, pBuff); // output supplementary information
+				text::newLine(m8DevLCDidx); // clear to the end of the line
 
 			}
 
 #endif //  defined(usePartialRefuel)
 #if defined(useSavedTrips)
 			if ((thisCursorPos == tsfCurrentLoadIdx) || (thisCursorPos == tsfTankLoadIdx))
-				text::stringOutIf(devIdxLCD, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
+				text::stringOutIf(m8DevLCDidx, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
 
 #endif //  defined(useSavedTrips)
 			break;
@@ -512,7 +512,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 				case tsfZeroPartialIdx:
 					SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
 					EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx);
-					text::statusOut(devIdxLCD, PSTR("PartialFuel RST"));
+					text::statusOut(m8DevLCDidx, PSTR("PartialFuel RST"));
 					break;
 
 #endif //  defined(usePartialRefuel)
@@ -520,14 +520,14 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 				case tsfCurrentSaveIdx:
 				case tsfTankSaveIdx:
 					doWriteTrip(thisTripSlot);
-					text::statusOut(devIdxLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
+					text::statusOut(m8DevLCDidx, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
 					break;
 
 				case tsfCurrentLoadIdx:
 				case tsfTankLoadIdx:
 					i = doReadTrip(thisTripSlot);
-					if (i) text::statusOut(devIdxLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
-					else text::statusOut(devIdxLCD, PSTR("Nothing to load"));
+					if (i) text::statusOut(m8DevLCDidx, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
+					else text::statusOut(m8DevLCDidx, PSTR("Nothing to load"));
 					break;
 
 				case tsfCurrentResetIdx: // current trip reset
@@ -611,12 +611,12 @@ static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 {
 
-	bitFlags[(uint16_t)(bfEEPROMchangeStatus)] &= ~(ecsEEPROMchangeDetected);
+	mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] &= ~(ecsEEPROMchangeDetected);
 
 	if (tripSlot) SWEET64::runPrgm(prgmSaveTankToEEPROM, 0);
 	else SWEET64::runPrgm(prgmSaveCurrentToEEPROM, 0);
 
-	return (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsEEPROMchangeDetected);
+	return (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsEEPROMchangeDetected);
 
 }
 
@@ -642,7 +642,7 @@ static void tripSupport::resetTank(void)
 static void tripSupport::outputResetStatus(uint8_t tripSlot)
 {
 
-	text::statusOut(devIdxLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
+	text::statusOut(m8DevLCDidx, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
 
 }
 
@@ -662,47 +662,47 @@ static void tripSupport::resetWindowFilter(void)
 /* Chrysler returnless fuel pressure correction display section */
 
 static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
+	instrLdRegVariable, 0x02, v16AnalogMAPchannelIdx,	// load analog channel ADC step value
+	instrSubVariableFromX, 0x02, m32AnalogMAPfloorIdx,	// is reading below MAP sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
-	instrMul2byMain, mpAnalogMAPnumerIdx,				// perform conversion to get pressure units per volts value
-	instrDiv2byMain, mpAnalogMAPdenomIdx,				// divide by pressure units per volts value
+	instrMul2byVariable, m32AnalogMAPnumerIdx,			// perform conversion to get pressure units per volts value
+	instrDiv2byVariable, m32AnalogMAPdenomIdx,			// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pMAPsensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpMAPpressureIdx,				// store resulting MAP sensor reading
+	instrStRegVariable, 0x02, m32MAPpressureIdx,		// store resulting MAP sensor reading
 #if defined(useChryslerBaroSensor)
 	instrDone											// exit to caller
 };
 
 static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
+	instrLdRegVariable, 0x02, v16AnalogBaroChannelIdx,	// load analog channel ADC step value
+	instrSubVariableFromX, 0x02, m32AnalogBaroFloorIdx,	// is reading below barometric sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
-	instrMul2byMain, mpAnalogBaroNumerIdx,				// convert to obtain pressure units per volts value
-	instrDiv2byMain, mpAnalogBaroDenomIdx,				// divide by pressure units per volts value
+	instrMul2byVariable, m32AnalogBaroNumerIdx,			// convert to obtain pressure units per volts value
+	instrDiv2byVariable, m32AnalogBaroDenomIdx,			// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pBaroSensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpBaroPressureIdx,			// store resulting barometric sensor reading
+	instrStRegVariable, 0x02, m32BaroPressureIdx,		// store resulting barometric sensor reading
 #endif // defined(useChryslerBaroSensor)
-	instrLdRegMain, 0x02, mpFuelPressureIdx,			// get fuel system differential pressure
-	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
-	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
-	instrStRegMain, 0x02, mpInjPressureIdx,				// store differential pressure across the fuel injector
-	instrMul2byConst, idxCorrectionFactor2,				// set up for iSqrt
-	instrDiv2byMain, mpFuelPressureIdx,					// divide by the fuel system differential pressure
+	instrLdRegVariable, 0x02, m32FuelPressureIdx,		// get fuel system differential pressure
+	instrAddVariableToX, 0x02, m32BaroPressureIdx,		// add to reference barometric pressure to get fuel system absolute pressure
+	instrSubVariableFromX, 0x02, m32MAPpressureIdx,		// subtract MAP to get differential pressure across the fuel injector
+	instrStRegVariable, 0x02, m32InjPressureIdx,		// store differential pressure across the fuel injector
+	instrMul2byRdOnly, idxCorrectionFactor2,			// set up for iSqrt
+	instrDiv2byVariable, m32FuelPressureIdx,			// divide by the fuel system differential pressure
 	instrTestReg, 0x02,									// test whether overflow occurred
 	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it
 	instrIsqrt, 0x02,									// perform square root on result
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
+	instrStRegVariable, 0x02, v32InjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
 	instrDone,											// return to caller
 
 //cont3:
-	instrLdRegConst, 0x02, idxCorrectionFactor,
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
+	instrLdRegRdOnly, 0x02, idxCorrectionFactor,
+	instrStRegVariable, 0x02, v32InjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 	instrDone											// return to caller
 };
 
@@ -714,7 +714,7 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
+			text::statusOut(m8DevLCDidx, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0);

@@ -360,7 +360,7 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 {
 
 	static void init(void);
-	static void idleProcess(void);
+	static void mainProcess(void);
 	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
 	static void doResetTrip(uint8_t tripSlot);
 #if defined(useButtonInput)
@@ -456,10 +456,10 @@ static const char pressureCorrectDisplayTitles[] PROGMEM = {
 };
 
 static const uint16_t pressureCorrectPageFormats[4] PROGMEM = {
-	((mpMAPpressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel),		// Pressures
-	((mpBaroPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel),
-	((mpFuelPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel),
-	((mpInjPressureIdx - mpMAPpressureIdx) << 8 ) |	(tPressureChannel),
+	((m32MAPpressureIdx - m32MAPpressureIdx) << 8 ) |	(tPressureChannel),		// Pressures
+	((m32BaroPressureIdx - m32MAPpressureIdx) << 8 ) |	(tPressureChannel),
+	((m32FuelPressureIdx - m32MAPpressureIdx) << 8 ) |	(tPressureChannel),
+	((m32InjPressureIdx - m32MAPpressureIdx) << 8 ) |	(tPressureChannel),
 };
 
 #endif // defined(useChryslerMAPCorrection)

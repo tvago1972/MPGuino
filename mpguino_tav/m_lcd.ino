@@ -5,7 +5,7 @@ static void LCD::init(void)
 {
 
 #if defined(useSerialLCD)
-	bitFlags[(uint16_t)(devIdxLCDserial)] &= ~(odvFlagCRLF);
+	mainProgram8Variables[(uint16_t)(m8DevLCDserialIdx - m8VariableStartIdx)] &= ~(odvFlagCRLF);
 
 	heart::wait0(delay0Tick100ms); // wait for 100 ms to allow serial LCD to initialize
 
@@ -16,10 +16,10 @@ static void LCD::init(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	text::initDev(devIdxLCD, (odvFlagEnableOutput), writeData);
+	text::initDev(m8DevLCDidx, (odvFlagEnableOutput), writeData);
 
 	lcdDelayCount = 0; // reset LCD delay count
-	bitFlags[(uint16_t)(bfTimer1Command)] &= ~(t1cDelayLCD); // turn off LCD delay
+	volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] &= ~(t1cDelayLCD); // turn off LCD delay
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -174,7 +174,7 @@ static void LCD::shutdown(void)
 	DDRE &= ~(lcdEnable);
 	DDRF &= ~(lcdRegisterSelect | lcdBit0 | lcdDirection);
 
-	PORTB |= lcdContrast; // ensure LCD contrast is turned off
+	PORTB |= (lcdContrast); // ensure LCD contrast is turned off
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 
 	// set OC1A to disabled
@@ -192,9 +192,9 @@ static void LCD::shutdown(void)
 	// disable LCD pins
 	DDRA &= ~(lcdBit3 | lcdBit2 | lcdBit1 | lcdBit0 | lcdEnable | lcdRegisterSelect);
 
-	PORTB |= lcdContrast; // ensure LCD contrast is turned off
+	PORTB |= (lcdContrast); // ensure LCD contrast is turned off
 #if defined(useInvertedLegacyLCDbrightness)
-	PORTB |= lcdBrightness; // ensure LCD brightness is turned off
+	PORTB |= (lcdBrightness); // ensure LCD brightness is turned off
 #else // defined(useInvertedLegacyLCDbrightness)
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 #endif // defined(useInvertedLegacyLCDbrightness)
@@ -215,9 +215,9 @@ static void LCD::shutdown(void)
 	DDRB &= ~(lcdBit3 | lcdBit2 | lcdBit1);
 	DDRD &= ~(lcdBit0 | lcdEnable | lcdRegisterSelect);
 
-	PORTD |= lcdContrast;
+	PORTD |= (lcdContrast);
 #if defined(useInvertedLegacyLCDbrightness)
-	PORTB |= lcdBrightness; // ensure LCD brightness is turned off
+	PORTB |= (lcdBrightness); // ensure LCD brightness is turned off
 #else // defined(useInvertedLegacyLCDbrightness)
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 #endif // defined(useInvertedLegacyLCDbrightness)
@@ -287,7 +287,7 @@ static void LCD::setBrightness(uint8_t idx)
 
 #endif // defined(useAdafruitRGBLCDshield)
 #if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
-	if (idx) portLCD |= lcdBrightness; // turn on LCD backlight
+	if (idx) portLCD |= (lcdBrightness); // turn on LCD backlight
 	else portLCD &= ~(lcdBrightness); // turn off LCD backlight
 
 #endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
@@ -500,23 +500,23 @@ static void LCD::writeData(uint8_t value)
 
 		case 0x08: // go back one character
 			charFlags |= (lcdCharGotoXY);
-			LCDaddressX--;
+			lcdAddr3ssX--;
 			break;
 
 		case 0x09:	// tab (go forward one character)
 			charFlags |= (lcdCharGotoXY);
-			LCDaddressX++;
+			lcdAddr3ssX++;
 			break;
 
 		case 0x0D: // carriage return with clreol
 #if defined(blankScreenOnMessage)
-			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0)
+			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0)
 #else // defined(blankScreenOnMessage)
-			if ((bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) || (LCDaddressY))
+			if ((volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) || (lcdAddr3ssY))
 #endif // defined(blankScreenOnMessage)
 			{
 
-				while (LCDaddressX < LCDcharWidth)
+				while (lcdAddr3ssX < LCDcharWidth)
 				{
 
 #if defined(use4BitLCD)
@@ -525,14 +525,14 @@ static void LCD::writeData(uint8_t value)
 #if defined(useSerialLCD)
 					LCDserialPort::chrOut(' ');
 #endif // defined(useSerialLCD)
-					LCDaddressX++;
+					lcdAddr3ssX++;
 
 				}
 
 			}
-			LCDaddressX = 0;
+			lcdAddr3ssX = 0;
 		case 0x0A: // linefeed
-			LCDaddressY++;
+			lcdAddr3ssY++;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -544,15 +544,15 @@ static void LCD::writeData(uint8_t value)
 #if defined(useSerialLCD)
 			charFlags |= (lcdCharOutput);
 #endif // defined(useSerialLCD)
-			LCDaddressY = 0;
-			LCDaddressX = 0;
+			lcdAddr3ssY = 0;
+			lcdAddr3ssX = 0;
 			break;
 
 		case 0x80 ... 0xCF: // hijack the gotoxy characters
 			value &= 0x7F;
-			LCDaddressY = value / 20;
-			LCDaddressX = value % 20;
-			if (bitFlags[(uint16_t)(devIdxLCD)] & odvFlagDoubleHeight) LCDaddressY += 2;
+			lcdAddr3ssY = value / 20;
+			lcdAddr3ssX = value % 20;
+			if (mainProgram8Variables[(uint16_t)(m8DevLCDidx - m8VariableStartIdx)] & odvFlagDoubleHeight) lcdAddr3ssY += 2;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -580,14 +580,14 @@ static void LCD::writeData(uint8_t value)
 		case 0x00 ... 0x07: // print defined CGRAM characters 0 through 7
 		case 0x20 ... 0x7F: // print normal characters
 #if defined(blankScreenOnMessage)
-			if (bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0)
+			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0)
 #else // defined(blankScreenOnMessage)
-			if ((bitFlags[(uint16_t)(bfTimer0DisplayDelay)] == 0) || (LCDaddressY))
+			if ((volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) || (lcdAddr3ssY))
 #endif // defined(blankScreenOnMessage)
 			{
 
-				if ((LCDaddressX < LCDcharWidth) && (LCDaddressY < LCDcharHeight)) charFlags |= (lcdCharOutput);
-				LCDaddressX++;
+				if ((lcdAddr3ssX < LCDcharWidth) && (lcdAddr3ssY < LCDcharHeight)) charFlags |= (lcdCharOutput);
+				lcdAddr3ssX++;
 
 			}
 			break;
@@ -603,7 +603,7 @@ static void LCD::writeData(uint8_t value)
 	}
 
 #if defined(use4BitLCD)
-	LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[(uint16_t)(LCDaddressY & 0x03)]) + LCDaddressX;
+	LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[(uint16_t)(lcdAddr3ssY & 0x03)]) + lcdAddr3ssX;
 
 #endif // defined(use4BitLCD)
 	if (charFlags & lcdCharGotoXY)
@@ -613,7 +613,7 @@ static void LCD::writeData(uint8_t value)
 		writeCommand(LCDgotoXYaddress);
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
-		LCDserialPort::chrOut(0x80 + LCDaddressY * 20 + LCDaddressX);
+		LCDserialPort::chrOut(0x80 + lcdAddr3ssY * 20 + lcdAddr3ssX);
 #endif // defined(useSerialLCD)
 
 	}
@@ -678,7 +678,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 	uint8_t oldSREG;
 
 #endif // defined(usePort4BitLCD)
-	while (bitFlags[(uint16_t)(bfTimer1Command)] & t1cDelayLCD) idleMainProcess(); // wait for LCD timer delay to complete
+	while (volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] & t1cDelayLCD) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
 #if defined(useTWI4BitLCD)
 	if (flags & lcdSendNybble)
@@ -687,7 +687,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 #if defined(useInterruptBasedTWI)
 		TWI::disableISRactivity(); // disable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
-		TWI::openChannelMain(lcdAddress, TW_WRITE); // open TWI as master transmitter
+		TWI::openChannelMain(TWIaddressLCD, TW_WRITE); // open TWI as master transmitter
 #if defined(useAdafruitRGBLCDshield)
 		TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
 #endif // defined(useAdafruitRGBLCDshield)
@@ -710,7 +710,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 	if (flags & lcdSendNybble)
 	{
 
-		TWI::transmitChannel(TWI_STOP); // commit LCD port expander write
+		TWI::transmitChannelMain(TWI_STOP); // commit LCD port expander write
 #if defined(useInterruptBasedTWI)
 		TWI::enableISRactivity(); // enable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
@@ -719,7 +719,7 @@ static void LCD::writeNybble(uint8_t value, uint8_t flags)
 #endif // defined(useTWI4BitLCD)
 #endif // defined(useLCDbufferedOutput)
 
-	heart::changeBitFlagBits(bfTimer1Command, 0, t1cDelayLCD); // enable LCD delay
+	heart::changeBitFlagBits(v8Timer1Command - v8VariableStartIdx, 0, t1cDelayLCD); // enable LCD delay
 
 }
 

@@ -101,10 +101,6 @@ static const uint8_t pressureDisplayIdx =			nextAllowedValue;
 static const uint8_t analogDisplayIdx =				nextAllowedValue;
 #define nextAllowedValue analogDisplayIdx + 1
 #endif // defined(useDebugAnalog)
-#if defined(useTestButtonValues)
-static const uint8_t buttonDisplayIdx =				nextAllowedValue;
-#define nextAllowedValue buttonDisplayIdx + 1
-#endif // defined(useTestButtonValues)
 
 static const uint8_t displayCountBase =				nextAllowedValue + 2 - optionalDisplayIdxStart;
 
@@ -147,7 +143,7 @@ static const uint8_t clockShowDisplayIdx =			nextAllowedValue;
 
 static const uint8_t displayCountUser =				nextAllowedValue - mainDisplayIdx;	// this variable is used to figure out how many menu levels the user display section has
 
-// the following display index defines are supplemental non-menu display index defines for options selected via configs.h 
+// the following display index defines are supplemental non-menu display index defines for options selected via configs.h
 
 #if defined(useDragRaceFunction)
 static const uint8_t dragRaceDisplayIdx =			nextAllowedValue;
@@ -519,9 +515,12 @@ static const uint16_t eeAdrMenuCursorEnd =					eeAdrMenuCursorStart + displayCou
 
 static const unsigned int eeAdrStorageEnd =					nextAllowedValue;
 
+#define nextAllowedValue 0
+
 /* parameter indexes */
 
-#define nextAllowedValue 0
+static const uint8_t pSettingsIdxStart =				nextAllowedValue;
+
 static const uint8_t pSignatureIdx =					nextAllowedValue;
 static const uint8_t pMetricModeIdx =					pSignatureIdx + 1;
 static const uint8_t pAlternateFEidx =					pMetricModeIdx + 1;
@@ -657,7 +656,10 @@ static const uint8_t pBottomDisplayIdx =				nextAllowedValue;
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 
-static const uint8_t eePtrSettingsEnd =					nextAllowedValue;
+static const uint8_t pSettingsIdxEnd =					nextAllowedValue;
+static const uint8_t pSettingsIdxLen =					pSettingsIdxEnd - pSettingsIdxStart;
+
+static const uint8_t pExpandedSettingsIdxStart =		nextAllowedValue;
 
 #if defined(useButtonInput)
 #if LCDcharHeight == 4
@@ -719,6 +721,9 @@ static const uint16_t eePtrMenuHeightStart =			eePtrDisplayCursorEnd;
 static const uint16_t eePtrMenuHeightEnd =				eePtrMenuHeightStart + displayCountMenu;
 #define nextAllowedValue eePtrMenuHeightEnd
 #endif // defined(useButtonInput)
+
+static const uint8_t pExpandedSettingsIdxEnd =			nextAllowedValue;
+static const uint8_t pExpandedSettingsIdxLen =			pExpandedSettingsIdxEnd - pExpandedSettingsIdxStart;
 
 static const uint8_t eePtrEnd =							nextAllowedValue;
 
@@ -828,7 +833,6 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(usePartialRefuel)
 	"pRefuelSizeIdx" tcEOS
 #endif // defined(usePartialRefuel)
-
 #if defined(useButtonInput)
 	"pDisplayIdx" tcEOS
 #if LCDcharHeight == 4
@@ -836,6 +840,10 @@ static const char terminalParameterNames[] PROGMEM = {
 	"pBottomCursorIdx" tcEOS
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
+};
+
+
+static const char terminalExpandedParameterNames[] PROGMEM = {
 #if defined(useEEPROMtripStorage)
 #if defined(usePartialRefuel)
 	"pRefuelSaveSizeIdx" tcEOS
@@ -974,9 +982,6 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useDebugAnalog)
 	"analogDisplayIdx" tcEOS
 #endif // defined(useDebugAnalog)
-#if defined(useTestButtonValues)
-	"buttonDisplayIdx" tcEOS
-#endif // defined(useTestButtonValues)
 
 	"mainDisplayIdx" tcEOS
 #if defined(useStatusMeter)
@@ -1166,7 +1171,7 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeAutoSaveActive & 0x07),												// Autosave Active Trip Data Enable
 #endif // defined(useSavedTrips)
 #if defined(usePartialRefuel)
-	(pSizeRefuelSize & 0x07) | pfSoftwareInitMPGuino,							// Partial Refuel amount * 1000 (gal or L)
+	(pSizeRefuelSize & 0x07),													// Partial Refuel amount * 1000 (gal or L)
 #endif // defined(usePartialRefuel)
 
 #if defined(useButtonInput)
@@ -1355,7 +1360,7 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 
 static const uint32_t newEEPROMsignature = ((uint32_t)(guinosig) << 24) + ((uint32_t)(eePtrEnd) << 16) + (uint32_t)(eeAdrSettingsEnd);
 
-static const uint32_t params[(uint16_t)(eePtrSettingsEnd)] PROGMEM = {
+static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 	newEEPROMsignature,	// EEPROM MPGuino signature long word
 	0,					// Display Mode (0 - US Display, 1 - Metric Display)
 	0,					// 0 - MPG or L/100km, 1 - G/100mile or km/L

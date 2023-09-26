@@ -3,11 +3,11 @@ namespace accelerationTest /* Acceleration Test support section prototype */
 {
 
 	static void init(void);
+	static void mainProcess(void);
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getAccelTestDisplayPageFormat(uint8_t formatIdx);
 	static void triggerTest(void);
-	static void idleProcess(void);
 
 }
 
@@ -27,7 +27,7 @@ static const uint8_t accelTestParamList[] PROGMEM = {
 	pVehicleMassIdx,
 };
 
-// bit flags for use with bfAccelerationFlags
+// bit flags for use with v8AccelerationFlags
 static const uint8_t accelTestActive =				0b10000000;
 static const uint8_t accelTestTriggered =			0b01000000;
 static const uint8_t accelTestCancelled =			0b00100000;

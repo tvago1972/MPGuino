@@ -27,12 +27,8 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static void shl64(union union_64 * an);
 	static void adc64(union union_64 * an, union union_64 * ann);
 	static void sbc64(union union_64 * an, union union_64 * ann, uint8_t sbcFlag);
-#ifndef useSWEET64mult
 	static void mult64(uint64_t * prgmReg64);
-#endif // useSWEET64mult
-#ifndef useSWEET64div
 	static void div64(uint64_t * prgmReg64);
-#endif // useSWEET64div
 	static void init64byt(union union_64 * an, uint8_t byt);
 	static void init64(union union_64 * an, uint32_t dWordL);
 	static void flagSet(uint8_t condition, uint8_t flag);
@@ -134,18 +130,18 @@ static const uint8_t i01 =	i00 + 8;	// load rX with rY
 static const uint8_t i02 =	i01 + 8;	// swap rX rY
 static const uint8_t i03 =	i02 + 8;	// load rX with EEPROM
 static const uint8_t i04 =	i03 + 8;	// store EEPROM rX
-static const uint8_t i05 =	i04 + 8;	// load rX with main program
-static const uint8_t i06 =	i05 + 8;	// store main program rX
-static const uint8_t i07 =	i06 + 8;	// load rX with volatile
-static const uint8_t i08 =	i07 + 8;	// store volatile rX
-static const uint8_t i09 =	i08 + 8;	// load rX with byte[operand]
+static const uint8_t i05 =	i04 + 8;
+static const uint8_t i06 =	i05 + 8;
+static const uint8_t i07 =	i06 + 8;	// load rX with program variable
+static const uint8_t i08 =	i07 + 8;	// store program variable rX
+static const uint8_t i09 =	i08 + 8;
 static const uint8_t i10 =	i09 + 8;	// load rX with byte
-static const uint8_t i11 =	i10 + 8;	// store rX byte to bargraph data array
+static const uint8_t i11 =	i10 + 8;
 static const uint8_t i12 =	i11 + 8;
 static const uint8_t i13 =	i12 + 8;
 static const uint8_t i14 =	i13 + 8;	// load rX with const
-static const uint8_t i15 =	i14 + 8;	// load rX with EEPROM init
-static const uint8_t i16 =	i15 + 8;	// load rX with voltage
+static const uint8_t i15 =	i14 + 8;
+static const uint8_t i16 =	i15 + 8;
 static const uint8_t i17 =	i16 + 8;	// load rX with FEvT trip variable
 static const uint8_t i18 =	i17 + 8;	// load rX with trip variable
 static const uint8_t i19 =	i18 + 8;	// store trip variable rX
@@ -301,9 +297,7 @@ uint64_t matrix_c[3];
 static const uint8_t instrTestReg =					nextAllowedValue;						// tests 64-bit register for zero condition or high bit set
 static const uint8_t instrTestIndex =				instrTestReg + 1;						// tests primary index for zero condition or high bit set
 static const uint8_t instrCmpXtoY =					instrTestIndex + 1;						// compares 64-bit register Y from 64-bit register X
-static const uint8_t instrCmpXtoMain =				instrCmpXtoY + 1;						// compares main program register value from 64-bit register X
-static const uint8_t instrCmpXtoConst =				instrCmpXtoMain + 1;						// compares stored constant value from 64-bit register X
-static const uint8_t instrCmpIndex =				instrCmpXtoConst + 1;					// compares primary index from operand
+static const uint8_t instrCmpIndex =				instrCmpXtoY + 1;					// compares primary index from operand
 
 static const uint8_t instrBranchIfVclear =			instrCmpIndex + 1;						// branches if result[0..63] is not all 1s
 static const uint8_t instrBranchIfVset =			instrBranchIfVclear + 1;				// branches if result[0..63] is all 1s
@@ -337,33 +331,28 @@ static const uint8_t instrJump =					instrCallImplied + 1;					// jump to indexe
 static const uint8_t instrLdReg =					instrJump + 1;							// load 64-bit register X with contents of 64-bit register Y
 static const uint8_t instrLdRegByteFromIndex =		instrLdReg + 1;							// load 64-bit register X with primary index byte value
 static const uint8_t instrLdRegByte =				instrLdRegByteFromIndex + 1;			// load 64-bit register X with immediate byte value
-static const uint8_t instrLdRegByteFromY =			instrLdRegByte + 1;						// load 64-bit register X with value of specified byte index into 64-bit register Y
-static const uint8_t instrLdRegTripVar =			instrLdRegByteFromY + 1;				// load 64-bit register X with specified trip specified read-in register
+static const uint8_t instrLdRegTripVar =			instrLdRegByte + 1;						// load 64-bit register X with specified trip specified read-in register
 static const uint8_t instrLdRegTripVarIndexed =		instrLdRegTripVar + 1;					// load 64-bit register X with indexed trip specified read-in register
 static const uint8_t instrLdRegTripVarOffset =		instrLdRegTripVarIndexed + 1;			// load 64-bit register X with offset indexed trip specified read-in register
 static const uint8_t instrLdRegTripVarIndexedRV =	instrLdRegTripVarOffset + 1;			// load 64-bit register X with specified trip indexed read-in register
 static const uint8_t instrStRegTripVarIndexed =		instrLdRegTripVarIndexedRV + 1;			// store 64-bit register X value to indexed trip specified read-in register
 static const uint8_t instrStRegTripVarIndexedRV =	instrStRegTripVarIndexed + 1;			// store 64-bit register X value to specified trip indexed read-in register
-static const uint8_t instrLdRegConst =				instrStRegTripVarIndexedRV + 1;			// load 64-bit register X with stored constant value
-static const uint8_t instrLdRegConstMetric =		instrLdRegConst + 1;					// load 64-bit register X (or Y if in metric mode) with stored constant value
-static const uint8_t instrLdRegConstIndexed =		instrLdRegConstMetric + 1;				// load 64-bit register X with indexed stored constant value
-static const uint8_t instrDoBCDadjust =				instrLdRegConstIndexed + 1;				// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
+static const uint8_t instrLdRegRdOnly =				instrStRegTripVarIndexedRV + 1;			// load 64-bit register X with read-only value
+static const uint8_t instrLdRegRdOnlyIndexed =		instrLdRegRdOnly + 1;					// load 64-bit register X with indexed read-only value
+static const uint8_t instrLdRegRdOnlyOffset =		instrLdRegRdOnlyIndexed + 1;			// load 64-bit register X with offset indexed read-only value
+static const uint8_t instrLdRegRdOnlyMetric =		instrLdRegRdOnlyOffset + 1;				// load 64-bit register X (or Y if in metric mode) with read-only value
+static const uint8_t instrDoBCDadjust =				instrLdRegRdOnlyMetric + 1;				// perform BCD-style conversion of 64-bit register X, using format stored in 64-bit register 3
 static const uint8_t instrLdRegEEPROM =				instrDoBCDadjust + 1;					// load 64-bit register X with EEPROM parameter value
 static const uint8_t instrLdRegEEPROMindexed =		instrLdRegEEPROM + 1;					// load 64-bit register X with indexed EEPROM parameter value
-static const uint8_t instrLdRegEinit =				instrLdRegEEPROMindexed + 1;			// load 64-bit register X with initial EEPROM parameter value
-static const uint8_t instrLdRegEinitIndexed =		instrLdRegEinit + 1;					// load 64-bit register X with indexed initial EEPROM parameter value
-static const uint8_t instrStRegEEPROM =				instrLdRegEinitIndexed + 1;				// store 64-bit register X value to EEPROM parameter
+static const uint8_t instrStRegEEPROM =				instrLdRegEEPROMindexed + 1;			// store 64-bit register X value to EEPROM parameter
 static const uint8_t instrStRegEEPROMindexed =		instrStRegEEPROM + 1;					// store 64-bit register X value to indexed EEPROM parameter
-static const uint8_t instrLdRegMain =				instrStRegEEPROMindexed + 1;			// load 64-bit register X with main program register value
-static const uint8_t instrLdRegMainIndexed =		instrLdRegMain + 1;						// load 64-bit register X with indexed main program register value
-static const uint8_t instrLdRegMainOffset =			instrLdRegMainIndexed + 1;				// load 64-bit register X with offset indexed main program register value
-static const uint8_t instrStRegMain =				instrLdRegMainOffset + 1;				// store 64-bit register X value to main program register
-static const uint8_t instrStRegMainIndexed =		instrStRegMain + 1;						// store 64-bit register X value to indexed main program register
-static const uint8_t instrLdRegVolatile =			instrStRegMainIndexed + 1;				// load 64-bit register X with volatile register value
-static const uint8_t instrLdRegVolatileIndexed =	instrLdRegVolatile + 1;					// load 64-bit register X with indexed volatile register value
-static const uint8_t instrStRegVolatile =			instrLdRegVolatileIndexed + 1;			// store 64-bit register X value to volatile register
-static const uint8_t instrStRegVolatileIndexed =	instrStRegVolatile + 1;					// store 64-bit register X value to indexed volatile register
-static const uint8_t instrLxdI =					instrStRegVolatileIndexed + 1;			// load primary index register with immediate byte value
+static const uint8_t instrLdRegVariable =			instrStRegEEPROMindexed + 1;			// load 64-bit register X with program variable register value
+static const uint8_t instrLdRegVariableIndexed =	instrLdRegVariable + 1;					// load 64-bit register X with indexed program variable register value
+static const uint8_t instrLdRegVariableOffset =		instrLdRegVariableIndexed + 1;			// load 64-bit register X with offset indexed program variable register value
+static const uint8_t instrStRegVariable =			instrLdRegVariableOffset + 1;			// store 64-bit register X value to program variable register
+static const uint8_t instrStRegVariableIndexed =	instrStRegVariable + 1;					// store 64-bit register X value to indexed program variable register
+static const uint8_t instrStRegVariableOffset =		instrStRegVariableIndexed + 1;			// store 64-bit register X value to offset indexed program variable register
+static const uint8_t instrLxdI =					instrStRegVariableOffset + 1;			// load primary index register with immediate byte value
 static const uint8_t instrLxdIEEPROM =				instrLxdI + 1;							// load primary index register with EEPROM parameter value
 static const uint8_t instrLxdIEEPROMoffset =		instrLxdIEEPROM + 1;					// load primary index register with offset indexed EEPROM parameter
 static const uint8_t instrLxdIParamLength =			instrLxdIEEPROMoffset + 1;				// load primary index register with bit length of EEPROM parameter
@@ -371,26 +360,25 @@ static const uint8_t instrLxdIParamLengthIndexed =	instrLxdIParamLength + 1;				
 static const uint8_t instrSwapReg =					instrLxdIParamLengthIndexed + 1;		// swap contents of 64-bit registers X and Y
 static const uint8_t instrSubYfromX =				instrSwapReg + 1;						// subtract 64-bit register Y from 64-bit register X
 static const uint8_t instrSubByteFromX =			instrSubYfromX + 1;						// subtract immediate byte value from 64-bit register X
-static const uint8_t instrSubMainFromX =			instrSubByteFromX + 1;					// subtract main program register value from 64-bit register X
-static const uint8_t instrAddYtoX =					instrSubMainFromX + 1;					// add 64-bit register Y to 64-bit register X
+static const uint8_t instrSubVariableFromX =		instrSubByteFromX + 1;					// subtract program register value from 64-bit register X
+static const uint8_t instrAddYtoX =					instrSubVariableFromX + 1;				// add 64-bit register Y to 64-bit register X
 static const uint8_t instrAdjustQuotient =			instrAddYtoX + 1;						// bumps 64-bit register 2 by 1 if last division resulted in remainder * 2 > divisor
 static const uint8_t instrAddByteToX =				instrAdjustQuotient + 1;				// add immediate byte value to 64-bit register X
 static const uint8_t instrAddConstToX =				instrAddByteToX + 1;					// add stored constant value to 64-bit register X
 static const uint8_t instrAddEEPROMtoX =			instrAddConstToX + 1;					// add EEPROM parameter value to 64-bit register X
-static const uint8_t instrAddMainToX =				instrAddEEPROMtoX + 1;					// add main program register value to 64-bit register X
-static const uint8_t instrAddIndexToX =				instrAddMainToX + 1;					// add contents of primary index to 64-bit register X
+static const uint8_t instrAddVariableToX =			instrAddEEPROMtoX + 1;					// add program register value to 64-bit register X
+static const uint8_t instrAddIndexToX =				instrAddVariableToX + 1;				// add contents of primary index to 64-bit register X
 static const uint8_t instrMul2by1 =					instrAddIndexToX + 1;					// multiply 64-bit register 2 by contents of 64-bit register 1
 static const uint8_t instrMul2byByte =				instrMul2by1 + 1;    					// multiply 64-bit register 2 by immediate byte value
-static const uint8_t instrMul2byConst =				instrMul2byByte + 1; 					// multiply 64-bit register 2 by stored constant value
-static const uint8_t instrMul2byEEPROM =			instrMul2byConst + 1; 					// multiply 64-bit register 2 by EEPROM parameter value
-static const uint8_t instrMul2byMain =				instrMul2byEEPROM + 1;					// multiply 64-bit register 2 by main program register value
-static const uint8_t instrMul2byVolatile =			instrMul2byMain + 1;					// multiply 64-bit register 2 by volatile register value
-static const uint8_t instrMul2byTripVarIndexed =	instrMul2byVolatile + 1;				// multiply 64-bit register 2 by indexed trip specified read-in register
+static const uint8_t instrMul2byRdOnly =			instrMul2byByte + 1; 					// multiply 64-bit register 2 by read-only value
+static const uint8_t instrMul2byEEPROM =			instrMul2byRdOnly + 1; 					// multiply 64-bit register 2 by EEPROM parameter value
+static const uint8_t instrMul2byVariable =			instrMul2byEEPROM + 1;					// multiply 64-bit register 2 by program variable register value
+static const uint8_t instrMul2byTripVarIndexed =	instrMul2byVariable + 1;				// multiply 64-bit register 2 by indexed trip specified read-in register
 static const uint8_t instrDiv2by1 =					instrMul2byTripVarIndexed + 1;			// divide 64-bit register 2 by contents of 64-bit register 1
-static const uint8_t instrDiv2byConst =				instrDiv2by1 + 1;						// divide 64-bit register 2 by stored constant value
-static const uint8_t instrDiv2byEEPROM =			instrDiv2byConst + 1;					// divide 64-bit register 2 by EEPROM parameter value
-static const uint8_t instrDiv2byMain =				instrDiv2byEEPROM + 1;					// divide 64-bit register 2 by main program register value
-static const uint8_t instrDiv2byTripVarIndexed =	instrDiv2byMain + 1;					// divide 64-bit register 2 by indexed trip specified read-in register
+static const uint8_t instrDiv2byRdOnly =				instrDiv2by1 + 1;						// divide 64-bit register 2 by read-only value
+static const uint8_t instrDiv2byEEPROM =			instrDiv2byRdOnly + 1;					// divide 64-bit register 2 by EEPROM parameter value
+static const uint8_t instrDiv2byVariable =			instrDiv2byEEPROM + 1;					// divide 64-bit register 2 by program variable register value
+static const uint8_t instrDiv2byTripVarIndexed =	instrDiv2byVariable + 1;				// divide 64-bit register 2 by indexed trip specified read-in register
 static const uint8_t instrDiv2byByte =				instrDiv2byTripVarIndexed + 1;			// divide 64-bit register 2 by immediate byte value
 static const uint8_t instrShiftRegLeft =			instrDiv2byByte + 1;					// shift 64-bit register X one bit left
 static const uint8_t instrShiftRegRight =			instrShiftRegLeft + 1;					// shift 64-bit register X one bit right
@@ -410,21 +398,10 @@ static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer 
 #define nextAllowedValue instrIsqrt + 1
 #endif // defined(useIsqrt)
 
-#if defined(useAnalogRead)
-static const uint8_t instrLdRegVoltage =			nextAllowedValue;						// load 64-bit register with specified raw 10-bit analog voltage value
-static const uint8_t instrLdRegVoltageIndexed =		instrLdRegVoltage + 1;					// load 64-bit register with indexed raw 10-bit analog voltage value
-#define nextAllowedValue instrLdRegVoltageIndexed + 1
-#endif // defined(useAnalogRead)
-
 #if defined(useBarFuelEconVsTime)
 static const uint8_t instrLdRegTripFEvTindexed =	nextAllowedValue;						// load trip index from fuel econ vs time trip array
 #define nextAllowedValue instrLdRegTripFEvTindexed + 1
 #endif // defined(useBarFuelEconVsTime)
-
-#if defined(useBarGraph)
-static const uint8_t instrStRegBGdataIndexed =		nextAllowedValue;						// store register byte to bargraph data array
-#define nextAllowedValue instrStRegBGdataIndexed + 1
-#endif // defined(useBarGraph)
 
 #if defined(useMatrixMath)
 static const uint8_t instrLdRegXColIndexedRow =		nextAllowedValue;						// load 64-bit register X with contents of Matrix X indexed row specified column
@@ -448,8 +425,6 @@ static const char opCodeList[] PROGMEM = {
 	"TestReg" tcEOS
 	"TestIndex" tcEOS
 	"CmpXtoY" tcEOS
-	"CmpXtoMain" tcEOS
-	"CmpXtoConst" tcEOS
 	"CmpIndex" tcEOS
 
 	"BranchIfVclear" tcEOS
@@ -482,25 +457,21 @@ static const char opCodeList[] PROGMEM = {
 	"LdRegTripVarIndexedRV" tcEOS
 	"StRegTripVarIndexed" tcEOS
 	"StRegTripVarIndexedRV" tcEOS
-	"LdRegConst" tcEOS
-	"LdRegConstMetric" tcEOS
-	"LdRegConstIndexed" tcEOS
+	"LdRegRdOnly" tcEOS
+	"LdRegRdOnlyIndexed" tcEOS
+	"LdRegRdOnlyOffset" tcEOS
+	"LdRegRdOnlyMetric" tcEOS
 	"DoBCDadjust" tcEOS
 	"LdRegEEPROM" tcEOS
 	"LdRegEEPROMindexed" tcEOS
-	"LdRegEinit" tcEOS
-	"LdRegEinitIndexed" tcEOS
 	"StRegEEPROM" tcEOS
 	"StRegEEPROMindexed" tcEOS
-	"LdRegMain" tcEOS
-	"LdRegMainIndexed" tcEOS
-	"LdRegMainOffset" tcEOS
-	"StRegMain" tcEOS
-	"StRegMainIndexed" tcEOS
-	"LdRegVolatile" tcEOS
-	"LdRegVolatileIndexed" tcEOS
-	"StRegVolatile" tcEOS
-	"StRegVolatileIndexed" tcEOS
+	"LdRegVariable" tcEOS
+	"LdRegVariableIndexed" tcEOS
+	"LdRegVariableOffset" tcEOS
+	"StRegVariable" tcEOS
+	"StRegVariableIndexed" tcEOS
+	"StRegVariableOffset" tcEOS
 	"LxdI" tcEOS
 	"LxdIEEPROM" tcEOS
 	"LxdIEEPROMoffset" tcEOS
@@ -509,25 +480,24 @@ static const char opCodeList[] PROGMEM = {
 	"SwapReg" tcEOS
 	"SubYfromX" tcEOS
 	"SubByteFromX" tcEOS
-	"SubMainFromX" tcEOS
+	"SubVariableFromX" tcEOS
 	"AddYtoX" tcEOS
 	"AdjustQuotient" tcEOS
 	"AddByteToX" tcEOS
 	"AddConstToX" tcEOS
 	"AddEEPROMtoX" tcEOS
-	"AddMainToX" tcEOS
+	"AddVariableToX" tcEOS
 	"AddIndexToX" tcEOS
 	"Mul2by1" tcEOS
 	"Mul2byByte" tcEOS
-	"Mul2byConst" tcEOS
+	"Mul2byRdOnly" tcEOS
 	"Mul2byEEPROM" tcEOS
-	"Mul2byMain" tcEOS
-	"Mul2byVolatile" tcEOS
+	"Mul2byVariable" tcEOS
 	"Mul2byTripVarIndexed" tcEOS
 	"Div2by1" tcEOS
-	"Div2byConst" tcEOS
+	"Div2byRdOnly" tcEOS
 	"Div2byEEPROM" tcEOS
-	"Div2byMain" tcEOS
+	"Div2byVariable" tcEOS
 	"Div2byTripVarIndexed" tcEOS
 	"Div2byByte" tcEOS
 	"ShiftRegLeft" tcEOS
@@ -544,16 +514,9 @@ static const char opCodeList[] PROGMEM = {
 #if defined(useIsqrt)
 	"Isqrt" tcEOS
 #endif // defined(useIsqrt)
-#if defined(useAnalogRead)
-	"LdRegVoltage" tcEOS
-	"LdRegVoltageIndexed" tcEOS
-#endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
 	"LdRegTripFEvTindexed" tcEOS
 #endif // defined(useBarFuelEconVsTime)
-#if defined(useBarGraph)
-	"StRegBGdataIndexed" tcEOS
-#endif // defined(useBarGraph)
 #if defined(useMatrixMath)
 	"LdRegXColIndexedRow" tcEOS
 	"StRegXColIndexedRow" tcEOS
@@ -584,8 +547,6 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 	(((r04 | p00 | s00) << 8) |			(m04 | i00)),			// instrTestReg
 	(((r00 | p00 | s00) << 8) |			(e18)),					// instrTestIndex
 	(((r04 | p00 | s00) << 8) |			(m03 | i00)),			// instrCmpXtoY
-	(((r06 | p01 | s00) << 8) |			(m03 | i05)),			// instrCmpXtoMain
-	(((r06 | p01 | s00) << 8) |			(m03 | i14)),			// instrCmpXtoConst
 	(((r00 | p01 | s00) << 8) |			(e25)),					// instrCmpIndex
 
 	(((r00 | p00 | s01) << 8) |			(e08)),					// instrBranchIfVclear
@@ -609,32 +570,27 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 	(((r01 | p00 | s00) << 8) |			(m00 | i01)),			// instrLdReg
 	(((r01 | p02 | s00) << 8) |			(m00 | i10)),			// instrLdRegByteFromIndex
 	(((r01 | p01 | s00) << 8) |			(m00 | i10)),			// instrLdRegByte
-	(((r01 | p01 | s00) << 8) |			(m00 | i09)),			// instrLdRegByteFromY
 	(((r04 | p01 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVar
 	(((r04 | p02 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVarIndexed
 	(((r04 | p03 | s01) << 8) |			(m04 | i18)),			// instrLdRegTripVarOffset
 	(((r04 | p01 | s02) << 8) |			(m04 | i18)),			// instrLdRegTripVarIndexedRV
 	(((r01 | p02 | s01) << 8) |			(m00 | i19)),			// instrStRegTripVarIndexed
 	(((r01 | p01 | s02) << 8) |			(m00 | i19)),			// instrStRegTripVarIndexedRV
-	(((r01 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegConst
-	(((r07 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegConstMetric
-	(((r01 | p02 | s00) << 8) |			(m00 | i14)),			// instrLdRegConstIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegRdOnly
+	(((r01 | p02 | s00) << 8) |			(m00 | i14)),			// instrLdRegRdOnlyIndexed
+	(((r01 | p03 | s00) << 8) |			(m00 | i14)),			// instrLdRegRdOnlyOffset
+	(((r07 | p01 | s00) << 8) |			(m00 | i14)),			// instrLdRegRdOnlyMetric
 	(((r01 | p01 | s00) << 8) |			(m00 | i31)),			// instrDoBCDadjust
 	(((r01 | p01 | s00) << 8) |			(m00 | i03)),			// instrLdRegEEPROM
 	(((r01 | p02 | s00) << 8) |			(m00 | i03)),			// instrLdRegEEPROMindexed
-	(((r01 | p01 | s00) << 8) |			(m00 | i15)),			// instrLdRegEinit
-	(((r01 | p02 | s00) << 8) |			(m00 | i15)),			// instrLdRegEinitIndexed
 	(((r01 | p01 | s00) << 8) |			(m00 | i04)),			// instrStRegEEPROM
 	(((r01 | p02 | s00) << 8) |			(m00 | i04)),			// instrStRegEEPROMindexed
-	(((r01 | p01 | s00) << 8) |			(m00 | i05)),			// instrLdRegMain
-	(((r01 | p02 | s00) << 8) |			(m00 | i05)),			// instrLdRegMainIndexed
-	(((r01 | p03 | s00) << 8) |			(m00 | i05)),			// instrLdRegMainOffset
-	(((r01 | p01 | s00) << 8) |			(m00 | i06)),			// instrStRegMain
-	(((r01 | p02 | s00) << 8) |			(m00 | i06)),			// instrStRegMainIndexed
-	(((r01 | p01 | s00) << 8) |			(m00 | i07)),			// instrLdRegVolatile
-	(((r01 | p02 | s00) << 8) |			(m00 | i07)),			// instrLdRegVolatileIndexed
-	(((r01 | p01 | s00) << 8) |			(m00 | i08)),			// instrStRegVolatile
-	(((r01 | p02 | s00) << 8) |			(m00 | i08)),			// instrStRegVolatileIndexed
+	(((r01 | p01 | s00) << 8) |			(m00 | i07)),			// instrLdRegVariable
+	(((r01 | p02 | s00) << 8) |			(m00 | i07)),			// instrLdRegVariableIndexed
+	(((r01 | p03 | s00) << 8) |			(m00 | i07)),			// instrLdRegVariableOffset
+	(((r01 | p01 | s00) << 8) |			(m00 | i08)),			// instrStRegVariable
+	(((r01 | p02 | s00) << 8) |			(m00 | i08)),			// instrStRegVariableIndexed
+	(((r01 | p03 | s00) << 8) |			(m00 | i08)),			// instrStRegVariableOffset
 	(((r00 | p01 | s00) << 8) |			(e23)),					// instrLxdI
 	(((r00 | p01 | s00) << 8) |			(e24)),					// instrLxdIEEPROM
 	(((r00 | p03 | s00) << 8) |			(e24)),					// instrLxdIEEPROMoffset
@@ -643,25 +599,24 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 	(((r01 | p00 | s00) << 8) |			(m00 | i02)),			// instrSwapReg
 	(((r04 | p00 | s00) << 8) |			(m02 | i00)),			// instrSubYfromX
 	(((r06 | p01 | s00) << 8) |			(m02 | i10)),			// instrSubByteFromX
-	(((r06 | p01 | s00) << 8) |			(m02 | i05)),			// instrSubMainFromX
+	(((r06 | p01 | s00) << 8) |			(m02 | i07)),			// instrSubVariableFromX
 	(((r04 | p00 | s00) << 8) |			(m01 | i00)),			// instrAddYtoX
 	(((r05 | p00 | s00) << 8) |			(m01 | i00)),			// instrAdjustQuotient
 	(((r06 | p01 | s00) << 8) |			(m01 | i10)),			// instrAddByteToX
 	(((r06 | p01 | s00) << 8) |			(m01 | i14)),			// instrAddConstToX
 	(((r06 | p01 | s00) << 8) |			(m01 | i03)),			// instrAddEEPROMtoX
-	(((r06 | p01 | s00) << 8) |			(m01 | i05)),			// instrAddMainToX
+	(((r06 | p01 | s00) << 8) |			(m01 | i07)),			// instrAddVariableToX
 	(((r06 | p02 | s00) << 8) |			(m01 | i10)),			// instrAddIndexToX
 	(((r03 | p00 | s00) << 8) |			(m05 | i01)),			// instrMul2by1
 	(((r02 | p01 | s00) << 8) |			(m05 | i10)),			// instrMul2byByte
-	(((r02 | p01 | s00) << 8) |			(m05 | i14)),			// instrMul2byConst
+	(((r02 | p01 | s00) << 8) |			(m05 | i14)),			// instrMul2byRdOnly
 	(((r02 | p01 | s00) << 8) |			(m05 | i03)),			// instrMul2byEEPROM
-	(((r02 | p01 | s00) << 8) |			(m05 | i05)),			// instrMul2byMain
-	(((r02 | p01 | s00) << 8) |			(m05 | i07)),			// instrMul2byVolatile
+	(((r02 | p01 | s00) << 8) |			(m05 | i07)),			// instrMul2byVariable
 	(((r02 | p02 | s01) << 8) |			(m05 | i18)),			// instrMul2byTripVarIndexed
 	(((r03 | p00 | s00) << 8) |			(m06 | i01)),			// instrDiv2by1
-	(((r02 | p01 | s00) << 8) |			(m06 | i14)),			// instrDiv2byConst
+	(((r02 | p01 | s00) << 8) |			(m06 | i14)),			// instrDiv2byRdOnly
 	(((r02 | p01 | s00) << 8) |			(m06 | i03)),			// instrDiv2byEEPROM
-	(((r02 | p01 | s00) << 8) |			(m06 | i05)),			// instrDiv2byMain
+	(((r02 | p01 | s00) << 8) |			(m06 | i07)),			// instrDiv2byVariable
 	(((r02 | p02 | s01) << 8) |			(m06 | i18)),			// instrDiv2byTripVarIndexed
 	(((r02 | p01 | s00) << 8) |			(m06 | i10)),			// instrDiv2byByte
 	(((r01 | p00 | s00) << 8) |			(m00 | i29)),			// instrShiftRegLeft
@@ -675,20 +630,13 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 	(((r00 | p02 | s00) << 8) |			(e29)),					// instrLdJumpReg
 	(((r00 | p01 | s00) << 8) |			(e30)),					// instrClearFlag
 	(((r00 | p01 | s00) << 8) |			(e31)),					// instrSetFlag
-#if defined(useIsqrt)           
+#if defined(useIsqrt)
 	(((r01 | p00 | s00) << 8) |			(m00 | i28)),			// instrIsqrt
-#endif // defined(useIsqrt)     
-#if defined(useAnalogRead)      
-	(((r01 | p01 | s00) << 8) |			(m00 | i16)),			// instrLdRegVoltage
-	(((r01 | p02 | s00) << 8) |			(m00 | i16)),			// instrLdRegVoltageIndexed
-#endif // defined(useAnalogRead)
+#endif // defined(useIsqrt)
 #if defined(useBarFuelEconVsTime)
 	(((r04 | p02 | s01) << 8) |			(m04 | i17)),			// instrLdRegTripFEvTindexed
 #endif // defined(useBarFuelEconVsTime)
-#if defined(useBarGraph)        
-	(((r01 | p02 | s00) << 8) |			(m00 | i11)),			// instrStRegBGdataIndexed
-#endif // defined(useBarGraph)  
-#if defined(useMatrixMath)      
+#if defined(useMatrixMath)
 	(((r01 | p01 | s02) << 8) |			(m00 | i20)),			// instrLdRegXColIndexedRow
 	(((r01 | p01 | s02) << 8) |			(m00 | i21)),			// instrStRegXColIndexedRow
 	(((r01 | p01 | s02) << 8) |			(m00 | i22)),			// instrLdRegRColIndexedRow
@@ -706,95 +654,99 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 // the order of the indices, representing the powers of 10 between 10 and 1000000000, is vitally important to the
 //    proper functioning of the autoranging feature of ull2str
 //
-#define nextAllowedValue 0
-const uint8_t idxTen =						nextAllowedValue;
+#define nextAllowedValue pSettingsIdxEnd
+static const uint8_t idxConstantStart =				nextAllowedValue;
 
-const uint8_t idxOneHundred =				idxTen + 1;
+static const uint8_t idxTen =						nextAllowedValue;
 
-const uint8_t idxOneThousand =				idxOneHundred + 1;
-const uint8_t idxDecimalPoint =				idxOneThousand;					// decimal point format (the basis for all of those '* 1000' parameters)
+static const uint8_t idxOneHundred =				idxTen + 1;
 
-const uint8_t idxTenThousand =				idxOneThousand + 1;
+static const uint8_t idxOneThousand =				idxOneHundred + 1;
+static const uint8_t idxDecimalPoint =				idxOneThousand;					// decimal point format (the basis for all of those '* 1000' parameters)
 
-const uint8_t idxOneHundredThousand =		idxTenThousand + 1;
-const uint8_t idxMetricFE =					idxOneHundredThousand;			// decimal point format * 100 for metric FE (L / 100km)
+static const uint8_t idxTenThousand =				idxOneThousand + 1;
+
+static const uint8_t idxOneHundredThousand =		idxTenThousand + 1;
+static const uint8_t idxMetricFE =					idxOneHundredThousand;			// decimal point format * 100 for metric FE (L / 100km)
 #if defined(useCoastDownCalculator)
-const uint8_t idxNumerDensity =				idxOneHundredThousand;			// numerator to convert SAE density to metric density
+static const uint8_t idxNumerDensity =				idxOneHundredThousand;			// numerator to convert SAE density to metric density
 #endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
-const uint8_t idxDenomImperialGallon =		idxOneHundredThousand;			// denominator to convert Imperial gallons to liters
+static const uint8_t idxDenomImperialGallon =		idxOneHundredThousand;			// denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
 
-const uint8_t idxOneMillion =				idxOneHundredThousand + 1;
-const uint8_t idxMicroSecondsPerSecond	=	idxOneMillion;					// microseconds per second
-const uint8_t idxDenomDistance =			idxOneMillion;					// denominator to convert miles to kilometers
+static const uint8_t idxOneMillion =				idxOneHundredThousand + 1;
+static const uint8_t idxMicroSecondsPerSecond =		idxOneMillion;					// microseconds per second
+static const uint8_t idxDenomDistance =				idxOneMillion;					// denominator to convert miles to kilometers
 
-const uint8_t idxTenMillion =				idxOneMillion + 1;
+static const uint8_t idxTenMillion =				idxOneMillion + 1;
 #if defined(usePressure)
-const uint8_t idxDenomPressure =			idxTenMillion;					// denominator to convert psig to kPa
+static const uint8_t idxDenomPressure =				idxTenMillion;					// denominator to convert psig to kPa
 #endif // defined(usePressure)
 
-const uint8_t idxOneHundredMillion =		idxTenMillion + 1;
-const uint8_t idxBCDdivisor =				idxOneHundredMillion;			// divisor to separate lower 4 BCD bytes from 5th byte
+static const uint8_t idxOneHundredMillion =			idxTenMillion + 1;
+static const uint8_t idxBCDdivisor =				idxOneHundredMillion;			// divisor to separate lower 4 BCD bytes from 5th byte
 #if defined(useCoastDownCalculator)
-const uint8_t idxDenomArea =				idxOneHundredMillion;			// denominator to convert square feet to square meters
+static const uint8_t idxDenomArea =					idxOneHundredMillion;			// denominator to convert square feet to square meters
 #endif // defined(useCoastDownCalculator)
 
-const uint8_t idxOneBillion =				idxOneHundredMillion + 1;
-const uint8_t idxDenomVolume =				idxOneBillion;					// denominator to convert US gallons to liters
+static const uint8_t idxOneBillion =				idxOneHundredMillion + 1;
+static const uint8_t idxDenomVolume =				idxOneBillion;					// denominator to convert US gallons to liters
 #if defined(useVehicleParameters)
-const uint8_t idxNumerMass =				idxOneBillion;					// numerator to convert pounds to kilograms
+static const uint8_t idxNumerMass =					idxOneBillion;					// numerator to convert pounds to kilograms
 #endif // defined(useVehicleParameters)
 
 // these are not required to be in any particular order
 
-const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
-const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
-const uint8_t idxNumerDistance =			idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
-const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
-const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
-const uint8_t idxCycles0PerHour =			idxSecondsPerHour + 1;			// timer0 clock cycles per hour
-#define nextAllowedValue idxCycles0PerHour + 1
+static const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
+static const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
+static const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
+static const uint8_t idxNumerDistance =				idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
+static const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
+static const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
+#define nextAllowedValue idxSecondsPerHour + 1
 #if defined(useClockDisplay)
-const uint8_t idxSecondsPerDay =			nextAllowedValue;				// number of seconds in a day
+static const uint8_t idxSecondsPerDay =				nextAllowedValue;				// number of seconds in a day
 #define nextAllowedValue idxSecondsPerDay + 1
 #endif // defined(useClockDisplay)
 #if defined(usePressure)
-const uint8_t idxNumerPressure =			nextAllowedValue;				// numerator to convert psig to kPa
-const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor used for fuel calculations
-const uint8_t idxCorrectionFactor2 =		idxCorrectionFactor + 1;		// correction factor squared for square root function
+static const uint8_t idxNumerPressure =				nextAllowedValue;				// numerator to convert psig to kPa
+static const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor used for fuel calculations
+static const uint8_t idxCorrectionFactor2 =			idxCorrectionFactor + 1;		// correction factor squared for square root function
 #define nextAllowedValue idxCorrectionFactor2 + 1
 #endif // defined(usePressure)
 #if defined(useAnalogRead)
-const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
-const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
+static const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to convert volts DC to ADC steps
+static const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
 #define nextAllowedValue idxDenomVoltage + 1
 #endif // defined(useAnalogRead)
 #if defined(useCarVoltageOutput)
-const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
-const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
+static const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
+static const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
 #endif // defined(useCarVoltageOutput)
 #if defined(useVehicleParameters)
-const uint8_t idxDenomMass =				nextAllowedValue;				// denominator to convert pounds to kilograms
+static const uint8_t idxDenomMass =					nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
 #if defined(useCoastDownCalculator)
-const uint8_t idxNumerArea =				nextAllowedValue;				// numerator to convert square feet to square meters
-const uint8_t idxDenomDensity =				idxNumerArea + 1;				// denominator to convert SAE density to metric density
+static const uint8_t idxNumerArea =					nextAllowedValue;				// numerator to convert square feet to square meters
+static const uint8_t idxDenomDensity =				idxNumerArea + 1;				// denominator to convert SAE density to metric density
 #define nextAllowedValue idxDenomDensity + 1
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
+static const uint8_t idxPowerFactor =				nextAllowedValue;				// 22.84, or vehicle speed division factor for accel test power estimation function (228.4/10 for internal calculations)
 #define nextAllowedValue idxPowerFactor + 1
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
 #ifdef useImperialGallon
-const uint8_t idxNumerImperialGallon =		nextAllowedValue;				// numerator to convert Imperial gallons to liters
+static const uint8_t idxNumerImperialGallon =		nextAllowedValue;				// numerator to convert Imperial gallons to liters
 #define nextAllowedValue idxNumerImperialGallon + 1
 #endif // useImperialGallon
 
-const uint8_t idxMaxConstant =				nextAllowedValue;
+static const uint8_t idxConstantEnd =				nextAllowedValue;
+static const uint8_t idxConstantLength =			idxConstantEnd - idxConstantStart;
+
+static const uint8_t idxMaxConstant =				nextAllowedValue;
 
 #if defined(useDebugTerminalLabels)
 static const char terminalConstIdxNames[] PROGMEM = {
@@ -852,7 +804,6 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerDistance" tcEOS
 	"idxNumerVolume" tcEOS
 	"idxSecondsPerHour" tcEOS
-	"idxCycles0PerHour" tcEOS
 #if defined(useClockDisplay)
 	"idxSecondsPerDay" tcEOS
 #endif // defined(useClockDisplay)
@@ -884,6 +835,13 @@ static const char terminalConstIdxNames[] PROGMEM = {
 #endif // useImperialGallon
 };
 
+static const char terminalBCDformatNames[] PROGMEM = {
+	"bcdFormat10digit" tcEOS
+	"bcdFormatHHMMSS" tcEOS
+	"bcdFormatH9MMSS" tcEOS
+	"bcdFormatOverflow" tcEOS
+};
+
 #endif // defined(useDebugTerminalLabels)
 
 static const uint32_t correctionFactor =	4096ul;
@@ -892,44 +850,44 @@ static const uint32_t correctionFactor =	4096ul;
 // the order of the values, representing the powers of 10 between 10 and 1000000000, is vitally important to the
 //    proper functioning of the autoranging feature of ull2str
 //
-static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
-	10ul,							// idxTen
+static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM = {
+	10ul,									// idxTen
 
-	100ul,							// idxOneHundred
+	100ul,									// idxOneHundred
 
-	1000ul,							// idxOneThousand
-									// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
+	1000ul,									// idxOneThousand
+											// idxDecimalPoint - decimal point format (the basis for all of those '* 1000' parameters)
 
-	10000ul,						// idxTenThousand
+	10000ul,								// idxTenThousand
 
-	100000ul,						// idxOneHundredThousand
-									// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
+	100000ul,								// idxOneHundredThousand
+											// idxMetricFE - decimal point format * 100 for metric FE (L / 100km)
 #if defined(useCoastDownCalculator)
-									// idxNumerDensity - numerator to convert SAE density to metric density
+											// idxNumerDensity - numerator to convert SAE density to metric density
 #endif // defined(useCoastDownCalculator)
 #ifdef useImperialGallon
-									// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
+											// idxDenomImperialGallon - denominator to convert Imperial gallons to liters
 #endif // useImperialGallon
 
-	1000000ul,						// idxOneMillion
-									// idxMicroSecondsPerSecond - microseconds per second
-									// idxDenomDistance - denominator to convert miles to kilometers
+	1000000ul,								// idxOneMillion
+											// idxMicroSecondsPerSecond - microseconds per second
+											// idxDenomDistance - denominator to convert miles to kilometers
 
-	10000000ul,						// idxTenMillion
+	10000000ul,								// idxTenMillion
 #if defined(usePressure)
-									// idxDenomPressure - denominator to convert psig to kPa
+											// idxDenomPressure - denominator to convert psig to kPa
 #endif // defined(usePressure)
 
-	100000000ul,					// idxOneHundredMillion
-									// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
+	100000000ul,							// idxOneHundredMillion
+											// idxBCDdivisor - divisor to separate lower 4 BCD bytes from 5th byte
 #if defined(useCoastDownCalculator)
-									// idxDenomArea - denominator to convert square feet to square meters
+											// idxDenomArea - denominator to convert square feet to square meters
 #endif // defined(useCoastDownCalculator)
 
-	1000000000ul,					// idxOneBillion
-									// idxDenomVolume - denominator to convert US gallons to liters
+	1000000000ul,							// idxOneBillion
+											// idxDenomVolume - denominator to convert US gallons to liters
 #if defined(useVehicleParameters)
-									// idxNumerMass - numerator to convert pounds to kilograms
+											// idxNumerMass - numerator to convert pounds to kilograms
 #endif // defined(useVehicleParameters)
 
 	t0CyclesPerSecond,						// idxCycles0PerSecond - timer0 clock cycles per second
@@ -938,7 +896,6 @@ static const uint32_t constantNumberList[(uint16_t)(idxMaxConstant)] PROGMEM = {
 	1609344ul,								// idxNumerDistance - numerator to convert miles to kilometers
 	3785411784ul,							// idxNumerVolume - numerator to convert US gallons to liters
 	3600ul,									// idxSecondsPerHour - seconds per hour
-	3600ul * t0CyclesPerSecond,				// idxCycles0PerHour - timer0 clock cycles per hour
 #if defined(useClockDisplay)
 	86400ul,								// idxSecondsPerDay - number of seconds in a day
 #endif // defined(useClockDisplay)

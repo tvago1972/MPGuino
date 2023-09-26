@@ -107,8 +107,8 @@ static const uint8_t dfMaxValDisplayCount =			nextAllowedValue;				// maximum in
 
 #if defined(useBluetooth)
 static const uint8_t tGetBTparameterValue =			nextAllowedValue;
-static const uint8_t tFetchMainProgramValue =		tGetBTparameterValue + 1;
-#define nextAllowedValue tFetchMainProgramValue + 1
+static const uint8_t tGetProgramVariableValue =		tGetBTparameterValue + 1;
+#define nextAllowedValue tGetProgramVariableValue + 1
 #endif // defined(useBluetooth)
 
 static const uint8_t dfMaxValCalcCount =			nextAllowedValue;				// maximum index for function indexes that return results
@@ -116,8 +116,8 @@ static const uint8_t dfMaxValCalcCount =			nextAllowedValue;				// maximum index
 static const uint8_t tCalculateRemainingTank =		nextAllowedValue;				// calculate estimated remaining fuel quantity in injector open cycles
 static const uint8_t tCalculateRemainingReserve =	tCalculateRemainingTank + 1;	// calculate estimated remaining fuel reserve value in injector open cycles
 static const uint8_t tCalculateBingoFuel =			tCalculateRemainingReserve + 1;	// calculate estimated fuel bingo value in injector open cycles
-static const uint8_t tConvertToMicroSeconds =		tCalculateBingoFuel + 1;
-static const uint8_t tCalculateFuelQuantity =		tConvertToMicroSeconds + 1;
+static const uint8_t tConvertToMilliSeconds =		tCalculateBingoFuel + 1;		// convert value in timer0 cycles to decimal formatted milliseconds
+static const uint8_t tCalculateFuelQuantity =		tConvertToMilliSeconds + 1;		// convert fuel quantity in timer0 cycles to unit liquid quantity
 static const uint8_t tCalculateFuelDistance =		tCalculateFuelQuantity + 1;
 static const uint8_t tCalculateFuelTime =			tCalculateFuelDistance + 1;
 static const uint8_t tCalculateSpeed =				tCalculateFuelTime + 1;
@@ -214,13 +214,13 @@ static const char terminalTripFuncNames[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 #if defined(useBluetooth)
 	"tGetBTparameterValue" tcEOS
-	"tFetchMainProgramValue" tcEOS
+	"tGetProgramVariableValue" tcEOS
 #endif // defined(useBluetooth)
 	"tCalculateRemainingTank" tcEOS		// calculate estimated remaining fuel quantity in injector open cycles
 	"tCalculateRemainingReserve" tcEOS	// calculate estimated remaining fuel reserve value in injector open cycles
 	"tCalculateBingoFuel" tcEOS			// calculate estimated fuel bingo value in injector open cycles
-	"tConvertToMicroSeconds" tcEOS
-	"tCalculateFuelQuantity" tcEOS
+	"tConvertToMilliSeconds" tcEOS		// convert value in timer0 cycles to decimal formatted milliseconds
+	"tCalculateFuelQuantity" tcEOS		// convert fuel quantity in timer0 cycles to unit liquid quantity
 	"tCalculateFuelDistance" tcEOS
 	"tCalculateFuelTime" tcEOS
 	"tCalculateSpeed" tcEOS
@@ -247,190 +247,206 @@ static const char terminalTripFuncNames[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminalLabels)
-static const uint8_t prgmEngineSpeed[] PROGMEM = {
+static const uint8_t prgmEngineRunTime[] PROGMEM = {	// tEngineRunTime - engine runtime (hhmmss)
+	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse cycle value into register 2
+	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by cycles per second value
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+};
+
+static const uint8_t prgmRangeTime[] PROGMEM = {		// tRangeTime - estimated total runtime from full tank (hhmmss)
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmReserveTime[] PROGMEM = {		// tReserveTime - estimated reserve runtime from full tank (hhmmss)
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmBingoTime[] PROGMEM = {		// tBingoTime - estimated bingo fuel runtime from full tank (hhmmss)
+	instrLdRegVariable, 0x02, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmTimeToEmpty[] PROGMEM = {		// tTimeToEmpty - estimated remaining engine runtime (hhmmss)
+	instrCall, tCalculateRemainingTank,					// fetch remaining fuel value in injector open cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmReserveTimeToEmpty[] PROGMEM = {	// tReserveTimeToEmpty - estimated remaining reserve engine runtime (hhmmss)
+	instrCall, tCalculateRemainingReserve,				// fetch reserve fuel quantity in injector open cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmBingoTimeToEmpty[] PROGMEM = {	// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (hhmmss)
+	instrCall, tCalculateBingoFuel,						// fetch bingo fuel value in injector open cycles
+	instrJump, tCalculateFuelTime						// go format it
+};
+
+static const uint8_t prgmCalculateFuelTime[] PROGMEM = {	// tCalculateFuelTime
+	instrTestReg, 0x02,									// test inputted fuel quantity
+	instrBranchIfZero, 10,								// if inputted fuel quantity is zero, exit to caller
+	instrMul2byRdOnly, idxMicroSecondsPerSecond,		// shift number upward to retain numeric precision
+	instrDiv2byTripVarIndexed, rvInjCycleIdx,			// divide by open injector time in cycles
+	instrMul2byTripVarIndexed, rvEngCycleIdx,			// multiply by injector open count
+	instrDiv2byRdOnly, idxCycles0PerSecond,				// convert output term from cycles remaining to seconds remaining
+	instrDiv2byRdOnly, idxMicroSecondsPerSecond,		// shift number downward - high numeric precision no longer needed
+
+//cont:
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+};
+
+static const uint8_t prgmMotionTime[] PROGMEM = {		// tMotionTime - time vehicle in motion (hhmmss)
+	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
+	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by cycles per second value
+	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+};
+
+static const uint8_t prgmFormatToH9MMSStime[] PROGMEM = {	// tFormatToH9MMSStime
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmInjectorOpenTime[] PROGMEM = {	// tInjectorOpenTime - fuel used (milliseconds)
+	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load trip injector open time in timer0 cycles
+	instrJump, tConvertToMilliSeconds					// go convert timer0 cycles to milliseconds
+};
+
+static const uint8_t prgmInjectorTotalTime[] PROGMEM = {	// tInjectorTotalTime - engine run time (milliseconds)
+	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load engine run time in timer0 cycles
+	instrJump, tConvertToMilliSeconds					// go convert timer0 cycles to milliseconds
+};
+
+static const uint8_t prgmVSStotalTime[] PROGMEM = {		// tVSStotalTime - time vehicle in motion (milliseconds)
+	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load time vehicle spent in motion in timer0 cycles
+	instrJump, tConvertToMilliSeconds					// go convert timer0 cycles to milliseconds
+};
+
+static const uint8_t prgmConvertToMicroSeconds[] PROGMEM = {	// tConvertToMilliSeconds - convert value in timer0 cycles to decimal formatted milliseconds
+	instrMul2byRdOnly, idxMicroSecondsPerSecond,		// multiply by conversion factor for microseconds per second (also milliseconds per second times decimal formatting factor)
+	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by conversion factor for cycles to seconds
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmEngineSpeed[] PROGMEM = {		// tEngineSpeed - engine speed (1/m)
 	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse time into register 2
 	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of injector fire events per 2 crank revolutions
 	instrLdReg, 0x21,									// move denominator to register 1
 
 	instrLdRegTripVarIndexed, 0x02, rvInjPulseIdx,		// load injector pulse count into register 2
-	instrMul2byConst, idxCycles0PerSecond,				// set up for conversion of denominator injector cycle count to time in seconds
+	instrMul2byRdOnly, idxCycles0PerSecond,				// set up for conversion of denominator injector cycle count to time in seconds
 	instrMul2byByte, 120,								// set up for conversion of denominator injector time in seconds to time in minutes
-	instrMul2byConst, idxDecimalPoint,					// perform output decimal formatting
+	instrMul2byRdOnly, idxDecimalPoint,					// perform output decimal formatting
 	instrDiv2by1,										// perform divide
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmMotionTime[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
-	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+static const uint8_t prgmInjectorPulseCount[] PROGMEM = {	// tInjectorPulseCount - fuel injector pulse count
+	instrLdRegTripVarIndexed, 0x02, rvInjPulseIdx,		// load trip fuel injector pulse count
+	instrMul2byRdOnly, idxDecimalPoint,					// multiply by decimal point factor for output as an integer
+	instrDone											// exit to caller
 };
 
-static const uint8_t prgmEngineRunTime[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse cycle value into register 2
-	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+static const uint8_t prgmVSSpulseCount[] PROGMEM = {	// tInjectorPulseCount - fuel injector pulse count
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load trip vehicle speed sensor pulse count
+	instrMul2byRdOnly, idxDecimalPoint,					// multiply by decimal point factor for output as an integer
+	instrDone											// exit to caller
 };
 
-static const uint8_t prgmRangeTime[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmReserveTime[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,		// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmBingoTime[] PROGMEM = {
-	instrLdRegMain, 0x02, mpBingoTankSizeIdx,			// fetch bingo tank size in injector open cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmTimeToEmpty[] PROGMEM = {
-	instrCall, tCalculateRemainingTank,					// fetch remaining fuel value in injector open cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmReserveTimeToEmpty[] PROGMEM = {
-	instrCall, tCalculateRemainingReserve,				// fetch reserve fuel quantity in injector open cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmBingoTimeToEmpty[] PROGMEM = {
-	instrCall, tCalculateBingoFuel,						// fetch bingo fuel value in injector open cycles
-	instrJump, tCalculateFuelTime						// go format it
-};
-
-static const uint8_t prgmCalculateFuelTime[] PROGMEM = {
-	instrTestReg, 0x02,									// test inputted fuel quantity
-	instrBranchIfZero, 10,								// if inputted fuel quantity is zero, exit to caller
-	instrMul2byConst, idxMicroSecondsPerSecond,			// shift number upward to retain numeric precision
-	instrDiv2byTripVarIndexed, rvInjCycleIdx,			// divide by open injector time in cycles
-	instrMul2byTripVarIndexed, rvEngCycleIdx,			// multiply by injector open count
-	instrDiv2byConst, idxCycles0PerSecond,				// convert output term from cycles remaining to seconds remaining
-	instrDiv2byConst, idxMicroSecondsPerSecond,			// shift number downward - high numeric precision no longer needed
-
-//cont:
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
-};
-
-static const uint8_t prgmDistance[] PROGMEM = {
+static const uint8_t prgmDistance[] PROGMEM = {			// tDistance - vehicle distance traveled (SI/SAE)
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS cycle value into register 2
-	instrMul2byConst, idxDecimalPoint,					// perform output decimal formatting
+	instrMul2byRdOnly, idxDecimalPoint,					// perform output decimal formatting
 	instrDiv2byEEPROM, pPulsesPerDistanceIdx,			// divide by pulse per distance value and store in register 2
 	instrDone											// exit to caller
 };
 
 static const uint8_t prgmSpeed[] PROGMEM = {			// tSpeed - vehicle speed (SI/SAE)
-	instrLdRegTripVarIndexed, 0x03, rvVSSpulseIdx,		// load VSS pulse count
-	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
+	instrLdRegTripVarIndexed, 0x01, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrJump, tCalculateSpeed							// go calculate speed
-};
-
-static const uint8_t prgmCalculateSpeed[] PROGMEM = {	// tCalculateSpeed - 
-	instrBranchIfZero, 16,								// if speed measurement is zero, exit to caller
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// set up to convert pulses per unit distance
-	instrCmpXtoMain, 0x02, mpLargeSpeedFactorIdx,		// compare denominator to large speed factor
-	instrBranchIfGT, 10,								// if numerator is larger, perform second round of checking
-	instrDiv2byConst, idxCycles0PerHour,				// divide by timer0 clock cycles per hour
-	instrSwapReg, 0x23,									// save denominator term for later, load numerator
-	instrMul2byConst, idxDecimalPoint,					// adjust numerator by decimal formatting term
-	instrSwapReg, 0x31,									// swap denominator term to denominator
-	instrDiv2by1,										// divide to obtain unit distance per hour
-//cont0:
-	instrDone,											// exit to caller
-
-//cont:
-	instrCmpXtoConst, 0x02, idxCycles0PerHour,			// compare denominator to timer0 clock cycles per hour
-	instrBranchIfGT, 10,								// if numerator is larger, perform second round of checking
-	instrDiv2byConst, idxCycles0PerSecond,				// divide by cycle0s per second
-	instrSwapReg, 0x23,									// save denominator term for later, load numerator
-	instrMul2byConst, idxSecondsPerHour,				// adjust numerator by seconds per hour
-	instrMul2byConst, idxDecimalPoint,					// adjust numerator by decimal formatting term
-	instrSkip, 237,										// go perform divide
-
-//cont2:
-	instrSwapReg, 0x23,									// save denominator term for later, load numerator
-	instrMul2byMain, mpLargeSpeedFactorIdx,				// adjust numerator by large speed factor
-	instrSkip, 231										// go perform divide
 };
 
 static const uint8_t prgmFuelUsed[] PROGMEM = {			// tFuelUsed - fuel quantity used (SI/SAE)
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// get amount of consumed fuel in cycles
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
 	instrJump, tCalculateFuelQuantity					// go format the fuel quantity value
 };
 
-static const uint8_t prgmRemainingFuel[] PROGMEM = {
-	instrCall, tCalculateRemainingTank,					// go get remaining fuel quantity in cycles
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
-	instrJump, tCalculateFuelQuantity					// go format the remaining fuel quantity value
-};
-
-static const uint8_t prgmReserveRemainingFuel[] PROGMEM = {
-	instrCall, tCalculateRemainingReserve,				// go calculate how much reserve fuel remains
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
-	instrJump, tCalculateFuelQuantity					// go format the reserve fuel value
-};
-
-static const uint8_t prgmBingoRemainingFuel[] PROGMEM = {
-	instrCall, tCalculateBingoFuel,						// go calculate bingo fuel quantity
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
-	instrJump, tCalculateFuelQuantity					// go format the bingo fuel value
-};
-
-static const uint8_t prgmCalculateFuelQuantity[] PROGMEM = {
-	instrTestReg, 0x02,									// test inputted fuel quantity
-	instrBranchIfZero, 4,								// if inputted fuel quantity is zero, exit to caller
-	instrMul2by1,										// multiply the fuel used value by the formatting term
-	instrDiv2byMain, mpCyclesPerVolumeIdx,				// convert fuel value in cycles to fuel value per unit quantity
+static const uint8_t prgmFuelRate[] PROGMEM = {			// tFuelRate - fuel consumption rate (SI/SAE)
+	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
+	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
+	instrMul2byRdOnly, idxSecondsPerHour,
+	instrMul2byRdOnly, idxDecimalPoint,
+	instrDiv2byTripVarIndexed, rvEngCycleIdx,
+	instrMul2byRdOnly, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
+	instrDiv2byVariable, m32CyclesPerVolumeIdx,			// multiply by quantity/cycle (divide by cycles/quantity)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont:
+	instrDone
+};
+
+static const uint8_t prgmFuelEcon[] PROGMEM = {			// tFuelEcon - fuel economy (SI/SAE)
+	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume to get the denominator for fuel economy
+	instrLdReg, 0x21,									// save denominator for later
+	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
+	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
+	instrBranchIfFuelOverDist, 6,						// if MPGuino is in metric mode, skip ahead
+	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
+	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or km/L)
+	instrSkip, 2,										// go skip ahead
+
+//fecont1:
+	instrMul2byRdOnly, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for L/100km or gal/100mi)
+
+//fecont2:
+	instrDiv2by1,										// divide the numerator by the denominator
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmRangeDistance[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
+static const uint8_t prgmRangeDistance[] PROGMEM = {	// tRangeDistance - estimated total distance on a full tank (SI/SAE)
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmReserveDistance[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,		// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
+static const uint8_t prgmReserveDistance[] PROGMEM = {	// tReserveDistance - estimated reserve fuel tank distance (SI/SAE)
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmBingoDistance[] PROGMEM = {
-	instrLdRegMain, 0x02, mpBingoTankSizeIdx,			// fetch bingo tank size in injector open cycles
+static const uint8_t prgmBingoDistance[] PROGMEM = {	// tBingoDistance - estimated bingo fuel tank distance (SI/SAE)
+	instrLdRegVariable, 0x02, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmDistanceToEmpty[] PROGMEM = {
+static const uint8_t prgmDistanceToEmpty[] PROGMEM = {	// tDistanceToEmpty - estimated remaining distance (SI/SAE)
 	instrCall, tCalculateRemainingTank,					// fetch remaining fuel value in injector open cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmReserveDistanceToEmpty[] PROGMEM = {
+static const uint8_t prgmReserveDistanceToEmpty[] PROGMEM = {	// tReserveDistanceToEmpty - estimated reserve remaining distance (SI/SAE)
 	instrCall, tCalculateRemainingReserve,				// fetch reserve fuel quantity in injector open cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmBingoDistanceToEmpty[] PROGMEM = {
+static const uint8_t prgmBingoDistanceToEmpty[] PROGMEM = {	// tBingoDistanceToEmpty - estimated bingo remaining distance (SI/SAE)
 	instrCall, tCalculateBingoFuel,						// fetch bingo fuel value in injector open cycles
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
-static const uint8_t prgmCalculateFuelDistance[] PROGMEM = {
+static const uint8_t prgmCalculateFuelDistance[] PROGMEM = {	// tCalculateFuelDistance
 	instrTestReg, 0x02,									// test inputted fuel quantity
 	instrBranchIfZero, 18,								// if inputted fuel quantity is zero, exit to caller
 	instrMul2byTripVarIndexed, rvVSSpulseIdx,			// multiply input fuel quantity by accumulated distance travelled pulses to get the numerator for distance to empty
 	instrLdReg, 0x23,									// move numerator to register 3 for now
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycles
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply accumulated fuel injector open cycles by pulses per unit distance factor
-	instrDiv2byConst, idxDecimalPoint,					// divide by decimal point constant to get denominator / decimal factor
+	instrDiv2byRdOnly, idxDecimalPoint,					// divide by decimal point constant to get denominator / decimal factor
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrLdReg, 0x21,									// move modified denominator to register 1 for now
 	instrLdReg, 0x32,									// fetch numerator from register 3
@@ -442,22 +458,62 @@ static const uint8_t prgmCalculateFuelDistance[] PROGMEM = {
 };
 
 static const uint8_t prgmFuelQuantity[] PROGMEM = {		// tFuelQuantity - tank total fuel quantity (SI/SAE)
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
 	instrJump, tCalculateFuelQuantity					// go format the fuel quantity
 };
 
 static const uint8_t prgmReserveQuantity[] PROGMEM = {	// tReserveQuantity - tank reserve fuel quantity (SI/SAE)
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,		// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
 	instrJump, tCalculateFuelQuantity					// go format the fuel quantity
 };
 
 static const uint8_t prgmBingoQuantity[] PROGMEM = {	// tBingoQuantity - tank bingo fuel quantity (SI/SAE)
-	instrLdRegMain, 0x02, mpBingoTankSizeIdx,			// fetch bingo tank size in injector open cycles
-	instrLdRegConst, 0x01, idxDecimalPoint,				// load the decimal point constant used for output formatting
+	instrLdRegVariable, 0x02, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
 	instrJump, tCalculateFuelQuantity					// go format the fuel quantity
+};
+
+static const uint8_t prgmRemainingFuel[] PROGMEM = {	// tRemainingFuel - estimated remaining fuel quantity (SI/SAE)
+	instrCall, tCalculateRemainingTank,					// go get remaining fuel quantity in cycles
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
+	instrJump, tCalculateFuelQuantity					// go format the remaining fuel quantity value
+};
+
+static const uint8_t prgmReserveRemainingFuel[] PROGMEM = {	// tReserveRemainingFuel - estimated remaining reserve fuel quantity (SI/SAE)
+	instrCall, tCalculateRemainingReserve,				// go calculate how much reserve fuel remains
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
+	instrJump, tCalculateFuelQuantity					// go format the reserve fuel value
+};
+
+static const uint8_t prgmBingoRemainingFuel[] PROGMEM = {	// tBingoRemainingFuel - estimated bingo fuel quantity remaining (SI/SAE)
+	instrCall, tCalculateBingoFuel,						// go calculate bingo fuel quantity
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,			// load the decimal point constant used for output formatting
+	instrJump, tCalculateFuelQuantity					// go format the bingo fuel value
+};
+
+static const uint8_t prgmCalculateFuelQuantity[] PROGMEM = {	// tCalculateFuelQuantity - convert fuel quantity in timer0 cycles to unit liquid quantity
+	instrTestReg, 0x02,									// test inputted fuel quantity
+	instrBranchIfZero, 4,								// if inputted fuel quantity is zero, exit to caller
+	instrMul2by1,										// multiply the fuel used value by the formatting term
+	instrDiv2byVariable, m32CyclesPerVolumeIdx,			// convert fuel value in cycles to fuel value per unit quantity
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+
+//cont:
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmCalculateSpeed[] PROGMEM = {	// tCalculateSpeed -
+	instrBranchIfZero, 4,								// if speed measurement is zero, exit to caller
+	instrMul2byVariable, m32SpeedFactorIdx,				// multiply pulse count by speed factor in (cycle0 * distance) / (pulse * hour)
+	instrDiv2by1,										// divide by time vehicle spent moving in cycle0s
+	instrDone,											// exit to caller
+
+//cont0:
+	instrLdRegByte, 0x02, 0,							// zero out result register
+	instrDone											// exit to caller
 };
 
 #if defined(useFuelCost)
@@ -468,20 +524,20 @@ static const uint8_t prgmFuelCostUsed[] PROGMEM = {
 };
 
 static const uint8_t prgmFuelCostTank[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrLdRegEEPROM, 0x01, pCostPerQuantity,			// fetch fuel monetary value per unit volume term
 	instrJump, tCalculateFuelQuantity					// go format the fuel monetary value
 };
 
 static const uint8_t prgmFuelCostReserve[] PROGMEM = {
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,		// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
 	instrLdRegEEPROM, 0x01, pCostPerQuantity,			// fetch fuel monetary value per unit volume term
 	instrJump, tCalculateFuelQuantity					// go format the fuel monetary value
 };
 
 static const uint8_t prgmFuelCostBingo[] PROGMEM = {
-	instrLdRegMain, 0x02, mpBingoTankSizeIdx,			// fetch bingo tank size in injector open cycles
+	instrLdRegVariable, 0x02, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
 	instrLdRegEEPROM, 0x01, pCostPerQuantity,			// fetch fuel monetary value per unit volume term
 	instrJump, tCalculateFuelQuantity					// go format the fuel monetary value
 };
@@ -506,7 +562,7 @@ static const uint8_t prgmFuelCostBingoRemaining[] PROGMEM = {
 
 static const uint8_t prgmFuelCostPerDistance[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume value to get the denominator for fuel cost per distance
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume value to get the denominator for fuel cost per distance
 	instrLdReg, 0x21,									// save denominator term
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel cost per distance
@@ -521,9 +577,9 @@ static const uint8_t prgmDistancePerFuelCost[] PROGMEM = {
 	instrMul2byEEPROM, pCostPerQuantity,				// multiply the denominator by the cost per unit quantity of fuel
 	instrLdReg, 0x21,									// save the denominator term
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume to get the numerator for distance per fuel cost
-	instrMul2byConst, idxDecimalPoint,					// cancel out the decimal point constant for the cost per unit quantity of fuel
-	instrMul2byConst, idxDecimalPoint,					// load the decimal point constant used for output formatting
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume to get the numerator for distance per fuel cost
+	instrMul2byRdOnly, idxDecimalPoint,					// cancel out the decimal point constant for the cost per unit quantity of fuel
+	instrMul2byRdOnly, idxDecimalPoint,					// load the decimal point constant used for output formatting
 	instrDiv2by1,										// divide the numerator by the denominator
 	instrDone
 };
@@ -531,11 +587,11 @@ static const uint8_t prgmDistancePerFuelCost[] PROGMEM = {
 static const uint8_t prgmFuelRateCost[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
 	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
-	instrMul2byConst, idxSecondsPerHour,
+	instrMul2byRdOnly, idxSecondsPerHour,
 	instrMul2byEEPROM, pCostPerQuantity,
 	instrDiv2byTripVarIndexed, rvEngCycleIdx,
-	instrMul2byConst, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
-	instrDiv2byMain, mpCyclesPerVolumeIdx,				// multiply by quantity/cycle (divide by cycles/quantity)
+	instrMul2byRdOnly, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
+	instrDiv2byVariable, m32CyclesPerVolumeIdx,			// multiply by quantity/cycle (divide by cycles/quantity)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont:
@@ -543,60 +599,11 @@ static const uint8_t prgmFuelRateCost[] PROGMEM = {
 };
 
 #endif // defined(useFuelCost)
-static const uint8_t prgmFuelRate[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// load injector open cycle value
-	instrBranchIfZero, 11,								// if zero, then fuel rate is also zero
-	instrMul2byConst, idxSecondsPerHour,
-	instrMul2byConst, idxDecimalPoint,
-	instrDiv2byTripVarIndexed, rvEngCycleIdx,
-	instrMul2byConst, idxCycles0PerSecond,				// for conversion of quantity/cycles to quantity/sec
-	instrDiv2byMain, mpCyclesPerVolumeIdx,				// multiply by quantity/cycle (divide by cycles/quantity)
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-
-//cont:
-	instrDone
-};
-
-static const uint8_t prgmFuelEcon[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume to get the denominator for fuel economy
-	instrLdReg, 0x21,									// save denominator for later
-	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
-	instrBranchIfFuelOverDist, 6,						// if MPGuino is in metric mode, skip ahead
-	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
-	instrMul2byConst, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or km/L)
-	instrSkip, 2,										// go skip ahead
-
-//fecont1:
-	instrMul2byConst, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for L/100km or gal/100mi)
-
-//fecont2:
-	instrDiv2by1,										// divide the numerator by the denominator
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrDone											// exit to caller
-};
-
-static const uint8_t prgmCalculateRemainingTank[] PROGMEM = {
-	instrLdRegTripVar, 0x01, tankIdx, rvInjCycleIdx,	// fetch tank quantity in injector open cycles
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
-#if defined(usePartialRefuel)
-	instrSubMainFromX, 0x01, mpPartialRefuelTankSize,	// subtract calculated partial refuel size in injector open cycles
-	instrBranchIfGT, 7,									// if calculated partial refuel size > tank quantity, exit with calculated tank size in result
-#endif // defined(usePartialRefuel)
-	instrSubYfromX, 0x12,								// subtract tank injector time in cycles from calculated tank size in cycles to get remaining fuel in cycles
-	instrBranchIfLTorE,	3,								// if tank quantity <= calculated tank size, exit
-	instrLdRegByte, 0x02, 0,							// zero out result in register 2
-
-//ret:
-	instrDone											// exit to caller
-};
-
 static const uint8_t prgmCalculateRemainingReserve[] PROGMEM = {
 	instrCall, tCalculateRemainingTank,					// get calculated remaining fuel in cycles
 	instrTestReg, 0x02,									// test calculated remaining fuel left
 	instrBranchIfZero, 8,								// if zero, then reserve fuel is also zero
-	instrSubMainFromX, 0x02, mpBingoTankSizeIdx,		// subtract bingo tank size in injector open cycles
+	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo tank size in injector open cycles
 	instrBranchIfLTorE, 3,								// if remaining fuel >= bingo tank size, exit to caller
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
@@ -608,7 +615,7 @@ static const uint8_t prgmCalculateBingoFuel[] PROGMEM = {
 	instrCall, tCalculateRemainingTank,					// get calculated remaining fuel in injector open cycles
 	instrTestReg, 0x02,									// test calculated remaining fuel left
 	instrBranchIfZero, 9,								// if zero, then bingo fuel is also zero
-	instrLdRegMain, 0x01, mpBingoTankSizeIdx,			// fetch bingo tank size in injector open cycles
+	instrLdRegVariable, 0x01, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
 	instrCmpXtoY, 0x21,
 	instrBranchIfLTorE, 2,								// if tank quantity in injector open cycles <= calculated bingo size in injector open cycles, exit to caller
 	instrLdReg, 0x12,									// shift calculated bingo size in injector open cycles to register 2
@@ -617,63 +624,53 @@ static const uint8_t prgmCalculateBingoFuel[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmInjectorOpenTime[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,
-	instrJump, tConvertToMicroSeconds
-};
+static const uint8_t prgmCalculateRemainingTank[] PROGMEM = {	// tCalculateRemainingTank - calculate estimated remaining fuel quantity in injector open cycles
+#if defined(usePartialRefuel)
+	instrLdRegEEPROM, 0x02, pRefuelSizeIdx,				// fetch partial refuel tank size in unit volume * decimal formatting factor
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume value to get tank size in cycles * formatting factor
+	instrDiv2byRdOnly, idxDecimalPoint,					// remove formatting factor to get partial refuel tank size in cycles
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+	instrLdRegTripVar, 0x01, tankIdx, rvInjCycleIdx,	// fetch tank quantity in injector open cycles
+	instrSubYfromX, 0x21,								// subtract calculated partial refuel size in injector open cycles
+	instrBranchIfGT, 7,									// if calculated partial refuel size > tank quantity, exit with calculated tank size in result
+#else // defined(usePartialRefuel)
+	instrLdRegTripVar, 0x01, tankIdx, rvInjCycleIdx,	// fetch tank quantity in injector open cycles
+#endif // defined(usePartialRefuel)
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
+	instrSubYfromX, 0x12,								// subtract tank injector time in cycles from calculated tank size in cycles to get remaining fuel in cycles
+	instrBranchIfLTorE,	3,								// if tank quantity <= calculated tank size, exit
+	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
-static const uint8_t prgmInjectorTotalTime[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,
-	instrJump, tConvertToMicroSeconds
-};
-
-static const uint8_t prgmVSStotalTime[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,
-	instrJump, tConvertToMicroSeconds
-};
-
-static const uint8_t prgmConvertToMicroSeconds[] PROGMEM = {
-	instrMul2byConst, idxMicroSecondsPerSecond,			// multiply by conversion factor for microseconds per second
-	instrDiv2byConst, idxCycles0PerSecond,				// divide by conversion factor for cycles to seconds
+//ret:
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmVSSpulseCount[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,
-	instrMul2byConst, idxDecimalPoint,					// cancel out the decimal point constant for the cost per unit quantity of fuel
-	instrDone
-};
-
-static const uint8_t prgmInjectorPulseCount[] PROGMEM = {
-	instrLdRegTripVarIndexed, 0x02, rvInjPulseIdx,
-	instrMul2byConst, idxDecimalPoint,					// cancel out the decimal point constant for the cost per unit quantity of fuel
-	instrDone
-};
-
 #if defined(useDebugAnalog)
-static const uint8_t prgmAnalogChannel[] PROGMEM = {
-	instrCmpIndex, dfMaxValAnalogCount,					// is trip index pointing to a valid analog channel?
+static const uint8_t prgmAnalogChannel[] PROGMEM = {	// tAnalogChannel - DC voltage
+	instrCmpIndex, v16AnalogStartIdx,					// is trip index pointing to a valid analog channel?
+	instrBranchIfLT, 4,									// if not, zero out result and return
+	instrCmpIndex, v16AnalogEndIdx,
 	instrBranchIfLT, 4,									// if so, skip ahead
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 	instrDone,											// exit to caller
 
 //cont1:
-	instrLdRegVoltageIndexed, 0x02,						// load analog channel ADC step value
-	instrMul2byConst, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
-	instrDiv2byConst, idxNumerVoltage,					// divide by numerator to convert from voltage to ADC steps
+	instrLdRegVariableIndexed, 0x02, 					// load analog channel ADC step value
+	instrMul2byRdOnly, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
+	instrDiv2byRdOnly, idxNumerVoltage,					// divide by numerator to convert from voltage to ADC steps
 	instrDone											// exit to caller
 };
 
 #endif // defined(useDebugAnalog)
 #if defined(useCarVoltageOutput)
 static const uint8_t prgmAlternatorChannel[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogAlternatorChannelIdx,	// load analog channel ADC step value
-	instrMul2byConst, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
-	instrDiv2byConst, idxNumerVoltage,					// divide by numerator to get voltage drop V(R5) between R5 and ground
-	instrLdRegConst, 0x01, idxResistanceR5,				// figure out V(R5+R6) from V(R5)
+	instrLdRegVariable, 0x02, v16AnalogAlternatorChannelIdx,	// load analog channel ADC step value
+	instrMul2byRdOnly, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
+	instrDiv2byRdOnly, idxNumerVoltage,					// divide by numerator to get voltage drop V(R5) between R5 and ground
+	instrLdRegRdOnly, 0x01, idxResistanceR5,			// figure out V(R5+R6) from V(R5)
 	instrAddConstToX, 0x01, idxResistanceR6,
 	instrMul2by1,
-	instrDiv2byConst, idxResistanceR5,
+	instrDiv2byRdOnly, idxResistanceR5,
 	instrAddEEPROMtoX, 0x02, pVoltageOffset,			// add diode offset
 	instrDone											// exit to caller
 };
@@ -687,7 +684,7 @@ static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
 	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
 	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
-	instrDiv2byConst, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
+	instrDiv2byRdOnly, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
 	instrSkip, 6,										// skip to adjustment
 
 //to10ths:
@@ -709,7 +706,7 @@ static const uint8_t prgmFormatToNumber[] PROGMEM = {	// tFormatToNumber
 	instrBranchIfOverflow, 13,							// if register 2 has overflow value, exit
 	instrCmpIndex, 3,									// check if valid number of decimal points were requested
 	instrBranchIfGT, 9,									// if too many decimal points were requested, error out with overflow
-	instrDiv2byConst, idxBCDdivisor,					// divide by 10^8 - quotient remains in register 2, and remainder goes into register 1
+	instrDiv2byRdOnly, idxBCDdivisor,					// divide by 10^8 - quotient remains in register 2, and remainder goes into register 1
 	instrLdRegByte, 0x03, 99,
 	instrCmpXtoY, 0x23,									// test if quotient is greater than 99 (remainder will be less than 10^8)
 	instrBranchIfLTorE, 4,								// if quotient is 99 or less, continue with processing
@@ -737,19 +734,19 @@ static const uint8_t prgmGetBTparameterValue[] PROGMEM = {	// tGetBTparameterVal
 	instrDone											// return to caller
 };
 
-static const uint8_t prgmWriteMainProgramValue[] PROGMEM = {
-	instrStRegMainIndexed, 0x02,
+static const uint8_t prgmWriteProgramVariableValue[] PROGMEM = {
+	instrStRegVariableIndexed, 0x02,
 	instrDone											// exit to caller
 };
 
 #endif // defined(useBluetooth)
-static const uint8_t prgmFetchMainProgramValue[] PROGMEM = { // tFetchMainProgramValue
-	instrLdRegMainIndexed, 0x02,
+static const uint8_t prgmGetProgramVariableValue[] PROGMEM = { // tGetProgramVariableValue
+	instrLdRegVariableIndexed, 0x02,
 	instrDone											// exit to caller
 };
 
 static const uint8_t prgmFetchInitialParamValue[] PROGMEM = {
-	instrLdRegEinitIndexed, 0x02,
+	instrLdRegRdOnlyIndexed, 0x02,
 	instrDone											// return to caller
 };
 
@@ -858,8 +855,8 @@ static const uint8_t prgmSaveTrip[] PROGMEM = {
 };
 
 static const uint8_t prgmReadTicksToSeconds[] PROGMEM = {
-	instrLdRegVolatileIndexed, 0x02,
-	instrDiv2byConst, idxTicksPerSecond,
+	instrLdRegVariableIndexed, 0x02,
+	instrDiv2byRdOnly, idxTicksPerSecond,
 	instrJump, tFormatToHHMMSStime						// go format the number to hhmmss time
 };
 
@@ -879,18 +876,18 @@ static const uint8_t prgmFEvTgetConsumedFuel[] PROGMEM = {
 static const uint8_t prgmFEvTgetFuelEconomy[] PROGMEM = {
 	instrLdRegTripFEvTindexed, 0x02, rvVSSpulseIdx,		// load indexed VSS pulses from fuel econ vs time trip variable bank
 	instrBranchIfE, 26,
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume to get the denominator for fuel economy
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume to get the denominator for fuel economy
 	instrLdReg, 0x21,									// save denominator (for G/100mi or L/100km) for later
 	instrLdRegTripFEvTindexed, 0x02, rvInjCycleIdx,		// load indexed injector cycles from fuel econ vs time trip variable bank
 	instrBranchIfE, 22,
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
 	instrBranchIfFuelOverDist, 6,						// if MPGuino currently outputting fuel econ as fuel over distance, skip
 	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
-	instrMul2byConst, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
+	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
 	instrSkip, 2,										// skip ahead
 
 //cont0:
-	instrMul2byConst, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for G/100mi or L/100km)
+	instrMul2byRdOnly, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for G/100mi or L/100km)
 	instrDiv2by1,										// divide the numerator by the denominator
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrClearFlag, SWEET64zeroFlag | SWEET64overflowFlag,	// ensure Z and V flags clear, to signal good data
@@ -926,18 +923,18 @@ static const uint8_t prgmFEvSgetConsumedFuel[] PROGMEM = {
 static const uint8_t prgmFEvSgetFuelEconomy[] PROGMEM = {
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvVSSpulseIdx,	// load indexed VSS pulses from fuel econ vs speed trip variable bank
 	instrBranchIfE, 27,
-	instrMul2byMain, mpCyclesPerVolumeIdx,				// multiply by cycles per unit volume to get the denominator for fuel economy
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume to get the denominator for fuel economy
 	instrLdReg, 0x21,									// save denominator (for G/100mi or L/100km) for later
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvInjCycleIdx,	// load indexed injector cycles from fuel econ vs speed trip variable bank
 	instrBranchIfE, 22,
 	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
 	instrBranchIfFuelOverDist, 6,						// if MPGuino currently outputting fuel econ as fuel over distance, skip
 	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
-	instrMul2byConst, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
+	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
 	instrSkip, 2,										// skip ahead
 
 //cont0:
-	instrMul2byConst, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for G/100mi or L/100km)
+	instrMul2byRdOnly, idxMetricFE,						// put in the output formatting decimal point constant, multiplied by 100 (for G/100mi or L/100km)
 	instrDiv2by1,										// divide the numerator by the denominator
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrClearFlag, SWEET64zeroFlag | SWEET64overflowFlag,	// ensure Z and V flags clear, to signal good data
@@ -980,37 +977,31 @@ static const uint8_t prgmFormatToHHMMSStime[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmFormatToH9MMSStime[] PROGMEM = {
-	instrLdReg, 0x21,									// move time in seconds into register 1
-	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
-	instrDone											// exit to caller
-};
-
 #if defined(useChryslerMAPCorrection)
 static const uint8_t prgmPressureChannel[] PROGMEM = {
-	instrCmpIndex, mpAnalogMAPfloorIdx - mpMAPpressureIdx,	// is trip index pointing to a valid pressure element?
+	instrCmpIndex, m32AnalogMAPfloorIdx - m32MAPpressureIdx,	// is trip index pointing to a valid pressure element?
 	instrBranchIfLT, 4,									// if so, skip ahead
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 	instrDone,											// exit to caller
 
 //cont1:
-	instrLdRegMainOffset, 0x02, mpMAPpressureIdx,		// load pre-formatted pressure element
+	instrLdRegVariableOffset, 0x02, m32MAPpressureIdx,	// load pre-formatted pressure element
 	instrDone											// exit to caller
 };
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
 static const uint8_t prgmDragSpeed[] PROGMEM = {		// tDragSpeed - acceleration test maximum vehicle speed (SI/SAE)
-	instrLdRegByte, 0x03, 1,							// load 1 pulse into numerator term
-	instrLdRegVolatile, 0x02, vDragInstantSpeedIdx,		// load instantaneous drag speed measurement into denominator term
-	instrTestReg, 0x02,									// test speed measurement
+	instrLdRegByte, 0x02, 1,							// load 1 pulse into numerator term
+	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load instantaneous drag speed measurement into denominator term
+	instrTestReg, 0x01,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
 };
 
 static const uint8_t prgmTrapSpeed[] PROGMEM = {		// tTrapSpeed - acceleration test vehicle speed at defined distance (SI/SAE)
-	instrLdRegByte, 0x03, 1,							// load 1 pulse into numerator term
-	instrLdRegVolatile, 0x02, vDragTrapSpeedIdx,		// load instantaneous trap speed measurement into denominator term
-	instrTestReg, 0x02,									// test speed measurement
+	instrLdRegByte, 0x02, 1,							// load 1 pulse into numerator term
+	instrLdRegVariable, 0x01, m32DragTrapSpeedIdx,		// load instantaneous trap speed measurement into denominator term
+	instrTestReg, 0x01,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
 };
 
@@ -1019,36 +1010,36 @@ static const uint8_t prgmEstimatedEnginePower[] PROGMEM = {	// tEstimatedEngineP
 	instrBranchIfSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
 
 //cont1:
-	instrMul2byConst, idxDenomDistance,					// multiply by numerator to convert km/hr to MPH
-	instrDiv2byConst, idxNumerDistance,					// divide by denominator to convert km/hr to MPH
+	instrMul2byRdOnly, idxDenomDistance,				// multiply by numerator to convert km/hr to MPH
+	instrDiv2byRdOnly, idxNumerDistance,				// divide by denominator to convert km/hr to MPH
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont2:
 	instrLdReg, 0x21,									// load register 1 with calculated vehicle speed
 	instrMul2by1,										// perform cube function on maximum accel test vehicle speed value to obtain initial denominator term
 	instrMul2by1,
-	instrDiv2byConst, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
+	instrDiv2byRdOnly, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrMul2byEEPROM, pVehicleMassIdx,					// multiply estimate by vehicle weight
-	instrDiv2byConst, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
+	instrDiv2byRdOnly, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrBranchIfSAEmode, 5,							// if MPGuino is in SAE mode, skip to power calculation setup
 
 //cont3:
-	instrMul2byConst, idxDenomMass,						// multiply by numerator to convert kg to lbf
-	instrDiv2byConst, idxNumerMass,						// divide by denominator to convert kg to lbf
+	instrMul2byRdOnly, idxDenomMass,					// multiply by numerator to convert kg to lbf
+	instrDiv2byRdOnly, idxNumerMass,					// divide by denominator to convert kg to lbf
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont4:
-	instrDiv2byConst, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
+	instrDiv2byRdOnly, idxPowerFactor,					// divide by power estimation term to reduce the number of bits in the estimate
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrDone											// exit to caller
 };
 
 static const uint8_t prgmAccelTestTime[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,
-	instrMul2byConst, idxDecimalPoint,					// load the decimal point constant used for output formatting
-	instrDiv2byConst, idxCycles0PerSecond,
+	instrMul2byRdOnly, idxDecimalPoint,					// load the decimal point constant used for output formatting
+	instrDiv2byRdOnly, idxCycles0PerSecond,
 	instrDone
 };
 
@@ -1123,15 +1114,15 @@ static const uint8_t * const S64programList[] PROGMEM = {
 // this is the start of the SWEET64 function list for useful functions that do not get displayed
 #if defined(useBluetooth)
 	prgmGetBTparameterValue,					// tGetBTparameterValue
-	prgmFetchMainProgramValue,					// tFetchMainProgramValue
+	prgmGetProgramVariableValue,				// tGetProgramVariableValue
 #endif // defined(useBluetooth)
 
 // this is the start of the internal SWEET64 index program address list
 	prgmCalculateRemainingTank,					// tCalculateRemainingTank - calculate estimated remaining fuel quantity in injector open cycles
 	prgmCalculateRemainingReserve,				// tCalculateRemainingReserve - calculate estimated remaining fuel reserve value in injector open cycles
 	prgmCalculateBingoFuel,						// tCalculateBingoFuel - calculate estimated fuel bingo value in injector open cycles
-	prgmConvertToMicroSeconds,					// tCalculateFuelQuantity
-	prgmCalculateFuelQuantity,					// tCalculateFuelQuantity
+	prgmConvertToMicroSeconds,					// tConvertToMilliSeconds - convert value in timer0 cycles to decimal formatted milliseconds
+	prgmCalculateFuelQuantity,					// tCalculateFuelQuantity - convert fuel quantity in timer0 cycles to unit liquid quantity
 	prgmCalculateFuelDistance,					// tCalculateFuelDistance
 	prgmCalculateFuelTime,						// tCalculateFuelTime
 	prgmCalculateSpeed,							// tCalculateSpeed

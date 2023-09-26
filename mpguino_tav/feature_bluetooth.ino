@@ -22,10 +22,10 @@ static void bluetooth::init(void)
 #if defined(useBluetoothAdaFruitSPI)
 	btInputState = btiResetFlag;
 
-	text::initDev(devIdxBluetooth, (odvFlagEnableOutput), blefriend::chrOut, chrIn);
+	text::initDev(m8DevBluetoothIdx, (odvFlagEnableOutput), blefriend::chrOut, chrIn);
 
 #else // defined(useBluetoothAdaFruitSPI)
-	bitFlags[(uint16_t)(devIdxBluetooth)] &= ~(odvFlagCRLF);
+	mainProgram8Variables[(uint16_t)(m8DevBluetoothIdx - m8VariableStartIdx)] &= ~(odvFlagCRLF);
 	btInputState = 0;
 
 #endif // defined(useBluetoothAdaFruitSPI)
@@ -80,7 +80,7 @@ static void bluetooth::mainProcess(void)
 	if (btInputState & btiResetFlag) // if performing a /RST cycle
 	{
 
-		if ((bitFlags[(uint16_t)(bfBLEstatus)] & bleResetFlags) == 0) // if /RST cycle is completed
+		if ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleResetFlags) == 0) // if /RST cycle is completed
 		{
 
 			btInputState &= ~(btiResetFlag); // mark /RST cycle as completed
@@ -88,7 +88,7 @@ static void bluetooth::mainProcess(void)
 			for (uint8_t x = 0; x < 4; x++)
 			{
 
-				text::stringOut(devIdxBluetooth, btResetString, x); // send a string of reset message
+				text::stringOut(m8DevBluetoothIdx, btResetString, x); // send a string of reset message
 
 				blefriend::outputBufferWithResponse(); // go output via AT wrapper, and pop response from input
 
@@ -114,12 +114,12 @@ static void bluetooth::mainProcess(void)
 		if (btInputState & btiAllowPolling)
 		{
 
-			if (bitFlags[(uint16_t)(bfAwake)] & aAwakeSampleBLEfriend)
+			if (volatile8Variables[(uint16_t)(v8Timer0StatusB - v8VariableStartIdx)] & t0sbSampleBLEfriend)
 			{
 
-				heart::changeBitFlagBits(bfAwake, aAwakeSampleBLEfriend, 0);
+				heart::changeBitFlagBits(v8Timer0StatusB - v8VariableStartIdx, t0sbSampleBLEfriend, 0);
 
-				text::stringOut(devIdxBluetooth, btInputString);
+				text::stringOut(m8DevBluetoothIdx, btInputString);
 				blefriend::outputBufferWithResponse(); // output GATT input request via 0xFFE1 characteristic
 
 				k = 1;
@@ -144,13 +144,13 @@ static void bluetooth::mainProcess(void)
 		do
 		{
 
-			btChar = text::chrIn(devIdxBluetooth); // read in a character from the input buffer
+			btChar = text::chrIn(m8DevBluetoothIdx); // read in a character from the input buffer
 
 			if (btChar) // if a valid character was read in
 			{
 
 #if defined(useDebugTerminal)
-				if (bitFlags[(uint16_t)(bfPeek)] & peekBluetoothInput) text::charOut(devIdxDebugTerminal, btChar);
+				if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekBluetoothInput) text::charOut(m8DevDebugTerminalIdx, btChar);
 
 #endif // defined(useDebugTerminal)
 				switch (btInputState)
@@ -281,13 +281,13 @@ static void bluetooth::mainProcess(void)
 													if (btF->u8[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
 													EEPROM::onChange(prgmWriteBTparameterValue, btF->u8[1]);
-													heart::changeBitFlagBits(bfTimer0Command, 0, t0cInputReceived);
+													heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cResetInputTimer);
 													break;
 
-												case tFetchMainProgramValue:
+												case tGetProgramVariableValue:
 													str2ull(btInpBuff); // convert digit string into a number
-													SWEET64::runPrgm(prgmWriteMainProgramValue, btF->u8[1]);
-													heart::changeBitFlagBits(bfTimer0Command, 0, t0cInputReceived);
+													SWEET64::runPrgm(prgmWriteProgramVariableValue, btF->u8[1]);
+													heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cResetInputTimer);
 													break;
 
 												default:
@@ -336,7 +336,7 @@ static void bluetooth::mainProcess(void)
 		if (btOutputState & btoFlagDelay) // check if output delay is finished
 		{
 
-			if ((bitFlags[(uint16_t)(bfTimer0Delay)] & btDelayFlag) == 0)
+			if ((volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & btDelayFlag) == 0)
 			{
 
 				btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
@@ -346,7 +346,7 @@ static void bluetooth::mainProcess(void)
 				{
 
 					btInputState |= (btiAllowPolling);
-					heart::changeBitFlagBits(bfTimer0Command, 0, t0cEnableBLEsample);
+					heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cEnableBLEsample);
 
 				}
 
@@ -372,11 +372,11 @@ static void bluetooth::mainProcess(void)
 					{
 
 #if defined(useBluetoothAdaFruitSPI)
-						text::stringOut(devIdxBluetooth, btOutputString);
+						text::stringOut(m8DevBluetoothIdx, btOutputString);
 #endif // defined(useBluetoothAdaFruitSPI)
-						text::charOut(devIdxBluetooth, btChar); // output character corresponding to output format
+						text::charOut(m8DevBluetoothIdx, btChar); // output character corresponding to output format
 #if defined(useDebugTerminal)
-						if (bitFlags[(uint16_t)(bfPeek)] & peekBluetoothOutput) text::charOut(devIdxDebugTerminal, btChar);
+						if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekBluetoothOutput) text::charOut(m8DevDebugTerminalIdx, btChar);
 #endif // defined(useDebugTerminal)
 
 						if ((btF->u8[1] == instantIdx) && (btF->u8[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
@@ -388,9 +388,9 @@ static void bluetooth::mainProcess(void)
 
 						btChar = ((btF->u8[0] < dfMaxValDisplayCount) ? 7 : 10);
 
-						text::tripFunctionOut(devIdxBluetooth, btFormat, btChar, (dfOutputBluetooth));
+						text::tripFunctionOut(m8DevBluetoothIdx, btFormat, btChar, (dfOutputBluetooth));
 #if defined(useDebugTerminal)
-						if (bitFlags[(uint16_t)(bfPeek)] & peekBluetoothOutput) text::tripFunctionOut(devIdxDebugTerminal, btFormat, btChar, (dfOutputBluetooth));
+						if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekBluetoothOutput) text::tripFunctionOut(m8DevDebugTerminalIdx, btFormat, btChar, (dfOutputBluetooth));
 #endif // defined(useDebugTerminal)
 #if defined(useBluetoothAdaFruitSPI)
 						blefriend::outputBufferWithResponse(); // send out via 0xFFE1 characteristic

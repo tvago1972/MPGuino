@@ -49,8 +49,8 @@ namespace LCD /* LCD hardware support section prototype */
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;
 
-static uint8_t LCDaddressX;
-static uint8_t LCDaddressY;
+static uint8_t lcdAddr3ssX;
+static uint8_t lcdAddr3ssY;
 
 static volatile unsigned int lcdDelayCount;
 
@@ -136,8 +136,6 @@ static const uint8_t lcdBrightnessRed =		0b01000000; // GPIO A
 static const uint8_t lcdBrightnessGreen =	0b10000000; // GPIO A
 static const uint8_t lcdBrightnessBlue =	0b00000001; // GPIO B
 
-static const uint8_t lcdAddress =			0x20;
-
 static const uint8_t RGBcolors[8] PROGMEM =
 {
 	0b11000001,	// off
@@ -163,8 +161,6 @@ static const uint8_t lcdBit2 =				0b01000000;
 static const uint8_t lcdBit1 =				0b00100000;
 static const uint8_t lcdBit0 =				0b00010000;
 static const uint8_t lcdBrightness =		0b00001000;
-
-static const uint8_t lcdAddress =			0x27; // typical, though PCF8574 allows for 0x20 through 0x27
 
 #endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
 #endif // defined(useTWI4BitLCD)

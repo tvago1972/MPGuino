@@ -10,7 +10,7 @@ static uint8_t baseMenu::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, baseMenuTitles, cursorPos);
+			text::stringOut(m8DevLCDidx, baseMenuTitles, cursorPos);
 			break;
 
 		case menuDoSelectionIdx:
@@ -70,14 +70,14 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, mainDisplayPageTitles, cursorPos); // briefly display screen name
+			text::statusOut(m8DevLCDidx, mainDisplayPageTitles, cursorPos); // briefly display screen name
 #if defined(useScreenEditor)
 			basePageIdx = cursorPos * 4;
 #endif // defined(useScreenEditor)
 
 		case displayOutputIdx:
 #if defined(trackIdleEOCdata)
-			i = (bitFlags[(uint16_t)(bfActivity)] & afActivityCheckFlags);
+			i = (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afActivityCheckFlags);
 			switch (i)
 			{
 
@@ -122,7 +122,7 @@ static uint8_t mainDisplay::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, mainMenuTitles, cursorPos);
+			text::stringOut(m8DevLCDidx, mainMenuTitles, cursorPos);
 			break;
 
 		case menuDoSelectionIdx:
@@ -232,8 +232,8 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	readingIdx <<= 3;
 
 #endif // defined(useSpiffyTripLabels)
-	text::gotoXY(devIdxLCD, x, y);
-	text::tripFunctionOut(devIdxLCD, tripFunction, windowLength, (tripBitmask | calcBitmask | dfOutputTag | dfOutputSpiffyTag));
+	text::gotoXY(m8DevLCDidx, x, y);
+	text::tripFunctionOut(m8DevLCDidx, tripFunction, windowLength, (tripBitmask | calcBitmask | dfOutputTag | dfOutputSpiffyTag));
 
 #if defined(useSpiffyTripLabels)
 	if (mainCalcFuncVar.suppressTripLabel == 0) localTripIdx = findTripIdx(mainCalcFuncVar.tripIdx);
@@ -346,11 +346,11 @@ static void displayEdit::set(void)
 
 	const char * str;
 
-	bitFlags[(uint16_t)(bfEEPROMchangeStatus)] &= ~(ecsEEPROMchangeDetected);
+	mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] &= ~(ecsEEPROMchangeDetected);
 
 	for (uint8_t x = 0; x < 4; x++) EEPROM::writeVal(basePageIdx + x + eePtrDisplayPagesStart, (uint32_t)(displayEditPageFormats[(uint16_t)(x)]));
 
-	if (bitFlags[(uint16_t)(bfEEPROMchangeStatus)] & ecsEEPROMchangeDetected) str = deFormatSaved;
+	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsEEPROMchangeDetected) str = deFormatSaved;
 	else str = deFormatNoChange;
 
 	cursor::screenLevelEntry(str, mainDisplayIdx);

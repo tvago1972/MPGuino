@@ -254,9 +254,9 @@ static void blefriend::init(void)
 
 	SPIconfigBluetooth = spi::configuration(4000000ul, SPI_MSBFIRST, SPI_MODE0);
 
-	text::initDev(devIdxBLEfriend, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
+	text::initDev(m8DevBLEfriendIdx, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 
-	heart::changeBitFlagBits(bfBLEstatus, 0, (bleResetFlags)); // request hardware reset
+	heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleResetFlags)); // request hardware reset
 
 }
 
@@ -306,8 +306,8 @@ static uint8_t blefriend::outputBufferWithResponse(void)
 		else // otherwise, IRQ hasn't yet been pulled high
 		{
 
-			idleMainProcess(); // perform idle process housekeeping
-			k = (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting); // update loop flag with packet wait delay status
+			heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+			k = (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting); // update loop flag with packet wait delay status
 
 		}
 
@@ -364,10 +364,10 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 
 	spi::set(SPIconfigBluetooth); // ensure SPI is set for bluetooth transceiver
 
-	heart::changeBitFlagBits(bfBLEstatus, 0, (blePacketWaitFlags)); // start tranceiver delay
+	heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
 
-//	text::hexByteOut(devIdxDebugTerminal, outLen);
-//	text::newLine(devIdxDebugTerminal);
+//	text::hexByteOut(m8DevDebugTerminalIdx, outLen);
+//	text::newLine(m8DevDebugTerminalIdx);
 
 	do
 	{
@@ -375,16 +375,16 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		do
 		{
 
-			heart::changeBitFlagBits(bfBLEstatus, 0, (bleAssertFlags)); // assert chip select
+			heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleAssertFlags)); // assert chip select
 
-			while (bitFlags[(uint16_t)(bfBLEstatus)] & bleAsserting);
+			while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAsserting);
 
 			k = spi::transfer(SPI_COMMAND_BYTE); // transmit command byte
 
 			if (k == SPI_IGNORED_BYTE) // BLE board might not be ready
 			{
 
-				if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) k = 1; // if we're still within the response delay period, signal to retry
+				if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) k = 1; // if we're still within the response delay period, signal to retry
 				else k = 0; // otherwise, we ran out of time
 
 			}
@@ -393,7 +393,7 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		}
 		while (k); // if retrying, loop back
 
-		if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) // if still within valid packet delay
+		if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
 		{
 
 			spi::transfer(cW->u8[0]); // output SDEP command high byte
@@ -407,7 +407,7 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		else k = 1;
 
 	}
-	while ((bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) && (k));
+	while ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) && (k));
 
 	return (k == 0); // return a 1 upon successful transmission of a packet header, or 0 on timeout
 
@@ -432,7 +432,7 @@ static uint8_t blefriend::readPacket(void)
 
 		spi::set(SPIconfigBluetooth); // ensure SPI is set for bluetooth transceiver
 
-		heart::changeBitFlagBits(bfBLEstatus, 0, (blePacketWaitFlags)); // start tranceiver delay
+		heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
 
 		do
 		{
@@ -440,16 +440,16 @@ static uint8_t blefriend::readPacket(void)
 			do
 			{
 
-				heart::changeBitFlagBits(bfBLEstatus, 0, (bleAssertFlags)); //  assert chip select
+				heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleAssertFlags)); //  assert chip select
 
-				while (bitFlags[(uint16_t)(bfBLEstatus)] & bleAsserting);
+				while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAsserting);
 
 				k = spi::transfer(0xFF); // transmit dummy byte
 
 				if ((k == SPI_IGNORED_BYTE) || (k == SPI_OVERREAD_BYTE)) // BLE board might not be ready
 				{
 
-					if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) i = 1; // if we're still within the response delay period, signal to retry
+					if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) i = 1; // if we're still within the response delay period, signal to retry
 					else i = 0; // otherwise, we ran out of time
 
 				}
@@ -458,7 +458,7 @@ static uint8_t blefriend::readPacket(void)
 			}
 			while (i); // if retrying, loop back
 
-			if (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) // if still within valid packet delay
+			if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
 			{
 
 				cW->u8[0] = spi::transfer(0xFF); // transmit dummy byte to fetch command word low byte
@@ -474,7 +474,7 @@ static uint8_t blefriend::readPacket(void)
 						{
 
 							ringBuffer::push(rbIdxBLEfriendIn, '*');
-							while (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+							while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 
 						}
 						else
@@ -489,7 +489,7 @@ static uint8_t blefriend::readPacket(void)
 								ringBuffer::push(rbIdxBLEfriendIn, '&');
 								partialPayload = 0;
 
-								while (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+								while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 
 							}
 							else
@@ -515,7 +515,7 @@ static uint8_t blefriend::readPacket(void)
 
 					default:
 						ringBuffer::push(rbIdxBLEfriendIn, '!');
-						while (bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+						while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 						break;
 
 				}
@@ -523,7 +523,7 @@ static uint8_t blefriend::readPacket(void)
 			}
 
 		}
-		while ((bitFlags[(uint16_t)(bfBLEstatus)] & blePacketWaiting) && (i));
+		while ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) && (i));
 
 		releaseCS();
 

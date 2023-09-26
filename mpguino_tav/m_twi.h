@@ -6,6 +6,7 @@ namespace TWI
 	static void init(void);
 	static void shutdown(void);
 	static void openChannelMain(uint8_t address, uint8_t writeFlag);
+	static void transmitChannelMain(uint8_t sendStop);
 	static void openChannel(uint8_t address, uint8_t writeFlag);
 	static uint8_t writeByte(uint8_t data);
 	static void transmitChannel(uint8_t sendStop);
@@ -15,9 +16,6 @@ namespace TWI
 #endif // defined(useInterruptBasedTWI)
 
 }
-
-static const uint8_t TWI_READ =				0;
-static const uint8_t TWI_WRITE =			1;
 
 static const uint8_t TWI_REPEAT_START =		0;
 static const uint8_t TWI_STOP =				1;
@@ -32,7 +30,7 @@ static volatile uint8_t twiErrorCode;
 static volatile uint8_t twiDataBufferIdx;
 static volatile uint8_t twiDataBufferLen;
 
-// bit flags for use with bfTWIstatus
+// bit flags for use with v8TWIstatus
 static const uint8_t twiBlockMainProgram =	0b10000000;
 static const uint8_t twiAllowISRactivity =	0b01000000;
 static const uint8_t twiOpen =				0b00100000;
@@ -42,6 +40,7 @@ static const uint8_t twiRemainOpen =		0b00000100;
 static const uint8_t twiErrorFlag =			0b00000010;
 
 static const uint8_t twiOpenMain =			(twiOpen | twiBlockMainProgram);
+static const uint8_t twiOpenInterrupt =		(twiOpen | twiAllowISRactivity);
 
 #endif // defined(useTWIsupport)
 #if defined(useMCP23017portExpander)
@@ -94,7 +93,7 @@ static const uint8_t MCP23017_B1_INTCAPB =		0x18;
 static const uint8_t MCP23017_B1_GPIOB =		0x19;
 static const uint8_t MCP23017_B1_OLATB =		0x1A;
 
-// bit flags for use with bfMCP23017status
+// bit flags for use with m8MCP23017statusFlags
 static const uint8_t afRGBLCDbankMode =			0b10000000;
 static const uint8_t afRGBLCDmirrorMode =		0b01000000;
 static const uint8_t afRGBLCDbyteMode =			0b00100000;
@@ -102,7 +101,5 @@ static const uint8_t afRGBLCDbyteMode =			0b00100000;
 static const uint8_t adaTWIsequentialMode =		0x00;
 static const uint8_t adaTWIbyteMode =			0x01;
 static const uint8_t adaTWItoggleMode =			0x02;
-
-static const uint8_t adafruitRGBLCDaddress =	0x20;
 
 #endif // defined(useMCP23017portExpander)

@@ -1,5 +1,5 @@
 #if defined(useAnalogRead)
-// bit flags for use with bfAnalogCommand
+// bit flags for use with v8AnalogCommand
 static const uint8_t acSampleGround =			0b10000000;
 static const uint8_t acSampleChannel0 =			0b00100000;
 static const uint8_t acSampleChannel1 =			0b00010000;
@@ -51,7 +51,7 @@ static const uint8_t acSampleButtonChannel =	acSampleChannel0;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
 
-// bit flags for use with bfAnalogStatus
+// bit flags for use with v8AnalogStatus
 static const uint8_t asHardwareReady =			0b10000000;
 static const uint8_t asReadChannel0 =			0b00100000;
 static const uint8_t asReadChannel1 =			0b00010000;
@@ -86,50 +86,32 @@ volatile uint8_t analogButton;
 volatile uint8_t analogValueIdx;
 volatile uint8_t analogBitmask;
 
-#define nextAllowedValue 0
-static const uint8_t analog0Idx =					nextAllowedValue;	// highest priority analog channel
-static const uint8_t analog1Idx =					analog0Idx + 1;
-static const uint8_t analog2Idx =					analog1Idx + 1;
-static const uint8_t analog3Idx =					analog2Idx + 1;
-static const uint8_t analog4Idx =					analog3Idx + 1;
-static const uint8_t analog5Idx =					analog4Idx + 1;
-#define nextAllowedValue analog5Idx + 1
-
-static const uint8_t dfMaxValAnalogCount =			nextAllowedValue;
-
-static const uint8_t analogGroundIdx =				nextAllowedValue;
-#define nextAllowedValue analogGroundIdx + 1
-
-static const uint8_t dfMaxAnalogCount =				nextAllowedValue;
-
 #if defined(useChryslerMAPCorrection)
-static const uint8_t analogMAPchannelIdx =			analog0Idx;
+static const uint8_t v16AnalogMAPchannelIdx =			v16Analog0Idx;
 #if defined(useChryslerBaroSensor)
-static const uint8_t analogBaroChannelIdx =			analog1Idx;
+static const uint8_t v16AnalogBaroChannelIdx =			v16Analog1Idx;
 #if defined(useAnalogButtons)
-static const uint8_t analogButtonChannelIdx =		analog2Idx;
+static const uint8_t v16AnalogButtonChannelIdx =		v16Analog2Idx;
 #endif // defined(useAnalogButtons)
 #else // defined(useChryslerBaroSensor)
 #if defined(useAnalogButtons)
-static const uint8_t analogButtonChannelIdx =		analog1Idx;
+static const uint8_t v16AnalogButtonChannelIdx =		v16Analog1Idx;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerBaroSensor)
 #else // defined(useChryslerMAPCorrection)
 #if defined(useAnalogButtons)
-static const uint8_t analogButtonChannelIdx =		analog0Idx;
+static const uint8_t v16AnalogButtonChannelIdx =		v16Analog0Idx;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useCarVoltageOutput)
 #if defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
-static const uint8_t analogAlternatorChannelIdx =	analog2Idx;
+static const uint8_t v16AnalogAlternatorChannelIdx =	v16Analog2Idx;
 #else // defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
-static const uint8_t analogAlternatorChannelIdx =	analog1Idx;
+static const uint8_t v16AnalogAlternatorChannelIdx =	v16Analog1Idx;
 #endif // defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
 #endif // defined(useCarVoltageOutput)
 
-volatile uint16_t analogValue[(uint16_t)(dfMaxValAnalogCount)];
-
-static const uint8_t analogChannelValue[(uint16_t)(dfMaxAnalogCount)] PROGMEM = { // points to the next channel to be read
+static const uint8_t analogChannelValue[(uint16_t)(v16AnalogLength)] PROGMEM = { // points to the next channel to be read
 #if defined(__AVR_ATmega32U4__)
 #if defined(useChryslerMAPCorrection)
 	 (1 << REFS0)|									(1 << MUX2)|	(1 << MUX1)					// 0 PF6 A1 MAP sensor

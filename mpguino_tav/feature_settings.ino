@@ -10,7 +10,7 @@ static uint8_t settings::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, settingsMenuTitles, cursorPos);
+			text::stringOut(m8DevLCDidx, settingsMenuTitles, cursorPos);
 			break;
 
 		case menuDoSelectionIdx:
@@ -127,7 +127,7 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, settingsSubMenuTitles, cursorPos + menuTitlesOffset);
+			text::stringOut(m8DevLCDidx, settingsSubMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuInitialEntryIdx:
@@ -142,8 +142,8 @@ static uint8_t parameterEdit::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuSecondLineOutIdx:
-			text::stringOut(devIdxLCD, pBuff); // output supplementary information
-			text::newLine(devIdxLCD); // clear to the end of the line
+			text::stringOut(m8DevLCDidx, pBuff); // output supplementary information
+			text::newLine(m8DevLCDidx); // clear to the end of the line
 			break;
 
 		case menuDoSelectionIdx:
@@ -217,7 +217,7 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			c = pBuff[(uint16_t)(cursorPos)]; // save existing character
 
-			if (bitFlags[(uint16_t)(bfTimer0Status)] & t0sShowCursor)
+			if (volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] & t0saShowCursor)
 			{
 
 				if (cursorPos < 10) pBuff[(uint16_t)(cursorPos)] = '_'; // replace character with an underscore

@@ -119,7 +119,7 @@ static const bluetoothFunction btFunctionList[] PROGMEM = {
 	{'I',	((currentIdx << 8 ) |					(tFuelEcon))},
 	{'J',	((tankIdx << 8 ) |						(tFuelEcon))},
 	{'L',	((currentIdx << 8 ) |					(tFuelUsed))},
-	{'!',	((mpBluetoothMainValue << 8 ) |			(tFetchMainProgramValue))},
+	{'!',	((m32BluetoothMainValue << 8 ) |		(tGetProgramVariableValue))},
 
 #if defined(usePartialRefuel)
 	{'@',	((pRefuelSizeIdx << 8 ) |				(tGetBTparameterValue))},

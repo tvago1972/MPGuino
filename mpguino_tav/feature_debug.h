@@ -1,12 +1,43 @@
+#if defined(useActivityRecord)
+namespace activity /* Process activity marking support section prototype */
+{
+
+	static void record(uint8_t assertFlag, uint8_t releaseFlag);
+
+};
+
+// flags for use with m8ActivityStatusIdx, m8ActivityOutputIdx
+static const uint8_t arMainProcess =		0b10000000;
+static const uint8_t arIdleProcess =		0b01000000;
+static const uint8_t arMainDevices =		0b00100000;
+static const uint8_t arMainActivity =		0b00010000;
+static const uint8_t arMainSample =			0b00001000;
+static const uint8_t arMainOutput =			0b00000100;
+static const uint8_t arMainOther =			0b00000010;
+static const uint8_t arSWEET64 =			0b00000001;
+
+static const uint8_t arMainDebug =			(arMainDevices | arMainActivity | arMainSample | arMainOutput | arMainOther);
+
+#endif // defined(useActivityRecord)
+#if defined(useActivityLED)
+namespace activityLED /* Activity status LED support section prototype */
+{
+
+	static void init(void);
+	static void shutdown(void);
+	static void assert(uint8_t flag);
+	static void release(uint8_t flag);
+	static void toggle(uint8_t flag);
+	static void output(uint8_t val);
+
+};
+
+#endif // defined(useActivityLED)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
 namespace systemInfo /* CPU loading and RAM availability support section prototype */
 {
 
-	static void idleProcess(void);
-	static void transferCycle0Length(uint8_t workingIdx, uint8_t startIdx);
-#if defined(useDebugCPUreading)
-	static void transferResetCycle0Length(uint8_t sampledIdx, uint8_t workingIdx);
-#endif // defined(useDebugCPUreading)
+	static void mainProcess(void);
 #if defined(useCPUreading)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
@@ -30,12 +61,12 @@ namespace signalSim /* VSS / fuel injector on-board simulator support section pr
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
 #endif // defined(useButtonInput)
 	static void configurePorts(void);
-	static void idleProcessFuel(void);
-	static void idleProcessVSS(void);
+	static void mainProcessFuel(void);
+	static void mainProcessVSS(void);
 
 }
 
-// bit flags for use with bfSignalSimModeFlags
+// bit flags for use with v8SignalSimModeFlags
 static const uint8_t debugVSSflag =				0b10000000;
 static const uint8_t debugInjectorFlag =		0b01000000;
 static const uint8_t debugFIPready =			0b00100000;
@@ -202,13 +233,13 @@ namespace terminal /* debug terminal section prototype */
 {
 
 	static void mainProcess(void);
-	static void outputBitFlagRegisterValue(uint8_t lineNumber);
 	static void outputTripFunctionValue(uint8_t lineNumber);
 	static void outputConstantValue(uint8_t lineNumber);
+	static void outputConstantExtra(uint8_t lineNumber);
 	static void outputParameterValue(uint8_t lineNumber);
 	static void outputParameterExtra(uint8_t lineNumber);
-	static void outputVolatileValue(uint8_t lineNumber);
-	static void outputMainProgramValue(uint8_t lineNumber);
+	static void outputVariableValue(uint8_t lineNumber);
+	static void outputVariableExtra(uint8_t lineNumber);
 	static void outputTripVarMeasuredValue(uint8_t lineNumber);
 	static void outputTripVarMeasuredExtra(uint8_t lineNumber);
 	static void outputDecimalValue(uint8_t lineNumber);
@@ -283,6 +314,9 @@ static const uint8_t tseIdxBadSWEET64addr =	nextAllowedValue;
 #endif // defined(useDebugTerminalSWEET64)
 
 static uint8_t errIdx;
+#if defined(useDebugButtonInjection)
+static uint8_t buttonInjDelay;
+#endif // defined(useDebugButtonInjection)
 
 static const char tseErrorStringList[] PROGMEM = {
 	"\\" tcEOSCR
@@ -306,19 +340,36 @@ static const char tseBadAddress[] PROGMEM = {
 typedef struct
 {
 
+	uint8_t labelType;
 	const uint8_t * labelStringPointer;
 	uint8_t labelLength;
 
 } dS64label_t;
 
+#define nextAllowedValue 1
+static const uint8_t dslIdxConst =				nextAllowedValue;
+static const uint8_t dslIdxConstSWEET64 =		dslIdxConst + 1;
+static const uint8_t dslIdxEEPROM =				dslIdxConstSWEET64 + 1;
+static const uint8_t dslIdxExpandedEEPROM =		dslIdxEEPROM + 1;
+static const uint8_t dslIdxProgramVariable =	dslIdxExpandedEEPROM + 1;
+static const uint8_t dslIdxTripVariable =		dslIdxProgramVariable + 1;
+static const uint8_t dslIdxTripMeasurement =	dslIdxTripVariable + 1;
+static const uint8_t dslIdxFunction =			dslIdxTripMeasurement + 1;
+static const uint8_t dslIdxBCDformat =			dslIdxFunction + 1;
+#define nextAllowedValue dslIdxBCDformat + 1
+
+static const uint8_t dslIdxEnd =				nextAllowedValue;
+
 static const dS64label_t debugSWEET64labelList[] PROGMEM = {
-	{terminalConstIdxNames,			idxMaxConstant},
-	{terminalParameterNames, 		eePtrEnd},
-	{terminalMainProgramVarLabels, 	mpVariableMaxIdx},
-	{terminalVolatileVarLabels, 	vVariableMaxIdx},
-	{terminalTripVarNames, 			tripSlotTotalCount},
-	{terminalTripVarLabels, 		rvMeasuredCount},
-	{terminalTripFuncNames, 		dfMaxValTotalCount},
+	{0,		terminalParameterNames, 			pSettingsIdxLen},
+	{0,		terminalConstIdxNames,				idxConstantLength},
+	{1,		terminalParameterNames, 			pSettingsIdxLen},
+	{1,		terminalExpandedParameterNames, 	pExpandedSettingsIdxLen},
+	{2,		terminalVariableLabels, 			programVariableMaxIdx},
+	{3,		terminalTripVarNames, 				tripSlotTotalCount},
+	{4,		terminalTripVarLabels, 				rvMeasuredCount},
+	{5,		terminalTripFuncNames, 				dfMaxValTotalCount},
+	{6,		terminalBCDformatNames, 			4},
 };
 
 #endif // defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels)
@@ -343,25 +394,19 @@ static const char terminalHelp[] PROGMEM = {
 	"       [y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
 	"xP:y [y] [y]... - store one or more y values, starting at stored parameter x" tcCR tcEOSCR
 
-	"       [y].[x]V - list volatile variables, optionally between [y] and [x]" tcEOSCR
-	"xV:y [y] [y]... - store one or more y values, starting at volatile variable x" tcCR tcEOSCR
-
-	"       [y].[x]M - list main program variables, optionally between [y] and [x]" tcEOSCR
-	"xM:y [y] [y]... - store one or more y values, starting at main program" tcEOSCR
-	"                  variable x" tcCR tcEOSCR
+	"       [y].[x]V - list program variables, optionally between [y] and [x]" tcEOSCR
+	"xV:y [y] [y]... - store one or more y values, starting at program variable x" tcCR tcEOSCR
 
 	"       [y].[x]T - list terminal trip variable values, optionally between [y]" tcEOSCR
 	"                  and [x]" tcEOSCR
 	"xT:y [y] [y]... - store one or more y values, starting at terminal trip" tcEOSCR
 	"                  variable x" tcCR tcEOSCR
 
-	"       [y].[x]S - list status and command bitflags, optionally between [y]" tcEOSCR
-	"                  and [x]" tcEOSCR
-	"xS:y            - store new bitflag value y into bitflag register x" tcCR tcEOSCR
-
 #if defined(useDebugTerminalSWEET64)
-	"      [y].[x]^E - list SWEET64 register contents, optionally between [y]" tcEOSCR
-	"                  and [x]" tcEOSCR
+	"      [y].[x]^E - list SWEET64 register contents" tcEOSCR
+	"                   [z] - decimal window length (optional)" tcEOSCR
+	"                   [y] - decimal digit count (optional)" tcEOSCR
+	"                   [x] - decimal processing flag (optional)" tcCR tcEOSCR
 	"x^E:y           - store one or more y values, starting at SWEET64 register x" tcCR tcEOSCR
 
 #endif // defined(useDebugTerminalSWEET64)
@@ -440,7 +485,7 @@ static uint64_t terminalS64reg64[(uint16_t)(s64reg64count)];
 
 static const char prgmLoadByteValue[] PROGMEM = {
 	instrLdRegByteFromIndex, 0x02,						// load byte value
-	instrMul2byConst, idxDecimalPoint,					// multiply by decimal formatting term
+	instrMul2byRdOnly, idxDecimalPoint,					// multiply by decimal formatting term
 	instrDone											// exit to caller
 };
 
@@ -463,6 +508,7 @@ static uint8_t decMode;
 
 #if defined(useDebugTerminalLabels)
 static const char * labelList;
+static uint8_t labelListOffset;
 #endif // defined(useDebugTerminalLabels)
 static const uint8_t * prgmPtr;
 static void (* primaryFunc)(uint8_t);
@@ -476,7 +522,7 @@ static const char terminalSecondarySeparator[] PROGMEM = {
 	" - " tcEOS
 };
 
-// bit flags for use with bfPeek
+// bit flags for use with m8PeekFlags
 static const uint8_t peekStatusMessage =		0b10000000;
 static const uint8_t peekBluetoothInput =		0b01000000;
 static const uint8_t peekBluetoothOutput =		0b00100000;
@@ -484,23 +530,3 @@ static const uint8_t peekBLEfriendEcho =		0b00010000;
 static const uint8_t peekEnableCPUread =		0b00001000;
 
 #endif // defined(useDebugTerminal)
-#if defined(useTestButtonValues)
-namespace buttonView /* Button input value viewer section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-
-}
-
-#endif // defined(useTestButtonValues)
-#if defined(useActivityLED)
-namespace activityLED /* Activity status LED support section prototype */
-{
-
-	static void init(void);
-	static void shutdown(void);
-	static void output(uint8_t val);
-
-};
-
-#endif // defined(useActivityLED)

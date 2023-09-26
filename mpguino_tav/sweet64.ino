@@ -10,86 +10,6 @@
 
 */
 
-#if defined(useSWEET64mult)
-static const uint8_t prgmMult64[] PROGMEM = {
-	instrLdReg, 0x24,									// load multiplier into register 4
-	instrLdRegByte, 0x02, 0,							// zero out result (register 2)
-	instrCmpXtoY, 0x54,									// is multiplicand greater than multiplier?
-	instrBranchIfGT, 12,								// if so, go to multipler test
-	instrSwapReg, 0x54,									// otherwise, swap the two so that multiplier is smaller (eg it's faster to add 3 10s than it is to add 10 3s)
-	instrSkip, 8,										// skip forward to multiplier test
-
-//multloop:
-	instrShiftRegRight, 0x04,							// shift multiplier right by one bit
-	instrBranchIfCclear, 2,								// if multiplier bit was clear, don't add multiplicand to result
-	instrAddYtoX, 0x52,									// add multiplicand to result
-
-//shiftmultiplicand:
-	instrShiftRegLeft, 0x05,							// shift multiplicand left by one bit
-
-//testmultiplier:
-	instrTestReg, 0x04,									// test multiplier register
-	instrBranchIfNotZero, 244,							// if multiplier is not zero, loop back
-	instrTraceDone										// exit to caller
-};
-
-#endif // defined(useSWEET64mult)
-#if defined(useSWEET64div)
-static const uint8_t prgmDiv64[] PROGMEM = {
-	instrLdReg, 0x21,									// initialize remainder with dividend
-	instrLdRegByte, 0x04, 1,							// load quotient bitmask with a 1
-	instrTestReg, 0x05,									// test divisor register
-	instrBranchIfNotZero, 11,							// if divisor is not zero, skip ahead
-
-//divoverflow:
-	instrLdRegByte, 0x02, 0,							// zero out quotient
-	instrSubYfromX, 0x42,								// set overflow value in quotient
-	instrLdReg, 0x21,									// set overflow value in remainder
-
-//divzero:
-	instrLdRegByte, 0x05, 0,							// zero out divisor
-	instrTraceDone,										// exit to caller
-
-//testdividend:
-	instrTestReg, 0x02,									// test dividend register
-	instrBranchIfZero, 248,								// if dividend is zero, go exit
-	instrLdRegByte, 0x02, 0,							// initialize quotient (register 2)
-	instrTestReg, 0x05,									// test dividend register
-	instrBranchIfMinus, 6,								// if dividend is already fully shifted left, skip
-
-//divloop0:
-	instrShiftRegLeft, 0x04,							// shift quotient bitmask left one bit
-	instrShiftRegLeft, 0x05,							// shift divisor left one bit
-	instrBranchIfPlus, 250,								// if dividend is not fully shifted left, loop back
-
-//divcomp:
-	instrCmpXtoY, 0x51,									// compare divisor to dividend
-	instrBranchIfGT, 4,									// if divisor is greater than dividend, skip to bitmask adjustment
-	instrSubYfromX, 0x51,								// subtract divisor from dividend
-	instrAddYtoX, 0x42,									// add quotient bitmask to quotient
-
-//divnext:
-	instrShiftRegRight, 0x04,							// shift quotient bitmask right by one bit
-	instrBranchIfCset, 4,								// if quotient bitmask empty, skip ahead
-	instrShiftRegRight, 0x05,							// shift divisor right by one bit
-	instrBranchIfNotZero, 240,							// go back to quotient bitmask test
-
-//divexit:
-	instrShiftRegLeft, 0x01,							// shift remainder left one bit to multiply by 2
-	instrCmpXtoY, 0x51,									// compare divisor to 2*remainder
-	instrBranchIfLTorE, 5,								// if divisor is less than or equal to 2*remainder, skip ahead
-	instrLdRegByte, 0x05, 0,							// zero out divisor
-	instrSkip, 3,										// skip ahead to restore remainder
-
-//divadjust1:
-	instrLdRegByte, 0x05, 1,							// load divisor with a 1
-
-//divexit2:
-	instrShiftRegRight, 0x01,							// shift remainder right one bit to restore it
-	instrTraceDone										// exit to caller
-};
-
-#endif // defined(useSWEET64div)
 static uint32_t SWEET64::doCalculate(uint8_t tripIdx, uint8_t calcIdx)
 {
 
@@ -104,7 +24,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	union union_32 * iLW = (union union_32 *)(&instrLWord);
 
 #if defined(useDebugCPUreading)
-	mainProgramVariables[(uint16_t)(mpDbgWorkingS64StartIdx)] = heart::cycles0();
+	activity::record(arSWEET64, 0);
 
 #endif // defined(useDebugCPUreading)
 	s64reg8[(uint16_t)(si64reg8trip)] = tripIdx; // store user-provided trip index value
@@ -126,7 +46,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	while (s64reg8[(uint16_t)(si64reg8valid)]);
 
 #if defined(useDebugCPUreading)
-	mainProgramVariables[(uint16_t)(mpDbgWorkingS64processIdx)] += heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingS64StartIdx)]);
+	activity::record(0, arSWEET64);
 
 #endif // defined(useDebugCPUreading)
 	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->ul[0];
@@ -236,7 +156,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 					{
 
 
-						if (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric) reg >>= 4; // if in metric mode, shift rY into rX
+						if (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) reg >>= 4; // if in metric mode, shift rY into rX
 						else reg &= 0x0F; // otherwise, throw rY away and keep rX
 
 						s64operands[(uint16_t)(s64oprRegXY)] = reg;
@@ -348,10 +268,12 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 	SWEET64processorFlags = prgmReg8[(uint16_t)(si64reg8flags)];
 	isValid = prgmReg8[(uint16_t)(si64reg8valid)];
 
+#if defined(useDebugTerminalSWEET64)
 	operand = (SWEET64processorFlags & SWEET64traceFlagGroup);
 	if (operand == SWEET64traceFlag) SWEET64processorFlags &= ~(SWEET64traceFlag);
 	if (operand == SWEET64traceCommandFlag) SWEET64processorFlags |= (SWEET64traceFlag);
 
+#endif // defined(useDebugTerminalSWEET64)
 	operand = s64operands[(uint16_t)(s64oprPrimary)];
 	extra = s64operands[(uint16_t)(s64oprExtra)];
 
@@ -369,7 +291,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 		branchFlag = false;
 
-		switch (instrLWord->u8[2]) // disable interrupts, according to ixx
+		// perform supplemental opcode parsing, and set up to disable interrupts according to instruction and operand index value
+		switch (instrLWord->u8[2])
 		{
 
 			case i18:	// load rX with trip variable
@@ -377,15 +300,75 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				if (operand < instantIdx) branchFlag = true; // if accessing raw trip variables, disable interrupts
 				break;
 
-			case i07:	// load rX with volatile
-			case i08:	// store volatile rX
-#if defined(useBarFuelEconVsTime)
-			case i17:	// load rX with FEvT trip variable
-#endif // defined(useBarFuelEconVsTime)
-				branchFlag = true;
+			case i14:	// load rX with const
+				switch (operand)
+				{
+
+					case (idxConstantStart) ... (idxConstantEnd - 1):
+						extra = idxConstantStart;
+						break;
+
+					case (pSettingsIdxStart) ... (pSettingsIdxEnd - 1):
+						extra = pSettingsIdxStart;
+						break;
+
+					default:
+						extra = 0;
+						break;
+
+				}
+
+				operand -= extra;
+				break;
+
+			case i07:	// load rX with program variable
+			case i08:	// store program variable rX
+				switch (operand)
+				{
+
+					case (v8VariableStartIdx) ... (v8VariableEndIdx - 1):
+						extra = v8VariableStartIdx;
+						branchFlag = true;
+						break;
+
+					case (m8VariableStartIdx) ... (m8VariableEndIdx - 1):
+						extra = m8VariableStartIdx;
+						break;
+
+					case (v16VariableStartIdx) ... (v16VariableEndIdx - 1):
+						extra = v16VariableStartIdx;
+						branchFlag = true;
+						break;
+
+					case (v32VariableStartIdx) ... (v32VariableEndIdx - 1):
+						extra = v32VariableStartIdx;
+						branchFlag = true;
+						break;
+
+					case (m32VariableStartIdx) ... (m32VariableEndIdx - 1):
+						extra = m32VariableStartIdx;
+						break;
+
+					case (m64VariableStartIdx) ... (m64VariableEndIdx - 1):
+						extra = m64VariableStartIdx;
+						break;
+
+					default:
+						extra = 255;
+						break;
+
+				}
+
+				operand -= extra;
 			default:
 				break;
 
+#if defined(useBarFuelEconVsTime)
+			case i17:	// load rX with FEvT trip variable
+				branchFlag = true;
+				break;
+
+#endif // defined(useBarFuelEconVsTime)
 		}
 
 		if (branchFlag)
@@ -418,48 +401,96 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				EEPROM::write64(regX, operand);
 				break;
 
-			case i05:	// load rX with main program
-				init64(regX, mainProgramVariables[(uint16_t)(operand)]);
+			case i07:	// load rX with program variable
+				switch (extra)
+				{
+
+					case v8VariableStartIdx:
+						init64byt(regX, volatile8Variables[(uint16_t)(operand)]);
+						break;
+
+					case m8VariableStartIdx:
+						init64byt(regX, mainProgram8Variables[(uint16_t)(operand)]);
+						break;
+
+					case v16VariableStartIdx:
+						init64(regX, volatile16Variables[(uint16_t)(operand)]);
+						break;
+
+					case v32VariableStartIdx:
+						init64(regX, volatile32Variables[(uint16_t)(operand)]);
+						break;
+
+					case m32VariableStartIdx:
+						init64(regX, mainProgram32Variables[(uint16_t)(operand)]);
+						break;
+
+					case m64VariableStartIdx:
+						copy64(regX, (union union_64 *)(&mainProgram64Variables[(uint16_t)(operand)]));
+						break;
+
+					default:
+						break;
+
+				}
 				break;
 
-			case i06:	// store main program rX
-				mainProgramVariables[(uint16_t)(operand)] = regX->ul[0];
+			case i08:	// store program variable rX
+				switch (extra)
+				{
+
+					case v8VariableStartIdx:
+						volatile8Variables[(uint16_t)(operand)] = regX->u8[0];
+						break;
+
+					case m8VariableStartIdx:
+						mainProgram8Variables[(uint16_t)(operand)] = regX->u8[0];
+						break;
+
+					case v16VariableStartIdx:
+						volatile16Variables[(uint16_t)(operand)] = regX->ui[0];
+						break;
+
+					case v32VariableStartIdx:
+						volatile32Variables[(uint16_t)(operand)] = regX->ul[0];
+						break;
+
+					case m32VariableStartIdx:
+						mainProgram32Variables[(uint16_t)(operand)] = regX->ul[0];
+						break;
+
+					case m64VariableStartIdx:
+						copy64((union union_64 *)(&mainProgram64Variables[(uint16_t)(operand)]), regX);
+						break;
+
+					default:
+						break;
+
+				}
 				break;
 
-			case i07:	// load rX with volatile
-				init64(regX, volatileVariables[(uint16_t)(operand)]);
-				break;
-
-			case i08:	// store volatile rX
-				volatileVariables[(uint16_t)(operand)] = regX->ul[0];
-				break;
-
-			case i09:	// load rX with byte[operand]
-				operand = regY->u8[(unsigned int)(operand)];
 			case i10:	// load rX with byte
 				init64byt(regX, operand);
 				break;
 
-#if defined(useBarGraph)
-			case i11:	// store rX byte to bargraph data array
-				bargraphData[(unsigned int)(operand)] = regX->u8[0];
-				break;
-
-#endif // defined(useBarGraph)
 			case i14:	// load rX with const
-				init64(regX, pgm_read_dword(&constantNumberList[(uint16_t)(operand)]));
+				switch (extra)
+				{
+
+					case idxConstantStart:
+						init64(regX, pgm_read_dword(&constantNumberList[(uint16_t)(operand)]));
+						break;
+
+					case pSettingsIdxStart:
+						init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
+						break;
+
+					default:
+						break;
+
+				}
 				break;
 
-			case i15:	// load rX with EEPROM init
-				init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
-				break;
-
-#if defined(useAnalogRead)
-			case i16:	// load rX with voltage
-				init64(regX, analogValue[(unsigned int)(operand)]);
-				break;
-
-#endif // defined(useAnalogRead)
 #if defined(useBarFuelEconVsTime)
 			case i17:	// load rX with FEvT trip variable
 				instr = FEvTperiodIdx; // get current fuel econ vs time trip variable
@@ -605,12 +636,15 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 #if defined(useIsqrt)
 			case i28:	// integer square root
 #if defined(useDebugCPUreading)
-				mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)] = heart::cycles0(); // record starting time
+				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
+
 #endif // defined(useDebugCPUreading)
 				regX->ul[0] = iSqrt(regX->ul[0]);
 #if defined(useDebugCPUreading)
-				mainProgramVariables[(uint16_t)(mpDebugAccS64sqrtIdx)] += heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)]);
-				mainProgramVariables[(uint16_t)(mpDebugCountS64sqrtIdx)]++;
+
+				mainProgram32Variables[(uint16_t)(m32DebugAccS64sqrtIdx - m32VariableStartIdx)] += heart::findCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx);
+				mainProgram32Variables[(uint16_t)(m32DebugCountS64sqrtIdx - m32VariableStartIdx)]++;
+
 #endif // defined(useDebugCPUreading)
 				break;
 
@@ -691,43 +725,29 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 			case m05:	// multiply		r2 = r2 * r5
 #if defined(useDebugCPUreading)
-				mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)] = heart::cycles0(); // record starting time
+				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
-#if defined(useSWEET64mult)
-				prgmStack[(unsigned int)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
-				if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15) isValid = 0;
-				else prgmPtr = prgmMult64;
-
-				SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#else // defined(useSWEET64mult)
 				mult64(prgmReg64);
-#endif // defined(useSWEET64mult)
 #if defined(useDebugCPUreading)
 
-				mainProgramVariables[(uint16_t)(mpDebugAccS64multIdx)] += heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)]);
-				mainProgramVariables[(uint16_t)(mpDebugCountS64multIdx)]++;
+				mainProgram32Variables[(uint16_t)(m32DebugAccS64multIdx - m32VariableStartIdx)] += heart::findCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx);
+				mainProgram32Variables[(uint16_t)(m32DebugCountS64multIdx - m32VariableStartIdx)]++;
+
 #endif // defined(useDebugCPUreading)
 				break;
 
 			case m06:	// divide		r2 = r2 / r5 rmdr r1 and qadj r5
 #if defined(useDebugCPUreading)
-				mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)] = heart::cycles0(); // record starting time
+				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
-#if defined(useSWEET64div)
-				prgmStack[(unsigned int)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
-				if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15) isValid = 0;
-				else prgmPtr = prgmDiv64;
-
-				SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#else // defined(useSWEET64div)
 				div64(prgmReg64);
-#endif // defined(useSWEET64div)
 #if defined(useDebugCPUreading)
 
-				mainProgramVariables[(uint16_t)(mpDebugAccS64divIdx)] += heart::findCycle0Length(mainProgramVariables[(uint16_t)(mpDbgWorkingMathStartIdx)]);
-				mainProgramVariables[(uint16_t)(mpDebugCountS64divIdx)]++;
+				mainProgram32Variables[(uint16_t)(m32DebugAccS64divIdx - m32VariableStartIdx)] += heart::findCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx);
+				mainProgram32Variables[(uint16_t)(m32DebugCountS64divIdx - m32VariableStartIdx)]++;
+
 #endif // defined(useDebugCPUreading)
 				break;
 
@@ -788,19 +808,19 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					break;
 
 				case e11:	// instrBranchIfMetricMode
-					branchFlag = (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric);
+					branchFlag = (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric);
 					break;
 
 				case e12:	// instrBranchIfSAEmode
-					branchFlag = ((bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric) == 0);
+					branchFlag = ((mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) == 0);
 					break;
 
 				case e13:	// instrBranchIfFuelOverDist (L/100km or G/100mi)
-					branchFlag = (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayAlternateFE);
+					branchFlag = (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE);
 					break;
 
 				case e14:	// instrBranchIfDistOverFuel (MPG or KPL)
-					branchFlag = ((bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayAlternateFE) == 0);
+					branchFlag = ((mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE) == 0);
 					break;
 
 				case e15:	// instrSkip
@@ -832,28 +852,38 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					break;
 
 				case e17:	// instrTraceDone
+#if defined(useDebugTerminalSWEET64)
 					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
 					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
+#endif // defined(useDebugTerminalSWEET64)
 				case e16:	// instrDone
 					if (prgmReg8[(uint16_t)(si64reg8spnt)]--) prgmPtr = prgmStack[(unsigned int)(prgmReg8[(uint16_t)(si64reg8spnt)])];
 					else isValid = 0;
 					break;
 
 				case e19:	// instrTraceRestore
+#if defined(useDebugTerminalSWEET64)
 					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
 					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
 					break;
 
+#endif // defined(useDebugTerminalSWEET64)
 				case e20:	// instrTraceOn
+#if defined(useDebugTerminalSWEET64)
 					SWEET64processorFlags |= (SWEET64traceCommandFlag | SWEET64traceSaveFlag);
 					break;
 
+#endif // defined(useDebugTerminalSWEET64)
 				case e22:	// instrTraceOff
+#if defined(useDebugTerminalSWEET64)
 					SWEET64processorFlags &= ~(SWEET64traceCommandFlag | SWEET64traceSaveFlag);
 					break;
 
+#endif // defined(useDebugTerminalSWEET64)
 				case e21:	// instrTraceSave
+#if defined(useDebugTerminalSWEET64)
 					SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
+#endif // defined(useDebugTerminalSWEET64)
 					break;
 
 				case e23:	// load index
@@ -1465,7 +1495,6 @@ static void SWEET64::mult64(uint64_t * prgmReg64)
 #endif // defined(useAssemblyLanguage)
 }
 
-#ifndef useSWEET64div
 static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-restoring hardware division
 {
 
@@ -1771,7 +1800,6 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 #endif // defined(useAssemblyLanguage)
 }
 
-#endif // useSWEET64div
 #if defined(useIsqrt)
 // 32-bit integer square root based on digit-by-digit method
 //

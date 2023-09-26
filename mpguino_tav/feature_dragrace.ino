@@ -1,6 +1,6 @@
 #if defined(useDragRaceFunction)
  /* Acceleration Test support section */
- 
+
 // upon successful arming, the drag race function will measure times to reach the distance specified by the EEPROM parameter pDragDistanceIdx (preset to 1/4 mile),
 // and to reach the speed specified by the EEPROM parameter pDragSpeedIdx (preset to 60 MPH).
 
@@ -55,28 +55,28 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 //cont3:
 	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
 	instrBranchIfZero, 14,								// if zero, then perform copy
-	instrLdRegVolatile, 0x02, vDragRawInstantSpeedIdx,	// load raw top speed
-	instrLdRegVolatile, 0x01, vDragInstantSpeedIdx,		// load regular top speed
+	instrLdRegVariable, 0x02, v32DragRawInstantSpeedIdx,	// load raw top speed
+	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load regular top speed
 	instrTestReg, 0x01,									// test regular top speed
 	instrBranchIfZero, 4,								// if zero, then perform copy
 	instrCmpXtoY, 0x21,									// compare raw top speed to regular top speed
 	instrBranchIfGT, 3,									// if raw top speed is smaller than regular top speed, skip
 
 //copyTopSpeed:
-	instrStRegVolatile, 0x02, vDragInstantSpeedIdx,		// store raw top speed value to regular top speed
+	instrStRegVariable, 0x02, m32DragInstantSpeedIdx,	// store raw top speed value to regular top speed
 
 //cont4:
 	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
 	instrBranchIfZero, 14,								// if zero, then perform copy
-	instrLdRegVolatile, 0x02, vDragRawTrapSpeedIdx,		// load raw trap speed
-	instrLdRegVolatile, 0x01, vDragTrapSpeedIdx,		// load regular trap speed
+	instrLdRegVariable, 0x02, v32DragRawTrapSpeedIdx,	// load raw trap speed
+	instrLdRegVariable, 0x01, m32DragTrapSpeedIdx,		// load regular trap speed
 	instrTestReg, 0x01,									// test regular trap speed
 	instrBranchIfZero, 4,								// if zero, then perform copy
 	instrCmpXtoY, 0x21,									// compare raw trap speed to regular trap speed
 	instrBranchIfGT, 3,									// if raw trap speed is smaller than regular trap speed, skip
 
 //copyTopSpeed:
-	instrStRegVolatile, 0x02, vDragTrapSpeedIdx,		// store raw trap speed value to regular trap speed
+	instrStRegVariable, 0x02, m32DragTrapSpeedIdx,		// store raw trap speed value to regular trap speed
 
 //cont5:
 	instrDone											// exit to caller
@@ -85,7 +85,7 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 static void accelerationTest::init(void)
 {
 
-	heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, 0);
+	heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, 0);
 
 	lastAccelTestStatus = 0;
 	accelTestStatus = 0;
@@ -105,7 +105,7 @@ static uint8_t accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			{
 
 				// display status message for new state
-				text::statusOut(devIdxLCD, accelTestStateMsgs, accelTestState);
+				text::statusOut(m8DevLCDidx, accelTestStateMsgs, accelTestState);
 				accelTestState = 0;
 
 			}
@@ -142,7 +142,7 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devIdxLCD, accelTestMenuTitles, cursorPos);
+			text::stringOut(m8DevLCDidx, accelTestMenuTitles, cursorPos);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -162,8 +162,8 @@ static uint8_t accelerationTest::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (cursorPos > 1)
 			{
 
-				text::stringOut(devIdxLCD, pBuff); // output supplementary information
-				text::newLine(devIdxLCD); // clear to the end of the line
+				text::stringOut(m8DevLCDidx, pBuff); // output supplementary information
+				text::newLine(m8DevLCDidx); // clear to the end of the line
 
 			}
 
@@ -206,11 +206,11 @@ static void accelerationTest::triggerTest(void)
 
 	uint8_t retVal;
 
-	if (bitFlags[(uint16_t)(bfAccelerationFlags)] & accelTestInProgress)
+	if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestInProgress)
 	{
 
 		// reset accel test capture flags, and signal that accel test is cancelled
-		heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, accelTestCompleteFlags);
+		heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
 		EEPROM::writeByte(pDragAutoFlagIdx, 0);
@@ -221,16 +221,16 @@ static void accelerationTest::triggerTest(void)
 	else
 	{
 
-		if (bitFlags[(uint16_t)(bfActivity)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
+		if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
 		{
 
-			heart::changeBitFlagBits(bfAccelerationFlags, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
+			heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
 
 			tripVar::reset(dragRawHalfSpeedIdx); // zero out acceleration 1/2 speed setpoint data
 			tripVar::reset(dragRawFullSpeedIdx); // zero out acceleration full speed setpoint data
 			tripVar::reset(dragRawDistanceIdx); // zero out acceleration distance setpoint data
 
-			heart::changeBitFlagBits(bfAccelerationFlags, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in bfAccelerationFlags register
+			heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in v8AccelerationFlags register
 
 			retVal = attTriggerNormal;
 
@@ -244,11 +244,11 @@ static void accelerationTest::triggerTest(void)
 
 	}
 
-	text::statusOut(devIdxLCD, accelTestTriggerMsgs, retVal);
+	text::statusOut(m8DevLCDidx, accelTestTriggerMsgs, retVal);
 
 }
 
-static void accelerationTest::idleProcess(void)
+static void accelerationTest::mainProcess(void)
 {
 
 	uint8_t oldSREG;
@@ -257,7 +257,7 @@ static void accelerationTest::idleProcess(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	accelTestStatus = bitFlags[(uint16_t)(bfAccelerationFlags)]; // copy accel test flag status to this loop
+	accelTestStatus = volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)]; // copy accel test flag status to this loop
 
 	SREG = oldSREG; // restore interrupt flag status
 

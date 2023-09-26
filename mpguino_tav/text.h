@@ -31,6 +31,7 @@ namespace text /* text support section prototype */
 	static uint8_t nybble(uint8_t val);
 	static void hexByteOut(uint8_t devIdx, uint8_t val);
 	static void hexWordOut(uint8_t devIdx, uint16_t val);
+	static void hexDWordOut(uint8_t devIdx, uint32_t val);
 	static void hexLWordOut(uint8_t devIdx, uint64_t * val);
 	static void tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
 	static void tripFunctionOut(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
@@ -78,12 +79,12 @@ static const uint8_t prgmAutoRangeNumber[] PROGMEM = {
 	instrBranchIfLT, 9,									// if valid, skip ahead
 	instrLxdI, 8,										// assume window length of 8 digits
 	instrSkip, 5,										// skip ahead
-	instrLdRegConst, 0x02, idxDecimalPoint,				// window length is 1 digit, load equivalent of decimal formatting term
-	instrSkip, 4,										// skip ahead
+	instrLdRegRdOnly, 0x02, idxDecimalPoint,			// window length is 1 digit, load equivalent of decimal formatting term
+	instrSkip, 5,										// skip ahead
 
 //cont:
-	instrLdRegConstIndexed, 0x02,						// load power of 10 corresponding to window into register 2
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrLdRegRdOnlyOffset, 0x02, idxTen,				// load power of 10 corresponding to window into register 2
+	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
 
 //cont2:
 	instrLxdI, 0,										// initialize decimal count with 0

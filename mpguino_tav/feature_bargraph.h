@@ -72,12 +72,12 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 	instrBranchIfZero, 15,								// if zero, then speed is also zero
 	instrLdReg, 0x21,									// save denominator term for later
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
-	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
+	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
+	instrMul2byRdOnly, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
 	instrDiv2by1,										// divide to obtain vehicle speed
 
 //cont:
-	instrSubMainFromX, 0x02, mpFEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
+	instrSubVariableFromX, 0x02, m32FEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
 	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
 
 //badRet:
@@ -85,7 +85,7 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 	instrDone,											// exit to caller
 
 //cont2:
-	instrDiv2byMain, mpFEvsSpeedQuantumIdx,				// find trip index offset
+	instrDiv2byVariable, m32FEvsSpeedQuantumIdx,		// find trip index offset
 	instrLdRegByte, 0x01, bgDataSize - 1,				// is offset greater than the number of available trip slots
 	instrCmpXtoY, 0x21,
 	instrBranchIfLTorE, 2,								// if not, skip ahead

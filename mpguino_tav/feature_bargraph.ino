@@ -61,7 +61,7 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 
 //loop2:
 	instrTestReg, 0x03,									// is high value zero
-	instrBranchIfE, 42,									// if so, just store a zero - can't divide by zero
+	instrBranchIfE, 19,									// if so, just store a zero - can't divide by zero
 	instrCallImplied,									// go call input function
 	instrBranchIfNotE, 12,								// if function result is not zero, go skip
 	instrBranchIfOverflow, 5,
@@ -78,10 +78,10 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont3:
-	instrStRegBGdataIndexed, 0x02,						// save normalized value
+	instrStRegVariableOffset, 0x02, m8BarGraphIdx, 		// save normalized value
 	instrAddIndex, 1,									// bump index up
 	instrCmpIndex, bgDataSize,							// processed through all of fuel econ vs time trip variable bank?
-	instrBranchIfLT, 225,								// if not, loop back
+	instrBranchIfLT, 224,								// if not, loop back
 	instrDone											// return to caller
 };
 
@@ -172,7 +172,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, labelList, cursorPos); // briefly display screen name
+			text::statusOut(m8DevLCDidx, labelList, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);
@@ -193,11 +193,11 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx)
 {
 
-	text::stringOut(devIdxLCD, bgSpaces, lineNumber);
+	text::stringOut(m8DevLCDidx, bgSpaces, lineNumber);
 
-	text::tripFunctionOut(devIdxLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
+	text::tripFunctionOut(m8DevLCDidx, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
 
-	text::newLine(devIdxLCD);
+	text::newLine(m8DevLCDidx);
 
 }
 
@@ -249,7 +249,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++) // this is for calculating the mean of the dataset
 	{
 
-		byt = bargraphData[(uint16_t)(x)];
+		byt = mainProgram8Variables[(uint16_t)(x + m8BarGraphIdx - m8VariableStartIdx)];
 
 		switch (byt)
 		{
@@ -312,7 +312,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++)
 	{
 
-		byt = bargraphData[(uint16_t)(x)];
+		byt = mainProgram8Variables[(uint16_t)(x + m8BarGraphIdx - m8VariableStartIdx)];
 		blinkFlag = ((x == cursorPos) && (mainLoopHeartBeat & 0b10001000));
 
 		switch (byt)

@@ -22,7 +22,7 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 
 		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
-		if (bitFlags[(uint16_t)(bfActivity)] & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
+		if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
 		{
 
 			if ((tripIdx == instantIdx) && (calcIdx == tFuelEcon)) calcIdx = tFuelRate;
@@ -38,8 +38,12 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 		{
 
 			calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
-			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric)) calcFmtIdx++; // shift index up one if this is an SI/SAE format
-			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayAlternateFE)) calcFmtIdx += 2; // shift index up one if this has two separate formats
+
+			// shift index up one if this is an SI/SAE format
+			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric)) calcFmtIdx++;
+
+			// shift index up two if this has two separate formats
+			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE)) calcFmtIdx += 2;
 
 		}
 		else calcFmtIdx = calcFormatTimeInMillisecondsIdx;

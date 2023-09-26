@@ -15,6 +15,9 @@ namespace clockSet
 	static void changeDigitDown(void);
 	static void set(void);
 	static void cancel(void);
+#if defined(useDS1307clock)
+	static void setFromRTC(void);
+#endif // defined(useDS1307clock)
 
 };
 

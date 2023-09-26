@@ -1,21 +1,14 @@
 #if defined(useClockDisplay)
  /* Big Clock Display support section */
 
-static const uint8_t prgmChangeSoftwareClock[] PROGMEM = {
-	instrLdRegVolatile, 0x02, vClockCycleIdx,			// read software clock
-	instrDiv2byConst, idxTicksPerSecond,				// convert datetime value from cycles to seconds
-	instrDiv2byConst, idxSecondsPerDay,					// divide by number of seconds in a day, to remove the existing time portion from the datetime value
-	instrMul2byByte, 24,								// multiply datetime value by 24 (hours per day)
-	instrLdRegByteFromY, 0x31, 0,						// add user-defined hours value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multply datetime value by 60 (minutes per hour)
-	instrLdRegByteFromY, 0x31, 2,						// add user-defined minutes value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byByte, 60,								// multiply datetime value by 60 (seconds per minute)
-	instrLdRegByteFromY, 0x31, 4,						// add user-defined seconds value to datetime value
-	instrAddYtoX, 0x12,
-	instrMul2byConst, idxTicksPerSecond,				// convert datetime value from seconds to cycles
-	instrStRegVolatile, 0x02, vClockCycleIdx,			// write software clock
+static const uint8_t prgmSetClock[] PROGMEM = {
+	instrLdRegVariable, 0x02, m8HourIdx,				// load user-defined hours value
+	instrMul2byByte, 60,								// multply hours value by 60 (minutes per hour)
+	instrAddVariableToX, 0x02, m8MinuteIdx,				// add user-defined minutes value to time value
+	instrMul2byByte, 60,								// multply time value by 60 (seconds per minute)
+	instrAddVariableToX, 0x02, m8SecondIdx,				// add user-defined seconds value to time value
+	instrMul2byRdOnly, idxTicksPerSecond,				// convert time value from seconds to cycles
+	instrStRegVariable, 0x02, v32ClockCycleIdx,			// write software clock
 	instrDone
 };
 
@@ -26,15 +19,15 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-			text::charOut(devIdxLCD, 0x0C);
+			text::charOut(m8DevLCDidx, 0x0C);
 
 			LCD::loadCGRAMfont(bigDigitFont);
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, PSTR("Clock"));
+			text::statusOut(m8DevLCDidx, PSTR("Clock"));
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, vClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, v32ClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4, 0, 0);
 			break;
 
 		default:
@@ -51,12 +44,10 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-#if defined(useSoftwareClock)
-			ull2str(csBuff, vClockCycleIdx, tReadTicksToSeconds);
-#endif // defined(useSoftwareClock)
+			ull2str(csBuff, v32ClockCycleIdx, tReadTicksToSeconds);
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (bitFlags[(uint16_t)(bfTimer0Status)] & t0sShowCursor), cursorPos, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] & t0saShowCursor), cursorPos, 0, 0);
 
 		default:
 			break;
@@ -99,27 +90,65 @@ static void clockSet::changeDigitDown(void)
 static void clockSet::set(void)
 {
 
-#if defined(useSoftwareClock)
 	uint8_t b;
+	uint8_t v;
+#if defined(useDS1307clock)
+	uint8_t oldSREG;
+#endif // defined(useDS1307clock)
 
 	csBuff[4] = '0'; // set seconds to zero
 	csBuff[5] = '0';
 
-	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmChangeSoftwareClock
+#if defined(useSoftwareClock)
+	v = m8SecondIdx - m8VariableStartIdx;
+
+	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmSetClock
 	{
 
 		b = csBuff[(uint16_t)(x)] - '0';
 		b *= 10;
 		b += csBuff[(uint16_t)(x + 1)] - '0';
-		((union union_64 *)(&s64reg[(uint16_t)(s64reg64_3)]))->u8[(uint16_t)(x)] = b;
+
+		mainProgram8Variables[(uint16_t)(v++)] = b;
 
 	}
 
-	SWEET64::runPrgm(prgmChangeSoftwareClock, 0); // convert time value into timer0 clock cycles
-
-	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
+	SWEET64::runPrgm(prgmSetClock, 0); // convert time value into timer0 clock cycles
 
 #endif // defined(useSoftwareClock)
+#if defined(useDS1307clock)
+	TWI::disableISRactivity(); // disable ISR-based TWI activity for RTC write
+
+	v = v8RTCsecondIdx - v8VariableStartIdx;
+
+	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmSetClock
+	{
+
+		b = csBuff[(uint16_t)(x)] - '0';
+		b *= 16;
+		b += csBuff[(uint16_t)(x + 1)] - '0';
+
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts
+
+		volatile8Variables[(uint16_t)(v++)] = b;
+
+		SREG = oldSREG; // restore interrupt flag status
+
+	}
+
+	TWI::openChannelMain(TWIaddressRTC, TW_WRITE); // open TWI as master transmitter
+	TWI::writeByte(0); // write out RTC seconds address
+	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)]); // write out RTC seconds value
+	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTCminuteIdx - v8VariableStartIdx)]); // write out RTC minutes value
+	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTChourIdx - v8VariableStartIdx)]); // write out RTC hours value
+	TWI::transmitChannelMain(TWI_STOP); // go write out register contents
+
+	TWI::enableISRactivity(); // re-enable ISR-based TWI activity
+
+#endif // defined(useDS1307clock)
+	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
+
 }
 
 static void clockSet::cancel(void)
@@ -129,6 +158,39 @@ static void clockSet::cancel(void)
 
 }
 
+#if defined(useDS1307clock)
+static void clockSet::setFromRTC(void)
+{
+
+	uint8_t b;
+	uint8_t c;
+	uint8_t oldSREG;
+
+	for (uint8_t x = 0; x < 3; x++)
+	{
+
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts
+
+		b = volatile8Variables[(uint16_t)(x + v8RTCsecondIdx - v8VariableStartIdx)]; // fetch a BCD value of time
+
+		SREG = oldSREG; // restore interrupt flag status
+
+		c = b & 0x0F; // save low digit for now
+		b &= 0xF0; // strip off low digit
+		b >>= 1; // divide by 2
+		b *= 5; // multiply by 5
+		b >>= 2; // divide again by 4 (to convert from BCD to hex, accomplishes (high digit) * 10 / 16)
+
+		mainProgram8Variables[(uint16_t)(x + m8SecondIdx - m8VariableStartIdx)] = b + c; // store natural value of time
+
+	}
+
+	SWEET64::runPrgm(prgmSetClock, 0); // convert time value into timer0 clock cycles
+
+}
+
+#endif // defined(useDS1307clock)
 #endif // defined(useClockDisplay)
 #if defined(useStatusMeter)
 /* Status Meter Output support section */
@@ -172,10 +234,10 @@ static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
+			text::statusOut(m8DevLCDidx, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
 		case displayOutputIdx:
 			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
-			text::charOut(devIdxLCD, ' ', (LCDcharWidth / 2));
+			text::charOut(m8DevLCDidx, ' ', (LCDcharWidth / 2));
 			mainDisplay::outputFunction(3, (instantIdx << 8 ) | (tFuelEcon), 136, 0);
 			break;
 
@@ -243,7 +305,7 @@ static void statusBar::outputStatusBar(uint16_t val) // takes an input number be
 
 			if (flg) writeStatusBarElement(oc, ei);
 
-			text::charOut(devIdxLCD, oc);
+			text::charOut(m8DevLCDidx, oc);
 
 		}
 
@@ -253,14 +315,14 @@ static void statusBar::outputStatusBar(uint16_t val) // takes an input number be
 
 		LCD::loadCGRAMfont(statusBarOverflowFont); // load initial status bar overflow custom characters
 
-		text::charOut(devIdxLCD, 0xF0);
-		text::charOut(devIdxLCD, 0xF2, 14);
-		text::charOut(devIdxLCD, 0xF1);
+		text::charOut(m8DevLCDidx, 0xF0);
+		text::charOut(m8DevLCDidx, 0xF2, 14);
+		text::charOut(m8DevLCDidx, 0xF1);
 	}
 
 	LCD::flushCGRAM(); // go output status bar custom characters
 
-	text::newLine(devIdxLCD);
+	text::newLine(m8DevLCDidx);
 
 }
 
@@ -330,7 +392,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			}
 
-			text::statusOut(devIdxLCD, tripFormatReverseNames, cursorPos, str);
+			text::statusOut(m8DevLCDidx, tripFormatReverseNames, cursorPos, str);
 
 		case displayOutputIdx:
 			switch (callingDisplayIdx)
@@ -441,12 +503,12 @@ static void bigDigit::outputNumberString(uint8_t hPos, char * str, uint8_t curso
 		if (c == 240) c = 10;
 		else if (c > 9) c = 11;
 
-		text::gotoXY(devIdxLCD, x, 1);
-		text::stringOut(devIdxLCD, bigDigitChars2, c);
-		text::charOut(devIdxLCD, d);
-		text::gotoXY(devIdxLCD, x, 0);
-		text::stringOut(devIdxLCD, bigDigitChars1, c);
-		text::charOut(devIdxLCD, e);
+		text::gotoXY(m8DevLCDidx, x, 1);
+		text::stringOut(m8DevLCDidx, bigDigitChars2, c);
+		text::charOut(m8DevLCDidx, d);
+		text::gotoXY(m8DevLCDidx, x, 0);
+		text::stringOut(m8DevLCDidx, bigDigitChars1, c);
+		text::charOut(m8DevLCDidx, e);
 
 		x += 4;
 
@@ -455,10 +517,10 @@ static void bigDigit::outputNumberString(uint8_t hPos, char * str, uint8_t curso
 	if (((x + 4) <= LCDcharWidth) && (str))
 	{
 
-		text::gotoXY(devIdxLCD, x, 1);
-		text::stringOut(devIdxLCD, titleStr);
-		text::gotoXY(devIdxLCD, x, 0);
-		text::stringOut(devIdxLCD, tripFormatReverseNames, cursorPos);
+		text::gotoXY(m8DevLCDidx, x, 1);
+		text::stringOut(m8DevLCDidx, titleStr);
+		text::gotoXY(m8DevLCDidx, x, 0);
+		text::stringOut(m8DevLCDidx, tripFormatReverseNames, cursorPos);
 
 	}
 

@@ -29,10 +29,10 @@ ISR( ADC_vect )
 	rawValue->u8[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
 	rawValue->u8[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
 
-	if (bitFlags[(uint16_t)(bfAnalogCommand)] & acSampleGround)
+	if (volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] & acSampleGround)
 	{
 
-		bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleGround); // signal that internal ground was read
+		volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] &= ~(acSampleGround); // signal that internal ground was read
 
 		flag = 1;
 		analogChannelMask = acSampleChannel0; // start with highest priority channel
@@ -41,7 +41,7 @@ ISR( ADC_vect )
 		while ((flag) && (analogChannelMask))
 		{
 
-			if (bitFlags[(uint16_t)(bfAnalogCommand)] & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
+			if (volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
 			else
 			{
 
@@ -55,17 +55,17 @@ ISR( ADC_vect )
 		if (analogChannelMask)
 		{
 
-			bitFlags[(uint16_t)(bfAnalogStatus)] &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
+			volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
 			analogValueIdx = analogChannelIdx; // save the analog index value
 			analogBitmask = analogChannelMask; // save the analog bitmask
-			bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(analogChannelMask); // clear the relevant bit in analog command status
+			volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] &= ~(analogChannelMask); // clear the relevant bit in analog command status
 			flag = 1;
 
 		}
 		else
 		{
 
-			bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+			volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 			flag = 0;
 
 		}
@@ -74,13 +74,14 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogValue[(uint16_t)(analogValueIdx)] = rawRead; // save the value just read in
-		bitFlags[(uint16_t)(bfAnalogStatus)] |= (analogBitmask); // signal to main program that an analog channel was read in
-		if (bitFlags[(uint16_t)(bfAnalogCommand)] & acSampleChannelActive)
+		volatile16Variables[(uint16_t)(analogValueIdx + v16AnalogStartIdx - v16VariableStartIdx)] = rawRead; // save the value just read in
+		volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] |= (analogBitmask); // signal to main program that an analog channel was read in
+
+		if (volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] & acSampleChannelActive)
 		{
 
-			bitFlags[(uint16_t)(bfAnalogCommand)] |= (acSampleGround); // signal that next read is for internal ground
-			analogChannelIdx = analogGroundIdx;
+			volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] |= (acSampleGround); // signal that next read is for internal ground
+			analogChannelIdx = v16AnalogGroundIdx;
 			flag = 1;
 
 		}
@@ -98,8 +99,8 @@ ISR( ADC_vect )
 	else
 	{
 
-		bitFlags[(uint16_t)(bfAnalogStatus)] |= (asHardwareReady);
-		bitFlags[(uint16_t)(bfAnalogCommand)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+		volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] |= (asHardwareReady);
+		volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 		ADCSRA |= (1 << ADIF);
 		ADCSRA &= ~(1 << ADIE); // shut off analog interrupt and clear analog interrupt flag
 
@@ -111,7 +112,7 @@ ISR( ADC_vect )
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vWorkingInterruptProcessIdx)] += c;
+	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -121,10 +122,10 @@ ISR( ADC_vect )
  /* ADC voltage display section */
 
 static const uint16_t analogReadPageFormats[4] PROGMEM = {
-	(analog0Idx << 8 ) |			(tAnalogChannel),	// Voltages
-	(analog1Idx << 8 ) |			(tAnalogChannel),
-	(analog2Idx << 8 ) |			(tAnalogChannel),
-	(analog3Idx << 8 ) |			(tAnalogChannel),
+	(v16Analog0Idx << 8 ) |			(tAnalogChannel),	// Voltages
+	(v16Analog1Idx << 8 ) |			(tAnalogChannel),
+	(v16Analog2Idx << 8 ) |			(tAnalogChannel),
+	(v16Analog3Idx << 8 ) |			(tAnalogChannel),
 };
 
 static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -135,7 +136,7 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devIdxLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
+			text::statusOut(m8DevLCDidx, analogReadDisplayTitles, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);

@@ -3,17 +3,17 @@
 static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void))
 {
 
-	deviceDefs[(uint16_t)(devIdx)].chrOut = charOut;
-	deviceDefs[(uint16_t)(devIdx)].chrIn = charIn;
-	bitFlags[(uint16_t)(devIdx)] |= (devStatus);
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn = charIn;
+	mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (devStatus);
 
 }
 
 static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t))
 {
 
-	deviceDefs[(uint16_t)(devIdx)].chrOut = charOut;
-	bitFlags[(uint16_t)(devIdx)] |= (devStatus);
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
+	mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (devStatus);
 
 }
 
@@ -22,7 +22,7 @@ static uint8_t text::chrIn(uint8_t devIdx)
 
 	uint8_t retVal;
 
-	if (deviceDefs[(uint16_t)(devIdx)].chrIn) retVal = deviceDefs[(uint16_t)(devIdx)].chrIn();
+	if (deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn) retVal = deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn();
 	else retVal = 0;
 
 	return retVal;
@@ -57,7 +57,7 @@ static uint8_t text::charOut(uint8_t devIdx, uint8_t chr)
 
 	retVal = 1;
 
-	if (deviceDefs[(uint16_t)(devIdx)].chrOut)
+	if (deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut)
 	{
 
 		switch (chr)
@@ -66,38 +66,38 @@ static uint8_t text::charOut(uint8_t devIdx, uint8_t chr)
 			case 0x00:	// tcEOS, end-of-string
 				retVal = 0;
 			case 0xED:	// tcOON, enable device output
-				bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
+				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEB:	// tcOMOFF, disable device output for metric mode
-				if (bitFlags[(uint16_t)(bfMetricModeFlags)] & mmDisplayMetric) bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
-				else bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
+				if (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
+				else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEC:	// tcOTOG, toggle device output enable
-				bitFlags[(uint16_t)(devIdx)] ^= (odvFlagEnableOutput);
+				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] ^= (odvFlagEnableOutput);
 				break;
 
 			case 0xEE:	// tcOOFF, disable device output
-				bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
+				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
 				break;
 
 			case 0x0D:	// tcEOSCR, output carriage return, defined as end of string
 				retVal = 0;
 			case 0xEF:	// tcCR, output carriage return not at end of string
-				bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
-				deviceDefs[(uint16_t)(devIdx)].chrOut(0x0D);
-				if (bitFlags[(uint16_t)(devIdx)] & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx)].chrOut(0x0A);
+				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+				deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0D);
+				if (mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0A);
 				break;
 
 			case 0xF0 ... 0xF7: // print CGRAM character
 				chr &= 0x07;
 			case 0x20 ... 0x7F: // print normal character
-				if (bitFlags[(uint16_t)(devIdx)] & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx)].chrOut(chr);
+				if (mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
 				break;
 
 			default:
-				deviceDefs[(uint16_t)(devIdx)].chrOut(chr);
+				deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
 				break;
 
 		}
@@ -118,12 +118,12 @@ static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, 
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
+	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
 	{
 
-		stringOut(devIdxDebugTerminal, findStr(sList, strIdx));
-		stringOut(devIdxDebugTerminal, str);
-		newLine(devIdxDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, findStr(sList, strIdx));
+		stringOut(m8DevDebugTerminalIdx, str);
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
@@ -139,12 +139,12 @@ static void text::statusOut(uint8_t devIdx, const char * str, const char * sList
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
+	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
 	{
 
-		stringOut(devIdxDebugTerminal, str);
-		stringOut(devIdxDebugTerminal, findStr(sList, strIdx));
-		newLine(devIdxDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, str);
+		stringOut(m8DevDebugTerminalIdx, findStr(sList, strIdx));
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
@@ -166,11 +166,11 @@ static void text::statusOut(uint8_t devIdx, const char * str)
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (bitFlags[(uint16_t)(bfPeek)] & peekStatusMessage)
+	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
 	{
 
-		stringOut(devIdxDebugTerminal, str);
-		newLine(devIdxDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, str);
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
@@ -222,8 +222,8 @@ static void text::stringOut(uint8_t devIdx, char * str)
 static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
-	if (condition) bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
-	else bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
+	if (condition) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+	else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
 
 	stringOut(devIdx, str, strIdx);
 
@@ -232,8 +232,8 @@ static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * st
 static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str)
 {
 
-	if (condition) bitFlags[(uint16_t)(devIdx)] |= (odvFlagEnableOutput);
-	else bitFlags[(uint16_t)(devIdx)] &= ~(odvFlagEnableOutput);
+	if (condition) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+	else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
 
 	stringOut(devIdx, str);
 
@@ -270,6 +270,16 @@ static void text::hexWordOut(uint8_t devIdx, uint16_t val)
 	union union_16 * vee = (union union_16 *)(&val);
 
 	for (uint8_t i = 1; i < 2; i--) hexByteOut(devIdx, vee->u8[i]);
+
+}
+
+static void text::hexDWordOut(uint8_t devIdx, uint32_t val)
+{
+
+	union union_32 * vee = (union union_32 *)(&val);
+
+	hexWordOut(devIdx, vee->ui[1]);
+	hexWordOut(devIdx, vee->ui[0]);
 
 }
 
@@ -577,7 +587,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 // sample debug monitor outputs:
 //
 // (overflow='-', do not ignore decimal point)                (overflow='9', ignore decimal point)
-// 
+//
 // ]6<2.0u                                                    ]6<2.c0u
 // decimalFlags=00, windowLen=06, places=02                   decimalFlags=C0, windowLen=06, places=02
 // 00: 0000000000000005 -   0.01                              00: 0000000000000005 -    0.01

@@ -133,8 +133,6 @@ static uint8_t menuHeight[(uint16_t)(displayCountMenu)];
 #if defined(useTWIbuttons)
 #if defined(useAdafruitRGBLCDshield)
 #define useButtonCrossConfig true
-const uint8_t buttonAddress =		0x20;
-
 const uint8_t buttonLbit = 			0b00010000; // GPIO A bit 4, left button
 const uint8_t buttonCbit = 			0b00000001; // GPIO A bit 0, select button
 const uint8_t buttonRbit = 			0b00000010; // GPIO A bit 1, right button
@@ -146,6 +144,20 @@ const uint8_t longButtonBit =		0b00100000; // GPIO A bit 5 isn't being used for 
 const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
 
 #endif // defined(useAdafruitRGBLCDshield)
+#if defined(useGenericTWIbuttons)
+#define useButtonCrossConfig true
+const uint8_t buttonLbit = 			0b00010000;
+const uint8_t buttonCbit = 			0b00001000;
+const uint8_t buttonRbit = 			0b00000100;
+const uint8_t buttonUbit = 			0b00000010;
+const uint8_t buttonDbit = 			0b00000001;
+
+const uint8_t longButtonBit =		0b00100000;	// make sure this is not being used for button input
+
+const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
+
+#endif // defined(useGenericTWIbuttons)
+
 	// place any other TWI button definitions here
 
 #endif // defined(useTWIbuttons)
@@ -690,12 +702,6 @@ static const buttonVariable bpListMiscViewer[] PROGMEM = {
 };
 
 #endif // defined(useSimulatedFIandVSS) || defined(useChryslerMAPCorrection) || defined(useDebugAnalog) || defined(useDragRaceFunction) || defined(useCoastDownCalculator)
-#if defined(useTestButtonValues)
-static const buttonVariable bpListButtonView[] PROGMEM = {
-	{buttonsUp,		cursor::doNothing},
-};
-
-#endif // defined(useTestButtonValues)
 static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGMEM = {
 
 	{baseMenuDisplayIdx,			1,					displayCountBase,				0,								baseMenu::menuHandler,				bpListMenu},
@@ -748,9 +754,6 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 #if defined(useDebugAnalog)
 	{analogDisplayIdx,				1,					1,								0,								analogReadViewer::displayHandler,	bpListMiscViewer},
 #endif // defined(useDebugAnalog)
-#if defined(useTestButtonValues)
-	{buttonDisplayIdx,				1,					1,								0,								buttonView::displayHandler,			bpListMiscViewer},
-#endif // defined(useTestButtonValues)
 
 // the following display entries are for the various main displays
 
@@ -780,7 +783,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	{mainDisplayIdx,				displayCountUser,	1,								dfClockShowDisplay,				clockDisplay::displayHandler,		bpListClockDisplay},
 #endif // defined(useClockDisplay)
 
-// the following display entries are supplemental non-menu display entries for options selected via configs.h 
+// the following display entries are supplemental non-menu display entries for options selected via configs.h
 
 #if defined(useDragRaceFunction)
 	{dragRaceDisplayIdx,			1,					4,								0,								accelerationTest::displayHandler,	bpListMiscViewer},

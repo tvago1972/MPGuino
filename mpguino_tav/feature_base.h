@@ -30,9 +30,6 @@ static const char baseMenuTitles[] PROGMEM = {	// each title must be no longer t
 #if defined(useDebugAnalog)
 	"ADC readings" tcEOSCR
 #endif // defined(useDebugAnalog)
-#if defined(useTestButtonValues)
-	"Button Values" tcEOSCR
-#endif // defined(useTestButtonValues)
 };
 
 namespace mainDisplay /* main display section prototype */

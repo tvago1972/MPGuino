@@ -87,7 +87,7 @@ static void usbDevice::init(void)
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	text::initDev(devIdxUSB, 0, chrOut, chrIn);
+	text::initDev(m8DevUSBidx, 0, chrOut, chrIn);
 
 }
 

@@ -37,18 +37,18 @@ static void button::init(void)
 #if defined(useInterruptBasedTWI)
 	TWI::disableISRactivity(); // disable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::configureOutputPort((uint16_t)(buttonMask));
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useMCP23017portExpander)
 #if defined(useInterruptBasedTWI)
 	TWI::enableISRactivity(); // enable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
 
 #endif // defined(useTWIbuttons)
-#if defined(useAnalogButtons)
-	heart::changeBitFlagBits(bfTimer0Command, 0, t0cEnableAnalogButtons); // enable analog button sampling
+#if defined(useTWIbuttons) || defined(useAnalogButtons)
+	heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cEnableButtonSampling);
 
-#endif // defined(useAnalogButtons)
+#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
 
 static void button::shutdown(void)
@@ -58,17 +58,13 @@ static void button::shutdown(void)
 	uint8_t oldSREG;
 
 #endif // defined(useLegacyButtons)
-#if defined(useAnalogButtons)
-	heart::changeBitFlagBits(bfTimer0Command, t0cEnableAnalogButtons, 0); // disable analog button sampling
-
-#endif // defined(useAnalogButtons)
 #if defined(useTWIbuttons)
 #if defined(useInterruptBasedTWI)
 	TWI::disableISRactivity(); // disable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::configureOutputPort(0);
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useMCP23017portExpander)
 #if defined(useInterruptBasedTWI)
 	TWI::enableISRactivity(); // enable ISR-based TWI activity
 #endif // defined(useInterruptBasedTWI)
@@ -97,6 +93,10 @@ static void button::shutdown(void)
 	SREG = oldSREG; // restore interrupt flag status
 
 #endif // defined(useLegacyButtons)
+#if defined(useTWIbuttons) || defined(useAnalogButtons)
+	heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, t0cEnableButtonSampling, 0);
+
+#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
 
 #if defined(useAnalogButtons) || defined(useDebugButtonInjection)
@@ -109,7 +109,7 @@ static void button::inject(uint8_t buttonValue)
 	cli(); // disable interrupts to make the next operations atomic
 
 	thisButtonState = buttonValue;
-	bitFlags[(uint16_t)(bfTimer0Command)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
+	volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -122,7 +122,7 @@ static void cursor::screenLevelEntry(const char * str, uint8_t newScreenLevel)
 {
 
 	moveAbsolute(newScreenLevel, 255);
-	text::statusOut(devIdxLCD, str);
+	text::statusOut(m8DevLCDidx, str);
 
 }
 
@@ -130,7 +130,7 @@ static void cursor::screenLevelEntry(const char * str, uint8_t strIdx, uint8_t n
 {
 
 	moveAbsolute(newScreenLevel, 255);
-	text::statusOut(devIdxLCD, str, strIdx);
+	text::statusOut(m8DevLCDidx, str, strIdx);
 
 }
 
@@ -289,7 +289,7 @@ static void cursor::doCommand(void)
 
 	}
 
-	text::gotoXY(devIdxLCD, 0, 0);
+	text::gotoXY(m8DevLCDidx, 0, 0);
 	((bdFunc)pgm_read_word(&(bpPtr->buttonCommand)))(); // go perform action
 
 }
@@ -297,11 +297,11 @@ static void cursor::doCommand(void)
 static void cursor::noSupport(void)
 {
 
-	text::initStatus(devIdxLCD);
-	text::stringOut(devIdxLCD, PSTR("Btn 0x"));
-	text::hexByteOut(devIdxLCD, buttonPress);
-	text::stringOut(devIdxLCD, PSTR(" Pressed"));
-	text::commitStatus(devIdxLCD);
+	text::initStatus(m8DevLCDidx);
+	text::stringOut(m8DevLCDidx, PSTR("Btn 0x"));
+	text::hexByteOut(m8DevLCDidx, buttonPress);
+	text::stringOut(m8DevLCDidx, PSTR(" Pressed"));
+	text::commitStatus(m8DevLCDidx);
 
 }
 
@@ -321,7 +321,7 @@ static void cursor::doNextBright(void)
 	EEPROM::writeByte(pBrightnessIdx, i); // save new LCD brightness index
 	LCD::setBrightness(i);
 
-	text::statusOut(devIdxLCD, brightMsg, brightString, i); // send status message 
+	text::statusOut(m8DevLCDidx, brightMsg, brightString, i); // send status message
 
 }
 
@@ -383,7 +383,7 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 
 	cursorPos = displayCursor[(uint16_t)(thisDisplayIdx)];
 
-	text::gotoXY(devIdxLCD, 0, 0);
+	text::gotoXY(m8DevLCDidx, 0, 0);
 
 	// call indexed support section screen refresh function
 	callingDisplayIdx = thisDisplayIdx;
@@ -431,14 +431,14 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 		if (outFlg)
 		{
 
-			bitFlags[(uint16_t)(devIdxLCD)] |= (odvFlagDoubleHeight);
+			mainProgram8Variables[(uint16_t)(m8DevLCDidx - m8VariableStartIdx)] |= (odvFlagDoubleHeight);
 
-			text::gotoXY(devIdxLCD, 0, 0);
+			text::gotoXY(m8DevLCDidx, 0, 0);
 
 			// call indexed support section screen refresh function
 			((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(callingDisplayIdx)].displayHandlerPtr))(cmd, bottomCursorPos);
 
-			bitFlags[(uint16_t)(devIdxLCD)] &= ~(odvFlagDoubleHeight);
+			mainProgram8Variables[(uint16_t)(m8DevLCDidx - m8VariableStartIdx)] &= ~(odvFlagDoubleHeight);
 			lineCount += 2;
 
 		}
@@ -448,8 +448,8 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 	while (lineCount < LCDcharHeight)
 	{
 
-		text::gotoXY(devIdxLCD, 0, lineCount++);
-		text::newLine(devIdxLCD);
+		text::gotoXY(m8DevLCDidx, 0, lineCount++);
+		text::newLine(m8DevLCDidx);
 
 	}
 
@@ -514,7 +514,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			while (displayLine < LCDcharHeight)
 			{
 
-				text::gotoXY(devIdxLCD, 0, displayLine);
+				text::gotoXY(m8DevLCDidx, 0, displayLine);
 				menuLine = i + menuTop;
 
 				if (menuLine >= menuLength) menuLine -= menuLength;
@@ -524,7 +524,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 				if (allowOutput < 2)
 				{
 
-					if (displayHeight > 1) text::charOut(devIdxLCD, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
+					if (displayHeight > 1) text::charOut(m8DevLCDidx, ((menuLine == cursorPos) ? '>' : ' ' )); // output caret if more than one element is being displayed
 
 					menuHandlerPtr(menuFirstLineOutIdx, menuLine); // output menu element
 
@@ -537,7 +537,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 						if (flg)
 						{
 
-							text::gotoXY(devIdxLCD, 0, ++displayLine);
+							text::gotoXY(m8DevLCDidx, 0, ++displayLine);
 							menuHandlerPtr(menuSecondLineOutIdx, menuLine);
 
 						}
@@ -545,7 +545,7 @@ static uint8_t menu::displayHandler(uint8_t cmd, uint8_t cursorPos)
 					}
 
 				}
-				else text::newLine(devIdxLCD); // clear the line
+				else text::newLine(m8DevLCDidx); // clear the line
 
 				displayLine++;
 				i++;

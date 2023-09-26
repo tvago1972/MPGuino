@@ -31,12 +31,12 @@ static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
 	instrCmpIndex, 6,									// outputting remaining value?
 	instrBranchIfE, 7,									// go do conversion if so
 	instrLdReg, 0x21,									// shift contents to register 1
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrSubYfromX, 0x12,								// subtract remaining fuel value from tank size
 
 //analogOut2:
 	instrMul2byByte, 255,								// multiply tank quantity by 255
-	instrDiv2byMain, mpTankSizeIdx,						// divide by calculated tank size
+	instrDiv2byVariable, m64TankSizeIdx,				// divide by calculated tank size
 	instrDone,											// return to caller
 
 // US (inst FE > accumulated FE) = /(inst FE <= accumulated FE)
