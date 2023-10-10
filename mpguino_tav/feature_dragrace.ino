@@ -4,94 +4,6 @@
 // upon successful arming, the drag race function will measure times to reach the distance specified by the EEPROM parameter pDragDistanceIdx (preset to 1/4 mile),
 // and to reach the speed specified by the EEPROM parameter pDragSpeedIdx (preset to 60 MPH).
 
-static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
-	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
-	instrBranchIfZero, 16,								// if zero, then perform copy
-	instrLdRegTripVar, 0x01, dragRawHalfSpeedIdx, rvVSScycleIdx,	// load raw half speed register elapsed time
-	instrLdRegTripVar, 0x02, dragHalfSpeedIdx, rvVSScycleIdx,		// load regular half speed register elapsed time
-	instrTestReg, 0x02,									// test regular half speed register elapsed time
-	instrBranchIfZero, 4,								// if zero, then perform copy
-	instrCmpXtoY, 0x21,									// compare raw half speed elapsed time to regular half speed elapsed time
-	instrBranchIfGT, 8,									// if raw half speed elapsed time is smaller than regular half speed elapsed time, skip
-
-//copyHalfSpeed:
-	instrLxdI, dragRawHalfSpeedIdx,						// transfer accel test raw half speed trip to accel test half speed trip
-	instrCall, tLoadTrip,
-	instrLxdI, dragHalfSpeedIdx,
-	instrCall, tSaveTrip,
-
-//cont1:
-	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
-	instrBranchIfZero, 16,								// if zero, then perform copy
-	instrLdRegTripVar, 0x01, dragRawFullSpeedIdx, rvVSScycleIdx,	// load raw full speed register elapsed time
-	instrLdRegTripVar, 0x02, dragFullSpeedIdx, rvVSScycleIdx,		// load regular full speed register elapsed time
-	instrTestReg, 0x02,									// test regular full speed register elapsed time
-	instrBranchIfZero, 4,								// if zero, then perform copy
-	instrCmpXtoY, 0x21,									// compare raw full speed elapsed time to regular full speed elapsed time
-	instrBranchIfGT, 8,									// if raw full speed elapsed time is smaller than regular full speed elapsed time, skip
-
-//copyFullSpeed:
-	instrLxdI, dragRawFullSpeedIdx,						// transfer accel test raw full speed trip to accel test full speed trip
-	instrCall, tLoadTrip,
-	instrLxdI, dragFullSpeedIdx,
-	instrCall, tSaveTrip,
-
-//cont2:
-	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
-	instrBranchIfZero, 16,								// if zero, then perform copy
-	instrLdRegTripVar, 0x01, dragRawDistanceIdx, rvVSScycleIdx,	// load raw distance register elapsed time
-	instrLdRegTripVar, 0x02, dragDistanceIdx, rvVSScycleIdx,		// load regular distance register elapsed time
-	instrTestReg, 0x02,									// test regular distance register elapsed time
-	instrBranchIfZero, 4,								// if zero, then perform copy
-	instrCmpXtoY, 0x21,									// compare raw distance elapsed time to regular distance elapsed time
-	instrBranchIfGT, 8,									// if raw distance elapsed time is smaller than regular distance elapsed time, skip
-
-//copyDistance:
-	instrLxdI, dragRawDistanceIdx,						// transfer accel test raw distance trip to accel test distance trip
-	instrCall, tLoadTrip,
-	instrLxdI, dragDistanceIdx,
-	instrCall, tSaveTrip,
-
-//cont3:
-	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
-	instrBranchIfZero, 14,								// if zero, then perform copy
-	instrLdRegVariable, 0x02, v32DragRawInstantSpeedIdx,	// load raw top speed
-	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load regular top speed
-	instrTestReg, 0x01,									// test regular top speed
-	instrBranchIfZero, 4,								// if zero, then perform copy
-	instrCmpXtoY, 0x21,									// compare raw top speed to regular top speed
-	instrBranchIfGT, 3,									// if raw top speed is smaller than regular top speed, skip
-
-//copyTopSpeed:
-	instrStRegVariable, 0x02, m32DragInstantSpeedIdx,	// store raw top speed value to regular top speed
-
-//cont4:
-	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
-	instrBranchIfZero, 14,								// if zero, then perform copy
-	instrLdRegVariable, 0x02, v32DragRawTrapSpeedIdx,	// load raw trap speed
-	instrLdRegVariable, 0x01, m32DragTrapSpeedIdx,		// load regular trap speed
-	instrTestReg, 0x01,									// test regular trap speed
-	instrBranchIfZero, 4,								// if zero, then perform copy
-	instrCmpXtoY, 0x21,									// compare raw trap speed to regular trap speed
-	instrBranchIfGT, 3,									// if raw trap speed is smaller than regular trap speed, skip
-
-//copyTopSpeed:
-	instrStRegVariable, 0x02, m32DragTrapSpeedIdx,		// store raw trap speed value to regular trap speed
-
-//cont5:
-	instrDone											// exit to caller
-};
-
-static void accelerationTest::init(void)
-{
-
-	heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, 0);
-
-	lastAccelTestStatus = 0;
-	accelTestStatus = 0;
-
-}
-
 static uint8_t accelerationTest::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -206,11 +118,11 @@ static void accelerationTest::triggerTest(void)
 
 	uint8_t retVal;
 
-	if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestInProgress)
+	if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestInProgress)
 	{
 
 		// reset accel test capture flags, and signal that accel test is cancelled
-		heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, accelTestCompleteFlags);
+		heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
 		EEPROM::writeByte(pDragAutoFlagIdx, 0);
@@ -221,16 +133,16 @@ static void accelerationTest::triggerTest(void)
 	else
 	{
 
-		if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
+		if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
 		{
 
-			heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
+			heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
 
 			tripVar::reset(dragRawHalfSpeedIdx); // zero out acceleration 1/2 speed setpoint data
 			tripVar::reset(dragRawFullSpeedIdx); // zero out acceleration full speed setpoint data
 			tripVar::reset(dragRawDistanceIdx); // zero out acceleration distance setpoint data
 
-			heart::changeBitFlagBits(v8AccelerationFlags - v8VariableStartIdx, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in v8AccelerationFlags register
+			heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in v8AccelerationFlagsIdx register
 
 			retVal = attTriggerNormal;
 
@@ -245,87 +157,6 @@ static void accelerationTest::triggerTest(void)
 	}
 
 	text::statusOut(m8DevLCDidx, accelTestTriggerMsgs, retVal);
-
-}
-
-static void accelerationTest::mainProcess(void)
-{
-
-	uint8_t oldSREG;
-	uint8_t i;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts to make the next operations atomic
-
-	accelTestStatus = volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)]; // copy accel test flag status to this loop
-
-	SREG = oldSREG; // restore interrupt flag status
-
-	i = (lastAccelTestStatus ^ accelTestStatus) & accelTestClearFlags; // detect any drag race flag changes
-
-	lastAccelTestStatus = accelTestStatus; // copy current accel test flag status for next loop
-
-	if (i)
-	{
-
-		i = accelTestStatus & accelTestClearFlags;
-
-		switch (i)
-		{
-
-			case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = atsReady;
-				break;
-
-			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = atsActive;
-				break;
-
-			case (accelTestFinished):
-				SWEET64::runPrgm(prgmTransferAccelTestTrips, 0);
-				accelTestState = atsFinished;
-				break;
-
-			case (accelTestFinished | accelTestCancelled):
-				accelTestState = atsCancelled;
-				break;
-
-			case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
-				accelTestState = atsCheckPointDist;
-				break;
-
-			case (accelTestActive | accelTestFullSpeed | accelTestDistance):
-				accelTestState = atsCheckPointHalf;
-				break;
-
-			case (accelTestActive | accelTestFullSpeed):
-				accelTestState = atsCheckPointDistHalf;
-				break;
-
-			case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
-				accelTestState = atsCheckPointFull;
-				break;
-
-			case (accelTestActive | accelTestHalfSpeed):
-				accelTestState = atsCheckPointDistFull;
-				break;
-
-			case (accelTestActive | accelTestDistance):
-				accelTestState = atsCheckPointHalfFull;
-				break;
-
-			case (accelTestActive):
-				accelTestState = atsCheckPointDistHalfFull;
-				break;
-
-			default:
-				accelTestState = atsInvalidState;
-				break;
-
-		}
-
-	}
-	else accelTestState = atsNoStatusChange;
 
 }
 

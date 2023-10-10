@@ -1,5 +1,5 @@
 #if defined(useAnalogRead)
-// bit flags for use with v8AnalogCommand
+// bit flags for use with v8AnalogCommandIdx
 static const uint8_t acSampleGround =			0b10000000;
 static const uint8_t acSampleChannel0 =			0b00100000;
 static const uint8_t acSampleChannel1 =			0b00010000;
@@ -51,7 +51,7 @@ static const uint8_t acSampleButtonChannel =	acSampleChannel0;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
 
-// bit flags for use with v8AnalogStatus
+// bit flags for use with v8AnalogStatusIdx
 static const uint8_t asHardwareReady =			0b10000000;
 static const uint8_t asReadChannel0 =			0b00100000;
 static const uint8_t asReadChannel1 =			0b00010000;
@@ -79,12 +79,8 @@ static const uint8_t asReadButtonChannel =		asReadChannel0;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
 
-#if defined(useAnalogButtons)
-volatile uint8_t analogButton;
-
-#endif // defined(useAnalogButtons)
-volatile uint8_t analogValueIdx;
-volatile uint8_t analogBitmask;
+static volatile uint8_t analogValueIdx;
+static volatile uint8_t analogBitmask;
 
 #if defined(useChryslerMAPCorrection)
 static const uint8_t v16AnalogMAPchannelIdx =			v16Analog0Idx;
@@ -103,13 +99,13 @@ static const uint8_t v16AnalogButtonChannelIdx =		v16Analog1Idx;
 static const uint8_t v16AnalogButtonChannelIdx =		v16Analog0Idx;
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 #if defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
 static const uint8_t v16AnalogAlternatorChannelIdx =	v16Analog2Idx;
 #else // defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
 static const uint8_t v16AnalogAlternatorChannelIdx =	v16Analog1Idx;
 #endif // defined(useAnalogButtons) || defined(useChryslerMAPCorrection)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 
 static const uint8_t analogChannelValue[(uint16_t)(v16AnalogLength)] PROGMEM = { // points to the next channel to be read
 #if defined(__AVR_ATmega32U4__)

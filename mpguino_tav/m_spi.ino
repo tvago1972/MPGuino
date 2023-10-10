@@ -7,14 +7,14 @@ static void spi::init(void)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 #if defined(__AVR_ATmega32U4__)
 	PRR0 &= ~(1 << PRSPI);  // turn on SPI hardware
 
 	PORTB |= (1 << PORTB0); // ensure /SS is set high to ensure SPI is set to master when it is enabled
 #if defined(useBluetoothAdaFruitSPI)
-	PORTB &= ~(1 << PORTB4); // disable CS when this pin becomes an output
+	PORTB |= (1 << PORTB4); // disable /CS when this pin becomes an output
 	PORTD |= (1 << PORTD4); // force /RST high when this pin becomes an output
 #endif // defined(useBluetoothAdaFruitSPI)
 
@@ -24,7 +24,7 @@ static void spi::init(void)
 #endif // defined(useBluetoothAdaFruitSPI)
 	DDRB |= (1 << DDB0); // enable /SS as output pin
 #if defined(useBluetoothAdaFruitSPI)
-	DDRB |= (1 << DDB4); // turn CS to an output pin
+	DDRB |= (1 << DDB4); // turn /CS to an output pin
 	DDRD |= (1 << DDD4); // turn /RST to an output pin
 #endif // defined(useBluetoothAdaFruitSPI)
 
@@ -38,9 +38,15 @@ static void spi::init(void)
 
 	PORTB |= (1 << PORTB0); // ensure /SS is set high to ensure SPI is set to master when it is enabled
 #if defined(useBluetoothAdaFruitSPI)
-	PORTH &= ~(1 << PORTH5); // disable CS when this pin becomes an output
+	PORTH |= (1 << PORTH5); // disable /CS when this pin becomes an output
 	PORTG |= (1 << PORTG5); // force /RST high when this pin becomes an output
 #endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useSeeedStudioTFTtouchShield)
+	PORTE |= (1 << PORTE3); // disable /CS when this pin becomes an output
+#endif // defined(useSeeedStudioTFTtouchShield)
+#if defined(useMPGuinoColourTouch)
+	PORTL |= (1 << PORTL2); // disable /CS when this pin becomes an output
+#endif // defined(useMPGuinoColourTouch)
 
 	DDRB &= ~((1 << DDB3) | (1 << DDB2) | (1 << DDB1)); // force MISO, MOSI, and SCLK as input pins
 #if defined(useBluetoothAdaFruitSPI)
@@ -48,9 +54,15 @@ static void spi::init(void)
 #endif // defined(useBluetoothAdaFruitSPI)
 	DDRB |= (1 << DDB0); // enable /SS as output pin
 #if defined(useBluetoothAdaFruitSPI)
-	DDRH |= (1 << DDH5); // turn CS to an output pin
+	DDRH |= (1 << DDH5); // turn /CS to an output pin
 	DDRG |= (1 << DDG5); // turn /RST to an output pin
 #endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useSeeedStudioTFTtouchShield)
+	DDRE |= (1 << DDE3); // turn /CS to an output pin
+#endif // defined(useSeeedStudioTFTtouchShield)
+#if defined(useMPGuinoColourTouch)
+	DDRL |= (1 << DDL2); // turn /CS to an output pin
+#endif // defined(useMPGuinoColourTouch)
 
 	SPCR |= ((1 << SPE) | (1 << MSTR)); // enable SPI and set as master
 
@@ -62,7 +74,7 @@ static void spi::init(void)
 
 	PORTB |= (1 << PORTB2); // ensure /SS is set high to ensure SPI is set to master when it is enabled
 #if defined(useBluetoothAdaFruitSPI)
-	PORTB &= ~(1 << PORTB0); // disable CS when this pin becomes an output
+	PORTB |= (1 << PORTB0); // disable /CS when this pin becomes an output
 	PORTD |= (1 << PORTD4); // force /RST high when this pin becomes an output
 #endif // defined(useBluetoothAdaFruitSPI)
 
@@ -72,7 +84,7 @@ static void spi::init(void)
 #endif // defined(useBluetoothAdaFruitSPI)
 	DDRB |= (1 << DDB2); // enable /SS as output pin
 #if defined(useBluetoothAdaFruitSPI)
-	DDRB |= (1 << DDB0); // turn CS to an output pin
+	DDRB |= (1 << DDB0); // turn /CS to an output pin
 	DDRD |= (1 << DDD4); // turn /RST to an output pin
 #endif // defined(useBluetoothAdaFruitSPI)
 
@@ -91,7 +103,7 @@ static void spi::shutdown(void)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 #if defined(__AVR_ATmega32U4__)
 	SPCR &= ~((1 << SPE) | (1 << MSTR)); // disable SPI
@@ -121,13 +133,25 @@ static void spi::shutdown(void)
 	DDRB &= ~((1 << DDB3) | (1 << DDB2) | (1 << DDB1) | (1 << DDB0)); // turn /SS, MISO, MOSI, and SCLK into input pins
 
 #if defined(useBluetoothAdaFruitSPI)
-	PORTH &= ~((1 << PORTH5) | (1 << PORTH4));
-	PORTG &= ~(1 << PORTG5);
-
 	DDRH &= ~((1 << DDH5) | (1 << DDH4)); // turn CS and IRQ to input pins
 	DDRG &= ~(1 << DDG5); // turn /RST to an input pin
 
+	PORTH &= ~((1 << PORTH5) | (1 << PORTH4));
+	PORTG &= ~(1 << PORTG5);
+
 #endif // defined(useBluetoothAdaFruitSPI)
+#if defined(useSeeedStudioTFTtouchShield)
+	DDRE &= ~(1 << DDE3); // turn /CS to an input pin
+
+	PORTE &= ~(1 << PORTE3);
+
+#endif // defined(useSeeedStudioTFTtouchShield)
+#if defined(useMPGuinoColourTouch)
+	DDRL &= ~(1 << DDL2); // turn /CS to an input pin
+
+	PORTL &= ~(1 << PORTL2);
+
+#endif // defined(useMPGuinoColourTouch)
 	PRR0 |= (1 << PRSPI); // turn off SPI hardware to conserve power
 
 #endif // defined(__AVR_ATmega2560__)
@@ -211,7 +235,7 @@ static void spi::set(uint8_t SPIconfiguration)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 	i = (SPIconfiguration >> 1); // fetch SPI clock divider, clock phase, clock polarity, and data direction bits
 	i |= ((1 << SPE) | (1 << MSTR)); // ensure that SPI enable and SPI master bits are set
@@ -227,11 +251,6 @@ static void spi::set(uint8_t SPIconfiguration)
 static uint8_t spi::transfer(uint8_t byt)
 {
 
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
 	SPDR = byt;
 
 	asm volatile("nop"); // small delay that can prevent wait loop at maximum speed, not noticed otherwise
@@ -239,8 +258,6 @@ static uint8_t spi::transfer(uint8_t byt)
 	while ((SPSR & (1 << SPIF)) == 0); // wait
 
 	byt = SPDR;
-
-	SREG = oldSREG; // restore interrupt flag status
 
 	return byt;
 
@@ -256,7 +273,7 @@ static void blefriend::init(void)
 
 	text::initDev(m8DevBLEfriendIdx, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 
-	heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleResetFlags)); // request hardware reset
+	heart::changeBitFlagBits(v8BLEstatusIdx - v8VariableStartIdx, 0, (bleResetFlags)); // request hardware reset
 
 }
 
@@ -307,7 +324,7 @@ static uint8_t blefriend::outputBufferWithResponse(void)
 		{
 
 			heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-			k = (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting); // update loop flag with packet wait delay status
+			k = (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting); // update loop flag with packet wait delay status
 
 		}
 
@@ -364,7 +381,7 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 
 	spi::set(SPIconfigBluetooth); // ensure SPI is set for bluetooth transceiver
 
-	heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
+	heart::changeBitFlagBits(v8BLEstatusIdx - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
 
 //	text::hexByteOut(m8DevDebugTerminalIdx, outLen);
 //	text::newLine(m8DevDebugTerminalIdx);
@@ -375,16 +392,16 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		do
 		{
 
-			heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleAssertFlags)); // assert chip select
+			heart::changeBitFlagBits(v8BLEstatusIdx - v8VariableStartIdx, 0, (bleAssertFlags)); // assert chip select
 
-			while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAsserting);
+			while (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleAsserting);
 
 			k = spi::transfer(SPI_COMMAND_BYTE); // transmit command byte
 
 			if (k == SPI_IGNORED_BYTE) // BLE board might not be ready
 			{
 
-				if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) k = 1; // if we're still within the response delay period, signal to retry
+				if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) k = 1; // if we're still within the response delay period, signal to retry
 				else k = 0; // otherwise, we ran out of time
 
 			}
@@ -393,7 +410,7 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		}
 		while (k); // if retrying, loop back
 
-		if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
+		if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
 		{
 
 			spi::transfer(cW->u8[0]); // output SDEP command high byte
@@ -407,7 +424,7 @@ static uint8_t blefriend::writePacketHeader(uint16_t cmdWord, uint8_t loadLen)
 		else k = 1;
 
 	}
-	while ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) && (k));
+	while ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) && (k));
 
 	return (k == 0); // return a 1 upon successful transmission of a packet header, or 0 on timeout
 
@@ -432,7 +449,7 @@ static uint8_t blefriend::readPacket(void)
 
 		spi::set(SPIconfigBluetooth); // ensure SPI is set for bluetooth transceiver
 
-		heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
+		heart::changeBitFlagBits(v8BLEstatusIdx - v8VariableStartIdx, 0, (blePacketWaitFlags)); // start tranceiver delay
 
 		do
 		{
@@ -440,16 +457,16 @@ static uint8_t blefriend::readPacket(void)
 			do
 			{
 
-				heart::changeBitFlagBits(v8BLEstatus - v8VariableStartIdx, 0, (bleAssertFlags)); //  assert chip select
+				heart::changeBitFlagBits(v8BLEstatusIdx - v8VariableStartIdx, 0, (bleAssertFlags)); //  assert chip select
 
-				while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAsserting);
+				while (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleAsserting);
 
 				k = spi::transfer(0xFF); // transmit dummy byte
 
 				if ((k == SPI_IGNORED_BYTE) || (k == SPI_OVERREAD_BYTE)) // BLE board might not be ready
 				{
 
-					if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) i = 1; // if we're still within the response delay period, signal to retry
+					if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) i = 1; // if we're still within the response delay period, signal to retry
 					else i = 0; // otherwise, we ran out of time
 
 				}
@@ -458,7 +475,7 @@ static uint8_t blefriend::readPacket(void)
 			}
 			while (i); // if retrying, loop back
 
-			if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
+			if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) // if still within valid packet delay
 			{
 
 				cW->u8[0] = spi::transfer(0xFF); // transmit dummy byte to fetch command word low byte
@@ -474,7 +491,7 @@ static uint8_t blefriend::readPacket(void)
 						{
 
 							ringBuffer::push(rbIdxBLEfriendIn, '*');
-							while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+							while (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 
 						}
 						else
@@ -489,7 +506,7 @@ static uint8_t blefriend::readPacket(void)
 								ringBuffer::push(rbIdxBLEfriendIn, '&');
 								partialPayload = 0;
 
-								while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+								while (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 
 							}
 							else
@@ -515,7 +532,7 @@ static uint8_t blefriend::readPacket(void)
 
 					default:
 						ringBuffer::push(rbIdxBLEfriendIn, '!');
-						while (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
+						while (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) spi::transfer(0xFF); // transmit dummy byte
 						break;
 
 				}
@@ -523,7 +540,7 @@ static uint8_t blefriend::readPacket(void)
 			}
 
 		}
-		while ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) && (i));
+		while ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) && (i));
 
 		releaseCS();
 
@@ -566,6 +583,7 @@ static uint8_t blefriend::isCSreleased(void)
 #endif // defined(__AVR_ATmega328P__)
 
 }
+
 static void blefriend::releaseCS(void)
 {
 

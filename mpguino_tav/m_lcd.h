@@ -24,9 +24,9 @@ namespace LCD /* LCD hardware support section prototype */
 #if defined(useLCDcontrast)
 	static void setContrast(uint8_t idx);
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	static void setRGBcolor(uint8_t idx);
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useLCDfonts)
 	static void loadCGRAMfont(const char * fontPtr);
 #endif // defined(useLCDfonts)
@@ -38,9 +38,8 @@ namespace LCD /* LCD hardware support section prototype */
 #endif // defined(useLCDgraphics)
 #if defined(use4BitLCD)
 	static void writeCommand(uint8_t value);
-	static void writeByte(uint8_t value, uint8_t flags, uint8_t delay);
-	static void writeNybble(uint8_t value, uint8_t flags);
-	static void outputNybble(uint8_t s);
+	static void writeByte(uint8_t value, uint8_t flags);
+	static void outputNybble(uint8_t value);
 #endif // defined(use4BitLCD)
 
 };
@@ -49,10 +48,10 @@ namespace LCD /* LCD hardware support section prototype */
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;
 
-static uint8_t lcdAddr3ssX;
-static uint8_t lcdAddr3ssY;
+static uint8_t lcdPositionX;
+static uint8_t lcdPositionY;
 
-static volatile unsigned int lcdDelayCount;
+static volatile uint16_t lcdDelayCount;
 
 #if defined(useLCDgraphics)
 static const uint8_t cgramFlagDirty =		0b10000000;
@@ -122,7 +121,7 @@ static const uint8_t lcdContrast =			0; // not used
 #endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
 static volatile uint8_t portLCD; // LCD port register expander byte
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 static volatile uint8_t portSwitches; // contains two out of the three LCD backlighting LED pins
 
 static const uint8_t lcdDirection =			0b01000000; // Legacy and Mega2560 Arduino LCDs have their pin R/W (5) tied directly to ground, so they don't need this assignment
@@ -148,7 +147,7 @@ static const uint8_t RGBcolors[8] PROGMEM =
 	0b00000000,	// white
 };
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
 
 // these definitions are for any TWI LCD module using a PCF8574 port expander
@@ -193,9 +192,8 @@ static const uint8_t lcdSetCGRAMaddress =			0b01000000;
 static const uint8_t lcdSetDDRAMaddress =			0b10000000;
 
 // these flags tell LCD::writeData whether to output the passed in character, and how to handle the character if it is output
-static const uint8_t lcdSendNybble =				0b00001000;
+static const uint8_t lcdSendByte =					0b00001000;
 static const uint8_t lcdDataByte =					0b00000100;
-static const uint8_t lcdCommandByte =				0b00000000;
 
 // these flags tell LCD::writeData what kind of delay is associated with the character
 static const uint8_t lcdDelay0015ms =				0x03;
@@ -203,7 +201,6 @@ static const uint8_t lcdDelay4100us =				0x02;
 static const uint8_t lcdDelay0100us =				0x01;
 static const uint8_t lcdDelay0040us =				0x00;
 static const uint8_t lcdDelayFlags =				lcdDataByte | 0x03;
-static const uint8_t lcdSendFlags =					lcdSendNybble | 0x03;
 
 static uint8_t LCDgotoXYaddress;
 

@@ -1,23 +1,27 @@
+#if defined(useClockSupport)
+namespace clockSet /* Clock support section prototype */
+{
+
 #if defined(useClockDisplay)
-namespace clockDisplay /* Big Clock Display support section prototype */
-{
-
-	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
-
-};
-
-namespace clockSet
-{
-
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void entry(void);
 	static void changeDigitUp(void);
 	static void changeDigitDown(void);
 	static void set(void);
 	static void cancel(void);
+#endif // defined(useClockDisplay)
 #if defined(useDS1307clock)
 	static void setFromRTC(void);
 #endif // defined(useDS1307clock)
+
+};
+
+#endif // defined(useClockSupport)
+#if defined(useClockDisplay)
+namespace clockDisplay /* Big Clock Display support section prototype */
+{
+
+	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 
 };
 

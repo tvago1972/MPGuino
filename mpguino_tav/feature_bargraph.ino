@@ -7,7 +7,7 @@ static void bgFEvsSsupport::reset(void)
 
 	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
 
-	FEvSpdTripIdx = 255;
+	mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] = 255;
 
 }
 
@@ -15,18 +15,20 @@ static void bgFEvsSsupport::reset(void)
 #if defined(useBarFuelEconVsTime)
 /* fuel economy over time histograph support section */
 
-static uint8_t bgFEvsTsupport::getFEvTperiodIdx(void)
+static uint8_t bgFEvsTsupport::getFEvTimeIdx(void)
 {
 
 	uint8_t oldSREG;
 	uint8_t retVal;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
-	retVal = FEvTperiodIdx;
+	retVal = volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)];
 
 	SREG = oldSREG; // restore interrupt flag status
+
+	retVal += FEvsTimePeriodIdx;
 
 	return retVal;
 
@@ -116,7 +118,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			line0CalcIdx = line1CalcIdx;
 			line0TripIdx = currentIdx;
 
-			line1TripIdx = bgFEvsTsupport::getFEvTperiodIdx();
+			line1TripIdx = bgFEvsTsupport::getFEvTimeIdx();
 			break;
 
 #endif // defined(useBarFuelEconVsTime)
@@ -124,7 +126,8 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
 
-			if (FEvSpdTripIdx < tripSlotCount) i = FEvSpdTripIdx - FEvsSpeedIdx + 1;
+			if (mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] < tripSlotCount)
+				i = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] - FEvsSpeedIdx + 1;
 			else i = 0;
 
 			graphCursorPos = i - 1;
@@ -135,9 +138,9 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			if (i)
 			{
 
-				line0TripIdx = FEvSpdTripIdx;
+				line0TripIdx = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)];
 
-				if (mainLoopHeartBeat & 0b11110001)
+				if (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b11110001)
 				{
 
 					line1CalcIdx = tSpeed;
@@ -313,7 +316,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	{
 
 		byt = mainProgram8Variables[(uint16_t)(x + m8BarGraphIdx - m8VariableStartIdx)];
-		blinkFlag = ((x == cursorPos) && (mainLoopHeartBeat & 0b10001000));
+		blinkFlag = ((x == cursorPos) && (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b10001000));
 
 		switch (byt)
 		{

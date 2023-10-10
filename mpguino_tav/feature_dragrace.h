@@ -2,14 +2,90 @@
 namespace accelerationTest /* Acceleration Test support section prototype */
 {
 
-	static void init(void);
-	static void mainProcess(void);
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getAccelTestDisplayPageFormat(uint8_t formatIdx);
 	static void triggerTest(void);
 
 }
+
+static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 16,								// if zero, then perform copy
+	instrLdRegTripVar, 0x01, dragRawHalfSpeedIdx, rvVSScycleIdx,	// load raw half speed register elapsed time
+	instrLdRegTripVar, 0x02, dragHalfSpeedIdx, rvVSScycleIdx,		// load regular half speed register elapsed time
+	instrTestReg, 0x02,									// test regular half speed register elapsed time
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw half speed elapsed time to regular half speed elapsed time
+	instrBranchIfGT, 8,									// if raw half speed elapsed time is smaller than regular half speed elapsed time, skip
+
+//copyHalfSpeed:
+	instrLxdI, dragRawHalfSpeedIdx,						// transfer accel test raw half speed trip to accel test half speed trip
+	instrCall, tLoadTrip,
+	instrLxdI, dragHalfSpeedIdx,
+	instrCall, tSaveTrip,
+
+//cont1:
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 16,								// if zero, then perform copy
+	instrLdRegTripVar, 0x01, dragRawFullSpeedIdx, rvVSScycleIdx,	// load raw full speed register elapsed time
+	instrLdRegTripVar, 0x02, dragFullSpeedIdx, rvVSScycleIdx,		// load regular full speed register elapsed time
+	instrTestReg, 0x02,									// test regular full speed register elapsed time
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw full speed elapsed time to regular full speed elapsed time
+	instrBranchIfGT, 8,									// if raw full speed elapsed time is smaller than regular full speed elapsed time, skip
+
+//copyFullSpeed:
+	instrLxdI, dragRawFullSpeedIdx,						// transfer accel test raw full speed trip to accel test full speed trip
+	instrCall, tLoadTrip,
+	instrLxdI, dragFullSpeedIdx,
+	instrCall, tSaveTrip,
+
+//cont2:
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 16,								// if zero, then perform copy
+	instrLdRegTripVar, 0x01, dragRawDistanceIdx, rvVSScycleIdx,	// load raw distance register elapsed time
+	instrLdRegTripVar, 0x02, dragDistanceIdx, rvVSScycleIdx,		// load regular distance register elapsed time
+	instrTestReg, 0x02,									// test regular distance register elapsed time
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw distance elapsed time to regular distance elapsed time
+	instrBranchIfGT, 8,									// if raw distance elapsed time is smaller than regular distance elapsed time, skip
+
+//copyDistance:
+	instrLxdI, dragRawDistanceIdx,						// transfer accel test raw distance trip to accel test distance trip
+	instrCall, tLoadTrip,
+	instrLxdI, dragDistanceIdx,
+	instrCall, tSaveTrip,
+
+//cont3:
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 14,								// if zero, then perform copy
+	instrLdRegVariable, 0x02, v32DragRawInstantSpeedIdx,	// load raw top speed
+	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load regular top speed
+	instrTestReg, 0x01,									// test regular top speed
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw top speed to regular top speed
+	instrBranchIfGT, 3,									// if raw top speed is smaller than regular top speed, skip
+
+//copyTopSpeed:
+	instrStRegVariable, 0x02, m32DragInstantSpeedIdx,	// store raw top speed value to regular top speed
+
+//cont4:
+	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
+	instrBranchIfZero, 14,								// if zero, then perform copy
+	instrLdRegVariable, 0x02, v32DragRawTrapSpeedIdx,	// load raw trap speed
+	instrLdRegVariable, 0x01, m32DragTrapSpeedIdx,		// load regular trap speed
+	instrTestReg, 0x01,									// test regular trap speed
+	instrBranchIfZero, 4,								// if zero, then perform copy
+	instrCmpXtoY, 0x21,									// compare raw trap speed to regular trap speed
+	instrBranchIfGT, 3,									// if raw trap speed is smaller than regular trap speed, skip
+
+//copyTopSpeed:
+	instrStRegVariable, 0x02, m32DragTrapSpeedIdx,		// store raw trap speed value to regular trap speed
+
+//cont5:
+	instrDone											// exit to caller
+};
 
 static const char accelTestMenuTitles[] PROGMEM = {
 	"Stats" tcEOSCR
@@ -27,7 +103,7 @@ static const uint8_t accelTestParamList[] PROGMEM = {
 	pVehicleMassIdx,
 };
 
-// bit flags for use with v8AccelerationFlags
+// bit flags for use with v8AccelerationFlagsIdx
 static const uint8_t accelTestActive =				0b10000000;
 static const uint8_t accelTestTriggered =			0b01000000;
 static const uint8_t accelTestCancelled =			0b00100000;

@@ -209,9 +209,9 @@ static const uint8_t pSizeBrightness =					2;
 #if defined(useLCDcontrast)
 static const uint8_t pSizeContrast =					1;
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 static const uint8_t pSizeLCDcolor =					3;
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 static const uint8_t pSizeFuelUnitCost =				24;
@@ -220,9 +220,9 @@ static const uint8_t pSizeFuelUnitCost =				24;
 static const uint8_t pSizeOutputPin1Mode =				3;
 static const uint8_t pSizeOutputPin2Mode =				3;
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint8_t pSizeVoltageOffset =				12;
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 static const uint8_t pSizeSerialDataLogging =			1;
 #endif // defined(useDataLoggingOutput)
@@ -361,10 +361,10 @@ static const uint16_t pAddressBrightness =					nextAllowedValue;
 static const uint16_t pAddressContrast =					nextAllowedValue;
 #define nextAllowedValue pAddressContrast + byteSize(pSizeContrast)
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 static const uint16_t pAddressLCDcolor =					nextAllowedValue;
 #define nextAllowedValue pAddressLCDcolor + byteSize(pSizeLCDcolor)
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 static const uint16_t pAddressFuelUnitCost =				nextAllowedValue;
@@ -375,10 +375,10 @@ static const uint16_t pAddressOutputPin1Mode =				nextAllowedValue;
 static const uint16_t pAddressOutputPin2Mode =				pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
 #define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint16_t pAddressVoltageOffset =				nextAllowedValue;
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 static const uint16_t pAddressSerialDataLogging =			nextAllowedValue;
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
@@ -513,7 +513,7 @@ static const uint16_t eeAdrMenuCursorEnd =					eeAdrMenuCursorStart + displayCou
 #define nextAllowedValue eeAdrMenuCursorEnd
 #endif // defined(useButtonInput)
 
-static const unsigned int eeAdrStorageEnd =					nextAllowedValue;
+static const uint16_t eeAdrStorageEnd =						nextAllowedValue;
 
 #define nextAllowedValue 0
 
@@ -554,10 +554,10 @@ static const uint8_t pBrightnessIdx =					nextAllowedValue;
 static const uint8_t pContrastIdx =						nextAllowedValue;
 #define nextAllowedValue pContrastIdx + 1
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 static const uint8_t pLCDcolorIdx =						nextAllowedValue;
 #define nextAllowedValue pLCDcolorIdx + 1
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 static const uint8_t pCostPerQuantity =					nextAllowedValue;
@@ -568,10 +568,10 @@ static const uint8_t pOutputPin1Mode =					nextAllowedValue;
 static const uint8_t pOutputPin2Mode =					pOutputPin1Mode + 1;
 #define nextAllowedValue pOutputPin2Mode + 1
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint8_t pVoltageOffset =					nextAllowedValue;
 #define nextAllowedValue pVoltageOffset + 1
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 static const uint8_t pSerialDataLoggingIdx =			nextAllowedValue;
 #define nextAllowedValue pSerialDataLoggingIdx + 1
@@ -759,9 +759,9 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useLCDcontrast)
 	"pContrastIdx" tcEOS
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	"pLCDcolorIdx" tcEOS
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	"pCostPerQuantity" tcEOS
@@ -770,9 +770,9 @@ static const char terminalParameterNames[] PROGMEM = {
 	"pOutputPin1Mode" tcEOS
 	"pOutputPin2Mode" tcEOS
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	"pVoltageOffset" tcEOS
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	"pSerialDataLoggingIdx" tcEOS
 #endif // defined(useDataLoggingOutput)
@@ -1063,12 +1063,24 @@ static const char terminalExpandedParameterNames[] PROGMEM = {
 // 0byyy0 0000 - MPGuino parameter action needed that is critical to measurements of fuel injection, VSS, timeouts, and the like
 // 0b0000 0xxx - fractional part of parameter size in bits
 
-static const uint8_t pfDoNothing =				0;
-static const uint8_t pfSoftwareInitMPGuino =	pfDoNothing + 32;
-static const uint8_t pfHardwareInitMPGuino =	pfSoftwareInitMPGuino + 32;
-static const uint8_t pfDoMetricModeConversion =	pfHardwareInitMPGuino + 32;
-static const uint8_t pfChangeDisplay =			pfDoMetricModeConversion + 32;
-static const uint8_t pfCalculateFuelParams =	pfChangeDisplay + 32;
+static const uint8_t pfDoNothing =					0;
+static const uint8_t pfSoftwareInitMPGuino =		pfDoNothing + 8;
+static const uint8_t pfHardwareInitMPGuino =		pfSoftwareInitMPGuino + 8;
+static const uint8_t pfDoMetricModeConversion =		pfHardwareInitMPGuino + 8;
+static const uint8_t pfChangeDisplay =				pfDoMetricModeConversion + 8;
+static const uint8_t pfCalculateFuelParams =		pfChangeDisplay + 8;
+#define nextAllowedValue pfCalculateFuelParams + 8
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t pfHWresetAndBFEvSreset =		nextAllowedValue;
+static const uint8_t pfSWresetAndBFEvSreset =		pfHWresetAndBFEvSreset + 8;
+#define nextAllowedValue pfSWresetAndBFEvSreset + 8
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useChryslerMAPCorrection)
+static const uint8_t pfHWresetAndFuelParamCalc =	nextAllowedValue;
+#define nextAllowedValue pfHWresetAndFuelParamCalc + 8
+#endif // defined(useChryslerMAPCorrection)
+
+static const uint8_t pfBitmask =					0xF8;
 
 static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeSignature & 0x07) | pfHardwareInitMPGuino,							// EEPROM MPGuino signature long word
@@ -1076,19 +1088,23 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeAlternateFE & 0x07) | pfChangeDisplay,								// 0 - MPG or L/100km, 1 - G/100mile or km/L
 	(pSizeMicroSecondsPerGallon & 0x07) | pfSoftwareInitMPGuino,				// Microseconds per US gallon
 	(pSizeInjEdgeTrigger & 0x07) | pfHardwareInitMPGuino,						// Fuel Injector Edge Trigger (0 - Falling Edge, 1 - Rising Edge)
-	(pSizeInjectorSettleTime & 0x07) | pfSoftwareInitMPGuino,					// Fuel Injector Opening Delay Time (us)
-	(pSizeInjPer2CrankRev & 0x07) | pfSoftwareInitMPGuino,						// Crankshaft Revolutions per Fuel Injector Event
-	(pSizeMinGoodRPM & 0x07) | pfSoftwareInitMPGuino,							// Minimum Engine Speed For Engine On (RPM)
-	(pSizePulsesPerDistance & 0x07) | pfSoftwareInitMPGuino,					// VSS Pulses (per mile or per km)
+	(pSizeInjectorSettleTime & 0x07) | pfHardwareInitMPGuino,					// Fuel Injector Opening Delay Time (us)
+	(pSizeInjPer2CrankRev & 0x07) | pfHardwareInitMPGuino,						// Crankshaft Revolutions per Fuel Injector Event
+	(pSizeMinGoodRPM & 0x07) | pfHardwareInitMPGuino,							// Minimum Engine Speed For Engine On (RPM)
+#if defined(useBarFuelEconVsSpeed)
+	(pSizePulsesPerDistance & 0x07) | pfHWresetAndBFEvSreset,					// VSS Pulses (per mile or per km)
+#else // defined(useBarFuelEconVsSpeed)
+	(pSizePulsesPerDistance & 0x07) | pfHardwareInitMPGuino,					// VSS Pulses (per mile or per km)
+#endif // defined(useBarFuelEconVsSpeed)
 	(pSizeVSSpause & 0x07) | pfHardwareInitMPGuino,								// VSS Pause Debounce Count (ms)
-	(pSizeMinGoodSpeed & 0x07) | pfSoftwareInitMPGuino,							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
+	(pSizeMinGoodSpeed & 0x07) | pfHardwareInitMPGuino,							// Minimum Vehicle Speed for Vehicle in Motion (MPH or kph) * 1000
 	(pSizeTankSize & 0x07) | pfSoftwareInitMPGuino,								// Tank Capacity * 1000 (gal or L)
 	(pSizeTankBingoSize & 0x07) | pfSoftwareInitMPGuino,						// Bingo Fuel (reserve tank) Capacity * 1000 (gal or L)
-	(pSizeIdleTimeout & 0x07) | pfSoftwareInitMPGuino,							// Engine Idle Timeout (s)
-	(pSizeEOCtimeout & 0x07) | pfSoftwareInitMPGuino,							// Engine-Off Coasting Timeout (s)
-	(pSizeButtonTimeout & 0x07) | pfSoftwareInitMPGuino,						// Button Press Activity Timeout (s)
-	(pSizeParkTimeout & 0x07) | pfSoftwareInitMPGuino,							// Vehicle Parked (engine off, no movement) Timeout (s)
-	(pSizeActivityTimeout & 0x07) | pfSoftwareInitMPGuino,						// Activity (engine off, no movement, no button press) Timeout (s)
+	(pSizeIdleTimeout & 0x07) | pfHardwareInitMPGuino,							// Engine Idle Timeout (s)
+	(pSizeEOCtimeout & 0x07) | pfHardwareInitMPGuino,							// Engine-Off Coasting Timeout (s)
+	(pSizeButtonTimeout & 0x07) | pfHardwareInitMPGuino,						// Button Press Activity Timeout (s)
+	(pSizeParkTimeout & 0x07) | pfHardwareInitMPGuino,							// Vehicle Parked (engine off, no movement) Timeout (s)
+	(pSizeActivityTimeout & 0x07) | pfHardwareInitMPGuino,						// Activity (engine off, no movement, no button press) Timeout (s)
 	(pSizeScratchpad & 0x07),													// Scratchpad Memory
 #if defined(useButtonInput)
 	(pSizeWakeupResetCurrentOnEngine & 0x07),									// Enable current trip reset upon wakeup due to engine running
@@ -1099,9 +1115,9 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useLCDcontrast)
 	(pSizeContrast & 0x07) | pfChangeDisplay,									// LCD Contrast
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	(pSizeLCDcolor & 0x07) | pfChangeDisplay,									// LCD Backlight color
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	(pSizeFuelUnitCost & 0x07),													// Price per unit volume of fuel
@@ -1110,9 +1126,9 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeOutputPin1Mode & 0x07),												// Output Pin 1 mode
 	(pSizeOutputPin2Mode & 0x07),												// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	(pSizeVoltageOffset & 0x07),												// diode offset from V(alternator)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	(pSizeSerialDataLogging & 0x07),											// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
@@ -1123,14 +1139,18 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeBluetoothOutput & 0x07),												// Bluetooth output Enable
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-	(pSizeFEvsTime & 0x07) | pfSoftwareInitMPGuino,								// Period Of FE over Time BarGraph Bar (s)
+	(pSizeFEvsTime & 0x07) | pfHardwareInitMPGuino,								// Period Of FE over Time BarGraph Bar (s)
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	(pSizeBarLowSpeedCutoff & 0x07) | pfSoftwareInitMPGuino,					// FE vs Speed Bargraph lower speed
-	(pSizeBarSpeedQuantumIdx & 0x07) | pfSoftwareInitMPGuino,					// FE vs Speed Bargraph speed bar size
+	(pSizeBarLowSpeedCutoff & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph lower speed
+	(pSizeBarSpeedQuantumIdx & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph speed bar size
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
-	(pSizeSysFuelPressure & 0x07) | pfSoftwareInitMPGuino,						// Fuel System Pressure (Pa or * 1000 psig)
+#if defined(useChryslerMAPCorrection)
+	(pSizeSysFuelPressure & 0x07) | pfHWresetAndFuelParamCalc,					// Fuel System Pressure (Pa or * 1000 psig)
+#else // defined(useChryslerMAPCorrection)
+	(pSizeSysFuelPressure & 0x07) | pfCalculateFuelParams,						// Fuel System Pressure (Pa or * 1000 psig)
+#endif // defined(useChryslerMAPCorrection)
 #endif // defined(useFuelPressure)
 #ifdef useCalculatedFuelFactor
 	(pSizeRefFuelPressure & 0x07) | pfCalculateFuelParams,						// Reference Fuel Injector Rated Pressure (Pa or * 1000 psig)
@@ -1138,17 +1158,17 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeInjectorSize & 0x07) | pfCalculateFuelParams,							// Fuel Injector Rated Capacity in cc/min * 1000 at Reference Fuel Injector Rated Pressure
 #endif // useCalculatedFuelFactor
 #if defined(useChryslerMAPCorrection)
-	(pSizeMAPsensorFloor & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Floor * 1000 (V)
-	(pSizeMAPsensorCeiling & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Ceiling * 1000 (V)
-	(pSizeMAPsensorRange & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Range (Pa or * 1000 psig)
-	(pSizeMAPsensorOffset & 0x07) | pfSoftwareInitMPGuino,						// MAP Sensor Offset (Pa or * 1000 psia)
+	(pSizeMAPsensorFloor & 0x07) | pfHardwareInitMPGuino,						// MAP Sensor Floor * 1000 (V)
+	(pSizeMAPsensorCeiling & 0x07) | pfHardwareInitMPGuino,						// MAP Sensor Ceiling * 1000 (V)
+	(pSizeMAPsensorRange & 0x07) | pfHardwareInitMPGuino,						// MAP Sensor Range (Pa or * 1000 psig)
+	(pSizeMAPsensorOffset & 0x07),												// MAP Sensor Offset (Pa or * 1000 psia)
 #if defined(useChryslerBaroSensor)
-	(pSizeBaroSensorFloor & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Floor * 1000 (V)
-	(pSizeBaroSensorCeiling & 0x07) | pfSoftwareInitMPGuino,					// Barometric Sensor Ceiling * 1000 (V)
-	(pSizeBaroSensorRange & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Range (Pa or * 1000 psig)
-	(pSizeBaroSensorOffset & 0x07) | pfSoftwareInitMPGuino,						// Barometric Sensor Offset (Pa or * 1000 psia)
+	(pSizeBaroSensorFloor & 0x07) | pfHardwareInitMPGuino,						// Barometric Sensor Floor * 1000 (V)
+	(pSizeBaroSensorCeiling & 0x07) | pfHardwareInitMPGuino,					// Barometric Sensor Ceiling * 1000 (V)
+	(pSizeBaroSensorRange & 0x07) | pfHardwareInitMPGuino,						// Barometric Sensor Range (Pa or * 1000 psig)
+	(pSizeBaroSensorOffset & 0x07),												// Barometric Sensor Offset (Pa or * 1000 psia)
 #else // defined(useChryslerBaroSensor)
-	(pSizeBarometricPressure & 0x07) | pfSoftwareInitMPGuino,					// Reference Barometric Pressure
+	(pSizeBarometricPressure & 0x07) | pfHardwareInitMPGuino,					// Reference Barometric Pressure
 #endif // defined(useChryslerBaroSensor)
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
@@ -1159,11 +1179,11 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeCoefficientD & 0x07),													// Vehicle C(d) * 1000
 	(pSizeCoefficientV & 0x07),													// Vehicle C(v) * 1000
 	(pSizeCoefficientRR & 0x07),												// Vehicle C(rr) * 1000
-	(pSizeCoastdownSamplePeriod & 0x07),										// Sample Period in seconds
+	(pSizeCoastdownSamplePeriod & 0x07) | pfHardwareInitMPGuino,				// Sample Period in seconds
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	(pSizeDragSpeed & 0x07),													// Drag speed cutoff (MPH or kph) * 1000
-	(pSizeDragDistance & 0x07),													// Drag distance cutoff (miles or km) * 1000
+	(pSizeDragSpeed & 0x07) | pfHardwareInitMPGuino,							// Drag speed cutoff (MPH or kph) * 1000
+	(pSizeDragDistance & 0x07) | pfHardwareInitMPGuino,							// Drag distance cutoff (miles or km) * 1000
 	(pSizeDragAutoFlag & 0x07),													// Drag automatic retrigger on vehicle stop
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
@@ -1178,7 +1198,7 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeDisplayIdx & 0x07) | pfChangeDisplay,									// current display index
 #if LCDcharHeight == 4
 	(pSizeBottomDisplayIdx & 0x07) | pfChangeDisplay,							// bottom display index
-	(pSizeBottomCursorIdx & 0x07),												// bottom display cursor position
+	(pSizeBottomCursorIdx & 0x07) | pfChangeDisplay,							// bottom display cursor position
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
 #if defined(useEEPROMtripStorage)
@@ -1243,9 +1263,9 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useLCDcontrast)
 	pAddressContrast,					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	pAddressLCDcolor,					// LCD Backlight color
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	pAddressFuelUnitCost,				// Price per unit volume of fuel
@@ -1254,9 +1274,9 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	pAddressOutputPin1Mode,				// Output Pin 1 mode
 	pAddressOutputPin2Mode,				// Output Pin 2 mode
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	pAddressVoltageOffset,				// diode offset from V(alternator)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	pAddressSerialDataLogging,			// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)
@@ -1394,9 +1414,9 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 #if defined(useLCDcontrast)
 	55,					// LCD Contrast
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	3,					// LCD Backlight color
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	2710259,			// Price per unit volume of fuel (this prices is for a liter of diesel at 717 HUF / liter)
@@ -1405,9 +1425,9 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 	0,					// Output pin 1 mode
 	0,					// Output pin 2 mode
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	700,				// diode offset from V(alternator) (via meelis11)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	1,					// Serial Data Logging Enable
 #endif // defined(useDataLoggingOutput)

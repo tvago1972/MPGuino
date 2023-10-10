@@ -78,7 +78,6 @@ static const uint8_t btiStringInput =			0b01000000;
 static const uint8_t btiGetSecondaryCharacter =	0b00100000;
 static const uint8_t btiAllowPolling =			0b00010000;
 
-static uint8_t btDelayFlag;
 static uint8_t btOutputState;
 
 static const uint8_t btoFlagActiveOutput =		0b10000000;
@@ -107,9 +106,9 @@ static const char btOutputList[] PROGMEM = { // any undefined letters simply get
 
 static const bluetoothFunction btFunctionList[] PROGMEM = {
 	{'A',	((instantIdx << 8 ) |					(tSpeed))},
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	{'B',	(										(tAlternatorChannel))},
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 	{'C',	((tankIdx << 8 ) |						(tFuelUsed))},
 	{'D',	((currentIdx << 8 ) |					(tDistance))},
 	{'E',	((tankIdx << 8 ) |						(tDistance))},
@@ -132,9 +131,9 @@ static const bluetoothFunction btFunctionList[] PROGMEM = {
 	{'W',	((pInjectorSettleTimeIdx << 8 ) |		(tGetBTparameterValue))},
 	{'X',	((pVSSpauseIdx << 8 ) |					(tGetBTparameterValue))},
 	{'Y',	((pInjEdgeTriggerIdx << 8 ) |			(tGetBTparameterValue))},
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	{'Z',	((pVoltageOffset << 8 ) |				(tGetBTparameterValue))},
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 };
 
 static const uint8_t btFunctionListLength = (sizeof(btFunctionList) / sizeof(bluetoothFunction));

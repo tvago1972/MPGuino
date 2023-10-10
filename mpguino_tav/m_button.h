@@ -131,8 +131,7 @@ static uint8_t displayCursor[(uint16_t)(displayCountTotal)];
 static uint8_t menuHeight[(uint16_t)(displayCountMenu)];
 
 #if defined(useTWIbuttons)
-#if defined(useAdafruitRGBLCDshield)
-#define useButtonCrossConfig true
+#if defined(useAdafruitRGBLCDbuttons)
 const uint8_t buttonLbit = 			0b00010000; // GPIO A bit 4, left button
 const uint8_t buttonCbit = 			0b00000001; // GPIO A bit 0, select button
 const uint8_t buttonRbit = 			0b00000010; // GPIO A bit 1, right button
@@ -143,9 +142,8 @@ const uint8_t longButtonBit =		0b00100000; // GPIO A bit 5 isn't being used for 
 
 const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit | buttonRbit;
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDbuttons)
 #if defined(useGenericTWIbuttons)
-#define useButtonCrossConfig true
 const uint8_t buttonLbit = 			0b00010000;
 const uint8_t buttonCbit = 			0b00001000;
 const uint8_t buttonRbit = 			0b00000100;
@@ -162,7 +160,6 @@ const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit |
 
 #endif // defined(useTWIbuttons)
 #if defined(useDebugButtons)
-#define useButtonCrossConfig true
 const uint8_t buttonLbit = 			0b00000001;
 const uint8_t buttonCbit = 			0b00000010;
 const uint8_t buttonRbit = 			0b00000100;
@@ -175,7 +172,6 @@ const uint8_t buttonMask =			buttonUbit | buttonDbit | buttonLbit | buttonCbit |
 
 #endif // defined(useDebugButtons)
 #if defined(useAnalogButtons)
-#define useButtonCrossConfig true
 const uint8_t buttonLbit = 			0b00000001;
 const uint8_t buttonCbit = 			0b00000010;
 const uint8_t buttonRbit = 			0b00000100;
@@ -193,95 +189,95 @@ const uint8_t buttonLbit = 			(1 << PINK3);
 const uint8_t buttonCbit = 			(1 << PINK4);
 const uint8_t buttonRbit = 			(1 << PINK5);
 
-const uint8_t longButtonBit =		(1 << PINK6); // PINK6 isn't being used for anything right now
+static const uint8_t longButtonBit =		(1 << PINK6); // PINK6 isn't being used for anything right now
 
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-const uint8_t buttonLbit = 			(1 << PINC3);
-const uint8_t buttonCbit = 			(1 << PINC4);
-const uint8_t buttonRbit = 			(1 << PINC5);
+static const uint8_t buttonLbit = 			(1 << PINC3);
+static const uint8_t buttonCbit = 			(1 << PINC4);
+static const uint8_t buttonRbit = 			(1 << PINC5);
 
-const uint8_t longButtonBit =		(1 << PINC6); // PINC6 is used as the RESET pin, so this value is safe to use for long-press signalling
+static const uint8_t longButtonBit =		(1 << PINC6); // PINC6 is used as the RESET pin, so this value is safe to use for long-press signalling
 
 #endif // defined(__AVR_ATmega328P__)
-const uint8_t buttonMask =			buttonLbit | buttonCbit | buttonRbit;
+static const uint8_t buttonMask =			buttonLbit | buttonCbit | buttonRbit;
 
 #endif // defined(useLegacyButtons)
-const uint8_t buttonsUp =			0;
-const uint8_t btnShortPressL =		buttonLbit;
-const uint8_t btnShortPressC =		buttonCbit;
-const uint8_t btnShortPressR =		buttonRbit;
-const uint8_t btnShortPressLC =		buttonCbit | buttonLbit;
-const uint8_t btnShortPressLR =		buttonRbit | buttonLbit;
-const uint8_t btnShortPressCR =		buttonRbit | buttonCbit;
-const uint8_t btnShortPressLCR =	buttonRbit | btnShortPressLC;
+static const uint8_t buttonsUp =			0;
+static const uint8_t btnShortPressL =		buttonLbit;
+static const uint8_t btnShortPressC =		buttonCbit;
+static const uint8_t btnShortPressR =		buttonRbit;
+static const uint8_t btnShortPressLC =		buttonCbit | buttonLbit;
+static const uint8_t btnShortPressLR =		buttonRbit | buttonLbit;
+static const uint8_t btnShortPressCR =		buttonRbit | buttonCbit;
+static const uint8_t btnShortPressLCR =	buttonRbit | btnShortPressLC;
 
-const uint8_t btnLongPressL =		longButtonBit | btnShortPressL;
-const uint8_t btnLongPressC =		longButtonBit | btnShortPressC;
-const uint8_t btnLongPressLC =		longButtonBit | btnShortPressLC;
-const uint8_t btnLongPressR =		longButtonBit | btnShortPressR;
-const uint8_t btnLongPressLR =		longButtonBit | btnShortPressLR;
-const uint8_t btnLongPressCR =		longButtonBit | btnShortPressCR;
-const uint8_t btnLongPressLCR =		longButtonBit | btnShortPressLCR;
+static const uint8_t btnLongPressL =		longButtonBit | btnShortPressL;
+static const uint8_t btnLongPressC =		longButtonBit | btnShortPressC;
+static const uint8_t btnLongPressLC =		longButtonBit | btnShortPressLC;
+static const uint8_t btnLongPressR =		longButtonBit | btnShortPressR;
+static const uint8_t btnLongPressLR =		longButtonBit | btnShortPressLR;
+static const uint8_t btnLongPressCR =		longButtonBit | btnShortPressCR;
+static const uint8_t btnLongPressLCR =		longButtonBit | btnShortPressLCR;
 
 #if defined(useButtonCrossConfig)
-const uint8_t btnShortPressU =		buttonUbit;
-const uint8_t btnShortPressUL =		buttonUbit | btnShortPressL;
-const uint8_t btnShortPressUC =		buttonUbit | btnShortPressC;
-const uint8_t btnShortPressULC =	buttonUbit | btnShortPressLC;
-const uint8_t btnShortPressUR =		buttonUbit | btnShortPressR;
-const uint8_t btnShortPressULR =	buttonUbit | btnShortPressLR;
-const uint8_t btnShortPressUCR =	buttonUbit | btnShortPressCR;
-const uint8_t btnShortPressULCR =	buttonUbit | btnShortPressLCR;
+static const uint8_t btnShortPressU =		buttonUbit;
+static const uint8_t btnShortPressUL =		buttonUbit | btnShortPressL;
+static const uint8_t btnShortPressUC =		buttonUbit | btnShortPressC;
+static const uint8_t btnShortPressULC =	buttonUbit | btnShortPressLC;
+static const uint8_t btnShortPressUR =		buttonUbit | btnShortPressR;
+static const uint8_t btnShortPressULR =	buttonUbit | btnShortPressLR;
+static const uint8_t btnShortPressUCR =	buttonUbit | btnShortPressCR;
+static const uint8_t btnShortPressULCR =	buttonUbit | btnShortPressLCR;
 
-const uint8_t btnShortPressD =		buttonDbit;
-const uint8_t btnShortPressDL =		buttonDbit | btnShortPressL;
-const uint8_t btnShortPressDC =		buttonDbit | btnShortPressC;
-const uint8_t btnShortPressDLC =	buttonDbit | btnShortPressLC;
-const uint8_t btnShortPressDR =		buttonDbit | btnShortPressR;
-const uint8_t btnShortPressDLR =	buttonDbit | btnShortPressLR;
-const uint8_t btnShortPressDCR =	buttonDbit | btnShortPressCR;
-const uint8_t btnShortPressDLCR =	buttonDbit | btnShortPressLCR;
+static const uint8_t btnShortPressD =		buttonDbit;
+static const uint8_t btnShortPressDL =		buttonDbit | btnShortPressL;
+static const uint8_t btnShortPressDC =		buttonDbit | btnShortPressC;
+static const uint8_t btnShortPressDLC =	buttonDbit | btnShortPressLC;
+static const uint8_t btnShortPressDR =		buttonDbit | btnShortPressR;
+static const uint8_t btnShortPressDLR =	buttonDbit | btnShortPressLR;
+static const uint8_t btnShortPressDCR =	buttonDbit | btnShortPressCR;
+static const uint8_t btnShortPressDLCR =	buttonDbit | btnShortPressLCR;
 
-const uint8_t btnShortPressUD =		buttonDbit | btnShortPressU;
-const uint8_t btnShortPressUDL =	buttonDbit | btnShortPressUL;
-const uint8_t btnShortPressUDC =	buttonDbit | btnShortPressUC;
-const uint8_t btnShortPressUDLC =	buttonDbit | btnShortPressULC;
-const uint8_t btnShortPressUDR =	buttonDbit | btnShortPressUR;
-const uint8_t btnShortPressUDLR =	buttonDbit | btnShortPressULR;
-const uint8_t btnShortPressUDCR =	buttonDbit | btnShortPressUCR;
-const uint8_t btnShortPressUDCRL =	buttonDbit | btnShortPressULCR;
+static const uint8_t btnShortPressUD =		buttonDbit | btnShortPressU;
+static const uint8_t btnShortPressUDL =	buttonDbit | btnShortPressUL;
+static const uint8_t btnShortPressUDC =	buttonDbit | btnShortPressUC;
+static const uint8_t btnShortPressUDLC =	buttonDbit | btnShortPressULC;
+static const uint8_t btnShortPressUDR =	buttonDbit | btnShortPressUR;
+static const uint8_t btnShortPressUDLR =	buttonDbit | btnShortPressULR;
+static const uint8_t btnShortPressUDCR =	buttonDbit | btnShortPressUCR;
+static const uint8_t btnShortPressUDCRL =	buttonDbit | btnShortPressULCR;
 
-const uint8_t btnLongPressU =		longButtonBit | btnShortPressU;
-const uint8_t btnLongPressUL =		longButtonBit | btnShortPressUL;
-const uint8_t btnLongPressUC =		longButtonBit | btnShortPressUC;
-const uint8_t btnLongPressULC =		longButtonBit | btnShortPressULC;
-const uint8_t btnLongPressUR =		longButtonBit | btnShortPressUR;
-const uint8_t btnLongPressULR =		longButtonBit | btnShortPressULR;
-const uint8_t btnLongPressUCR =		longButtonBit | btnShortPressUCR;
-const uint8_t btnLongPressULCR =	longButtonBit | btnShortPressULCR;
+static const uint8_t btnLongPressU =		longButtonBit | btnShortPressU;
+static const uint8_t btnLongPressUL =		longButtonBit | btnShortPressUL;
+static const uint8_t btnLongPressUC =		longButtonBit | btnShortPressUC;
+static const uint8_t btnLongPressULC =		longButtonBit | btnShortPressULC;
+static const uint8_t btnLongPressUR =		longButtonBit | btnShortPressUR;
+static const uint8_t btnLongPressULR =		longButtonBit | btnShortPressULR;
+static const uint8_t btnLongPressUCR =		longButtonBit | btnShortPressUCR;
+static const uint8_t btnLongPressULCR =	longButtonBit | btnShortPressULCR;
 
-const uint8_t btnLongPressD =		longButtonBit | btnShortPressD;
-const uint8_t btnLongPressDL =		longButtonBit | btnShortPressDL;
-const uint8_t btnLongPressDC =		longButtonBit | btnShortPressDC;
-const uint8_t btnLongPressDLC =		longButtonBit | btnShortPressDLC;
-const uint8_t btnLongPressDR =		longButtonBit | btnShortPressDR;
-const uint8_t btnLongPressDLR =		longButtonBit | btnShortPressDLR;
-const uint8_t btnLongPressDCR =		longButtonBit | btnShortPressDCR;
-const uint8_t btnLongPressDLCR =	longButtonBit | btnShortPressDLCR;
+static const uint8_t btnLongPressD =		longButtonBit | btnShortPressD;
+static const uint8_t btnLongPressDL =		longButtonBit | btnShortPressDL;
+static const uint8_t btnLongPressDC =		longButtonBit | btnShortPressDC;
+static const uint8_t btnLongPressDLC =		longButtonBit | btnShortPressDLC;
+static const uint8_t btnLongPressDR =		longButtonBit | btnShortPressDR;
+static const uint8_t btnLongPressDLR =		longButtonBit | btnShortPressDLR;
+static const uint8_t btnLongPressDCR =		longButtonBit | btnShortPressDCR;
+static const uint8_t btnLongPressDLCR =	longButtonBit | btnShortPressDLCR;
 
-const uint8_t btnLongPressUD =		longButtonBit | btnShortPressUD;
-const uint8_t btnLongPressUDL =		longButtonBit | btnShortPressUDL;
-const uint8_t btnLongPressUDC =		longButtonBit | btnShortPressUDC;
-const uint8_t btnLongPressUDLC =	longButtonBit | btnShortPressUDLC;
-const uint8_t btnLongPressUDR =		longButtonBit | btnShortPressUDR;
-const uint8_t btnLongPressUDLR =	longButtonBit | btnShortPressUDLR;
-const uint8_t btnLongPressUDCR =	longButtonBit | btnShortPressUDCR;
-const uint8_t btnLongPressUDCRL =	longButtonBit | btnShortPressUDCRL;
+static const uint8_t btnLongPressUD =		longButtonBit | btnShortPressUD;
+static const uint8_t btnLongPressUDL =		longButtonBit | btnShortPressUDL;
+static const uint8_t btnLongPressUDC =		longButtonBit | btnShortPressUDC;
+static const uint8_t btnLongPressUDLC =	longButtonBit | btnShortPressUDLC;
+static const uint8_t btnLongPressUDR =		longButtonBit | btnShortPressUDR;
+static const uint8_t btnLongPressUDLR =	longButtonBit | btnShortPressUDLR;
+static const uint8_t btnLongPressUDCR =	longButtonBit | btnShortPressUDCR;
+static const uint8_t btnLongPressUDCRL =	longButtonBit | btnShortPressUDCRL;
 
 #endif // defined(useButtonCrossConfig)
 #if defined(useParallax5PositionSwitch)
-const unsigned int analogButtonThreshold[] PROGMEM = {
+static const uint16_t analogButtonThreshold[] PROGMEM = {
 	0,		// 00
 	559,	// 01
 	588,	// 02
@@ -302,11 +298,11 @@ const unsigned int analogButtonThreshold[] PROGMEM = {
 	980		// 12
 };
 
-const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(unsigned int));
+static const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(uint16_t));
 
 //	btnShortPressDC,	// 08
 
-const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
+static const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 	buttonsUp,			// 00
 	btnShortPressULC,	// 01
 	btnShortPressUL,	// 02
@@ -329,7 +325,7 @@ const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 
 #endif // defined(useParallax5PositionSwitch)
 #if defined(useAnalogMuxButtons)
-const unsigned int analogButtonThreshold[] PROGMEM = {
+static const uint16_t analogButtonThreshold[] PROGMEM = {
 	0,		// 00
 	556,	// 01
 	560,	// 02
@@ -365,9 +361,9 @@ const unsigned int analogButtonThreshold[] PROGMEM = {
 	1012	// 20
 };
 
-const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(unsigned int));
+static const uint8_t analogButtonCount = (sizeof(analogButtonThreshold) / sizeof(uint16_t));
 
-const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
+static const uint8_t analogTranslate[(uint16_t)(analogButtonCount)] PROGMEM = {
 	buttonsUp,
 	btnShortPressUDCRL,
 	btnShortPressULCR,
@@ -492,17 +488,19 @@ static const buttonVariable bpListMainDisplay[] PROGMEM = {
 static const buttonVariable bpListMainDisplayEdit[] PROGMEM = {
 	{btnShortPressR,	cursor::shortRight},
 	{btnShortPressL,	cursor::shortLeft},
-	{btnLongPressL,	displayEdit::cancel},
+	{btnLongPressL,		displayEdit::cancel},
 	{btnLongPressLR,	displayEdit::cancel},
-	{btnLongPressC,	displayEdit::set},
 	{btnShortPressLR,	displayEdit::set},
-	{btnLongPressR,	displayEdit::readInitial},
+	{btnLongPressR,		displayEdit::readInitial},
 #if defined(useButtonCrossConfig)
-		{btnShortPressU,	displayEdit::changeItemUp},
-		{btnShortPressD,	displayEdit::changeItemDown},
+		{btnShortPressU,	displayEdit::changeFunctionUp},
+		{btnShortPressD,	displayEdit::changeFunctionDown},
+		{btnLongPressU,		displayEdit::changeTripUp},
+		{btnLongPressD,		displayEdit::changeTripDown},
 		{btnShortPressC,	displayEdit::set},
 #else // defined(useButtonCrossConfig)
-		{btnShortPressC,	displayEdit::changeItemUp},
+		{btnShortPressC,	displayEdit::changeFunctionUp},
+		{btnLongPressC,		displayEdit::changeTripUp},
 #endif // defined(useButtonCrossConfig)
 	{buttonsUp,		cursor::noSupport},
 };
@@ -712,23 +710,23 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 
 // the following display entries are for the various EEPROM parameter settings, grouped by function
 
-	{displaySettingsDisplayIdx,	1,					displayCountSettingsDisplay,	displayStartSettingsDisplay,	parameterEdit::menuHandler,			bpListMenu},
+	{displaySettingsDisplayIdx,	1,						displayCountSettingsDisplay,	displayStartSettingsDisplay,	parameterEdit::menuHandler,			bpListMenu},
 	{fuelSettingsDisplayIdx,		1,					displayCountSettingsFuel,		displayStartSettingsFuel,		parameterEdit::menuHandler,			bpListMenu},
-	{VSSsettingsDisplayIdx,		1,					displayCountSettingsVSS,		displayStartSettingsVSS,		parameterEdit::menuHandler,			bpListMenu},
+	{VSSsettingsDisplayIdx,		1,						displayCountSettingsVSS,		displayStartSettingsVSS,		parameterEdit::menuHandler,			bpListMenu},
 	{tankSettingsDisplayIdx,		1,					displayCountSettingsTank,		displayStartSettingsTank,		parameterEdit::menuHandler,			bpListMenu},
 #if defined(useChryslerMAPCorrection)
 	{CRFICsettingsDisplayIdx,		1,					displayCountSettingsCRFIC,		displayStartSettingsCRFIC,		parameterEdit::menuHandler,			bpListMenu},
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-	{acdSettingsDisplayIdx,		1,					displayCountSettingsVehicle,	displayStartSettingsVehicle,	parameterEdit::menuHandler,			bpListMenu},
+	{acdSettingsDisplayIdx,		1,						displayCountSettingsVehicle,	displayStartSettingsVehicle,	parameterEdit::menuHandler,			bpListMenu},
 #endif // defined(useVehicleParameters)
-	{timeoutSettingsDisplayIdx,	1,					displayCountSettingsTimeout,	displayStartSettingsTimeout,	parameterEdit::menuHandler,			bpListMenu},
+	{timeoutSettingsDisplayIdx,	1,						displayCountSettingsTimeout,	displayStartSettingsTimeout,	parameterEdit::menuHandler,			bpListMenu},
 	{miscSettingsDisplayIdx,		1,					displayCountSettingsMisc,		displayStartSettingsMisc,		parameterEdit::menuHandler,			bpListMenu},
 
 // the following display entries are for any otherwise unlinked menu groups
 
 #if defined(useSavedTrips)
-	{tripSaveCurrentDisplayIdx,	1,					displayCountTripSaveCurrent,	displayStartTripSaveCurrent,	tripSave::menuHandler,				bpListMenu},
+	{tripSaveCurrentDisplayIdx,	1,						displayCountTripSaveCurrent,	displayStartTripSaveCurrent,	tripSave::menuHandler,				bpListMenu},
 #endif // defined(useSavedTrips)
 #if defined(useEnhancedTripReset)
 	{tripSaveTankDisplayIdx,		1,					displayCountTripSaveTank,		displayStartTripSaveTank,		tripSave::menuHandler,				bpListMenu},
@@ -799,7 +797,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 	{clockSetDisplayIdx,			1,					4,								dfFullScreen,					clockSet::displayHandler,			bpListClockSet},
 #endif // defined(useClockDisplay)
 #if defined(useScreenEditor)
-	{displayEditDisplayIdx,		1,					8,								dfSplitScreen,					displayEdit::displayHandler,		bpListMainDisplayEdit},
+	{displayEditDisplayIdx,		1,						4,								dfSplitScreen,					displayEdit::displayHandler,		bpListMainDisplayEdit},
 #endif // defined(useScreenEditor)
 };
 

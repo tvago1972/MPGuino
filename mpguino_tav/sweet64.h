@@ -705,10 +705,10 @@ static const uint8_t idxNumerDistance =				idxTicksPerSecond + 1;			// numerator
 static const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
 static const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
 #define nextAllowedValue idxSecondsPerHour + 1
-#if defined(useClockDisplay)
+#if defined(useClockSupport)
 static const uint8_t idxSecondsPerDay =				nextAllowedValue;				// number of seconds in a day
 #define nextAllowedValue idxSecondsPerDay + 1
-#endif // defined(useClockDisplay)
+#endif // defined(useClockSupport)
 #if defined(usePressure)
 static const uint8_t idxNumerPressure =				nextAllowedValue;				// numerator to convert psig to kPa
 static const uint8_t idxCorrectionFactor =			idxNumerPressure + 1;			// correction factor used for fuel calculations
@@ -720,11 +720,11 @@ static const uint8_t idxNumerVoltage =				nextAllowedValue;				// numerator to c
 static const uint8_t idxDenomVoltage =				idxNumerVoltage + 1;			// denominator to convert volts DC to ADC steps
 #define nextAllowedValue idxDenomVoltage + 1
 #endif // defined(useAnalogRead)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint8_t idxResistanceR5 =				nextAllowedValue;				// resistor next to ground (via meelis11)
 static const uint8_t idxResistanceR6 =				idxResistanceR5 + 1;			// resistor next to diode  (via meelis11)
 #define nextAllowedValue idxResistanceR6 + 1
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useVehicleParameters)
 static const uint8_t idxDenomMass =					nextAllowedValue;				// denominator to convert pounds to kilograms
 #define nextAllowedValue idxDenomMass + 1
@@ -804,9 +804,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerDistance" tcEOS
 	"idxNumerVolume" tcEOS
 	"idxSecondsPerHour" tcEOS
-#if defined(useClockDisplay)
+#if defined(useClockSupport)
 	"idxSecondsPerDay" tcEOS
-#endif // defined(useClockDisplay)
+#endif // defined(useClockSupport)
 #if defined(usePressure)
 	"idxNumerPressure" tcEOS
 	"idxCorrectionFactor" tcEOS
@@ -816,10 +816,10 @@ static const char terminalConstIdxNames[] PROGMEM = {
 	"idxNumerVoltage" tcEOS
 	"idxDenomVoltage" tcEOS
 #endif // defined(useAnalogRead)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	"idxResistanceR5" tcEOS
 	"idxResistanceR6" tcEOS
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useVehicleParameters)
 	"idxDenomMass" tcEOS
 #if defined(useCoastDownCalculator)
@@ -896,9 +896,9 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 	1609344ul,								// idxNumerDistance - numerator to convert miles to kilometers
 	3785411784ul,							// idxNumerVolume - numerator to convert US gallons to liters
 	3600ul,									// idxSecondsPerHour - seconds per hour
-#if defined(useClockDisplay)
+#if defined(useClockSupport)
 	86400ul,								// idxSecondsPerDay - number of seconds in a day
-#endif // defined(useClockDisplay)
+#endif // defined(useClockSupport)
 #if defined(usePressure)
 	68947573ul,								// idxNumerPressure - numerator to convert psig to kPa
 	correctionFactor,						// idxCorrectionFactor - correction factor used for fuel calculations
@@ -908,10 +908,10 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 	1024ul,									// idxNumerVoltage - numerator to convert volts DC to ADC steps
 	5000ul,									// idxDenomVoltage - denominator to convert volts DC to ADC steps
 #endif // defined(useAnalogRead)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	9600ul,									// idxResistanceR5 - resistor next to ground (via meelis11)
 	27000ul,								// idxResistanceR6 - resistor next to diode  (via meelis11)
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useVehicleParameters)
 	2204622621ul,							// idxDenomMass - denominator to convert pounds to kilograms
 #if defined(useCoastDownCalculator)

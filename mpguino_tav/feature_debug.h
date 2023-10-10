@@ -37,12 +37,11 @@ namespace activityLED /* Activity status LED support section prototype */
 namespace systemInfo /* CPU loading and RAM availability support section prototype */
 {
 
-	static void mainProcess(void);
-#if defined(useCPUreading)
+#if defined(useCPUreading) && defined(useButtonInput)
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static void showCPUload(void);
 	static void showCPUloading(void);
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) && defined(useButtonInput)
 
 };
 
@@ -60,24 +59,20 @@ namespace signalSim /* VSS / fuel injector on-board simulator support section pr
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
 #endif // defined(useButtonInput)
-	static void configurePorts(void);
-	static void mainProcessFuel(void);
-	static void mainProcessVSS(void);
+	static void configurePorts(uint8_t newMode);
 
 }
 
-// bit flags for use with v8SignalSimModeFlags
-static const uint8_t debugVSSflag =				0b10000000;
-static const uint8_t debugInjectorFlag =		0b01000000;
-static const uint8_t debugFIPready =			0b00100000;
-static const uint8_t debugVSSready =			0b00010000;
+// bit flags for use with v8SignalSimModeIdx
+static const uint8_t debugVSSflag =				0b00000010;
+static const uint8_t debugInjectorFlag =		0b00000001;
+static const uint8_t debugFIPready =			0b10000000;
+static const uint8_t debugVSSready =			0b01000000;
+static const uint8_t debugFIPfiring =			0b00100000;
 
-static const uint8_t debugEnableFlags =			debugVSSflag | debugInjectorFlag;
-static const uint8_t debugVSreadyFlags =		debugVSSready | debugVSSflag;
-static const uint8_t debugFIreadyFlags =		debugFIPready | debugInjectorFlag;
-
-static const unsigned long debugVSSresetLength = (unsigned long)(ceil)((2ul * F_CPU) / (2ul * 255ul)) - 1; // 2 sec
-static const unsigned long debugFIPresetLength = (unsigned long)(ceil)((4ul * F_CPU) / (3ul * 2ul * 255ul)) - 1; // 4/3 sec
+static const uint8_t debugEnableFlags =			(debugVSSflag | debugInjectorFlag);
+static const uint8_t debugVSreadyFlags =		(debugVSSready | debugVSSflag);
+static const uint8_t debugFIreadyFlags =		(debugFIPready | debugInjectorFlag);
 
 #if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
@@ -95,6 +90,15 @@ static const char debugScreenFuncNames[] PROGMEM = {
 };
 
 #endif // defined(useButtonInput)
+#if defined(useDebugTerminalLabels)
+static const char terminalSignalSimHelp[] PROGMEM = {
+	"signal simulation off" tcEOS
+	"fuel injector signal simulation only" tcEOS
+	"VSS signal simulation only" tcEOS
+	"fuel injection and VSS signal simulation" tcEOS
+};
+
+#endif // defined(useDebugTerminalLabels)
 static const uint16_t debugVSSvalues[] PROGMEM = {
 	65535,
 	2258,
@@ -210,23 +214,6 @@ static const uint16_t debugFIPWvalues[] PROGMEM = {
 static const uint8_t debugVSSlength = ( sizeof(debugVSSvalues) / sizeof(uint16_t) );
 static const uint8_t debugFIPlength = ( sizeof(debugFIPvalues) / sizeof(uint16_t) );
 
-static volatile uint16_t debugVSStickLength;
-static volatile uint16_t debugFIPtickLength;
-static volatile uint16_t debugFIPWtickLength;
-
-static volatile uint16_t debugVSScount;
-static volatile uint16_t debugFIPcount;
-static volatile uint16_t debugFIPWcount;
-
-static uint8_t debugVSSidx;
-static uint8_t debugFIPidx;
-
-static uint8_t debugVSSstate;
-static uint8_t debugFIPstate;
-
-static uint16_t debugFIPWgoodTickLength; // to force debug injector pulse width to a maximum good engine speed-dependent value
-static uint16_t debugFIPWreadTickLength;
-
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugTerminal)
 namespace terminal /* debug terminal section prototype */
@@ -245,6 +232,9 @@ namespace terminal /* debug terminal section prototype */
 	static void outputDecimalValue(uint8_t lineNumber);
 	static void outputDecimalExtra(uint8_t lineNumber);
 	static void dumpSWEET64information(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+#if defined(useSimulatedFIandVSS)
+	static void outputSignalSimSetting(uint8_t lineNumber);
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugTerminalSWEET64)
 	static void outputSWEET64registerContents(uint8_t lineNumber);
 	static void outputSWEET64registerExtra(uint8_t lineNumber);
@@ -267,56 +257,53 @@ namespace terminal /* debug terminal section prototype */
 }
 
 #define nextAllowedValue 0
-static const uint8_t tsError =				nextAllowedValue;
-static const uint8_t tsBell =				tsError + 1;
-static const uint8_t tsInitInput =			tsBell + 1;
-static const uint8_t tsUserInput =			tsInitInput + 1;
-static const uint8_t tsInitTerminalCmd =	tsUserInput + 1;
-static const uint8_t tsInitProcessing =		tsInitTerminalCmd + 1;
-static const uint8_t tsProcessCommand =		tsInitProcessing + 1;
-static const uint8_t tsInitListDecimal =	tsProcessCommand + 1;
-static const uint8_t tsInitListReadOnly =	tsInitListDecimal + 1;
-static const uint8_t tsInitList =			tsInitListReadOnly + 1;
-static const uint8_t tsProcessList =		tsInitList + 1;
+static const uint8_t tsError =					nextAllowedValue;
+static const uint8_t tsBell =					tsError + 1;
+static const uint8_t tsInitInput =				tsBell + 1;
+static const uint8_t tsUserInput =				tsInitInput + 1;
+static const uint8_t tsInitTerminalCmd =		tsUserInput + 1;
+static const uint8_t tsInitProcessing =			tsInitTerminalCmd + 1;
+static const uint8_t tsProcessCommand =			tsInitProcessing + 1;
+static const uint8_t tsInitListDecimal =		tsProcessCommand + 1;
+static const uint8_t tsInitListReadOnly =		tsInitListDecimal + 1;
+static const uint8_t tsInitList =				tsInitListReadOnly + 1;
+static const uint8_t tsProcessList =			tsInitList + 1;
 #define nextAllowedValue tsProcessList + 1;
 #if defined(useDebugTerminalHelp)
-static const uint8_t tsOutputHelpLine =		nextAllowedValue;
+static const uint8_t tsOutputHelpLine =			nextAllowedValue;
 #define nextAllowedValue tsOutputHelpLine + 1;
 #endif // defined(useDebugTerminalHelp)
 #if defined(useDebugButtonInjection)
-static const uint8_t tsInjectButtonPress =	nextAllowedValue;
-static const uint8_t tsInjectButtonsUp =	tsInjectButtonPress + 1;
+static const uint8_t tsInjectButtonPress =		nextAllowedValue;
+static const uint8_t tsInjectButtonsUp =		tsInjectButtonPress + 1;
 #define nextAllowedValue tsInjectButtonsUp + 1;
 #endif // defined(useDebugButtonInjection)
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t tsOutputSWEET64line =	nextAllowedValue;
-static const uint8_t tsTraceSWEET64line =	tsOutputSWEET64line + 1;
+static const uint8_t tsOutputSWEET64line =		nextAllowedValue;
+static const uint8_t tsTraceSWEET64line =		tsOutputSWEET64line + 1;
 #define nextAllowedValue tsTraceSWEET64line + 1;
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t tsOutputBLEfriend =	nextAllowedValue;
+static const uint8_t tsOutputBLEfriend =		nextAllowedValue;
 #define nextAllowedValue tsOutputBLEfriend + 1;
 #endif // defined(useBluetoothAdaFruitSPI)
 
 #define nextAllowedValue 0
-static const uint8_t tseIdxLineCancel =		nextAllowedValue;
-static const uint8_t tseIdxSyntax =			tseIdxLineCancel + 1;
-static const uint8_t tseIdxState =			tseIdxSyntax + 1;
-static const uint8_t tseIdxSourceVal =		tseIdxState + 1;
-static const uint8_t tseIdxTargetVal =		tseIdxSourceVal + 1;
-static const uint8_t tseIdxAddressVal =		tseIdxTargetVal + 1;
-static const uint8_t tseIdxBadIndex =		tseIdxAddressVal + 1;
-static const uint8_t tseIdxNoAddress =		tseIdxBadIndex + 1;
+static const uint8_t tseIdxLineCancel =			nextAllowedValue;
+static const uint8_t tseIdxSyntax =				tseIdxLineCancel + 1;
+static const uint8_t tseIdxState =				tseIdxSyntax + 1;
+static const uint8_t tseIdxSourceVal =			tseIdxState + 1;
+static const uint8_t tseIdxTargetVal =			tseIdxSourceVal + 1;
+static const uint8_t tseIdxAddressVal =			tseIdxTargetVal + 1;
+static const uint8_t tseIdxBadIndex =			tseIdxAddressVal + 1;
+static const uint8_t tseIdxNoAddress =			tseIdxBadIndex + 1;
 #define nextAllowedValue tseIdxNoAddress + 1
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t tseIdxBadSWEET64addr =	nextAllowedValue;
+static const uint8_t tseIdxBadSWEET64addr =		nextAllowedValue;
 #define nextAllowedValue tseIdxBadSWEET64addr + 1;
 #endif // defined(useDebugTerminalSWEET64)
 
 static uint8_t errIdx;
-#if defined(useDebugButtonInjection)
-static uint8_t buttonInjDelay;
-#endif // defined(useDebugButtonInjection)
 
 static const char tseErrorStringList[] PROGMEM = {
 	"\\" tcEOSCR
@@ -418,6 +405,7 @@ static const char terminalHelp[] PROGMEM = {
 	"                [z] - decimal window length (optional)" tcEOSCR
 	"                [y] - decimal digit count (optional)" tcEOSCR
 	"                [x] - decimal processing flag (optional)" tcCR tcEOSCR
+
 #if defined(useDebugTerminalSWEET64)
 	"   [y].[x]^I - list SWEET64 instructions, along with their operands, optionally" tcEOSCR
 	"               between [y] and [x]" tcEOSCR
@@ -463,7 +451,10 @@ static const char terminalHelp[] PROGMEM = {
 	"                 long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
-
+#if defined(useSimulatedFIandVSS)
+	"           S - lists available signal simulator modes" tcEOSCR
+	"S:y          - sets signal simulator mode to y" tcEOSCR
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
 	"           Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
 #endif // defined(useBluetoothAdaFruitSPI)
@@ -528,5 +519,6 @@ static const uint8_t peekBluetoothInput =		0b01000000;
 static const uint8_t peekBluetoothOutput =		0b00100000;
 static const uint8_t peekBLEfriendEcho =		0b00010000;
 static const uint8_t peekEnableCPUread =		0b00001000;
+static const uint8_t peekOutputFlags =			0b00000100;
 
 #endif // defined(useDebugTerminal)

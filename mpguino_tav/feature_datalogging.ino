@@ -212,6 +212,7 @@ static void doOutputJSONremainingFuel(void)
 static void doOutputJSON(void) //skybolt added JSON output function
 {
 
+	uint8_t oldSREG;
 	static uint8_t subtitleCount1 = 2;
 #if defined(useDragRaceFunction)
 	static uint8_t subtitleCount2 = 3;
@@ -220,8 +221,16 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	uint32_t targetDistance;
 #endif // defined(useDragRaceFunction)
 
-	if (heart::testAndResetBitFlagBit(v8Timer0StatusA - v8VariableStartIdx, t0saJSONchangeSubtitle)) // replaced timerChecker with this because it's a more accurate method to change once every 1.6 seconds
+	// replaced timerChecker with this because it's a more accurate method to change once every 1.6 seconds
+	if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saJSONchangeSubtitle)
 	{
+
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts to make the next operation atomic
+
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saJSONchangeSubtitle);
+
+		SREG = oldSREG; // restore interrupt flag status
 
 		if (!(--subtitleCount1)) subtitleCount1 = 2;
 #if defined(useDragRaceFunction)

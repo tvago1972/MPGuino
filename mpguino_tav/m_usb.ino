@@ -1,4 +1,4 @@
-#if defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega32U4__) && false
 static void usbSupport::init(void)
 {
 

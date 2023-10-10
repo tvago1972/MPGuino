@@ -80,7 +80,7 @@ static void bluetooth::mainProcess(void)
 	if (btInputState & btiResetFlag) // if performing a /RST cycle
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleResetFlags) == 0) // if /RST cycle is completed
+		if ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleResetFlags) == 0) // if /RST cycle is completed
 		{
 
 			btInputState &= ~(btiResetFlag); // mark /RST cycle as completed
@@ -96,7 +96,7 @@ static void bluetooth::mainProcess(void)
 
 			ringBuffer::empty(rbIdxBLEfriendIn);
 
-			btDelayFlag = heart::delay0(delay0Tick500ms); // set for a 1/2 sec delay
+			mainProgram8Variables[(uint16_t)(m8Delay0FlagUSBidx - m8VariableStartIdx)] = heart::delay0(delay0Tick500ms, 0); // set for a 1/2 sec delay
 			btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 		}
@@ -114,10 +114,10 @@ static void bluetooth::mainProcess(void)
 		if (btInputState & btiAllowPolling)
 		{
 
-			if (volatile8Variables[(uint16_t)(v8Timer0StatusB - v8VariableStartIdx)] & t0sbSampleBLEfriend)
+			if (volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] & t0sbSampleBLEfriend)
 			{
 
-				heart::changeBitFlagBits(v8Timer0StatusB - v8VariableStartIdx, t0sbSampleBLEfriend, 0);
+				heart::changeBitFlagBits(v8Timer0Status1Idx - v8VariableStartIdx, t0sbSampleBLEfriend, 0);
 
 				text::stringOut(m8DevBluetoothIdx, btInputString);
 				blefriend::outputBufferWithResponse(); // output GATT input request via 0xFFE1 characteristic
@@ -281,13 +281,13 @@ static void bluetooth::mainProcess(void)
 													if (btF->u8[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
 													EEPROM::onChange(prgmWriteBTparameterValue, btF->u8[1]);
-													heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cResetInputTimer);
+													heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cResetInputTimer);
 													break;
 
 												case tGetProgramVariableValue:
 													str2ull(btInpBuff); // convert digit string into a number
 													SWEET64::runPrgm(prgmWriteProgramVariableValue, btF->u8[1]);
-													heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cResetInputTimer);
+													heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cResetInputTimer);
 													break;
 
 												default:
@@ -325,7 +325,7 @@ static void bluetooth::mainProcess(void)
 			{
 
 				btOutputState &= ~(btoFlagFlushBuffer);
-				btDelayFlag = heart::delay0(delay0Tick20ms); // set for a 20 ms delay
+				mainProgram8Variables[(uint16_t)(m8Delay0FlagUSBidx - m8VariableStartIdx)] = heart::delay0(delay0Tick20ms, 0); // set for a 20 ms delay
 				btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 			}
@@ -336,7 +336,7 @@ static void bluetooth::mainProcess(void)
 		if (btOutputState & btoFlagDelay) // check if output delay is finished
 		{
 
-			if ((volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & btDelayFlag) == 0)
+			if ((volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8Delay0FlagUSBidx - m8VariableStartIdx)]) == 0)
 			{
 
 				btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
@@ -346,7 +346,7 @@ static void bluetooth::mainProcess(void)
 				{
 
 					btInputState |= (btiAllowPolling);
-					heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cEnableBLEsample);
+					heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cEnableBLEsample);
 
 				}
 
@@ -395,7 +395,7 @@ static void bluetooth::mainProcess(void)
 #if defined(useBluetoothAdaFruitSPI)
 						blefriend::outputBufferWithResponse(); // send out via 0xFFE1 characteristic
 						ringBuffer::empty(rbIdxBLEfriendIn); // pop response from input buffer
-						btDelayFlag = heart::delay0(delay0Tick20ms); // set for a 20 ms delay
+						mainProgram8Variables[(uint16_t)(m8Delay0FlagUSBidx - m8VariableStartIdx)] = heart::delay0(delay0Tick20ms, 0); // set for a 20 ms delay
 						btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 #else // defined(useBluetoothAdaFruitSPI)
@@ -403,7 +403,7 @@ static void bluetooth::mainProcess(void)
 						btOutputState |= (btoFlagFlushBuffer);
 
 #else // defined(rbIdxBluetoothSerial)
-						btDelayFlag = heart::delay0(delay0Tick20ms); // set for a 20 ms delay
+						mainProgram8Variables[(uint16_t)(m8Delay0FlagUSBidx - m8VariableStartIdx)] = heart::delay0(delay0Tick20ms, 0); // set for a 20 ms delay
 						btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
 
 #endif // defined(rbIdxBluetoothSerial)

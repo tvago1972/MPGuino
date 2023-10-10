@@ -1,6 +1,6 @@
-#if defined(useClockDisplay)
- /* Big Clock Display support section */
-
+#if defined(useClockSupport)
+/* Clock support section */
+ 
 static const uint8_t prgmSetClock[] PROGMEM = {
 	instrLdRegVariable, 0x02, m8HourIdx,				// load user-defined hours value
 	instrMul2byByte, 60,								// multply hours value by 60 (minutes per hour)
@@ -12,31 +12,7 @@ static const uint8_t prgmSetClock[] PROGMEM = {
 	instrDone
 };
 
-static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
-{
-
-	switch (cmd)
-	{
-
-		case displayInitialEntryIdx:
-			text::charOut(m8DevLCDidx, 0x0C);
-
-			LCD::loadCGRAMfont(bigDigitFont);
-			LCD::flushCGRAM();
-
-		case displayCursorUpdateIdx:
-			text::statusOut(m8DevLCDidx, PSTR("Clock"));
-		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, v32ClockCycleIdx, tReadTicksToSeconds), (mainLoopHeartBeat & 0b01010101), 4, 0, 0);
-			break;
-
-		default:
-			break;
-
-	}
-
-}
-
+#if defined(useClockDisplay)
 static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -47,7 +23,7 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			ull2str(csBuff, v32ClockCycleIdx, tReadTicksToSeconds);
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] & t0saShowCursor), cursorPos, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saShowCursor), cursorPos, 0, 0);
 
 		default:
 			break;
@@ -117,8 +93,6 @@ static void clockSet::set(void)
 
 #endif // defined(useSoftwareClock)
 #if defined(useDS1307clock)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity for RTC write
-
 	v = v8RTCsecondIdx - v8VariableStartIdx;
 
 	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmSetClock
@@ -137,14 +111,15 @@ static void clockSet::set(void)
 
 	}
 
-	TWI::openChannelMain(TWIaddressRTC, TW_WRITE); // open TWI as master transmitter
-	TWI::writeByte(0); // write out RTC seconds address
-	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)]); // write out RTC seconds value
-	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTCminuteIdx - v8VariableStartIdx)]); // write out RTC minutes value
-	TWI::writeByte(volatile8Variables[(uint16_t)(v8RTChourIdx - v8VariableStartIdx)]); // write out RTC hours value
-	TWI::transmitChannelMain(TWI_STOP); // go write out register contents
+	TWImain::open(TWIaddressRTC, TW_WRITE); // open TWI as master transmitter
+	TWImain::writeByte(0); // write out RTC seconds address
+	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)]); // write out RTC seconds value
+	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTCminuteIdx - v8VariableStartIdx)]); // write out RTC minutes value
+	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTChourIdx - v8VariableStartIdx)]); // write out RTC hours value
+	TWImain::transmit(TWI_STOP); // go write out register contents
 
-	TWI::enableISRactivity(); // re-enable ISR-based TWI activity
+	// tell timer0 to read RTC
+	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cReadRTC);
 
 #endif // defined(useDS1307clock)
 	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
@@ -158,6 +133,7 @@ static void clockSet::cancel(void)
 
 }
 
+#endif // defined(useClockDisplay)
 #if defined(useDS1307clock)
 static void clockSet::setFromRTC(void)
 {
@@ -191,6 +167,35 @@ static void clockSet::setFromRTC(void)
 }
 
 #endif // defined(useDS1307clock)
+#endif // defined(useClockSupport)
+#if defined(useClockDisplay)
+ /* Big Clock Display support section */
+
+static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
+{
+
+	switch (cmd)
+	{
+
+		case displayInitialEntryIdx:
+			text::charOut(m8DevLCDidx, 0x0C);
+
+			LCD::loadCGRAMfont(bigDigitFont);
+			LCD::flushCGRAM();
+
+		case displayCursorUpdateIdx:
+			text::statusOut(m8DevLCDidx, PSTR("Clock"));
+		case displayOutputIdx:
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, v32ClockCycleIdx, tReadTicksToSeconds), (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b01010101), 4, 0, 0);
+			break;
+
+		default:
+			break;
+
+	}
+
+}
+
 #endif // defined(useClockDisplay)
 #if defined(useStatusMeter)
 /* Status Meter Output support section */
@@ -355,7 +360,7 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos + 1)]);
+	uint8_t tripIdx = pgm_read_byte(&tripFormatReverseList[(uint16_t)(cursorPos)]);
 	char * str;
 
 	switch (cmd)
@@ -412,7 +417,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
 				case bigTTEdisplayIdx:
-					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (mainLoopHeartBeat & 0b10001000), 4, cursorPos, PSTR("TTE "));
+					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b10001000), 4, cursorPos, PSTR("TTE "));
 					break;
 
 #endif // defined(useBigTTE)

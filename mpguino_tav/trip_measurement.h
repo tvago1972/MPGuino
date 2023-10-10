@@ -14,13 +14,13 @@ namespace tripVar /* trip data collection basic function prototype */
 
 };
 
-const uint8_t rvVSSpulseIdx = 0; 			// distance pulse count
-const uint8_t rvVSScycleIdx = 1; 			// time that the vehicle has spent moving
-const uint8_t rvInjPulseIdx = 2; 			// engine revolution count
-const uint8_t rvInjCycleIdx = 3; 			// time that the fuel injector has been open
-const uint8_t rvEngCycleIdx = 4; 			// engine run time
+static const uint8_t rvVSSpulseIdx = 0; 			// distance pulse count
+static const uint8_t rvVSScycleIdx = 1; 			// time that the vehicle has spent moving
+static const uint8_t rvInjPulseIdx = 2; 			// engine revolution count
+static const uint8_t rvInjCycleIdx = 3; 			// time that the fuel injector has been open
+static const uint8_t rvEngCycleIdx = 4; 			// engine run time
 
-const uint8_t rvMeasuredCount = 5;
+static const uint8_t rvMeasuredCount = 5;
 
 #if defined(useDebugTerminalLabels)
 static const char terminalTripVarLabels[] PROGMEM = {
@@ -42,81 +42,81 @@ static uint8_t oldRawEOCidleTripIdx;
 #endif // defined(trackIdleEOCdata)
 
 #if defined(useWindowTripFilter)
-const uint8_t windowTripFilterSize = 4;
-uint8_t wtpCurrentIdx;
+static const uint8_t windowTripFilterSize = 4;
 
 #endif // defined(useWindowTripFilter)
 #define nextAllowedValue 0
-const uint8_t raw0tripIdx =				nextAllowedValue;
-const uint8_t raw1tripIdx =				raw0tripIdx + 1;
+static const uint8_t raw0tripIdx =				nextAllowedValue;
+static const uint8_t raw1tripIdx =				raw0tripIdx + 1;
 #define nextAllowedValue raw1tripIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t raw0eocIdleTripIdx =		nextAllowedValue;
-const uint8_t raw1eocIdleTripIdx =		raw0eocIdleTripIdx + 1;
+static const uint8_t raw0eocIdleTripIdx =		nextAllowedValue;
+static const uint8_t raw1eocIdleTripIdx =		raw0eocIdleTripIdx + 1;
 #define nextAllowedValue raw1eocIdleTripIdx + 1
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-const uint8_t dragRawHalfSpeedIdx =		nextAllowedValue;
-const uint8_t dragRawFullSpeedIdx =		dragRawHalfSpeedIdx + 1;
-const uint8_t dragRawDistanceIdx =		dragRawFullSpeedIdx + 1;
+static const uint8_t dragRawHalfSpeedIdx =		nextAllowedValue;
+static const uint8_t dragRawFullSpeedIdx =		dragRawHalfSpeedIdx + 1;
+static const uint8_t dragRawDistanceIdx =		dragRawFullSpeedIdx + 1;
 #define nextAllowedValue dragRawDistanceIdx + 1
 #endif // defined(useDragRaceFunction)
 
-const uint8_t instantIdx =				nextAllowedValue;
-const uint8_t currentIdx =				instantIdx + 1;
-const uint8_t tankIdx =					currentIdx + 1;
+static const uint8_t tripMainProgramIdxStart =	nextAllowedValue;
+
+static const uint8_t instantIdx =				nextAllowedValue;
+static const uint8_t currentIdx =				instantIdx + 1;
+static const uint8_t tankIdx =					currentIdx + 1;
 #define nextAllowedValue tankIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t eocIdleInstantIdx =		nextAllowedValue;
-const uint8_t eocIdleCurrentIdx =		eocIdleInstantIdx + 1;
-const uint8_t eocIdleTankIdx =			eocIdleCurrentIdx + 1;
+static const uint8_t eocIdleInstantIdx =		nextAllowedValue;
+static const uint8_t eocIdleCurrentIdx =		eocIdleInstantIdx + 1;
+static const uint8_t eocIdleTankIdx =			eocIdleCurrentIdx + 1;
 #define nextAllowedValue eocIdleTankIdx + 1
 #endif // defined(trackIdleEOCdata)
 
 #if defined(useDebugTerminal)
-const uint8_t terminalIdx =				nextAllowedValue;
+static const uint8_t terminalIdx =				nextAllowedValue;
 #define nextAllowedValue terminalIdx + 1
 #endif // defined(useDebugTerminal)
 
 #if defined(useDragRaceFunction)
-const uint8_t dragHalfSpeedIdx =		nextAllowedValue;
-const uint8_t dragFullSpeedIdx =		dragHalfSpeedIdx + 1;
-const uint8_t dragDistanceIdx =			dragFullSpeedIdx + 1;
+static const uint8_t dragHalfSpeedIdx =			nextAllowedValue;
+static const uint8_t dragFullSpeedIdx =			dragHalfSpeedIdx + 1;
+static const uint8_t dragDistanceIdx =			dragFullSpeedIdx + 1;
 #define nextAllowedValue dragDistanceIdx + 1
 #endif // defined(useDragRaceFunction)
 
 #if defined(useWindowTripFilter)
-const uint8_t windowTripFilterIdx =		nextAllowedValue;
+static const uint8_t windowTripFilterIdx =		nextAllowedValue;
 #define nextAllowedValue windowTripFilterIdx + windowTripFilterSize
 #endif // defined(useWindowTripFilter)
 
-const uint8_t tripSlotFullCount =		nextAllowedValue;
+static const uint8_t tripSlotFullCount =		nextAllowedValue;
 
 #if defined(useBarFuelEconVsTime)
-const uint8_t FEvsTimeIdx =				nextAllowedValue;
-const uint8_t FEvsTimeEndIdx =			FEvsTimeIdx + bgDataSize - 1;
-#define nextAllowedValue FEvsTimeEndIdx + 1
+static const uint8_t FEvsTimePeriodIdx =		nextAllowedValue;
+#define nextAllowedValue FEvsTimePeriodIdx + bgDataSize
 #endif // defined(useBarFuelEconVsTime)
 
 #if defined(useBarFuelEconVsSpeed)
-const uint8_t FEvsSpeedIdx =			nextAllowedValue;
+static const uint8_t FEvsSpeedIdx =				nextAllowedValue;
 #define nextAllowedValue FEvsSpeedIdx + bgDataSize
 #endif // defined(useBarFuelEconVsSpeed)
 
-const uint8_t tripSlotCount =			nextAllowedValue;
+static const uint8_t tripSlotCount =			nextAllowedValue;
 
 #if defined(useEEPROMtripStorage)
-const uint8_t EEPROMcurrentIdx =		nextAllowedValue;
-const uint8_t EEPROMtankIdx =			EEPROMcurrentIdx + 1;
+static const uint8_t EEPROMcurrentIdx =			nextAllowedValue;
+static const uint8_t EEPROMtankIdx =			EEPROMcurrentIdx + 1;
 #define nextAllowedValue EEPROMtankIdx + 1
 #if defined(trackIdleEOCdata)
-const uint8_t EEPROMeocIdleCurrentIdx =	nextAllowedValue;
-const uint8_t EEPROMeocIdleTankIdx =	EEPROMeocIdleCurrentIdx + 1;
+static const uint8_t EEPROMeocIdleCurrentIdx =	nextAllowedValue;
+static const uint8_t EEPROMeocIdleTankIdx =		EEPROMeocIdleCurrentIdx + 1;
 #define nextAllowedValue EEPROMeocIdleTankIdx + 1
 #endif // defined(trackIdleEOCdata)
 #endif // defined(useEEPROMtripStorage)
 
-const uint8_t tripSlotTotalCount =		nextAllowedValue;
+static const uint8_t tripSlotTotalCount =		nextAllowedValue;
 
 static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 	'0',
@@ -218,7 +218,6 @@ static const uint8_t tripFormatDragDistanceIdx =	tripFormatDragFullSpeedIdx + 1;
 static const uint8_t tripFormatIdxCount =			nextAllowedValue;
 
 static const uint8_t tripFormatReverseList[] PROGMEM = {
-	255,						// there should hopefully never be a trip index with this value
 	instantIdx,
 	currentIdx,
 	tankIdx,
@@ -253,8 +252,6 @@ static const char tripFormatReverseNames[] PROGMEM = {
 #if defined(useSpiffyTripLabels)
 // display variable trip labels
 static const uint8_t tripFormatLabelCGRAM[][4] PROGMEM = {
-	{0b00000000, 0b00000000, 0b00000000, 0b00000000}, // blank
-
 	{0b00000000, 0b00000111, 0b00000010, 0b00000111}, // I
  	{0b00000000, 0b00000011, 0b00000100, 0b00000011}, // C
 	{0b00000000, 0b00000111, 0b00000010, 0b00000010}, // T
@@ -271,12 +268,12 @@ static const uint8_t tripFormatLabelCGRAM[][4] PROGMEM = {
 };
 
 #endif // defined(useSpiffyTripLabels)
-volatile uint32_t collectedVSSpulseCount[(uint16_t)(tripSlotCount)];
-volatile uint64_t collectedInjCycleCount[(uint16_t)(tripSlotCount)];
+static volatile uint32_t collectedVSSpulseCount[(uint16_t)(tripSlotCount)];
+static volatile uint64_t collectedInjCycleCount[(uint16_t)(tripSlotCount)];
 
-volatile uint32_t collectedInjPulseCount[(uint16_t)(tripSlotFullCount)];
-volatile uint64_t collectedVSScycleCount[(uint16_t)(tripSlotFullCount)];
-volatile uint64_t collectedEngCycleCount[(uint16_t)(tripSlotFullCount)];
+static volatile uint32_t collectedInjPulseCount[(uint16_t)(tripSlotFullCount)];
+static volatile uint64_t collectedVSScycleCount[(uint16_t)(tripSlotFullCount)];
+static volatile uint64_t collectedEngCycleCount[(uint16_t)(tripSlotFullCount)];
 
 #if defined(useDebugTerminalLabels)
 static const char terminalTripVarNames[] PROGMEM = {
@@ -312,21 +309,21 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"windowTripFilterIdx[03]" tcEOS
 #endif // defined(useWindowTripFilter)
 #if defined(useBarFuelEconVsTime)
-	"FEvsTimeIdx[00]" tcEOS
-	"FEvsTimeIdx[01]" tcEOS
-	"FEvsTimeIdx[02]" tcEOS
-	"FEvsTimeIdx[03]" tcEOS
-	"FEvsTimeIdx[04]" tcEOS
-	"FEvsTimeIdx[05]" tcEOS
-	"FEvsTimeIdx[06]" tcEOS
-	"FEvsTimeIdx[07]" tcEOS
-	"FEvsTimeIdx[08]" tcEOS
-	"FEvsTimeIdx[09]" tcEOS
-	"FEvsTimeIdx[10]" tcEOS
-	"FEvsTimeIdx[11]" tcEOS
-	"FEvsTimeIdx[12]" tcEOS
-	"FEvsTimeIdx[13]" tcEOS
-	"FEvsTimeIdx[14]" tcEOS
+	"FEvsTimePeriodIdx[00]" tcEOS
+	"FEvsTimePeriodIdx[01]" tcEOS
+	"FEvsTimePeriodIdx[02]" tcEOS
+	"FEvsTimePeriodIdx[03]" tcEOS
+	"FEvsTimePeriodIdx[04]" tcEOS
+	"FEvsTimePeriodIdx[05]" tcEOS
+	"FEvsTimePeriodIdx[06]" tcEOS
+	"FEvsTimePeriodIdx[07]" tcEOS
+	"FEvsTimePeriodIdx[08]" tcEOS
+	"FEvsTimePeriodIdx[09]" tcEOS
+	"FEvsTimePeriodIdx[10]" tcEOS
+	"FEvsTimePeriodIdx[11]" tcEOS
+	"FEvsTimePeriodIdx[12]" tcEOS
+	"FEvsTimePeriodIdx[13]" tcEOS
+	"FEvsTimePeriodIdx[14]" tcEOS
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 	"FEvsSpeedIdx[00]" tcEOS
@@ -360,7 +357,6 @@ namespace tripSupport /* Trip save/restore/reset support section prototype */
 {
 
 	static void init(void);
-	static void mainProcess(void);
 	static uint8_t translateTripIndex(uint8_t tripTransferIdx, uint8_t tripDirIndex);
 	static void doResetTrip(uint8_t tripSlot);
 #if defined(useButtonInput)
@@ -469,8 +465,10 @@ namespace tripSave /* Trip save/restore/reset display support section prototype 
 
 #if defined(useButtonInput)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
-	static void goSaveCurrent(void);
 	static void goSaveTank(void);
+#if defined(useSavedTrips)
+	static void goSaveCurrent(void);
+#endif // defined(useSavedTrips)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 	static uint8_t doReadTrip(uint8_t tripSlot);
@@ -530,10 +528,12 @@ static const char tripSaveMenuTitles[] PROGMEM = {
 	"Reset TANK Trip" tcEOSCR
 };
 
-#if defined(useSavedTrips)
+#if defined(useSavedTrips) || defined(usePartialRefuel)
 static uint8_t thisTripSlot;
 static uint8_t topScreenLevel;
 
+#endif // defined(useSavedTrips) || defined(usePartialRefuel)
+#if defined(useSavedTrips)
 static const uint8_t taaModeWrite =			0;
 static const uint8_t taaModeRead =			taaModeWrite + 1;
 

@@ -22,7 +22,7 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 
 		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
-		if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
+		if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
 		{
 
 			if ((tripIdx == instantIdx) && (calcIdx == tFuelEcon)) calcIdx = tFuelRate;

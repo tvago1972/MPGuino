@@ -21,11 +21,9 @@ static const char bgSpaces[] PROGMEM = {
 namespace bgFEvsTsupport /* fuel economy over time histograph support section prototype */
 {
 
-	static uint8_t getFEvTperiodIdx(void);
+	static uint8_t getFEvTimeIdx(void);
 
 };
-
-volatile uint8_t FEvTperiodIdx;
 
 static const char barFEvTfuncNames[] PROGMEM = {
 	"FuelUsed / Time" tcEOS
@@ -64,8 +62,6 @@ namespace bgFEvsSsupport /* fuel economy over speed histograph support section p
 
 };
 
-uint8_t FEvSpdTripIdx;
-
 static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrTestReg, 0x02,									// test VSS cycle value
@@ -78,11 +74,11 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 
 //cont:
 	instrSubVariableFromX, 0x02, m32FEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
-	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
+	instrBranchIfLTorE, 5,								// if vehicle speed is above minimum threshold, skip ahead
 
 //badRet:
 	instrLdRegByte, 0x02, 0xFF,							// load a 255 into register 2
-	instrDone,											// exit to caller
+	instrSkip, 14,										// go store FE vs speed trip register index
 
 //cont2:
 	instrDiv2byVariable, m32FEvsSpeedQuantumIdx,		// find trip index offset
@@ -93,6 +89,7 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 
 //cont3:
 	instrAddByteToX, 0x02, FEvsSpeedIdx,				// obtain working fuel econ vs speed trip index value
+	instrStRegVariable, 0x02, m8FEvSpeedTripIdx,			// store working FS vs speed trip register index
 	instrDone											// exit to caller
 };
 

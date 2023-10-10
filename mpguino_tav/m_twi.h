@@ -1,46 +1,46 @@
 #if defined(useTWIsupport)
 #include <compat/twi.h>
-namespace TWI
+namespace TWI /* Two-Wire Interface support prototype */
 {
 
 	static void init(void);
 	static void shutdown(void);
-	static void openChannelMain(uint8_t address, uint8_t writeFlag);
-	static void transmitChannelMain(uint8_t sendStop);
-	static void openChannel(uint8_t address, uint8_t writeFlag);
+	static void open(uint8_t address, uint8_t writeFlag);
 	static uint8_t writeByte(uint8_t data);
-	static void transmitChannel(uint8_t sendStop);
-#if defined(useInterruptBasedTWI)
-	static void disableISRactivity(void);
-	static void enableISRactivity(void);
-#endif // defined(useInterruptBasedTWI)
+	static void transmit(uint8_t sendStop);
+
+}
+
+namespace TWImain /* Two-Wire Interface main program facing support prototype */
+{
+
+	static void open(uint8_t address, uint8_t writeFlag);
+	static uint8_t writeByte(uint8_t data);
+	static void transmit(uint8_t sendStop);
 
 }
 
 static const uint8_t TWI_REPEAT_START =		0;
 static const uint8_t TWI_STOP =				1;
 
-static const unsigned int twiFrequency =	100L;
+static const uint16_t twiFrequency =		100L;
 static const uint8_t twiDataBufferSize =	16;
 
 static uint8_t twiDataBuffer[twiDataBufferSize];
 
 static volatile uint8_t twiSlaveAddress;
-static volatile uint8_t twiErrorCode;
 static volatile uint8_t twiDataBufferIdx;
 static volatile uint8_t twiDataBufferLen;
 
-// bit flags for use with v8TWIstatus
-static const uint8_t twiBlockMainProgram =	0b10000000;
-static const uint8_t twiAllowISRactivity =	0b01000000;
-static const uint8_t twiOpen =				0b00100000;
-static const uint8_t twiFinished =			0b00010000;
-static const uint8_t twiClose =				0b00001000;
-static const uint8_t twiRemainOpen =		0b00000100;
-static const uint8_t twiErrorFlag =			0b00000010;
+// bit flags for use with v8TWIstatusIdx
+static const uint8_t twiOpen =					0b10000000;
+static const uint8_t twiRemainOpen =			0b01000000;
+static const uint8_t twiFinished =				0b00100000;
+static const uint8_t twiClose =					0b00010000;
+static const uint8_t twiErrorFlag =				0b00001000;
+static const uint8_t twiInterruptInUse =		0b00000100;
 
-static const uint8_t twiOpenMain =			(twiOpen | twiBlockMainProgram);
-static const uint8_t twiOpenInterrupt =		(twiOpen | twiAllowISRactivity);
+static const uint8_t twiInUse =					(twiOpen | twiRemainOpen);
 
 #endif // defined(useTWIsupport)
 #if defined(useMCP23017portExpander)

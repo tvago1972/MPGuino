@@ -26,9 +26,9 @@ static const uint8_t displayCountSettingsDisplay = 2
 #if defined(useLCDcontrast)
 	+ 1
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	+ 1
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	+ 1
@@ -36,9 +36,9 @@ static const uint8_t displayCountSettingsDisplay = 2
 #if defined(useOutputPins)
 	+ 2
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	+ 1
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	+ 1
 #endif // defined(useDataLoggingOutput)
@@ -124,9 +124,9 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 #if defined(useLCDcontrast)
 	"Contrast" tcEOSCR
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	"LCD BG Color" tcEOSCR
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 #ifdef useImperialGallon
@@ -139,9 +139,9 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 	"OutPtPin 1 Mode" tcEOSCR
 	"OutPtPin 2 Mode" tcEOSCR
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	"V(diode)*1000" tcEOSCR
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	"DLogSerial 1-Yes" tcEOSCR
 #endif // defined(useDataLoggingOutput)
@@ -255,9 +255,9 @@ static const char settingsParameterList[] PROGMEM = {
 #if defined(useLCDcontrast)
 	pContrastIdx,
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	pLCDcolorIdx,
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	pCostPerQuantity,
@@ -266,9 +266,9 @@ static const char settingsParameterList[] PROGMEM = {
 	pOutputPin1Mode,
 	pOutputPin2Mode,
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	pVoltageOffset,
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	pSerialDataLoggingIdx,
 #endif // defined(useDataLoggingOutput)

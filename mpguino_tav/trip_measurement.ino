@@ -229,7 +229,7 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 		: "e" (ann)
 	);
 #else // defined(useAssemblyLanguage)
-	unsigned int enn;
+	uint16_t enn;
 	union union_16 * n = (union union_16 *)(&enn);
 
 	c = 0;
@@ -303,55 +303,12 @@ static void tripSupport::init(void)
 	curRawEOCidleTripIdx = raw0eocIdleTripIdx;
 #endif // defined(trackIdleEOCdata)
 
+	SREG = oldSREG; // restore interrupt flag status
+
 	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
 
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void tripSupport::mainProcess(void)
-{
-
-	uint8_t oldSREG;
-	uint8_t k;
-	uint8_t m;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts to make the next operations atomic
-
-	oldRawTripIdx = curRawTripIdx; // save old raw trip variable index
-	curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set current raw trip variable index
-#if defined(trackIdleEOCdata)
-	oldRawEOCidleTripIdx = curRawEOCidleTripIdx; // save old raw EOC/idle trip variable index
-	curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set current raw EOC/idle trip variable index
-#endif // defined(trackIdleEOCdata)
-
-	SREG = oldSREG; // restore interrupt flag status
-
-	for (uint8_t x = 0; x < tripUpdateListSize; x++)
-	{
-
-		k = translateTripIndex(x, 0);
-		m = translateTripIndex(x, 1);
-
-		if (m & 0x80) tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
-		else tripVar::update(k, m); // otherwise, just do trip update
-
-	}
-
-	tripVar::reset(oldRawTripIdx); // reset old raw trip variable
-#if defined(trackIdleEOCdata)
-	tripVar::reset(oldRawEOCidleTripIdx); // reset old raw EOC/idle trip variable
-#endif // defined(trackIdleEOCdata)
-
 #if defined(useWindowTripFilter)
-	if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnVehicle)
-	{
-
-		wtpCurrentIdx++;
-		if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
-
-	}
+	mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
 
 #endif // defined(useWindowTripFilter)
 }
@@ -380,19 +337,24 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 #endif // defined(trackIdleEOCdata)
 #if defined(useWindowTripFilter)
 		case 0x7D:		// replace generic window trip index with current window trip index
-			i = wtpCurrentIdx;
+			i = mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] + windowTripFilterIdx - 1;
+
+			if ((--mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)]) == 0)
+				mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
+
 			break;
 
 #endif // defined(useWindowTripFilter)
 #if defined(useBarFuelEconVsTime)
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
-			i = bgFEvsTsupport::getFEvTperiodIdx();
+			i = bgFEvsTsupport::getFEvTimeIdx();
 			break;
 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
-			i = FEvSpdTripIdx;
+			SWEET64::runPrgm(prgmFEvsSpeed, instantIdx);
+			i = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)];
 			break;
 
 #endif // defined(useBarFuelEconVsSpeed)
@@ -566,6 +528,7 @@ static void tripSave::goSaveTank(void)
 
 }
 
+#if defined(useSavedTrips)
 static void tripSave::goSaveCurrent(void)
 {
 
@@ -575,6 +538,7 @@ static void tripSave::goSaveCurrent(void)
 
 }
 
+#endif // defined(useSavedTrips)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 static uint8_t tripSave::doAutoAction(uint8_t taaMode)
@@ -651,7 +615,7 @@ static void tripSupport::outputResetStatus(uint8_t tripSlot)
 static void tripSupport::resetWindowFilter(void)
 {
 
-	wtpCurrentIdx = windowTripFilterIdx;
+	mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
 
 	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
 

@@ -4,6 +4,7 @@
 //#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
+#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module
 //#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
@@ -78,11 +79,10 @@
 //
 //#define useLegacyLCD true					// select Legacy 16x2 4-bit LCD
 //#define useDFR0009LCD true						// (inw) select DFRobot DFR0009 LCD Keypad Shield
-#define useAdafruitRGBLCDshield true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
+//#define useAdafruitRGBLCDdisplay true		// select Adafruit RGB 16x2 4-bit LCD module over TWI
 //#define useParallaxSerialLCDmodule true		// select Parallax 16x2 Serial LCD module
 //#define useSainSmart2004LCD true			// select SainSmart 2004 20x4 4-bit LCD module over TWI
 //#define useGenericTWILCD true				// select any 4-bit LCD module over TWI using a PCF8574 port expander
-#define useSeeedStudioTFTtouchShield true	// select SeeedStudio TFT Touch Shield 2.0 and above with ILI9341 chipset 
 
 // the below defines determine the LCD character screen width and screen height. These settings are overridden by the above
 // LCD device options, if specified.
@@ -104,23 +104,24 @@
 // only one of the below hardware button options may be chosen - choosing more than one will cause a compilation error to occur
 // one of the above LCD (not TFT) display options MUST be selected with one of the below button options
 //
-// note: if useAdafruitRGBLCDshield is selected, useLegacyButtons will be ignored
-//       if useMPGuinoColourTouch is selected, all hardware button choices will be ignored
+// note: if useMPGuinoColourTouch is selected, all hardware button choices will be ignored
 //
 //#define useLegacyButtons true
 //#define useAnalogMuxButtons true
 //#define useParallax5PositionSwitch true
+//#define useAdafruitRGBLCDbuttons true
 //#define useGenericTWIbuttons true
 
 // core selectable options - any conflicts will be reported at compile time
 // *** these features will be supported, regardless of what user interface is chosen for MPGuino ***
 //
+#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 #define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
 //#define useFuelCost true					// Show fuel cost
 #define usePartialRefuel true				// Provide means to enter partial refuel amount into MPGuino
 //#define useImperialGallon true				// when selected, uses Imperial gallons instead of default US gallons
-#define useCarVoltageOutput true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
+#define useAlternatorVoltage true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// Ability to use a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
 //#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
@@ -131,7 +132,6 @@
 // user interface selectable options - any conflicts will be reported at compile time
 // *** these features only work with 16x2 or 20x2 or 20x4 LCD output display with buttons ***
 //
-#define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define useDragRaceFunction true			// Performs "drag race" 0-60 MPH, 1/4 mile time, estimated horsepower functionality
 #define useBigFE true						// Show big fuel economy displays
 #define useBigDTE true						// Show big distance-to-empty displays
@@ -151,10 +151,10 @@
 //   - all may be chosen independently of one another
 //   - if the performance enhancement option depends on a base option that is not selected, the performance enhancement is ignored
 //
-#define useLCDbufferedOutput true			// Speed up LCD output
-#define useBluetoothBufferedOutput true		// speed up Bluetooth output on serial port
-#define useLoggingBufferedOutput true		// speed up logging output on serial port
-#define useJSONbufferedOutput true			// speed up JSON output on serial port
+//#define useLCDbufferedOutput true			// Speed up LCD output
+//#define useBluetoothBufferedOutput true		// speed up Bluetooth output on serial port
+//#define useLoggingBufferedOutput true		// speed up logging output on serial port
+//#define useJSONbufferedOutput true			// speed up JSON output on serial port
 #define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
 #define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 
@@ -204,31 +204,50 @@
 #error *** CANNOT configure for TinkerkitLCDmodule and Legacy Buttons!!! ***
 #endif // defined(useTinkerkitLCDmodule) && defined(useLegacyButtons)
 
+#if defined(useAdafruitRGBLCDshield)
+#define useAdafruitRGBLCDdisplay true
+#define useAdafruitRGBLCDbuttons true
+#undef useLegacyLCD
+#undef useDFR0009LCD
+#undef useParallaxSerialLCDmodule
+#undef useSainSmart2004LCD
+#undef useGenericTWILCD
+#undef useLegacyButtons
+#undef useAnalogMuxButtons
+#undef useParallax5PositionSwitch
+#undef useGenericTWIbuttons
+#endif // defined(useAdafruitRGBLCDshield)
+
 #if defined(useSeeedStudioTFTtouchShield)
 #define useTFToutput true
+#define useILI9341 true
 #define useTouchScreenInput true
 #define useAnalogRead true
-#define useTimer4 true
 #endif // defined(useSeeedStudioTFTtouchShield)
 
 #if defined(useMPGuinoColourTouch)
 #define useTFToutput true
+#define useILI9341 true
 #define useTouchScreenInput true
 #define useBluetooth true
 #define useBluetoothSerialPort1 true
 #define useBluetoothSerialBaudRate 9600
 #define useBluetoothBufferedOutput true
-#define useCarVoltageOutput true
+#define useAlternatorVoltage true
 #undef useBluetoothSerialPort0
 #undef useBluetoothSerialPort2
 #undef useBluetoothSerialPort3
 #undef useBluetoothAdaFruitSPI
 #endif // defined(useMPGuinoColourTouch)
 
+#if defined(useILI9341)
+#define useHardwareSPI true
+#endif // defined(useILI9341)
+
 #if defined(useTFToutput)
 #undef useLegacyLCD
 #undef useDFR0009LCD
-#undef useAdafruitRGBLCDshield
+#undef useAdafruitRGBLCDdisplay
 #undef useParallaxSerialLCDmodule
 #undef useSainSmart2004LCD
 #undef useGenericTWILCD
@@ -239,6 +258,7 @@
 #undef useAnalogMuxButtons
 #undef useParallax5PositionSwitch
 #undef useAnalogButtons
+#undef useAdafruitRGBLCDbuttons
 #undef useTWIbuttons
 #undef useDebugButtonInjection
 #endif // defined(useTouchScreenInput)
@@ -258,7 +278,8 @@
 #define LCDcharWidth 16
 #define LCDcharHeight 2
 #undef useDFR0009LCD
-#undef useAdafruitRGBLCDshield
+#undef useAdafruitRGBLCDdisplay
+#undef useAdafruitRGBLCDbuttons
 #undef useParallaxSerialLCDmodule
 #undef useSainSmart2004LCD
 #undef useGenericTWILCD
@@ -275,10 +296,12 @@
 #define F_CPU = 20000000UL; // redefine F_CPU
 #endif // defined(useJellyBeanDriverBoard)
 #undef useDFR0009LCD
-#undef useAdafruitRGBLCDshield
+#undef useDS1307clock
 #undef useParallaxSerialLCDmodule
 #undef useSainSmart2004LCD
+#undef useAdafruitRGBLCDdisplay
 #undef useGenericTWILCD
+#undef useAdafruitRGBLCDbuttons
 #undef useAnalogMuxButtons
 #undef useParallax5PositionSwitch
 #undef useActivityLED
@@ -286,9 +309,9 @@
 
 // LCD defines and sanity checks
 
-#if ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDshield) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
+#if ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDdisplay) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
 #error *** MPGuino can only use exactly one LCD device!!! ***
-#endif // ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDshield) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
+#endif // ( defined(useLegacyLCD) + defined(useDFR0009LCD) + defined(useAdafruitRGBLCDdisplay) + defined(useParallaxSerialLCDmodule) + defined(useSainSmart2004LCD) + defined(useGenericTWILCD) ) > 1
 
 #if defined(useLegacyLCD)
 #define LCDcharWidth 16
@@ -315,19 +338,21 @@
 #undef useTWI4BitLCD
 #endif // defined(useParallaxSerialLCDmodule)
 
+#if defined(useAdafruitRGBLCDbuttons)
+#undef useGenericTWIbuttons
+#define useTWIbuttons true
+static const uint8_t TWIaddressButton = addressTWIadafruitRGBLCD;
+#define useButtonCrossConfig true
+#endif // defined(useAdafruitRGBLCDbuttons)
+
 #if defined(useGenericTWIbuttons)
 #define useTWIbuttons true
+#define useButtonCrossConfig true
 static const uint8_t TWIaddressButton = addressTWIbutton;
 #endif // defined(useGenericTWIbuttons)
 
-#if defined(useGenericTWILCD)
-#define useTWI4BitLCD true
-static const uint8_t TWIaddressLCD = addressTWILCD;
-#undef usePort4BitLCD
-#undef useSerialLCD
-#endif // defined(useGenericTWILCD)
-
 #if defined(useSainSmart2004LCD)
+#undef useGenericTWILCD
 #define LCDcharWidth 20
 #define LCDcharHeight 4
 #define useTWI4BitLCD true
@@ -336,127 +361,106 @@ static const uint8_t TWIaddressLCD = addressTWILCD;
 #undef useSerialLCD
 #endif // defined(useSainSmart2004LCD)
 
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
+#undef useGenericTWILCD
 #define LCDcharWidth 16
 #define LCDcharHeight 2
 #define useTWI4BitLCD true
 static const uint8_t TWIaddressLCD = addressTWIadafruitRGBLCD;
-#define useMCP23017portExpander true
-static const uint8_t TWIaddressMCP23017 = addressTWIadafruitRGBLCD;
 #undef usePort4BitLCD
 #undef useSerialLCD
-#if !defined(useAnalogButtons)
-#undef useLegacyButtons
-#define useTWIbuttons true
-static const uint8_t TWIaddressButton = addressTWIadafruitRGBLCD;
-#endif // !defined(useAnalogButtons)
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
+
+#if defined(useGenericTWILCD)
+#define useTWI4BitLCD true
+static const uint8_t TWIaddressLCD = addressTWILCD;
+#undef usePort4BitLCD
+#undef useSerialLCD
+#endif // defined(useGenericTWILCD)
+
+#if defined(useAdafruitRGBLCDdisplay) || defined(useAdafruitRGBLCDbuttons)
+#define useMCP23017portExpander true
+static const uint8_t TWIaddressMCP23017 = addressTWIadafruitRGBLCD;
+#endif // defined(useAdafruitRGBLCDdisplay) || defined(useAdafruitRGBLCDbuttons)
 
 #if defined(useSpiffyTripLabels) && LCDcharHeight == 4
 #error *** CANNOT use useSpiffyTripLabels with an LCD display height of 4 lines!!! ***
 #endif // defined(useSpiffyTripLabels) && LCDcharHeight == 4
 
-// major feature define configurations
-
-#if defined(usePartialRefuel) || defined(useSavedTrips)
-#define useEnhancedTripReset true
-#endif // defined(usePartialRefuel) || defined(useSavedTrips)
-
-#if defined(useSoftwareClock) || defined(useDS1307clock)
-#define useClockDisplay true
-#define useBigTimeDisplay true
-#if defined(useDS1307clock)
-static const uint8_t TWIaddressRTC = addressTWIRTC;
-#define useTWIsupport true
-#define useInterruptBasedTWI true
-#undef useSoftwareClock
-#endif // defined(useDS1307clock)
-#endif // defined(useSoftwareClock) || defined(useDS1307clock)
-
-#if defined(useStatusMeter)
-#define useExpandedMainDisplay true
-#endif // defined(useStatusMeter)
-
-#if defined(useBigFE)
-#define useExpandedMainDisplay true
-#define useBigNumberDisplay true
-#endif // defined(useBigFE)
-
-#if defined(useBarFuelEconVsTime)
-#define useExpandedMainDisplay true
-#define useBarGraph true
-#endif // defined(useBarFuelEconVsTime)
-
-#if defined(useBarFuelEconVsSpeed)
-#define useExpandedMainDisplay true
-#define useBarGraph true
-#endif // defined(useBarFuelEconVsSpeed)
-
-#if defined(useBigTTE)
-#define useExpandedMainDisplay true
-#define useBigTimeDisplay true
-#endif // defined(useBigTTE)
-
-#if defined(useBigDTE)
-#define useExpandedMainDisplay true
-#define useBigNumberDisplay true
-#endif // defined(useBigDTE)
-
-#if defined(useCPUreading)
-#define useExpandedMainDisplay true
-#endif // defined(useCPUreading)
-
-#if defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
-#define useActivityRecord true
-#endif // defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
-
-#if defined(useClockDisplay)
-#define useExpandedMainDisplay true
-#endif // defined(useClockDisplay)
-
-#if defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
-#define useBigDigitDisplay true
-#endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
-
-#if defined(useBigDigitDisplay) || defined(useStatusMeter)
-#define useLCDfonts true
-#endif // defined(useBigDigitDisplay) || defined(useStatusMeter)
-
-#if defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
-#define useLCDgraphics true
-#endif // defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
-
-#ifdef useCalculatedFuelFactor
-#define useIsqrt true
-#define usePressure true
-#define useFuelPressure true
-#endif // useCalculatedFuelFactor
+// button and miscellaneous hardware defines and sanity checks
 
 #if defined(useDebugAnalog)
 #define useAnalogRead true
 #endif // defined(useDebugAnalog)
 
 #if defined(useChryslerMAPCorrection)
-#define useIsqrt true
-#define usePressure true
 #define useFuelPressure true
 #define useAnalogRead true
 #else // defined(useChryslerMAPCorrection)
 #undef useChryslerBaroSensor
 #endif // defined(useChryslerMAPCorrection)
 
-#if defined(useCarVoltageOutput)
+#ifdef useCalculatedFuelFactor
+#define useFuelPressure true
+#endif // useCalculatedFuelFactor
+
+#if defined(useAlternatorVoltage)
 #define useAnalogRead true
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 
-#if defined(useCoastDownCalculator)
-#define useVehicleParameters true
-#define useMatrixMath true
-#endif // defined(useCoastDownCalculator)
+#if defined(useDS1307clock)
+static const uint8_t TWIaddressRTC = addressTWIRTC;
+#define useTWIsupport true
+#define useInterruptBasedTWI true
+#undef useSoftwareClock
+#endif // defined(useDS1307clock)
 
-#ifdef useFuelParamCalculator
-#define useMatrixMath true
-#endif // useFuelParamCalculator
+#if defined(useTWIbuttons)
+#define useTWIsupport true
+#define useInterruptBasedTWI true
+#endif // defined(useTWIbuttons)
+
+#if defined(useSoftwareClock) || defined(useDS1307clock)
+#define useClockSupport true
+#endif // defined(useSoftwareClock) || defined(useDS1307clock)
+
+#if defined(useSavedTrips)
+#define useEEPROMtripStorage true
+#endif // defined(useSavedTrips)
+
+#if defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
+#define useAnalogButtons true
+#endif // defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
+
+#if defined(useAnalogButtons)
+#define useAnalogRead true
+#define useButtonCrossConfig true
+#endif // defined(useAnalogButtons)
+
+#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
+#if defined(__AVR_ATmega2560__) && defined(useDebugTerminal) && !defined(useTouchScreenInput)
+#define useDebugButtonInjection true
+#endif // defined(__AVR_ATmega2560__) && defined(useDebugTerminal) && !defined(useTouchScreenInput)
+#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
+
+#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
+#define useButtonInput true
+#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
+
+#if !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
+#define useDebugButtons true
+#define useButtonCrossConfig true
+#endif // !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
+
+#if defined(useTinkerkitLCDmodule) and !defined(useButtonInput)
+#error *** useTinkerkitLCDmodule button configuration missing!!! ***
+#endif // defined(useTinkerkitLCDmodule) and !defined(useButtonInput)
+
+// serial / USB / SPI initial define configurations
+
+#if defined(useBluetoothAdaFruitSPI) && defined(useSeeedStudioTFTtouchShield)
+#error *** Hardware conflict between useBluetoothAdaFruitSPI and useSeeedStudioTFTtouchShield!!! ***
+#endif // defined(useBluetoothAdaFruitSPI) && defined(useSeeedStudioTFTtouchShield)
 
 // serial / USB / SPI initial define configurations
 
@@ -483,7 +487,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useBluetoothSerialPort2
 #undef useBluetoothSerialPort3
 #undef useBluetoothSerialBaudRate
-//#undef useBluetoothAdaFruitSPI
+#if !defined(__AVR_ATmega2560__)
+#undef useBluetoothAdaFruitSPI
+#endif // !defined(__AVR_ATmega2560__)
 #undef useBluetoothBufferedOutput
 #endif // defined(useBluetooth)
 
@@ -983,12 +989,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useBuffering true
 #endif
 
-// hardware input define configurations
-
-#if defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
-#define useAnalogButtons true
-#endif // defined(useAnalogMuxButtons) || defined(useParallax5PositionSwitch)
-
 #if defined(useTWI4BitLCD)
 #define useTWIsupport true
 #define useBinaryLCDbrightness true
@@ -1002,15 +1002,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
 #define useLCDoutput true
 #endif // defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
-
-#if defined(useAnalogButtons)
-#define useAnalogRead true
-#endif // defined(useAnalogButtons)
-
-#if defined(useTWIbuttons)
-#define useTWIsupport true
-#define useInterruptBasedTWI true
-#endif // defined(useTWIbuttons)
 
 #if defined(useSimulatedFIandVSS)
 #define useTimer1Interrupt true
@@ -1032,28 +1023,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useTimer2 true
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(useOutputPins)
-
-#if defined(useDragRaceFunction)
-#define useVehicleParameters true
-#endif // defined(useDragRaceFunction)
-
-#if defined(useSavedTrips)
-#define useEEPROMtripStorage true
-#endif // defined(useSavedTrips)
-
-#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
-#if defined(__AVR_ATmega2560__)
-#define useDebugButtonInjection true
-#endif // defined(__AVR_ATmega2560__)
-#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons)
-
-#if defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
-#define useButtonInput true
-#endif // defined(useLegacyButtons) || defined(useAnalogButtons) || defined(useTWIbuttons) || defined(useDebugButtonInjection)
-
-#if !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
-#define useDebugButtons true
-#endif // !defined(useLegacyButtons) && !defined(useAnalogButtons) && !defined(useTWIbuttons) && defined(useButtonInput)
 
 // this section catches configuration errors
 
@@ -1120,13 +1089,75 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #error *** CANNOT select both useSoftwareClock and useDeepSleep!!! ***
 #endif // defined(useSoftwareClock) && defined(useDeepSleep)
 
-#if defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
-#error *** CANNOT select both useCarVoltageOutput and useChryslerBaroSensor!!! ***
-#endif // defined(useCarVoltageOutput) && defined(useChryslerBaroSensor)
+#if defined(useAlternatorVoltage) && defined(useChryslerBaroSensor)
+#error *** CANNOT select both useAlternatorVoltage and useChryslerBaroSensor!!! ***
+#endif // defined(useAlternatorVoltage) && defined(useChryslerBaroSensor)
 
 #if defined(useHardwareSPI)
 #if defined(__AVR_ATmega328P__) && ( defined(useOutputPins) || defined(useActivityLED) )
 #error *** Conflict exists between useHardwareSPI and useOutputPins / useActivityLED!!! ***
 #endif // defined(__AVR_ATmega328P__) && ( defined(useOutputPins) || defined(useActivityLED) )
 #endif // defined(useHardwareSPI)
+
+// major feature define configurations
+
+#if defined(useCoastDownCalculator)
+#define useVehicleParameters true
+#define useMatrixMath true
+#endif // defined(useCoastDownCalculator)
+
+#if defined(useDragRaceFunction)
+#define useVehicleParameters true
+#endif // defined(useDragRaceFunction)
+
+#ifdef useFuelParamCalculator
+#define useMatrixMath true
+#endif // useFuelParamCalculator
+
+#if defined(useFuelPressure)
+#define useIsqrt true
+#define usePressure true
+#endif // defined(useFuelPressure)
+
+#if defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
+#define useActivityRecord true
+#endif // defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
+
+// LCD-specific major feature define configurations
+
+#if defined(useClockSupport) && defined(useButtonInput)
+#define useClockDisplay true
+#endif // defined(useClockSupport) && defined(useButtonInput)
+
+#if defined(useBigTTE) || defined(useClockDisplay)
+#define useBigTimeDisplay true
+#endif // defined(useBigTTE) || defined(useClockDisplay)
+
+#if defined(useBigDTE) || defined(useBigFE)
+#define useBigNumberDisplay true
+#endif // defined(useBigDTE) || defined(useBigFE)
+
+#if defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
+#define useBigDigitDisplay true
+#endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
+
+#if defined(useBarFuelEconVsSpeed) || defined(useBarFuelEconVsTime)
+#define useBarGraph true
+#endif // defined(useBarFuelEconVsSpeed) || defined(useBarFuelEconVsTime)
+
+#if defined(useBigDigitDisplay) || defined(useStatusMeter)
+#define useLCDfonts true
+#endif // defined(useBigDigitDisplay) || defined(useStatusMeter)
+
+#if defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
+#define useLCDgraphics true
+#endif // defined(useSpiffyTripLabels) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useLCDfonts)
+
+#if defined(useCPUreading) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useStatusMeter)
+#define useExpandedMainDisplay true
+#endif // defined(useCPUreading) || defined(useBigDigitDisplay) || defined(useBarGraph) || defined(useStatusMeter)
+
+#if defined(usePartialRefuel) || defined(useSavedTrips)
+#define useEnhancedTripReset true
+#endif // defined(usePartialRefuel) || defined(useSavedTrips)
 

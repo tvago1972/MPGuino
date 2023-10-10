@@ -33,7 +33,7 @@ static const uint8_t coastdownTestParamList[] PROGMEM = {
 
 static volatile uint8_t coastdownState;
 
-// bit flags for use with v8CoastdownStatus
+// bit flags for use with v8CoastdownStatusIdx
 static const uint8_t cdTestActive =				0b10000000;
 static const uint8_t cdTestTriggered =			0b01000000;
 static const uint8_t cdTestCanceled =			0b00100000;

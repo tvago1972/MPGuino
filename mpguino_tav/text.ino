@@ -180,7 +180,8 @@ static void text::statusOut(uint8_t devIdx, const char * str)
 static void text::initStatus(uint8_t devIdx)
 {
 
-	heart::delayS(0);
+	// clear all display delays in progress for this device
+	mainProgram8Variables[(uint16_t)(devIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = 0;
 
 #if defined(blankScreenOnMessage)
 	charOut(devIdx, 0x0C); // clear the entire screen
@@ -194,7 +195,7 @@ static void text::commitStatus(uint8_t devIdx)
 {
 
 	newLine(devIdx);
-	heart::delayS(delay0Tick2000ms);
+	mainProgram8Variables[(uint16_t)(devIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = heart::delay0(delay0Tick2000ms, 0);
 
 }
 
@@ -437,7 +438,7 @@ static const char * findStr(const char * str, uint8_t strIdx)
 
 }
 
-static unsigned long str2ull(char * strBuffer)
+static uint32_t str2ull(char * strBuffer)
 {
 
 	uint8_t c;

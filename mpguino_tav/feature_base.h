@@ -100,38 +100,26 @@ static const char mainDisplayPageTitles[] PROGMEM = {
 
 static const uint16_t mainDisplayPageFormats[(uint16_t)(mainDisplayFormatSize)] PROGMEM = {
 	(instantIdx << 8 ) |			(tSpeed),				// Instrument
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 									(tAlternatorChannel),
-#else // defined(useCarVoltageOutput)
+#else // defined(useAlternatorVoltage)
 	(instantIdx << 8 ) |			(tEngineSpeed),
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 	(instantIdx << 8 ) |			(tFuelRate),
 	(instantIdx << 8 ) |			(tFuelEcon),
 
 	(instantIdx << 8 ) |			(tFuelEcon),			// Custom
-#if defined(useCarVoltageOutput)
-									(tAlternatorChannel),
-#else // defined(useCarVoltageOutput)
-	(instantIdx << 8 ) |			(tEngineSpeed),
-#endif // defined(useCarVoltageOutput)
+	(instantIdx << 8 ) |			(tSpeed),
 	(instantIdx << 8 ) |			(tFuelRate),
 	(currentIdx << 8 ) |			(tFuelEcon),
 
 	(instantIdx << 8 ) |			(tFuelEcon),			// Instant / Current
-#if defined(useCarVoltageOutput)
-									(tAlternatorChannel),
-#else // defined(useCarVoltageOutput)
-	(instantIdx << 8 ) |			(tEngineSpeed),
-#endif // defined(useCarVoltageOutput)
+	(instantIdx << 8 ) |			(tSpeed),
 	(currentIdx << 8 ) |			(tFuelEcon),
 	(currentIdx << 8 ) |			(tDistance),
 
 	(instantIdx << 8 ) |			(tFuelEcon),			// Instant / Tank
-#if defined(useCarVoltageOutput)
-									(tAlternatorChannel),
-#else // defined(useCarVoltageOutput)
-	(instantIdx << 8 ) |			(tEngineSpeed),
-#endif // defined(useCarVoltageOutput)
+	(instantIdx << 8 ) |			(tSpeed),
 	(tankIdx << 8 ) |				(tFuelEcon),
 	(tankIdx << 8 ) |				(tDistance),
 
@@ -205,17 +193,19 @@ namespace displayEdit /* Programmable main display page edit support section pro
 	static void cancel(void);
 	static void set(void);
 	static void readInitial(void);
-	static void changeItemUp(void);
+	static void changeFunctionUp(void);
+	static void changeTripUp(void);
 #if defined(useButtonCrossConfig)
-	static void changeItemDown(void);
+	static void changeFunctionDown(void);
+	static void changeTripDown(void);
 #endif // defined(useButtonCrossConfig)
-	static void changeItem(uint8_t changeDir);
+	static void changeFunction(uint8_t changeDir);
+	static void changeTrip(uint8_t changeDir);
 
 };
 
 static uint8_t basePageIdx;
-static uint8_t formatEditIdx;
-static uint8_t formatFunctionFlag;
+static uint8_t functionPos;
 static uint16_t displayEditPageFormats[(uint16_t)(4)];
 
 static const char deFormatReverted[] PROGMEM = "DisplayEdit Canx";

@@ -102,9 +102,9 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 #if defined(useLCDcontrast)
 			if (parameterPtr == pContrastIdx) LCD::setContrast((uint8_t)(str2ull(pBuff))); // adjust contrast dynamically
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 			if (parameterPtr == pLCDcolorIdx) LCD::setRGBcolor((uint8_t)(str2ull(pBuff))); // adjust backlight color dynamically
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 			break;
 
@@ -217,7 +217,7 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			c = pBuff[(uint16_t)(cursorPos)]; // save existing character
 
-			if (volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] & t0saShowCursor)
+			if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saShowCursor)
 			{
 
 				if (cursorPos < 10) pBuff[(uint16_t)(cursorPos)] = '_'; // replace character with an underscore

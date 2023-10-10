@@ -8,7 +8,7 @@ static void button::init(void)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 #if defined(__AVR_ATmega2560__)
 	DIDR2 &= ~((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D)); // enable digital input on port K button pins
@@ -34,19 +34,13 @@ static void button::init(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useTWIbuttons)
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
 #if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::configureOutputPort((uint16_t)(buttonMask));
 #endif // defined(useMCP23017portExpander)
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
 
 #endif // defined(useTWIbuttons)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-	heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, 0, t0cEnableButtonSampling);
+	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cEnableButtonSampling);
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
@@ -59,20 +53,14 @@ static void button::shutdown(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useTWIbuttons)
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
 #if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::configureOutputPort(0);
 #endif // defined(useMCP23017portExpander)
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
 
 #endif // defined(useTWIbuttons)
 #if defined(useLegacyButtons)
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 #if defined(__AVR_ATmega2560__)
 	DIDR2 |= ((1 << ADC13D) | (1 << ADC12D) | (1 << ADC11D)); // disable digital input on port K button pins
@@ -94,7 +82,7 @@ static void button::shutdown(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-	heart::changeBitFlagBits(v8Timer0Command - v8VariableStartIdx, t0cEnableButtonSampling, 0);
+	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, t0cEnableButtonSampling, 0);
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
@@ -108,8 +96,8 @@ static void button::inject(uint8_t buttonValue)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	thisButtonState = buttonValue;
-	volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
+	volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] = buttonValue;
+	volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -275,8 +263,16 @@ static void cursor::doCommand(void)
 	const buttonVariable * bpPtr;
 	uint8_t bp;
 	uint8_t i;
+	uint8_t oldSREG;
 
-	bp = buttonPress; // capture button state
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operation atomic
+
+	volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saReadButton);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+	bp = volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)]; // capture button state
 	bpPtr = (const buttonVariable *)(pgm_read_word(&(displayParameters[(uint16_t)(workingDisplayIdx)].buttonList)));
 
 	while (true)
@@ -299,7 +295,7 @@ static void cursor::noSupport(void)
 
 	text::initStatus(m8DevLCDidx);
 	text::stringOut(m8DevLCDidx, PSTR("Btn 0x"));
-	text::hexByteOut(m8DevLCDidx, buttonPress);
+	text::hexByteOut(m8DevLCDidx, volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)]);
 	text::stringOut(m8DevLCDidx, PSTR(" Pressed"));
 	text::commitStatus(m8DevLCDidx);
 

@@ -126,16 +126,7 @@ TFT Pins - MPGuino Colour Touch by abbalooga
   Arduino Mega2560
     CS         PL2, Digital 47
     DC         PL1, Digital 48
-    LED        PB6, Digital 12, controlled by PWM on OC1B
-    RESET      PL5, Digital 44
-    SDI (MOSI) PB2, Digital 51
-    SCK        PB1, Digital 52
-
-TFT Pins - SeeedStudio TFT Touch Shield v2.0 and above
-  Arduino Mega2560
-    CS         PE3, Digital 5
-    DC         PH3, Digital 6
-    LED        PH4, Digital 7, controlled by PWM on OC4C
+    LED        PB6, Digital 12
     RESET      PL5, Digital 44
     SDI (MOSI) PB2, Digital 51
     SCK        PB1, Digital 52
@@ -208,13 +199,6 @@ Touchscreen Pins - MPGuino Colour Touch by abbalooga
     T_DIN      PH6, Digital 9, software SPI
     T_DO       PH5, Digital 8, software SPI
     T_IRQ      PH4, Digital 7
-
-Touchscreen Pins - SeeedStudio TFT Touch Shield v2.0 and above
-  Arduino Mega2560
-    YM/YD   PF0 (ADC0), A0
-    XM/XL   PF1 (ADC1), A1
-    YP/YU   PF2 (ADC2), A2
-    XP/XR   PF3 (ADC3), A3
 
 -------------------------------------
 
@@ -512,29 +496,28 @@ int main(void);
 int main(void)
 {
 
+#if defined(useSimulatedFIandVSS)
+	uint16_t signalSimFIPtickLength; // to force debug injector pulse width to a maximum good engine speed-dependent value
+	uint16_t signalSimFIPWopenTickLength;
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	uint16_t availableRAMptr;
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	uint8_t i;
 	uint8_t j;
+	uint8_t oldSREG;
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
-	heart::initCore(); // go initialize core MPGuino functionality
+	heart::initCore(); // go initialize core MPGuino timers
 
-	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required
+	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required - also initialize basic MPGuino functionality
 
 	tripSupport::init(); // go initialize trip variable storage
 
-#if defined(useSimulatedFIandVSS)
-	volatile8Variables[(uint16_t)(v8SignalSimModeFlags - v8VariableStartIdx)] = (debugVSSflag | debugInjectorFlag);
-	signalSim::configurePorts();
-
-#endif // defined(useSimulatedFIandVSS)
-#if defined(useDragRaceFunction)
-	accelerationTest::init();
-
-#endif // defined(useDragRaceFunction)
 	sei();
 
-	j = heart::delay0(delay0Tick1500ms); // show splash screen for 1.5 seconds
+	j = heart::delay0(delay0Tick1500ms, 0); // show splash screen for 1.5 seconds
 
 	heart::initHardware(); // initialize all human interface peripherals
 
@@ -561,9 +544,13 @@ int main(void)
 	decWindow = 10;
 
 #endif // defined(outputDebugTerminalSplash)
-	heart::doDelay0(j); // show splash screen for 1.5 seconds
+	while (volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & j) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
 #if defined(useButtonInput)
+#if defined(useSimulatedFIandVSS)
+	signalSim::configurePorts(debugVSSflag | debugInjectorFlag);
+
+#endif // defined(useSimulatedFIandVSS)
 	// restore cursor positions from EEPROM
 	for (uint8_t x = 0; x < displayCountTotal; x++) displayCursor[(uint16_t)(x)] = EEPROM::readByte(x + eePtrDisplayCursorStart);
 
@@ -598,26 +585,141 @@ int main(void)
 #endif // defined(useDebugCPUreading)
 #endif // defined(useActivityRecord)
 #if defined(useSimulatedFIandVSS)
-		if (heart::testAndResetBitFlagBit(v8Timer1Status - v8VariableStartIdx, t1sDebugUpdateFIP)) signalSim::mainProcessFuel();
+		if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugEnableFlags)
+		{
 
-		if (heart::testAndResetBitFlagBit(v8Timer1Status - v8VariableStartIdx, t1sDebugUpdateVSS)) signalSim::mainProcessVSS();
+			if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugInjectorFlag) // if injector simulator is enabled
+			{
+
+				// if timer0 delay for fuel injector simulator is timed out
+				if (volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)])
+				{
+
+					// reset timer0 delay for fuel injector simulator
+					heart::changeBitFlagBits(v8Timer0DelaySignalIdx - v8VariableStartIdx, mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)], 0);
+
+					if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)]) mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)]--;
+					else
+					{
+
+						mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)] = debugFIPlength - 1;
+						mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] += 0x40;
+
+					}
+
+					if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] & 0x40)
+					{
+
+						if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] & 0x80) i = debugFIPlength - mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)] - 1;
+						else i = mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)];
+
+						signalSimFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(i)]); // read stored engine period countdown value
+						signalSimFIPWopenTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(i)]); // read stored fuel injector open period value
+
+						// if fuel injector open period value is greater than stored engine period countdown value, use the stored engine period countdown value instead
+						if (signalSimFIPWopenTickLength > (signalSimFIPtickLength - 63)) signalSimFIPWopenTickLength = signalSimFIPtickLength - 63;
+
+						oldSREG = SREG; // save interrupt flag status
+						cli(); // disable interrupts to make the next operation atomic
+
+						volatile16Variables[(uint16_t)(v16SignalSimFIPtickLength - v16VariableStartIdx)] = signalSimFIPtickLength;
+						volatile16Variables[(uint16_t)(v16SignalSimFIPWtickLength - v16VariableStartIdx)] = signalSimFIPWopenTickLength;
+
+						volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] |= (debugFIPready);
+
+						SREG = oldSREG; // restore interrupt flag status
+
+					}
+
+				}
+
+			}
+
+			if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugVSSflag) // if VSS simulator is enabled
+			{
+
+				// if timer0 delay for VSS simulator is timed out
+				if (volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)])
+				{
+
+					// reset timer0 delay for VSS simulator
+					heart::changeBitFlagBits(v8Timer0DelaySignalIdx - v8VariableStartIdx, mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)], 0);
+
+					if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)]) mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)]--;
+					else
+					{
+
+						mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)] = debugVSSlength - 1;
+						mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] += 0x40;
+
+					}
+
+					if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] & 0x40)
+					{
+
+						if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] & 0x80) i = mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)];
+						else i = debugVSSlength - mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)] - 1;
+
+						oldSREG = SREG; // save interrupt flag status
+						cli(); // disable interrupts to make the next operations atomic
+
+						volatile16Variables[(uint16_t)(v16SignalSimVSStickLength - v16VariableStartIdx)] = pgm_read_word(&debugVSSvalues[(uint16_t)(i)]);
+
+						volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] |= (debugVSSready);
+
+						SREG = oldSREG; // restore interrupt flag status
+
+					}
+
+				}
+
+			}
+
+		}
 
 #endif // defined(useSimulatedFIandVSS)
-#if defined(useDS1307clock)
-		if (heart::testAndResetBitFlagBit(v8Timer0StatusB - v8VariableStartIdx, t0sbReadRTC)) clockSet::setFromRTC();
-
-#endif // defined(useDS1307clock)
 #if defined(useChryslerMAPCorrection)
-		if (heart::testAndResetBitFlagBit(v8AnalogStatus - v8VariableStartIdx, asReadMAPchannel)) SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
+		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadMAPchannel)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadMAPchannel);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
+
+		}
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useChryslerBaroSensor)
-		if (heart::testAndResetBitFlagBit(v8AnalogStatus - v8VariableStartIdx, asReadBaroChannel)) SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
+		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadBaroChannel)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadBaroChannel);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
+
+		}
 
 #endif // defined(useChryslerBaroSensor)
 #if defined(useAnalogButtons)
-		if (heart::testAndResetBitFlagBit(v8AnalogStatus - v8VariableStartIdx, asReadButtonChannel))
+		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadButtonChannel)
 		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadButtonChannel);
+
+			SREG = oldSREG; // restore interrupt flag status
 
 			for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 			{
@@ -625,7 +727,7 @@ int main(void)
 				if (volatile16Variables[(uint16_t)(v16AnalogButtonChannelIdx - v16VariableStartIdx)] >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
 				{
 
-					if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cEnableButtonSampling) button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
+					if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cEnableButtonSampling) button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
 
 					break;
 
@@ -640,129 +742,251 @@ int main(void)
 		activity::record(arMainActivity, arMainDevices);
 
 #endif // defined(useDebugCPUreading)
-		if (heart::testAndResetBitFlagBit(v8ActivityChange - v8VariableStartIdx, afActivityTimeoutFlag))
+		if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & (afActivityTimeoutFlag | afEngineOffFlag | afVehicleStoppedFlag | afParkFlag))
 		{
 
-			if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afActivityTimeoutFlag)
 			{
 
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afActivityTimeoutFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+				if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+				{
+
 #ifdef useDeepSleep
-				heart::doGoDeepSleep();
+					heart::doGoDeepSleep();
 
 #else // useDeepSleep
 #if defined(useClockDisplay)
-				clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
+					clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
 
-				LCD::setBrightness(0); // set backlight brightness to zero
+					LCD::setBrightness(0); // set backlight brightness to zero
 
 #else // defined(useClockDisplay)
 #if defined(useLCDoutput)
-				LCD::shutdown(); // shut down the LCD display
+					LCD::shutdown(); // shut down the LCD display
 
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-				TFT::shutdown(); // shut down the TFT display
+					TFT::shutdown(); // shut down the TFT display
 
 #endif // defined(useTFToutput)
 #endif // defined(useClockDisplay)
 #endif // useDeepSleep
-			}
-			else // if MPGuino is commanded to wake up
-			{
+				}
+				else // if MPGuino is commanded to wake up
+				{
 
 #if defined(useLCDoutput)
-				LCD::init(); // re-initialize LCD device
+					LCD::init(); // re-initialize LCD device
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-				TFT::init(); // re-initialize TFT device
+					TFT::init(); // re-initialize TFT device
 #endif // defined(useTFToutput)
 #if defined(useButtonInput)
-				cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
+					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 #endif // defined(useButtonInput)
+
+				}
 
 			}
 
-		}
+			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afEngineOffFlag)
+			{
 
-		if (heart::testAndResetBitFlagBit(v8ActivityChange - v8VariableStartIdx, afEngineOffFlag))
-		{
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afEngineOffFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
-			// if engine start is detected
-			if (((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
+				// if engine start is detected
+				if (((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
-		}
+			}
 
-		if (heart::testAndResetBitFlagBit(v8ActivityChange - v8VariableStartIdx, afVehicleStoppedFlag))
-		{
+			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afVehicleStoppedFlag)
+			{
+
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afVehicleStoppedFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
-			// if vehicle movement is detected
-			if (((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
+				// if vehicle movement is detected
+				if (((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
-			// if vehicle is stopped
-			if ((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
+				// if vehicle is stopped
+				if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
 
 #endif // defined(useDragRaceFunction)
-		}
+			}
 
-#if defined(useWindowTripFilter) || defined(useSavedTrips)
-		if (heart::testAndResetBitFlagBit(v8ActivityChange - v8VariableStartIdx, afParkFlag))
-		{
-
-			if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afParkFlag) // if MPGuino is commanded to go park
+			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afParkFlag)
 			{
 
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afParkFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+#if defined(useWindowTripFilter) || defined(useSavedTrips)
+				if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afParkFlag) // if MPGuino is commanded to go park
+				{
+
 #if defined(useButtonInput)
-				// save working display index to EEPROM
-				if (workingDisplayIdx < displayMaxSavableIdx) EEPROM::writeByte(pDisplayIdx, workingDisplayIdx);
+					// save working display index to EEPROM
+					if (workingDisplayIdx < displayMaxSavableIdx) EEPROM::writeByte(pDisplayIdx, workingDisplayIdx);
 
-				// save cursor positions to EEPROM
-				for (uint8_t x = 0; x < displayCountTotal; x++)
-					EEPROM::writeByte(x + eePtrDisplayCursorStart, displayCursor[(uint16_t)(x)]);
+					// save cursor positions to EEPROM
+					for (uint8_t x = 0; x < displayCountTotal; x++)
+						EEPROM::writeByte(x + eePtrDisplayCursorStart, displayCursor[(uint16_t)(x)]);
 
-				// save menu heights to EEPROM
-				for (uint8_t x = 0; x < displayCountMenu; x++)
-					EEPROM::writeByte(x + eePtrMenuHeightStart, menuHeight[(uint16_t)(x)]);
+					// save menu heights to EEPROM
+					for (uint8_t x = 0; x < displayCountMenu; x++)
+						EEPROM::writeByte(x + eePtrMenuHeightStart, menuHeight[(uint16_t)(x)]);
 
 #endif // defined(useButtonInput)
 #if defined(useWindowTripFilter)
-				tripSupport::resetWindowFilter(); // reset the window trip filter
+					tripSupport::resetWindowFilter(); // reset the window trip filter
 
 #endif // defined(useWindowTripFilter)
 #if defined(useSavedTrips)
-				i = tripSave::doAutoAction(taaModeWrite);
+					i = tripSave::doAutoAction(taaModeWrite);
 #if defined(useLCDoutput)
-				if (i) text::statusOut(m8DevLCDidx, PSTR("AutoSave Done"));
+					if (i) text::statusOut(m8DevLCDidx, PSTR("AutoSave Done"));
 #endif // defined(useLCDoutput)
 
 #endif // defined(useSavedTrips)
+				}
+
+#endif // defined(useWindowTripFilter) || defined(useSavedTrips)
 			}
 
 		}
 
-#endif // defined(useWindowTripFilter) || defined(useSavedTrips)
 #if defined(useDebugCPUreading)
 		activity::record(arMainSample, arMainActivity);
 
 #endif // defined(useDebugCPUreading)
 		// this is the part of the main loop that only executes twice a second (or what is defined by samplesPerSecond), to collect and process readings
-		if (heart::testAndResetBitFlagBit(v8Timer0StatusA - v8VariableStartIdx, t0saTakeSample)) // if main timer has commanded a sample be taken
+		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saTakeSample)
 		{
 
-			tripSupport::mainProcess();
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saTakeSample);
+
+			oldRawTripIdx = curRawTripIdx; // save old raw trip variable index
+			curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set current raw trip variable index
+#if defined(trackIdleEOCdata)
+			oldRawEOCidleTripIdx = curRawEOCidleTripIdx; // save old raw EOC/idle trip variable index
+			curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set current raw EOC/idle trip variable index
+#endif // defined(trackIdleEOCdata)
+
+			SREG = oldSREG; // restore interrupt flag status
+
+#if defined(useBarFuelEconVsTime)
+			if (volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] & t0sbResetFEvsTimeTrip) 
+			{
+
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operations atomic
+
+				volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] &= ~(t0sbResetFEvsTimeTrip);
+				i = volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)];
+
+				SREG = oldSREG; // restore interrupt flag status
+
+				tripVar::reset(i + FEvsTimePeriodIdx); // reset source trip variable
+
+			}
+
+#endif // defined(useBarFuelEconVsTime)
+			for (uint8_t x = 0; x < tripUpdateListSize; x++)
+			{
+
+				i = tripSupport::translateTripIndex(x, 0);
+				j = tripSupport::translateTripIndex(x, 1);
+
+				if (j & 0x80) tripVar::transfer(i, j & 0x7F); // if transfer bit set, do trip transfer
+				else tripVar::update(i, j); // otherwise, just do trip update
+
+			}
+
+			tripVar::reset(oldRawTripIdx); // reset old raw trip variable
+#if defined(trackIdleEOCdata)
+			tripVar::reset(oldRawEOCidleTripIdx); // reset old raw EOC/idle trip variable
+#endif // defined(trackIdleEOCdata)
 
 #if defined(useCPUreading) || defined(useDebugCPUreading)
-			systemInfo::mainProcess();
+			if((uint16_t)__brkval == 0) availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)&__bss_end);
+			else availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)__brkval);
 
+			mainProgram32Variables[(uint16_t)(m32AvailableRAMidx - m32VariableStartIdx)] = availableRAMptr;
+
+#if defined(useDebugCPUreading)
+			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekEnableCPUread)
+			{
+
+				mainProgram32Variables[(uint16_t)(m32CPUsampledMainLoopIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32CPUsampledMainProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32CPUsampledIdleProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledMainDevicesIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainDevicesIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledMainActivityIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainActivityIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledMainSampleIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainSampleIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledMainOutputIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOutputIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledMainOtherIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOtherIdx - m32VariableStartIdx)];
+				mainProgram32Variables[(uint16_t)(m32DbgSampledS64processIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingS64processIdx - m32VariableStartIdx)];
+
+			}
+#else // defined(useDebugCPUreading)
+			mainProgram32Variables[(uint16_t)(m32CPUsampledMainLoopIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)];
+			mainProgram32Variables[(uint16_t)(m32CPUsampledMainProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)];
+			mainProgram32Variables[(uint16_t)(m32CPUsampledIdleProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)];
+#endif // defined(useDebugCPUreading)
+
+			mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)] = 0;
+#if defined(useDebugCPUreading)
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainDevicesIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainActivityIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainSampleIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOutputIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOtherIdx - m32VariableStartIdx)] = 0;
+			mainProgram32Variables[(uint16_t)(m32DbgWorkingS64processIdx - m32VariableStartIdx)] = 0;
+#endif // defined(useDebugCPUreading)
+
+#if defined(useDebugCPUreading)
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekEnableCPUread)
+				mainProgram32Variables[(uint16_t)(m32DbgSampledInterruptProcessIdx - m32VariableStartIdx)] = volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)];
+
+			volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] = 0;
+
+			SREG = oldSREG; // restore interrupt flag status
+
+#endif // defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useBarFuelEconVsSpeed)
-			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
-
-#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useOutputPins)
 			outputPin::setOutputPin1(0);
 			outputPin::setOutputPin2(1);
@@ -773,23 +997,39 @@ int main(void)
 
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-			if ((volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
+			if ((volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
 
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
 			if (EEPROM::readByte(pBluetoothOutputIdx)) bluetooth::mainOutput();
 
 #endif // defined(useBluetooth)
+#if defined(useDS1307clock)
+			if (volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] & t0sbReadRTC)
+			{
+
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] &= ~(t0sbReadRTC);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+				clockSet::setFromRTC();
+
+			}
+
+#endif // defined(useDS1307clock)
 		}
 
-#if defined(useBluetooth)
-		bluetooth::mainProcess();
-
-#endif // defined(useBluetooth)
 #if defined(useDebugCPUreading)
 		activity::record(arMainOther, arMainSample);
 
 #endif // defined(useDebugCPUreading)
+#if defined(useBluetooth)
+		bluetooth::mainProcess();
+
+#endif // defined(useBluetooth)
 #if defined(useDebugTerminal)
 		terminal::mainProcess();
 
@@ -799,77 +1039,135 @@ int main(void)
 
 #endif // defined(useDebugCPUreading)
 #if defined(useButtonInput)
-		if (heart::testAndResetBitFlagBit(v8Timer0StatusA - v8VariableStartIdx, t0saReadButton)) cursor::doCommand(); // if any buttons were pressed, go perform button action
+		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saReadButton) cursor::doCommand(); // if any buttons were pressed, go perform button action
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
-		if (heart::testAndResetBitFlagBit(v8Timer0StatusA - v8VariableStartIdx, t0saAccelTestFlag)) accelerationTest::mainProcess();
+		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saAccelTestFlag)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saAccelTestFlag);
+			accelTestStatus = volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)]; // copy accel test flag status to this loop
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			i = (lastAccelTestStatus ^ accelTestStatus) & accelTestClearFlags; // detect any drag race flag changes
+
+			lastAccelTestStatus = accelTestStatus; // copy current accel test flag status for next loop
+
+			if (i)
+			{
+
+				i = accelTestStatus & accelTestClearFlags;
+
+				switch (i)
+				{
+
+					case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsReady;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsActive;
+						break;
+
+					case (accelTestFinished):
+						SWEET64::runPrgm(prgmTransferAccelTestTrips, 0);
+						accelTestState = atsFinished;
+						break;
+
+					case (accelTestFinished | accelTestCancelled):
+						accelTestState = atsCancelled;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
+						accelTestState = atsCheckPointDist;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestDistance):
+						accelTestState = atsCheckPointHalf;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed):
+						accelTestState = atsCheckPointDistHalf;
+						break;
+
+					case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsCheckPointFull;
+						break;
+
+					case (accelTestActive | accelTestHalfSpeed):
+						accelTestState = atsCheckPointDistFull;
+						break;
+
+					case (accelTestActive | accelTestDistance):
+						accelTestState = atsCheckPointHalfFull;
+						break;
+
+					case (accelTestActive):
+						accelTestState = atsCheckPointDistHalfFull;
+						break;
+
+					default:
+						accelTestState = atsInvalidState;
+						break;
+
+				}
+
+			}
+			else accelTestState = atsNoStatusChange;
+
+		}
 
 #endif // defined(useDragRaceFunction)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
-		if (heart::testAndResetBitFlagBit(v8Timer0StatusA - v8VariableStartIdx, t0saUpdateDisplay))
+		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saUpdateDisplay)
 		{
 
-			// this section handles all MPGuino activity modes
-			// engine running and vehicle in motion and a button being pressed
-			// engine not running and vehicle in motion (Engine Off Coasting) and a button being pressed
-			// engine running and vehicle stopped and a button being pressed
-			// engine stopped and vehicle stopped and a button being pressed
-			// engine running and vehicle in motion
-			// engine not running and vehicle in motion (Engine Off Coasting)
-			// engine running and vehicle stopped
-			// engine stopped and vehicle stopped
-			//
-			// in addition, two independent timers are dedicated to these activity modes
-			//
-			// the park timer counts down from a stored parameter value once MPGuino detects engine not running and vehicle stopped
-			// if the park timer goes to zero, the vehicle is said to be parked, and MPGuino goes to parked mode
-			// parked mode is exited once MPGuino detects that the engine runs OR the vehicle is in motion
-			//
-			// the activity timer counts down from a stored parameter value once MPGuino detects engine not running, vehicle stopped, and no button press occurs
-			// if the activity timer goes to zero, MPGuino goes to sleep mode
-			// sleep mode is exited once MPGuino detects that the engine runs OR the vehicle is in motion OR a button press occurs
-			//
-			// if the park timer setting in stored parameters is larger than the activity timer, MPGuino will skip parked mode
-			i = volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afValidFlags; // fetch a local copy of activity flags
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
 
-			switch (i)
+			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saUpdateDisplay);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+#if defined(useButtonInput)
+#if defined(useDebugTerminal)
+			if ((mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage) && (mainProgram8Variables[(uint16_t)(m8Delay0FlagLCDidx - m8VariableStartIdx)]))
 			{
 
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afParkFlag): // engine stopped, vehicle stopped, no buttons pressed for a while
-				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag): // engine stopped, vehicle stopped for a while
-				case (afVehicleStoppedFlag | afUserInputFlag): // vehicle stopped, button not pressed
-				case (afEngineOffFlag | afUserInputFlag): // engine stopped, button not pressed
-				case (afVehicleStoppedFlag): // vehicle stopped
-				case (afEngineOffFlag): // engine stopped
-				case (afVehicleStoppedFlag | afEngineOffFlag): // engine stopped, vehicle stopped
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
-				case 0: // engine running and vehicle in motion
-				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
-#if defined(useButtonInput)
-					cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
-#endif // defined(useButtonInput)
-					break;
-
-				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
-#ifndef useDeepSleep
-#if defined(useClockDisplay)
-					clockDisplay::displayHandler(displayOutputIdx, 0); // display the software clock
-
-#endif // defined(useClockDisplay)
-#endif // useDeepSleep
-					break;
-
-				default: // handle unexpected cases
-#if defined(useLCDoutput)
-					text::hexByteOut(m8DevLCDidx, i);
-#endif // defined(useLCDoutput)
-					break;
+				text::charOut(m8DevDebugTerminalIdx, '*');
 
 			}
 
+			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekOutputFlags)
+			{
+
+				text::charOut(m8DevDebugTerminalIdx, '*');
+				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)]);
+				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)]);
+				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)]);
+#if defined(useTWIsupport)
+				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)]);
+#endif // defined(useTWIsupport)
+				text::newLine(m8DevDebugTerminalIdx);
+
+			}
+
+#endif // defined(useDebugTerminal)
+#if defined(useClockDisplay) && !defined(useDeepSleep)
+			if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityTimeoutFlag) clockDisplay::displayHandler(displayOutputIdx, 0);
+			else cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
+
+#else // defined(useClockDisplay) && !defined(useDeepSleep)
+			cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
+
+#endif // defined(useClockDisplay) && !defined(useDeepSleep)
+#endif // defined(useButtonInput)
 		}
 
 #if defined(useActivityRecord)
@@ -883,8 +1181,10 @@ int main(void)
 #endif // defined(useActivityRecord)
 		heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
+#if defined(useActivityRecord)
 		j = arIdleProcess;
 
+#endif // defined(useActivityRecord)
 	}
 
 }

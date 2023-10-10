@@ -77,7 +77,7 @@ static uint8_t mainDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayOutputIdx:
 #if defined(trackIdleEOCdata)
-			i = (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afActivityCheckFlags);
+			i = (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityCheckFlags);
 			switch (i)
 			{
 
@@ -215,8 +215,8 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	uint8_t localTripIdx;
 #endif // defined(useSpiffyTripLabels)
 
-	tripBitmask = ((mainLoopHeartBeat & tripBlink) ? dfBlinkTrip : 0); // determine if trip label component should blink or not
-	calcBitmask = ((mainLoopHeartBeat & calcBlink) ? dfBlinkCalc : 0); // determine if function component should blink or not
+	tripBitmask = ((volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & tripBlink) ? dfBlinkTrip : 0); // determine if trip label component should blink or not
+	calcBitmask = ((volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & calcBlink) ? dfBlinkCalc : 0); // determine if function component should blink or not
 
 	readingIdx &= 3;
 	windowLength = LCDcharWidth / 2;
@@ -236,8 +236,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 	text::tripFunctionOut(m8DevLCDidx, tripFunction, windowLength, (tripBitmask | calcBitmask | dfOutputTag | dfOutputSpiffyTag));
 
 #if defined(useSpiffyTripLabels)
-	if (mainCalcFuncVar.suppressTripLabel == 0) localTripIdx = findTripIdx(mainCalcFuncVar.tripIdx);
-	else localTripIdx = 0;
+	localTripIdx = findTripIdx(mainCalcFuncVar.tripIdx);
 
 	for (uint8_t x = 0; x < 16; x++)
 	{
@@ -246,7 +245,7 @@ static void mainDisplay::outputFunction(uint8_t readingIdx, uint16_t tripFunctio
 		if (calcBitmask) calcPart = 0;
 		else calcPart = pgm_read_byte(&calcFormatLabelCGRAM[(uint16_t)(mainCalcFuncVar.calcFmtIdx)][(uint16_t)(x)]); // read a byte of function label bit pattern
 
-		if ((mainCalcFuncVar.tripChar == ' ') || (tripBitmask)) tripPart = 0; // provide for blinking trip label component
+		if ((tripBitmask) || (mainCalcFuncVar.suppressTripLabel)) tripPart = 0; // provide for blinking or suppressed trip label component
 		else
 		{
 
@@ -281,36 +280,25 @@ static uint8_t mainDisplay::findTripIdx(uint8_t tripIdx)
 static uint8_t displayEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
-	uint8_t tripBlink;
 	uint8_t calcBlink;
 
 	switch (cmd)
 	{
-//TODO - cause cursor to skip over trip index for those calc indices which do not depend on trip index
+
 		case displayInitialEntryIdx:
 			basePageIdx = displayCursor[(uint16_t)(mainDisplayIdx)] * 4;
 			for (uint8_t x = 0; x < 4; x++) displayEditPageFormats[(uint16_t)(x)] = mainDisplay::getMainDisplayPageFormat(basePageIdx + x);
 
 		case displayCursorUpdateIdx:
-			formatEditIdx = cursorPos / 2;
-			formatFunctionFlag = (cursorPos & 1);
-
+			functionPos = cursorPos;
 		case displayOutputIdx:
 			for (uint8_t x = 0; x < 4; x++)
 			{
 
-				tripBlink = 0;
-				calcBlink = 0;
+				if (x == functionPos) calcBlink = 170;
+				else calcBlink = 0;
 
-				if (x == formatEditIdx)
-				{
-
-					if (formatFunctionFlag) calcBlink = 170;
-					else tripBlink = 170;
-
-				}
-
-				mainDisplay::outputFunction(x, displayEditPageFormats[(uint16_t)(x)], tripBlink, calcBlink);
+				mainDisplay::outputFunction(x, displayEditPageFormats[(uint16_t)(x)], 0, calcBlink);
 
 			}
 
@@ -360,50 +348,62 @@ static void displayEdit::set(void)
 static void displayEdit::readInitial(void)
 {
 
-	displayEditPageFormats[(uint16_t)(formatEditIdx)] = pgm_read_word(&mainDisplayPageFormats[(uint16_t)(basePageIdx + formatEditIdx)]);
+	displayEditPageFormats[(uint16_t)(functionPos)] = pgm_read_word(&mainDisplayPageFormats[(uint16_t)(basePageIdx + functionPos)]);
 
 }
 
-static void displayEdit::changeItemUp(void)
+static void displayEdit::changeFunctionUp(void)
 {
 
-	changeItem(1);
+	changeFunction(1);
+
+}
+
+static void displayEdit::changeTripUp(void)
+{
+
+	changeTrip(1);
 
 }
 
 #if defined(useButtonCrossConfig)
-static void displayEdit::changeItemDown(void)
+static void displayEdit::changeFunctionDown(void)
 {
 
-	changeItem(255);
+	changeFunction(255);
+
+}
+
+static void displayEdit::changeTripDown(void)
+{
+
+	changeTrip(255);
 
 }
 
 #endif // defined(useButtonCrossConfig)
-static void displayEdit::changeItem(uint8_t changeDir)
+static void displayEdit::changeFunction(uint8_t changeDir)
+{
+
+	union union_16 * dEPF = (union union_16 *)(&displayEditPageFormats[(uint16_t)(functionPos)]);
+
+	dEPF->u8[0] += changeDir; // adjust trip function index
+
+	if (dEPF->u8[0] >= dfMaxValDisplayCount) dEPF->u8[0] = ( changeDir == 1 ? 0 : dfMaxValDisplayCount - 1); // boundary check
+
+}
+
+static void displayEdit::changeTrip(uint8_t changeDir)
 {
 
 	uint8_t i;
-	union union_16 * dEPF = (union union_16 *)(&displayEditPageFormats[(uint16_t)(formatEditIdx)]);
+	union union_16 * dEPF = (union union_16 *)(&displayEditPageFormats[(uint16_t)(functionPos)]);
 
-	if (formatFunctionFlag) // modify the function portion of the format value
-	{
+	i = mainDisplay::findTripIdx(dEPF->u8[1]) + changeDir; // adjust trip label index
 
-		dEPF->u8[0] += changeDir; // adjust trip function index
+	if (i >= tripFormatIdxCount) i = ( changeDir == 1 ? 0 : tripFormatIdxCount - 1); // boundary check
 
-		if (dEPF->u8[0] >= dfMaxValDisplayCount) dEPF->u8[0] = ( changeDir == 1 ? 0 : dfMaxValDisplayCount - 1); // boundary check
-
-	}
-	else // modify the trip portion of the format value
-	{
-
-		i = mainDisplay::findTripIdx(dEPF->u8[1]) + changeDir; // adjust trip label index
-
-		if (i >= tripFormatIdxCount) i = ( changeDir == 1 ? 0 : tripFormatIdxCount - 1); // boundary check
-
-		dEPF->u8[1] = pgm_read_byte(&tripFormatReverseList[(uint16_t)(i)]);
-
-	}
+	dEPF->u8[1] = pgm_read_byte(&tripFormatReverseList[(uint16_t)(i)]);
 
 }
 

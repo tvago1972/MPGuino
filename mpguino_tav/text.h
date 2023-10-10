@@ -1,5 +1,5 @@
 static const char * findStr(const char * str, uint8_t strIdx);
-static unsigned long str2ull(char * strBuffer);
+static uint32_t str2ull(char * strBuffer);
 static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t &decPos, char &zeroChar, uint8_t &digCnt, uint8_t flg);
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx);
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag);

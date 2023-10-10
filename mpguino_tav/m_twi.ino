@@ -1,4 +1,6 @@
 #if defined(useTWIsupport)
+/* Two-Wire Interface support */
+
 ISR( TWI_vect )
 {
 
@@ -19,7 +21,7 @@ ISR( TWI_vect )
 		case TW_START:     // sent start condition
 		case TW_REP_START: // sent repeated start condition
 			TWDR = twiSlaveAddress; // copy device address and r/w bit to output register
-			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK
+			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA)); // send ACK
 			break;
 
 		case TW_MT_SLA_ACK:  // slave receiver ACKed address
@@ -28,40 +30,40 @@ ISR( TWI_vect )
 			{
 
 				TWDR = twiDataBuffer[(uint16_t)(twiDataBufferIdx++)]; // copy data to output register
-				TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK
+				TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA)); // send ACK
 
 			}
-			else volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiFinished);
+			else volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiFinished);
 
 			break;
 
 		case TW_MR_DATA_NACK: // data received, nack sent
 			twiDataBuffer[(uint16_t)(twiDataBufferIdx++)] = TWDR; // put final byte into buffer
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiFinished);
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiFinished);
 			break;
 
 		case TW_MR_DATA_ACK: // data received, ACK sent
 			twiDataBuffer[(uint16_t)(twiDataBufferIdx++)] = TWDR; // put byte into buffer
 		case TW_MR_SLA_ACK:  // address sent, ACK received
-			if(twiDataBufferIdx < twiDataBufferLen) TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK if more bytes are expected
+			if(twiDataBufferIdx < twiDataBufferLen) TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA)); // send ACK if more bytes are expected
 			else TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE)); // otherwise, send NEGATIVE ACK
 			break;
 
 		case TW_MR_SLA_NACK: // address sent, NACK received
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiFinished | twiClose);
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiFinished | twiClose);
 			break;
 
 		case TW_MT_ARB_LOST: // lost bus arbitration (also handles TW_MR_ARB_LOST)
-			twiErrorCode = TW_MT_ARB_LOST;
-			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // send ACK
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiOpen); // set TWI state to ready
+			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA)); // send ACK
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInUse); // set TWI state to ready
+			volatile8Variables[(uint16_t)(v8TWIerrorIdx - v8VariableStartIdx)] = TW_MT_ARB_LOST;
 			break;
 
 		case TW_MT_SLA_NACK:  // address sent, NACK received
 		case TW_MT_DATA_NACK: // data sent, NACK received
 		case TW_BUS_ERROR: // bus error, illegal stop/start
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiErrorFlag | twiFinished | twiClose); // set error condition
-			twiErrorCode = twiStatus;
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiErrorFlag | twiFinished | twiClose); // set error condition
+			volatile8Variables[(uint16_t)(v8TWIerrorIdx - v8VariableStartIdx)] = twiStatus;
 			break;
 
 		case TW_NO_INFO: // no state information
@@ -70,24 +72,24 @@ ISR( TWI_vect )
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiFinished)
+	if (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiFinished)
 	{
 
-		volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiOpen | twiFinished); // set TWI state to ready
+		volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiOpen | twiFinished); // set TWI state to ready
 
-		if (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiClose)
+		if (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiClose)
 		{
 
-			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTO)); // send STOP condition
+			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA) | (1 << TWSTO)); // send STOP condition
 			while (TWCR & (1 << TWSTO)); // wait for STOP condition to be executed on the TWI bus
 
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiRemainOpen);
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiRemainOpen);
 
 		}
 		else
 		{
 
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiRemainOpen);	// keep the TWI channel open
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiRemainOpen);	// keep the TWI channel open
 			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWSTA));
 
 		}
@@ -111,7 +113,7 @@ static void TWI::init(void) // this can be in either main program or interrupt c
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 #if defined(__AVR_ATmega32U4__)
 	PRR0 &= ~(1 << PRTWI); // turn on TWI module
@@ -126,10 +128,10 @@ static void TWI::init(void) // this can be in either main program or interrupt c
 	PORTC |= ((1 << PORTC5) | (1 << PORTC4)); // enable port C TWI pin pullup resistors
 #endif // defined(__AVR_ATmega328P__)
 	TWSR &= ~((1 << TWPS1) | (1 << TWPS0)); // set TWI prescaler to 1
-	TWBR = (uint8_t)(((unsigned int)(F_CPU / (twiFrequency * 1000UL)) - 16) / 2); // set TWI frequency
-	TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE)); // enable TWI module, acks, and interrupt
+	TWBR = (uint8_t)(((uint16_t)(F_CPU / (twiFrequency * 1000UL)) - 16) / 2); // set TWI frequency
+	TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA)); // enable TWI module, acks, and interrupt
 
-	volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] = twiClose; // initialize TWI state to ready, default send stop, and no repeated start in progress
+	volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] = (twiClose); // initialize TWI state to ready, default send stop, and no repeated start in progress
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -140,10 +142,11 @@ static void TWI::shutdown(void) // this can be in either main program or interru
 
 	uint8_t oldSREG;
 
-	while (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiOpenMain) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+	// while there's a TWI transaction in progress, go perform idle sleep mode
+	while (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiInUse) heart::performSleepMode(SLEEP_MODE_IDLE);
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
 	TWCR &= ~((1 << TWEN) | (1 << TWIE)); // disable TWI module and interrupt
 #if defined(__AVR_ATmega32U4__)
@@ -159,58 +162,28 @@ static void TWI::shutdown(void) // this can be in either main program or interru
 	PRR |= (1 << PRTWI); // turn off TWI module
 #endif // defined(__AVR_ATmega328P__)
 
-	volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] = 0;
+	volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] = 0;
 
 	SREG = oldSREG; // restore interrupt flag status
 
 }
 
-static void TWI::openChannelMain(uint8_t address, uint8_t writeFlag) // this is in main program context
-{
-
-	uint8_t oldSREG;
-
-	while (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiOpenMain) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	openChannel(address, writeFlag);
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void TWI::transmitChannelMain(uint8_t sendStop) // this is in main program context
-{
-
-	uint8_t oldSREG;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	transmitChannel(sendStop);
-
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void TWI::openChannel(uint8_t address, uint8_t writeFlag) // this is in interrupt context
+static void TWI::open(uint8_t address, uint8_t writeFlag) // this is in interrupt context
 {
 
 	twiSlaveAddress = (address << 1); // initial slave address
 	twiSlaveAddress |= (writeFlag); // slap on direction
 
-	volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiOpen); // signal twi is in use
-	volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiErrorFlag); // clear error condition
-	twiErrorCode = 0x00; // reset error state
+	volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiOpen); // signal twi is in use
+	volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiErrorFlag); // clear error condition
+	volatile8Variables[(uint16_t)(v8TWIerrorIdx - v8VariableStartIdx)] = 0x00; // reset error state
 
 	twiDataBufferLen = 0; // initialize buffer length
 	twiDataBufferIdx = 0; // initialize buffer index
 
 }
 
-static uint8_t TWI::writeByte(uint8_t data) // this can be in either main program or interrupt context
+static uint8_t TWI::writeByte(uint8_t data) // this is in interrupt context
 {
 
 	if(twiDataBufferLen < twiDataBufferSize)
@@ -223,22 +196,28 @@ static uint8_t TWI::writeByte(uint8_t data) // this can be in either main progra
 	else
 	{
 
-		heart::changeBitFlagBits(v8TWIstatus - v8VariableStartIdx, twiOpen, 0); // free up TWI for main program use
+		volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInUse); // free up TWI for main program use
 		return 1; // signal buffer overflow
 
 	}
 
 }
 
-static void TWI::transmitChannel(uint8_t sendStop) // this is in interrupt context
+static void TWI::transmit(uint8_t sendStop) // this is in interrupt context
 {
 
-	if ((twiSlaveAddress & TW_WRITE) && (twiDataBufferLen == 0)) volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiOpen);
+	if ((twiSlaveAddress & TW_WRITE) && (twiDataBufferLen == 0))
+	{
+
+		// if attempting to transmit an empty buffer, just cancel
+		volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInUse);
+
+	}
 	else
 	{
 
-		if (sendStop) volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiClose); // if stop was requested as end of transmission, remember it
-		else volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiClose); // otherwise, remember to do a repeated start
+		if (sendStop) volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiClose); // if stop was requested as end of transmission, remember it
+		else volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiClose); // otherwise, remember to do a repeated start
 
 		// if we're in the repeated start state, then we've already sent the start,
 		// and the TWI state machine is just waiting for the address byte.
@@ -247,36 +226,75 @@ static void TWI::transmitChannel(uint8_t sendStop) // this is in interrupt conte
 		// up. Also, don't enable the START interrupt. There may be one pending from the
 		// repeated start that we sent outselves, and that would really confuse things.
 
-		if (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiRemainOpen) // if in repeated start state
+		if (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiRemainOpen) // if in repeated start state
 		{
 
-			volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiRemainOpen); // clear repeated start state
+			volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiRemainOpen); // clear repeated start state
 			TWDR = twiSlaveAddress; // set data address to slave address
-			TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE));  // send ACK
+			TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA));  // send ACK
 
 		}
-		else TWCR = ((1 << TWINT) | (1 << TWEA) | (1 << TWEN) | (1 << TWIE) | (1 << TWSTA)); // enable INT and send start condition
+		else TWCR = ((1 << TWINT) | (1 << TWEN) | (1 << TWIE) | (1 << TWEA) | (1 << TWSTA)); // enable INT and send start condition
 
 	}
 
 }
 
-#if defined(useInterruptBasedTWI)
-static void TWI::disableISRactivity(void)
+/* Two-Wire Interface main program facing support */
+
+static void TWImain::open(uint8_t address, uint8_t writeFlag) // this is in main program context
 {
- 
-	heart::changeBitFlagBits(v8TWIstatus - v8VariableStartIdx, twiAllowISRactivity, 0); // disable ISR TWI activity as it interferes with main program TWI activity
+
+	uint8_t oldSREG;
+	uint8_t waitFlag;
+
+	do
+	{
+
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts to make the next operations atomic
+
+		waitFlag = (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & (twiInUse | twiInterruptInUse)); // is a TWI transaction already in progress?
+
+		if (waitFlag == 0) TWI::open(address, writeFlag); // if not, open TWI hardware for main program
+
+		SREG = oldSREG; // restore interrupt flag status
+
+		if (waitFlag) heart::performSleepMode(SLEEP_MODE_IDLE); // if a TWI transaction was already in progress, wait for timer0 to complete request
+
+	}
+	while (waitFlag); // loop while the already-in-progress TWI transaction completes
 
 }
 
-static void TWI::enableISRactivity(void)
+static uint8_t TWImain::writeByte(uint8_t data) // this is in main program context
 {
 
-	heart::changeBitFlagBits(v8TWIstatus - v8VariableStartIdx, 0, twiAllowISRactivity); // re-enable ISR TWI activity
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	TWI::writeByte(data);
+
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 
-#endif // defined(useInterruptBasedTWI)
+static void TWImain::transmit(uint8_t sendStop) // this is in main program context
+{
+
+	uint8_t oldSREG;
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	TWI::transmit(sendStop);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
 #endif // defined(useTWIsupport)
 #if defined(useMCP23017portExpander)
 // initialize MCP23017 port expander to a known initial state
@@ -287,10 +305,6 @@ void MCP23017portExpanderSupport::init(void)
 
 	mainProgram8Variables[(uint16_t)(m8MCP23017statusFlags - m8VariableStartIdx)] = 0; // initially set all control register bits to 0
 
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
 	// we might have inadvertently entered into MCP23017 bank mode - if we didn't, we'll just end up disabling all of bank B's interrupt enable bits
 	writeRegister8Bit(MCP23017_B1_IOCON, mainProgram8Variables[(uint16_t)(m8MCP23017statusFlags - m8VariableStartIdx)]); // write initialization value to IO control register
 
@@ -309,10 +323,6 @@ void MCP23017portExpanderSupport::init(void)
 
 	configureOutputPort(MCP23017registers); // finish up by initializing pin outputs and going to address byte mode
 
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
 }
 
 void MCP23017portExpanderSupport::configureOutputPort(uint16_t registerValue)
@@ -340,21 +350,21 @@ void MCP23017portExpanderSupport::writeRegister16Bit(uint8_t registerAddress, ui
 
 	if (mainProgram8Variables[(uint16_t)(m8MCP23017statusFlags - m8VariableStartIdx)] & afRGBLCDbankMode) setTransferMode(adaTWItoggleMode); // if address mode isn't set to access 16-bit registers, configure as such
 
-	TWI::openChannelMain(TWIaddressMCP23017, TW_WRITE); // open TWI as master transmitter
-	TWI::writeByte(registerAddress | MCP23017_B0_PORTA); // specify bank A register address
-	TWI::writeByte(portAbyte); // write desired value to register bank A byte
-	TWI::writeByte(portBbyte); // write desired value to register bank B byte
-	TWI::transmitChannelMain(TWI_STOP); // go write out register contents
+	TWImain::open(TWIaddressMCP23017, TW_WRITE); // open TWI as master transmitter
+	TWImain::writeByte(registerAddress | MCP23017_B0_PORTA); // specify bank A register address
+	TWImain::writeByte(portAbyte); // write desired value to register bank A byte
+	TWImain::writeByte(portBbyte); // write desired value to register bank B byte
+	TWImain::transmit(TWI_STOP); // go write out register contents
 
 }
 
 void MCP23017portExpanderSupport::writeRegister8Bit(uint8_t registerAddress, uint8_t portByte)
 {
 
-	TWI::openChannelMain(TWIaddressMCP23017, TW_WRITE); // open TWI as master transmitter
-	TWI::writeByte(registerAddress); // specify register address
-	TWI::writeByte(portByte); // write desired value to register address
-	TWI::transmitChannelMain(TWI_STOP); // go write out register contents
+	TWImain::open(TWIaddressMCP23017, TW_WRITE); // open TWI as master transmitter
+	TWImain::writeByte(registerAddress); // specify register address
+	TWImain::writeByte(portByte); // write desired value to register address
+	TWImain::transmit(TWI_STOP); // go write out register contents
 
 }
 

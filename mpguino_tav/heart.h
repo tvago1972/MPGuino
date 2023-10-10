@@ -13,16 +13,17 @@ namespace heart /* core MPGuino system support section prototype */
 	static void doGoDeepSleep(void);
 #endif // useDeepSleep
 	static uint32_t findCycle0Length(uint32_t lastCycle, uint32_t thisCycle);
-	static uint32_t findCycle0Length(uint8_t lastCycleIdx);
 	static uint32_t getCycle0Length(uint8_t lastCycleIdx, uint32_t thisCycle);
 	static uint32_t cycles0(void);
-	static void doDelay0(uint8_t delay0Channel);
-	static uint8_t delay0(uint16_t ms);
+	static uint8_t delay0(uint16_t ms, uint8_t repeatFlag);
+	static uint8_t delayInt0(uint16_t ms, uint8_t repeatFlag);
 	static void wait0(uint16_t ms);
-	static void delayS(uint16_t ms);
 	static void changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR);
-	static uint8_t testAndResetBitFlagBit(uint8_t bitFlagIdx, uint8_t maskAND);
 	static void performSleepMode(uint8_t sleepMode);
+#if defined(useTimer1Interrupt)
+	static void enableTimer1Interrupt(void);
+	static void disableTimer1Interrupt(void);
+#endif // defined(useTimer1Interrupt)
 
 };
 
@@ -311,8 +312,10 @@ static const uint16_t delay0Tick3000ms =		(uint16_t)(ceil)((double)(3ul * t0Cycl
 static const uint16_t delay0Tick2000ms =		(uint16_t)(ceil)((double)(2ul * t0CyclesPerSecond) / (double)(256ul)) - 1; // 2 second delay
 static const uint16_t delay0Tick1600ms =		(uint16_t)(ceil)((double)(16ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.6 second delay
 static const uint16_t delay0Tick1500ms =		(uint16_t)(ceil)((double)(15ul * t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 1.5 second delay
+static const uint16_t delay0Tick1333ms =		(uint16_t)(ceil)((double)(4ul * t0CyclesPerSecond) / (double)(256ul * 3ul)) - 1; // 1.3333 second delay
 static const uint16_t delay0Tick1000ms =		(uint16_t)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul)); // 1 second delay
 static const uint16_t delay0Tick500ms =			(uint16_t)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 2ul)) - 1; // display cursor toggle period is 500 milliseconds
+static const uint16_t delay0Tick200ms =			(uint16_t)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 5ul)) - 1; // 200 millisecond delay
 static const uint16_t delay0Tick100ms =			(uint16_t)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 10ul)) - 1; // 100 millisecond delay
 static const uint16_t delay0Tick50ms =			(uint16_t)(ceil)((double)(t0CyclesPerSecond) / (double)(256ul * 20ul)) - 1; // 50 millisecond delay button debounce
 static const uint16_t delay0Tick30ms =			(uint16_t)(ceil)((double)(30ul * t0CyclesPerSecond) / (double)(256ul * 1000ul)) - 1; // 30 millisecond delay
@@ -339,45 +342,56 @@ static const uint16_t delay1Tick40us =		(uint16_t)(ceil)((double)(40ul * systemP
 
 static const uint8_t v8VariableStartIdx =				nextAllowedValue;						// start of 8-bit volatile variable storage
 
-static const uint8_t v8Timer0Command =					nextAllowedValue;						// timer0 command flags
-static const uint8_t v8Timer0StatusA =					v8Timer0Command + 1;					// timer0 status flags
-static const uint8_t v8Timer0StatusB =					v8Timer0StatusA + 1;					// more timer0 status flags
-static const uint8_t v8Dirty =							v8Timer0StatusB + 1;					// MPGuino FI / VSS dirty (processing) flags
-static const uint8_t v8Awake =							v8Dirty + 1;							// MPGuino awake flags
-static const uint8_t v8Timer0Delay =					v8Awake + 1;							// timer0 delay function flags
-static const uint8_t v8Timer0DisplayDelay =				v8Timer0Delay + 1;						// timer0 display delay flags
-static const uint8_t v8Activity =						v8Timer0DisplayDelay + 1;				// MPGuino activity flags
-static const uint8_t v8ActivityChange =					v8Activity + 1;							// MPGuino activity change detection flags
-#define nextAllowedValue v8ActivityChange + 1
+static const uint8_t v8Timer0CommandIdx =				nextAllowedValue;						// timer0 command flags
+static const uint8_t v8Timer0Status0Idx =				v8Timer0CommandIdx + 1;					// timer0 status flags
+static const uint8_t v8Timer0Status1Idx =				v8Timer0Status0Idx + 1;					// more timer0 status flags
+static const uint8_t v8DirtyIdx =						v8Timer0Status1Idx + 1;					// MPGuino FI / VSS dirty (processing) flags
+static const uint8_t v8AwakeIdx =						v8DirtyIdx + 1;							// MPGuino awake flags
+static const uint8_t v8Timer0DelayIdx =					v8AwakeIdx + 1;							// timer0 delay function flags
+static const uint8_t v8Timer0DelayRepeatIdx =			v8Timer0DelayIdx + 1;					// timer0 delay function repeat flags
+static const uint8_t v8Timer0DelaySignalIdx =			v8Timer0DelayRepeatIdx + 1;				// timer0 delay function signal flags
+static const uint8_t v8ActivityIdx =					v8Timer0DelaySignalIdx + 1;				// MPGuino activity flags
+static const uint8_t v8ActivityIdxChangeIdx =			v8ActivityIdx + 1;						// MPGuino activity change detection flags
+static const uint8_t v8HeartbeatBitmaskIdx =			v8ActivityIdxChangeIdx + 1;				// Sample loop-driven heartbeat bitmask
+static const uint8_t v8VSSdebounceTickIdx =				v8HeartbeatBitmaskIdx + 1;				// for VSS debouncing
+static const uint8_t v8VSSdebounceCountIdx =			v8VSSdebounceTickIdx + 1;				// for VSS debouncing
+#define nextAllowedValue v8VSSdebounceCountIdx + 1
+#if defined(useButtonInput)
+static const uint8_t v8ThisButtonStateIdx =				nextAllowedValue;
+static const uint8_t v8LastButtonStateIdx =				v8ThisButtonStateIdx + 1;
+static const uint8_t v8ButtonPressIdx =					v8LastButtonStateIdx + 1;
+#define nextAllowedValue v8ButtonPressIdx + 1
+#endif // defined(useButtonInput)
 #if defined(useAnalogRead)
-static const uint8_t v8AnalogCommand =					nextAllowedValue;						// analog command flags
-static const uint8_t v8AnalogStatus =					v8AnalogCommand + 1;					// analog status flags
-#define nextAllowedValue v8AnalogStatus + 1
+static const uint8_t v8AnalogCommandIdx =				nextAllowedValue;						// analog command flags
+static const uint8_t v8AnalogStatusIdx =				v8AnalogCommandIdx + 1;					// analog status flags
+#define nextAllowedValue v8AnalogStatusIdx + 1
 #endif // defined(useAnalogRead)
 #if defined(useTWIsupport)
-static const uint8_t v8TWIstatus =						nextAllowedValue;						// TWI status flags
-#define nextAllowedValue v8TWIstatus + 1
+static const uint8_t v8TWIstatusIdx =					nextAllowedValue;						// TWI status flags
+static const uint8_t v8TWIerrorIdx =					v8TWIstatusIdx + 1;						// TWI error flags
+#define nextAllowedValue v8TWIerrorIdx + 1
 #endif // defined(useTWIsupport)
 #if defined(useTimer1Interrupt)
-static const uint8_t v8Timer1Command =					nextAllowedValue;						// timer1 command flags
-static const uint8_t v8Timer1Status =					v8Timer1Command + 1;					// timer1 status flags
-#define nextAllowedValue v8Timer1Status + 1
+static const uint8_t v8Timer1CommandIdx =				nextAllowedValue;						// timer1 command flags
+static const uint8_t v8Timer1StatusIdx =				v8Timer1CommandIdx + 1;					// timer1 status flags
+#define nextAllowedValue v8Timer1StatusIdx + 1
 #if defined(useSimulatedFIandVSS)
-static const uint8_t v8SignalSimModeFlags =				nextAllowedValue;						// simulated FI/VSS mode flags
-#define nextAllowedValue v8SignalSimModeFlags + 1
+static const uint8_t v8SignalSimModeIdx =				nextAllowedValue;						// simulated FI/VSS mode flags
+#define nextAllowedValue v8SignalSimModeIdx + 1
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t v8BLEstatus =						nextAllowedValue;						// AdaFruit BLEfriend condition flags
-#define nextAllowedValue v8BLEstatus + 1
+static const uint8_t v8BLEstatusIdx =					nextAllowedValue;						// AdaFruit BLEfriend condition flags
+#define nextAllowedValue v8BLEstatusIdx + 1
 #endif // defined(useBluetoothAdaFruitSPI)
 #endif // defined(useTimer1Interrupt)
 #if defined(useDragRaceFunction)
-static const uint8_t v8AccelerationFlags =				nextAllowedValue;						// acceleration test mode flags
-#define nextAllowedValue v8AccelerationFlags + 1
+static const uint8_t v8AccelerationFlagsIdx =			nextAllowedValue;						// acceleration test mode flags
+#define nextAllowedValue v8AccelerationFlagsIdx + 1
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-static const uint8_t v8CoastdownStatus =				nextAllowedValue;						// coastdown status flags
-#define nextAllowedValue v8CoastdownStatus + 1
+static const uint8_t v8CoastdownStatusIdx =				nextAllowedValue;						// coastdown status flags
+#define nextAllowedValue v8CoastdownStatusIdx + 1
 #endif // defined(useCoastDownCalculator)
 #if defined(useSerial0Port)
 static const uint8_t v8Serial0StatusIdx =				nextAllowedValue;
@@ -395,6 +409,10 @@ static const uint8_t v8Serial2StatusIdx =				nextAllowedValue;
 static const uint8_t v8Serial3StatusIdx =				nextAllowedValue;
 #define nextAllowedValue v8Serial3StatusIdx + 1
 #endif // defined(useSerial3Port)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t v8FEvTimeTripIdx =					nextAllowedValue;
+#define nextAllowedValue v8FEvTimeTripIdx + 1
+#endif // defined(useBarFuelEconVsTime)
 #if defined(useDS1307clock)
 static const uint8_t v8RTCsecondIdx =					nextAllowedValue;
 static const uint8_t v8RTCminuteIdx =					v8RTCsecondIdx + 1;
@@ -457,13 +475,52 @@ static const uint8_t m8DevUSBidx =						nextAllowedValue;
 static const uint8_t m8DevEndIdx =						nextAllowedValue;
 static const uint8_t m8DevLength =						m8DevEndIdx - m8DevStartIdx;
 
-#if defined(useClockDisplay)
+static const uint8_t m8Delay0FlagStartIdx =				nextAllowedValue;
+
+#if defined(useLCDoutput)
+static const uint8_t m8Delay0FlagLCDidx =				nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagLCDidx + 1
+#endif // defined(useLCDoutput)
+#if defined(useTFToutput)
+static const uint8_t m8Delay0FlagTFTidx =				nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagTFTidx + 1
+#endif // defined(useTFToutput)
+#if defined(useSerial0Port)
+static const uint8_t m8Delay0FlagSerial0idx =			nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagSerial0idx + 1
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+static const uint8_t m8Delay0FlagSerial1idx =			nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagSerial1idx + 1
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+static const uint8_t m8Delay0FlagSerial2idx =			nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagSerial2idx + 1
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+static const uint8_t m8Delay0FlagSerial3idx =			nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagSerial3idx + 1
+#endif // defined(useSerial3Port)
+#if defined(useBluetoothAdaFruitSPI)
+static const uint8_t m8Delay0FlagBLEfriendIdx =			nextAllowedValue;
+static const uint8_t m8Delay0FlagBluetoothIdx =			m8Delay0FlagBLEfriendIdx + 1;
+#define nextAllowedValue m8Delay0FlagBluetoothIdx + 1
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(__AVR_ATmega32U4__)
+static const uint8_t m8Delay0FlagUSBidx =				nextAllowedValue;
+#define nextAllowedValue m8Delay0FlagUSBidx + 1
+#endif // defined(__AVR_ATmega32U4__)
+
+static const uint8_t m8Delay0FlagEndIdx =				nextAllowedValue;
+static const uint8_t m8Delay0FlagLength =				m8Delay0FlagEndIdx - m8Delay0FlagStartIdx;
+
+#if defined(useClockSupport)
 static const uint8_t m8SecondIdx =						nextAllowedValue;
 static const uint8_t m8MinuteIdx =						m8SecondIdx + 1;
 static const uint8_t m8HourIdx =						m8MinuteIdx + 1;
 #define nextAllowedValue m8HourIdx + 1
 
-#endif // defined(useClockDisplay)
+#endif // defined(useClockSupport)
 #if defined(useActivityRecord)
 static const uint8_t m8ActivityStatusIdx =				nextAllowedValue;
 #define nextAllowedValue m8ActivityStatusIdx + 1
@@ -473,6 +530,16 @@ static const uint8_t m8ActivityOutputIdx =				nextAllowedValue;
 #endif // defined(useActivityLED)
 
 #endif // defined(useActivityRecord)
+#if defined(useWindowTripFilter)
+static const uint8_t m8CurrentWindowTripIdx =			nextAllowedValue;
+#define nextAllowedValue m8CurrentWindowTripIdx + 1
+
+#endif // defined(useWindowTripFilter)
+#if defined(useBarFuelEconVsSpeed)
+static const uint8_t m8FEvSpeedTripIdx =				nextAllowedValue;
+#define nextAllowedValue m8FEvSpeedTripIdx + 1
+
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBarGraph)
 static const uint8_t m8BarGraphIdx =					nextAllowedValue;
 #define nextAllowedValue m8BarGraphIdx + bgDataSize
@@ -483,6 +550,16 @@ static const uint8_t m8MCP23017statusFlags =			nextAllowedValue;						// MCP2301
 #define nextAllowedValue m8MCP23017statusFlags + 1
 
 #endif // defined(useMCP23017portExpander)
+#if defined(useSimulatedFIandVSS)
+static const uint8_t m8SignalSimVSSdelayFlagIdx =		nextAllowedValue;
+static const uint8_t m8SignalSimFIPdelayFlagIdx =		m8SignalSimVSSdelayFlagIdx + 1;
+static const uint8_t m8SignalSimVSSidx =				m8SignalSimFIPdelayFlagIdx + 1;			// simulated VSS value index
+static const uint8_t m8SignalSimFIPidx =				m8SignalSimVSSidx + 1;					// simulated fuel injector value index
+static const uint8_t m8SignalSimVSSstate =				m8SignalSimFIPidx + 1;					// simulated VSS state
+static const uint8_t m8SignalSimFIPstate =				m8SignalSimVSSstate + 1;				// simulated fuel injector state
+#define nextAllowedValue m8SignalSimFIPstate + 1
+
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugTerminal)
 static const uint8_t m8PeekFlags =						nextAllowedValue;						// debug terminal peek (echo to terminal) flags
 #define nextAllowedValue m8PeekFlags + 1
@@ -502,7 +579,9 @@ static const uint8_t v16ParkTimeoutIdx =				v16InputTimeoutIdx + 1;					// vehic
 static const uint8_t v16ActivityTimeoutIdx =			v16ParkTimeoutIdx + 1;					// total activity (vehicle park and no button press) timeout value in timer0 ticks
 static const uint8_t v16DetectVehicleStopIdx =			v16ActivityTimeoutIdx + 1;				// minimum good vehicle speed in timer0 ticks
 static const uint8_t v16DetectEngineOffIdx =			v16DetectVehicleStopIdx + 1;			// minimum good engine speed in timer0 ticks
-#define nextAllowedValue v16DetectEngineOffIdx + 1
+static const uint8_t v16Timer0DelayTickIdx =			v16DetectEngineOffIdx + 1;				// timer0 delay repeater start values in timer0 ticks
+static const uint8_t v16Timer0DelayCountIdx =			v16Timer0DelayTickIdx + 8;				// timer0 delay repeater countdown values in timer0 ticks
+#define nextAllowedValue v16Timer0DelayCountIdx + 8
 
 #if defined(useAnalogRead)
 static const uint8_t v16AnalogStartIdx =				nextAllowedValue;						// start of analog value storage
@@ -520,6 +599,13 @@ static const uint8_t v16AnalogEndIdx =					nextAllowedValue;						// end of anal
 static const uint8_t v16AnalogLength =					v16AnalogEndIdx - v16AnalogStartIdx;
 
 #endif // defined(useAnalogRead)
+#if defined(useSimulatedFIandVSS)
+static const uint8_t v16SignalSimVSStickLength =		nextAllowedValue;
+static const uint8_t v16SignalSimFIPtickLength =		v16SignalSimVSStickLength + 1;
+static const uint8_t v16SignalSimFIPWtickLength =		v16SignalSimFIPtickLength + 1;
+#define nextAllowedValue v16SignalSimFIPWtickLength + 1
+
+#endif // defined(useSimulatedFIandVSS)
 static const uint8_t v16VariableEndIdx =				nextAllowedValue;						// end of 16-bit volatile variable storage
 static const uint8_t v16VariableLength =				v16VariableEndIdx - v16VariableStartIdx;
 
@@ -527,21 +613,23 @@ static const uint8_t v16VariableLength =				v16VariableEndIdx - v16VariableStart
 
 static const uint8_t v32VariableStartIdx =				nextAllowedValue;						// start of 32-bit volatile variable storage
 
-#if defined(useCPUreading)
-static const uint8_t v32SystemCycleIdx =				nextAllowedValue;						// system timer tick count
-#define nextAllowedValue v32SystemCycleIdx + 1
-#endif // defined(useCPUreading)
-
-#if defined(useClockDisplay)
-static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software clock tick count
-#define nextAllowedValue v32ClockCycleIdx + 1
-#endif // defined(useClockDisplay)
-
-static const uint8_t v32MaximumVSSperiodIdx =			nextAllowedValue;						// maximum good VSS period in timer0 cycles
+static const uint8_t v32Timer0OverflowCountIdx =		nextAllowedValue;
+static const uint8_t v32InjectorOpenTickStartIdx =		v32Timer0OverflowCountIdx + 1;
+static const uint8_t v32EnginePeriodTickStartIdx =		v32InjectorOpenTickStartIdx + 1;
+static const uint8_t v32EnginePeriodTickCloseIdx =		v32EnginePeriodTickStartIdx + 1;
+static const uint8_t v32MaximumVSSperiodIdx =			v32EnginePeriodTickCloseIdx + 1;		// maximum good VSS period in timer0 cycles
 static const uint8_t v32MaximumEnginePeriodIdx =		v32MaximumVSSperiodIdx + 1;				// maximum good engine period in timer0 cycles
 static const uint8_t v32InjectorOpenDelayIdx =			v32MaximumEnginePeriodIdx + 1;			// injector settle time in timer0 cycles
 static const uint8_t v32InjectorValidMaxWidthIdx =		v32InjectorOpenDelayIdx + 1;			// maximum valid fuel injector pulse width in timer0 cycles
 #define nextAllowedValue v32InjectorValidMaxWidthIdx + 1
+#if defined(useCPUreading)
+static const uint8_t v32SystemCycleIdx =				nextAllowedValue;						// system timer tick count
+#define nextAllowedValue v32SystemCycleIdx + 1
+#endif // defined(useCPUreading)
+#if defined(useClockSupport)
+static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software clock tick count
+#define nextAllowedValue v32ClockCycleIdx + 1
+#endif // defined(useClockSupport)
 #if defined(useChryslerMAPCorrection)
 static const uint8_t v32InjectorCorrectionIdx =			nextAllowedValue;						// Chrysler fuel injector correction value
 #define nextAllowedValue v32InjectorCorrectionIdx + 1
@@ -554,7 +642,6 @@ static const uint8_t v32FEvsTimePeriodTimeoutIdx =		nextAllowedValue;						// ti
 static const uint8_t v32WorkingInterruptProcessIdx =	nextAllowedValue;						// interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingInterruptProcessIdx + 1
 #endif // defined(useDebugCPUreading)
-
 #if defined(useDragRaceFunction)
 static const uint8_t v32DragRawInstantSpeedIdx =		nextAllowedValue;
 static const uint8_t v32DragRawTrapSpeedIdx =			v32DragRawInstantSpeedIdx + 1;
@@ -563,7 +650,6 @@ static const uint8_t v32AccelFullPeriodIdx =			v32AccelHalfPeriodIdx + 1;
 static const uint8_t v32AccelDistanceValueIdx =			v32AccelFullPeriodIdx + 1;
 #define nextAllowedValue v32AccelDistanceValueIdx + 1
 #endif // defined(useDragRaceFunction)
-
 #if defined(useCoastDownCalculator)
 static const uint8_t v32CoastdownMeasurement1Idx =		nextAllowedValue;
 static const uint8_t v32CoastdownMeasurement2Idx =		v32CoastdownMeasurement1Idx + 1;
@@ -704,37 +790,47 @@ static uint64_t mainProgram64Variables[(uint16_t)(m64VariableLength)];
 
 #if defined(useDebugTerminalLabels)
 static const char terminalVariableLabels[] PROGMEM = {
-	"v8Timer0Command" tcEOS
-	"v8Timer0StatusA" tcEOS
-	"v8Timer0StatusB" tcEOS
-	"v8Dirty" tcEOS
-	"v8Awake" tcEOS
-	"v8Timer0Delay" tcEOS
-	"v8Timer0DisplayDelay" tcEOS
-	"v8Activity" tcEOS
-	"v8ActivityChange" tcEOS
+	"v8Timer0CommandIdx" tcEOS
+	"v8Timer0Status0Idx" tcEOS
+	"v8Timer0Status1Idx" tcEOS
+	"v8DirtyIdx" tcEOS
+	"v8AwakeIdx" tcEOS
+	"v8Timer0DelayIdx" tcEOS
+	"v8Timer0DelayRepeatIdx" tcEOS
+	"v8Timer0DelaySignalIdx" tcEOS
+	"v8ActivityIdx" tcEOS
+	"v8ActivityIdxChangeIdx" tcEOS
+	"v8HeartbeatBitmaskIdx" tcEOS
+	"v8VSSdebounceTickIdx" tcEOS
+	"v8VSSdebounceCountIdx" tcEOS
+#if defined(useButtonInput)
+	"v8ThisButtonStateIdx" tcEOS
+	"v8LastButtonStateIdx" tcEOS
+	"v8ButtonPressIdx" tcEOS
+#endif // defined(useButtonInput)
 #if defined(useAnalogRead)
-	"v8AnalogCommand" tcEOS
-	"v8AnalogStatus" tcEOS
+	"v8AnalogCommandIdx" tcEOS
+	"v8AnalogStatusIdx" tcEOS
 #endif // defined(useAnalogRead)
 #if defined(useTWIsupport)
-	"v8TWIstatus" tcEOS
+	"v8TWIstatusIdx" tcEOS
+	"v8TWIerrorIdx" tcEOS
 #endif // defined(useTWIsupport)
 #if defined(useTimer1Interrupt)
-	"v8Timer1Command" tcEOS
-	"v8Timer1Status" tcEOS
+	"v8Timer1CommandIdx" tcEOS
+	"v8Timer1StatusIdx" tcEOS
 #if defined(useSimulatedFIandVSS)
-	"v8SignalSimModeFlags" tcEOS
+	"v8SignalSimModeIdx" tcEOS
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
-	"v8BLEstatus" tcEOS
+	"v8BLEstatusIdx" tcEOS
 #endif // defined(useBluetoothAdaFruitSPI)
 #endif // defined(useTimer1Interrupt)
 #if defined(useDragRaceFunction)
-	"v8AccelerationFlags" tcEOS
+	"v8AccelerationFlagsIdx" tcEOS
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-	"v8CoastdownStatus" tcEOS
+	"v8CoastdownStatusIdx" tcEOS
 #endif // defined(useCoastDownCalculator)
 #if defined(useSerial0Port)
 	"v8Serial0StatusIdx" tcEOS
@@ -748,6 +844,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useSerial3Port)
 	"v8Serial3StatusIdx" tcEOS
 #endif // defined(useSerial3Port)
+#if defined(useBarFuelEconVsTime)
+	"v8FEvTimeTripIdx" tcEOS
+#endif // defined(useBarFuelEconVsTime)
 #if defined(useDS1307clock)
 	"v8RTCsecondIdx" tcEOS
 	"v8RTCminuteIdx" tcEOS
@@ -786,15 +885,46 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(__AVR_ATmega32U4__)
 	"m8DevUSBidx" tcEOS
 #endif // defined(__AVR_ATmega32U4__)
-#if defined(useClockDisplay)
+#if defined(useLCDoutput)
+	"m8Delay0FlagLCDidx" tcEOS
+#endif // defined(useLCDoutput)
+#if defined(useTFToutput)
+	"m8Delay0FlagTFTidx" tcEOS
+#endif // defined(useTFToutput)
+#if defined(useSerial0Port)
+	"m8Delay0FlagSerial0idx" tcEOS
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+	"m8Delay0FlagSerial1idx" tcEOS
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+	"m8Delay0FlagSerial2idx" tcEOS
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+	"m8Delay0FlagSerial3idx" tcEOS
+#endif // defined(useSerial3Port)
+#if defined(useBluetoothAdaFruitSPI)
+	"m8Delay0FlagBLEfriendIdx" tcEOS
+	"m8Delay0FlagBluetoothIdx" tcEOS
+#endif // defined(useBluetoothAdaFruitSPI)
+#if defined(__AVR_ATmega32U4__)
+	"m8Delay0FlagUSBidx" tcEOS
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(useClockSupport)
 	"m8SecondIdx" tcEOS
 	"m8MinuteIdx" tcEOS
 	"m8HourIdx" tcEOS
-#endif // defined(useClockDisplay)
+#endif // defined(useClockSupport)
 #if defined(useActivityLED)
 	"m8ActivityStatusIdx" tcEOS
 	"m8ActivityOutputIdx" tcEOS
 #endif // defined(useActivityLED)
+#if defined(useWindowTripFilter)
+	"m8CurrentWindowTripIdx" tcEOS
+#endif // defined(useWindowTripFilter)
+#if defined(useBarFuelEconVsSpeed)
+	"m8FEvSpeedTripIdx" tcEOS
+#endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBarGraph)
 	"m8BarGraphIdx[0x00]" tcEOS
 	"m8BarGraphIdx[0x01]" tcEOS
@@ -815,6 +945,14 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useMCP23017portExpander)
 	"m8MCP23017statusFlags" tcEOS
 #endif // defined(useMCP23017portExpander)
+#if defined(useSimulatedFIandVSS)
+	"m8SignalSimVSSdelayFlagIdx" tcEOS
+	"m8SignalSimFIPdelayFlagIdx" tcEOS
+	"m8SignalSimVSSidx" tcEOS
+	"m8SignalSimFIPidx" tcEOS
+	"m8SignalSimVSSstate" tcEOS
+	"m8SignalSimFIPstate" tcEOS
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugTerminal)
 	"m8PeekFlags" tcEOS
 #endif // defined(useDebugTerminal)
@@ -826,7 +964,22 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v16ActivityTimeoutIdx" tcEOS				// timer0
 	"v16DetectVehicleStopIdx" tcEOS				// vss
 	"v16DetectEngineOffIdx" tcEOS				// fi open
-
+	"v16Timer0DelayTickIdx[0]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[1]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[2]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[3]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[4]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[5]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[6]" tcEOS			// timer0
+	"v16Timer0DelayTickIdx[7]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[0]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[1]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[2]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[3]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[4]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[5]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[6]" tcEOS			// timer0
+	"v16Timer0DelayCountIdx[7]" tcEOS			// timer0 
 #if defined(useAnalogRead)
 	"v16Analog0Idx" tcEOS						// analog
 	"v16Analog1Idx" tcEOS						// analog
@@ -836,17 +989,26 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v16Analog5Idx" tcEOS						// analog
 	"v16AnalogGroundIdx" tcEOS					// analog
 #endif // defined(useAnalogRead)
+#if defined(useSimulatedFIandVSS)
+	"v16SignalSimVSStickLength" tcEOS			// timer1
+	"v16SignalSimFIPtickLength" tcEOS			// timer1
+	"v16SignalSimFIPWtickLength" tcEOS			// timer1
+#endif // defined(useSimulatedFIandVSS)
 
-#if defined(useCPUreading)
-	"v32SystemCycleIdx" tcEOS					// timer0
-#endif // defined(useCPUreading)
-#if defined(useClockDisplay)
-	"v32ClockCycleIdx" tcEOS					// timer0
-#endif // defined(useClockDisplay)
+	"v32Timer0OverflowCountIdx" tcEOS			// timer0, fi, vss, timing
+	"v32InjectorOpenTickStartIdx" tcEOS			// fi
+	"v32EnginePeriodTickStartIdx" tcEOS			// fi
+	"v32EnginePeriodTickCloseIdx" tcEOS			// fi
 	"v32MaximumVSSperiodIdx" tcEOS				// vss
 	"v32MaximumEnginePeriodIdx" tcEOS			// fi close
 	"v32InjectorOpenDelayIdx" tcEOS				// fi close
 	"v32InjectorValidMaxWidthIdx" tcEOS			// fi close
+#if defined(useCPUreading)
+	"v32SystemCycleIdx" tcEOS					// timer0
+#endif // defined(useCPUreading)
+#if defined(useClockSupport)
+	"v32ClockCycleIdx" tcEOS					// timer0
+#endif // defined(useClockSupport)
 #if defined(useChryslerMAPCorrection)
 	"v32InjectorCorrectionIdx" tcEOS			// fi close
 #endif // defined(useChryslerMAPCorrection)
@@ -954,9 +1116,10 @@ static const uint8_t ecsDoMPGuinoInitHardware =	0b01000000;
 static const uint8_t ecsDoMetricConversion =	0b00100000;
 static const uint8_t ecsChangeDisplay =			0b00010000;
 static const uint8_t ecsCalculateFuelParam =	0b00001000;
-static const uint8_t ecsEEPROMchangeDetected =	0b00000100;
+static const uint8_t ecsResetBarFEvsSpeed =		0b00000100;
+static const uint8_t ecsEEPROMchangeDetected =	0b00000010;
 
-static const uint8_t ecsEEPROMchangeFlags =		(ecsDoMPGuinoInitSoftware | ecsDoMPGuinoInitHardware | ecsDoMetricConversion | ecsChangeDisplay | ecsCalculateFuelParam | ecsEEPROMchangeDetected);
+static const uint8_t ecsEEPROMchangeFlags =		(ecsDoMPGuinoInitSoftware | ecsDoMPGuinoInitHardware | ecsDoMetricConversion | ecsChangeDisplay | ecsCalculateFuelParam | ecsResetBarFEvsSpeed | ecsEEPROMchangeDetected);
 
 // bit flags for use with m8MetricModeFlags
 static const uint8_t mmDisplayAlternateFE =		0b00000010;
@@ -964,48 +1127,23 @@ static const uint8_t mmDisplayMetric =			0b00000001;
 
 static const uint8_t mmFuelEconOutputFlags =	(mmDisplayAlternateFE | mmDisplayMetric);
 
-volatile uint8_t lastPINxState;
-
-volatile uint8_t VSScount; // for VSS debouncing
-volatile uint8_t VSSpause; // for VSS debouncing
-
-#if defined(useButtonInput)
-volatile uint8_t thisButtonState;
-volatile uint8_t lastButtonState;
-volatile uint8_t buttonPress;
-#endif // defined(useButtonInput)
-
-static volatile uint8_t mainLoopHeartBeat;
-
-static volatile uint32_t timer0_overflow_count;
+static volatile uint8_t lastPINxState;
 
 static volatile uint16_t watchdogInjectorCount;
 static volatile uint16_t watchdogVSSCount;
 
-// this provides for 8 separate delay counters based on timer0
-static volatile uint16_t timer0DelayCount[8];
-
-// these flags specifically tell the system timer0 to do something (v8Timer0Command)
+// these flags specifically tell the system timer0 to do something (v8Timer0CommandIdx)
 // main program sets flag, system timer0 usually acknowledges by clearing flag
 static const uint8_t t0cResetTimer =			0b10000000;
 static const uint8_t t0cResetInputTimer =		0b01000000;
-#if defined(useButtonInput)
+static const uint8_t t0cResetOutputTimer =		0b00100000;
 static const uint8_t t0cProcessButton =			0b00010000;
-#if defined(useTWIbuttons) || defined(useAnalogButtons)
 static const uint8_t t0cEnableButtonSampling =	0b00001000;
-#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
-#endif // defined(useButtonInput)
-#if defined(useBarFuelEconVsTime)
 static const uint8_t t0cResetFEvTime =			0b00000100;
-#endif // defined(useBarFuelEconVsTime)
-#if defined(useBluetoothAdaFruitSPI)
 static const uint8_t t0cEnableBLEsample =		0b00000010;
-#endif // defined(useBluetoothAdaFruitSPI)
-#if defined(useDS1307clock)
 static const uint8_t t0cReadRTC =				0b00000001;
-#endif // defined(useDS1307clock)
 
-// these flags specifically tell the main program to do something (v8Timer0StatusA)
+// these flags specifically tell the main program to do something (v8Timer0Status0Idx)
 // system timer0 sets flag, main program acknowledges by clearing flag
 static const uint8_t t0saTakeSample =			0b10000000;	// tells the main program to perform trip variable sampling
 static const uint8_t t0saUpdateDisplay =		0b01000000;
@@ -1023,7 +1161,7 @@ static const uint8_t t0saCoastdownTestFlag =	0b00000010;
 static const uint8_t t0saJSONchangeSubtitle =	0b00000001;
 #endif // defined(useJSONoutput)
 
-// these flags specifically tell the main program to do something (v8Timer0StatusB)
+// these flags specifically tell the main program to do something (v8Timer0Status1Idx)
 // system timer0 sets flag, main program acknowledges by clearing flag
 #if defined(useBluetoothAdaFruitSPI)
 static const uint8_t t0sbSampleBLEfriend =		0b10000000;
@@ -1031,8 +1169,11 @@ static const uint8_t t0sbSampleBLEfriend =		0b10000000;
 #if defined(useDS1307clock)
 static const uint8_t t0sbReadRTC =				0b01000000;
 #endif // defined(useDS1307clock)
+#if defined(useBarFuelEconVsTime)
+static const uint8_t t0sbResetFEvsTimeTrip =	0b00100000;
+#endif // defined(useBarFuelEconVsTime)
 
-// these status flags inform the main program about MPGuino awake state (v8Awake)
+// these status flags inform the main program about MPGuino awake state (v8AwakeIdx)
 static const uint8_t aAwakeOnInjector =			0b10000000;
 static const uint8_t aAwakeOnVSS =				0b01000000;
 static const uint8_t aAwakeOnInput =			0b00100000;
@@ -1042,7 +1183,7 @@ static const uint8_t aAwakeVehicleMoving =		0b00001000;
 static const uint8_t aAwake =					(aAwakeOnInjector | aAwakeOnVSS | aAwakeOnInput);
 static const uint8_t aAwakeOnVehicle =			(aAwakeOnInjector | aAwakeOnVSS);
 
-// these status flags inform the main program about MPGuino sensor activity (v8Activity, v8ActivityChange)
+// these status flags inform the main program about MPGuino sensor activity (v8ActivityIdx, v8ActivityIdxChangeIdx)
 static const uint8_t afEngineOffFlag =			0b10000000;
 static const uint8_t afVehicleStoppedFlag =		0b01000000;
 static const uint8_t afUserInputFlag =			0b00100000;
@@ -1056,7 +1197,7 @@ static const uint8_t afActivityCheckFlags =		(afEngineOffFlag | afVehicleStopped
 static const uint8_t afParkCheckFlags =			(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag);
 static const uint8_t afNotParkedFlags =			(afEngineOffFlag | afVehicleStoppedFlag);
 
-// these status flags communicate instantaneous vehicle status between the sensor interrupts and the system timer0 interrupt (v8Dirty)
+// these status flags communicate instantaneous vehicle status between the sensor interrupts and the system timer0 interrupt (v8DirtyIdx)
 static const uint8_t dGoodEngineRotationOpen =		0b10000000;
 static const uint8_t dGoodEngineRotationClose =		0b01000000;
 static const uint8_t dInjectorReadInProgress =		0b00100000;
@@ -1079,34 +1220,27 @@ static const uint8_t internalButtonValid =			0b00100000;
 static const uint8_t internalReadTWIrtc =			0b00010000;
 static const uint8_t internalReadTWIbutton =		0b00001000;
 static const uint8_t internalWriteTWIbyte =			0b00000100;
-static const uint8_t internalResetUpdateTimer =		0b00000010;
 static const uint8_t internalResetCursorTimer =		0b00000001;
 
 #if defined(useTimer1Interrupt)
-// these flags specifically tell the system timer1 to do something (v8Timer1Command)
+// these flags specifically tell the system timer1 to do something (v8Timer1CommandIdx)
 // main program sets flag, system timer1 acknowledges by clearing flag
 static const uint8_t t1cResetTimer =			0b10000000;
-#if defined(useLCDoutput)
 static const uint8_t t1cDelayLCD =				0b01000000;
-#endif // defined(useLCDoutput)
-#if defined(useSimulatedFIandVSS)
 static const uint8_t t1cEnableDebug =			0b00100000;
-#endif // defined(useSimulatedFIandVSS)
 
-// these flags specifically tell the main program to do something (v8Timer1Status)
+static const uint8_t t1cEnableInterrupt =		(t1cDelayLCD | t1cEnableDebug);
+
+// these flags specifically tell the main program to do something (v8Timer1StatusIdx)
 // system timer1 sets flag, main program acknowledges by clearing flag
 // these flags also have some internal use
 #if defined(useTWI4BitLCD)
 static const uint8_t t1sLoopFlag =				0b10000000;
 static const uint8_t t1sDoOutputTWI =			0b01000000;
 #endif // defined(useTWI4BitLCD)
-#if defined(useSimulatedFIandVSS)
-static const uint8_t t1sDebugUpdateFIP =		0b00100000;
-static const uint8_t t1sDebugUpdateVSS =		0b00010000;
-#endif // defined(useSimulatedFIandVSS)
 
 #if defined(useBluetoothAdaFruitSPI)
-// bit flags for use with v8BLEstatus
+// bit flags for use with v8BLEstatusIdx
 static const uint8_t bleReset =					0b10000000;
 static const uint8_t bleResetting =				0b01000000;
 static const uint8_t bleAssert =				0b00100000;
@@ -1117,6 +1251,7 @@ static const uint8_t blePacketWaiting =			0b00000100;
 static const uint8_t bleResetFlags =			(bleReset | bleResetting);
 static const uint8_t bleAssertFlags =			(bleAssert | bleAsserting);
 static const uint8_t blePacketWaitFlags =		(blePacketWait | blePacketWaiting);
+static const uint8_t bleEnableInterrupt =		(bleResetFlags | bleAssertFlags | blePacketWaitFlags);
 
 #endif // defined(useBluetoothAdaFruitSPI)
 #endif // defined(useTimer1Interrupt)

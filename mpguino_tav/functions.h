@@ -79,10 +79,10 @@ static const uint8_t tBingoRemainingFuel =			tReserveRemainingFuel + 1;		// esti
 static const uint8_t tAnalogChannel =				nextAllowedValue;				// DC voltage
 #define nextAllowedValue tAnalogChannel + 1
 #endif // defined(useDebugAnalog)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint8_t tAlternatorChannel =			nextAllowedValue;				// DC voltage
 #define nextAllowedValue tAlternatorChannel + 1
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useChryslerMAPCorrection)
 static const uint8_t tPressureChannel =				nextAllowedValue;				// absolute pressure (SI/SAE)
 #define nextAllowedValue tPressureChannel + 1
@@ -193,9 +193,9 @@ static const char terminalTripFuncNames[] PROGMEM = {
 #if defined(useDebugAnalog)
 	"tAnalogChannel" tcEOS				// DC voltage
 #endif // defined(useDebugAnalog)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	"tAlternatorChannel" tcEOS			// DC voltage
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useChryslerMAPCorrection)
 	"tPressureChannel" tcEOS			// absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
@@ -662,7 +662,7 @@ static const uint8_t prgmAnalogChannel[] PROGMEM = {	// tAnalogChannel - DC volt
 };
 
 #endif // defined(useDebugAnalog)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 	instrLdRegVariable, 0x02, v16AnalogAlternatorChannelIdx,	// load analog channel ADC step value
 	instrMul2byRdOnly, idxDenomVoltage,					// perform multiply (we're converting from ADC steps to voltage)
@@ -675,7 +675,7 @@ static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrTestReg, 0x02,									// test register 2
 	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
@@ -1091,9 +1091,9 @@ static const uint8_t * const S64programList[] PROGMEM = {
 #if defined(useDebugAnalog)
 	prgmAnalogChannel,							// tAnalogChannel - DC voltage
 #endif // defined(useDebugAnalog)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	prgmAlternatorChannel,						// tAlternatorChannel - DC voltage
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useChryslerMAPCorrection)
 	prgmPressureChannel,						// tPressureChannel - absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)
@@ -1169,7 +1169,7 @@ static const uint8_t calcFormatTimeInSecondsIdx =		nextAllowedValue;						// tim
 #if defined(useAnalogRead)
 static const uint8_t calcFormatAnalogDisplayIdx =		nextAllowedValue;						// voltage
 #define nextAllowedValue calcFormatAnalogDisplayIdx + 1
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 #if defined(useFuelCost)
 static const uint8_t calcFormatFuelCostIdx =			nextAllowedValue;						// fuel cost
 static const uint8_t calcFormatFuelRateCostIdx =		calcFormatFuelCostIdx + 1;				// fuel rate cost
@@ -1219,7 +1219,7 @@ static const char calcFormatLabels[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
 	"V(dc)" tcEOS					// voltage
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 #if defined(useFuelCost)
 	"cost" tcEOS					// fuel cost
 	"cost/hour" tcEOS				// fuel rate cost
@@ -1310,7 +1310,7 @@ static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGME
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
 	'V',	// voltage
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 #if defined(useFuelCost)
 	'$',	// fuel cost
 	'#',	// fuel rate cost
@@ -1526,9 +1526,9 @@ static const uint8_t calcFormatList[(uint16_t)(dfMaxValDisplayCount)] PROGMEM = 
 #if defined(useDebugAnalog)
 	calcFormatAnalogDisplayIdx,					// tAnalogChannel - DC voltage
 #endif // defined(useDebugAnalog)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	calcFormatAnalogDisplayIdx,					// tAlternatorChannel - DC voltage
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useChryslerMAPCorrection)
 	calcFormatPressureIdx,						// tPressureChannel - absolute pressure (SI/SAE)
 #endif // defined(useChryslerMAPCorrection)

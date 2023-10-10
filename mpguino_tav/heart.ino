@@ -53,33 +53,26 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	uint32_t thisTime;
 
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cResetTimer)
+	uint8_t delay0Channel;
+	uint8_t delay0ChannelMask;
+	uint8_t i;
+
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cResetTimer)
 	{
 
-		timer0_overflow_count = 0; // initialize timer 0 overflow counter
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cResetTimer); // acknowledge reset request
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetInputTimer | t0cResetOutputTimer); // reset display cursor
+
 		thisTime = TCNT0;
-		internalFlags = (internalResetCursorTimer);
-
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] &= ~(t0cResetTimer); // acknowledge reset request
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cResetInputTimer); // reset display cursor
-
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] = 0; // initialize status flags
-		volatile8Variables[(uint16_t)(v8Timer0StatusB - v8VariableStartIdx)] = 0;
-		volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dGoodVehicleDrive);
-
-		volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] = 0; // initialize dedicated delay flags
-		volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] = 0;
+		internalFlags = (internalResetCursorTimer); // reset cursor timer
 
 		sampleCount = delay0TickSampleLoop;
 		updateCount = delay0TickUpdateLoop;
-		mainLoopHeartBeat = 0x01;
 
-		volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] = 0;
-		activityTimeoutCount = volatile16Variables[(uint16_t)(v16ActivityTimeoutIdx - v16VariableStartIdx)];
 		parkTimeoutCount = 0;
 		swapFEwithFCRcount = 0;
 
-		volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] = (afActivityCheckFlags | afSwapFEwithFCR);
+		activityTimeoutCount = volatile16Variables[(uint16_t)(v16ActivityTimeoutIdx - v16VariableStartIdx)];
 		previousActivity = (afActivityCheckFlags);
 
 #if defined(useButtonInput)
@@ -89,10 +82,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 
 #endif // defined(useButtonInput)
-#if defined(useAnalogRead)
-		volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] = asHardwareReady;
-
-#endif // defined(useAnalogRead)
 #if defined(useInterruptBasedTWI)
 		TWIsampleState = 0;
 
@@ -101,10 +90,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		bluetoothPeriodCount = delay0TickSampleLoop;
 
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cResetFEvTime);
-
-#endif // defined(useBarFuelEconVsTime)
 #if defined(useBluetoothAdaFruitSPI)
 		BLEtimeoutCount = 0;
 
@@ -113,20 +98,21 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		timer0_overflow_count += 256; // update TOV count
-		thisTime = timer0_overflow_count | TCNT0; // calculate current cycle count
+		volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] += 256; // update TOV count
+		thisTime = volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] | TCNT0; // calculate current cycle count
 
 #if defined(useCPUreading)
 		volatile32Variables[(uint16_t)(v32SystemCycleIdx - v32VariableStartIdx)]++; // update systemcycles
 
 #endif // defined(useCPUreading)
-#if defined(useClockDisplay)
-		// update clockcycles - if clockcycles goes past day length in timer0 ticks, roll back to 0
 #if defined(useSoftwareClock)
+		// update clockcycles - if clockcycles goes past day length in timer0 ticks, roll back to 0
 		if ((++volatile32Variables[(uint16_t)(v32ClockCycleIdx - v32VariableStartIdx)]) >= t0TicksPerDay)
 			volatile32Variables[(uint16_t)(v32ClockCycleIdx - v32VariableStartIdx)] = 0;
+
 #endif // defined(useSoftwareClock)
 #if defined(useDS1307clock)
+		// update clockcycles - if clockcycles goes past two times day length in timer0 ticks, roll back to day length in timer0 ticks
 		if ((++volatile32Variables[(uint16_t)(v32ClockCycleIdx - v32VariableStartIdx)]) >= (2 * t0TicksPerDay))
 		{
 
@@ -134,12 +120,11 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			internalFlags |= (internalReadTWIrtc);
 
 		}
-#endif // defined(useDS1307clock)
 
-#endif // defined(useClockDisplay)
+#endif // defined(useDS1307clock)
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
+	if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
 	{
 
 		if (watchdogInjectorCount) // if the fuel injector watchdog timer is running on minimum good engine speed
@@ -148,11 +133,11 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			watchdogInjectorCount--; // cycle fuel injector watchdog timer down
 
 #if defined(useChryslerMAPCorrection)
-			if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dSampleADC) // if injector monitor commanded an analog engine sensor read
+			if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dSampleADC) // if injector monitor commanded an analog engine sensor read
 			{
 
-				volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dSampleADC); // acknowledge the command
-				volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] |= (acSampleChrysler);
+				volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dSampleADC); // acknowledge the command
+				volatile8Variables[(uint16_t)(v8AnalogCommandIdx - v8VariableStartIdx)] |= (acSampleChrysler);
 
 			}
 
@@ -161,8 +146,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // fuel injector watchdog timer has timed out
 		{
 
-			volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] &= ~(aAwakeOnInjector); // signal that MPGuino is not awake any more due to no detected injector event during injector watchdog period
-			volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dGoodEngineRun); // reset all fuel injector measurement flags
+			volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] &= ~(aAwakeOnInjector); // signal that MPGuino is not awake any more due to no detected injector event during injector watchdog period
+			volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dGoodEngineRun); // reset all fuel injector measurement flags
 			watchdogInjectorCount = volatile16Variables[(uint16_t)(v16EngineOffTimeoutIdx - v16VariableStartIdx)]; // start the fuel injector watchdog for engine off mode
 
 		}
@@ -171,15 +156,15 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else // MPGuino is no longer awake due to no detected fuel injector events
 	{
 
-		if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeEngineRunning) // if MPGuino is still awake due to running engine
+		if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeEngineRunning) // if MPGuino is still awake due to running engine
 		{
 
 			if (watchdogInjectorCount) watchdogInjectorCount--; // cycle fuel injector watchdog timer down for engine off flag mode
 			else
 			{
 
-				volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afEngineOffFlag); // flag engine as being off
-				volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] &= ~(aAwakeEngineRunning); // MPGuino is no longer awake due to engine running
+				volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afEngineOffFlag); // flag engine as being off
+				volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] &= ~(aAwakeEngineRunning); // MPGuino is no longer awake due to engine running
 
 			}
 
@@ -187,15 +172,15 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (VSScount) // if there is a VSS debounce countdown in progress
+	if (volatile8Variables[(uint16_t)(v8VSSdebounceCountIdx - v8VariableStartIdx)]) // if there is a VSS debounce countdown in progress
 	{
 
-		VSScount--; // bump down the VSS count
-		if (VSScount == 0) heart::updateVSS(thisTime); // if count has reached zero, go update VSS
+		volatile8Variables[(uint16_t)(v8VSSdebounceCountIdx - v8VariableStartIdx)]--; // bump down the VSS count
+		if (volatile8Variables[(uint16_t)(v8VSSdebounceCountIdx - v8VariableStartIdx)] == 0) heart::updateVSS(thisTime); // if count has reached zero, go update VSS
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnVSS) // if MPGuino is awake on detected VSS pulse event
+	if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeOnVSS) // if MPGuino is awake on detected VSS pulse event
 	{
 
 		if (watchdogVSSCount) // if the VSS watchdog timer is running on minimum good vehicle speed
@@ -207,8 +192,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // VSS watchdog timer has timed out on minimum good vehicle speed
 		{
 
-			volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] &= ~(aAwakeOnVSS); // signal that MPGuino is no longer awake due to no detected VSS pulse event during VSS watchdog period
-			volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dGoodVehicleMotion); // reset all VSS measurement flags
+			volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] &= ~(aAwakeOnVSS); // signal that MPGuino is no longer awake due to no detected VSS pulse event during VSS watchdog period
+			volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dGoodVehicleMotion); // reset all VSS measurement flags
 			watchdogVSSCount = volatile16Variables[(uint16_t)(v16VehicleStopTimeoutIdx - v16VariableStartIdx)]; // start the VSS watchdog for vehicle stopped mode
 			swapFEwithFCRcount = delay0Tick3000ms; // reset swap timer counter
 
@@ -218,34 +203,34 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else // MPGuino is no longer awake due to no detected VSS pulse events
 	{
 
-		if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeVehicleMoving) // if MPGuino is awake due to detected vehicle movement
+		if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeVehicleMoving) // if MPGuino is awake due to detected vehicle movement
 		{
 
 			if (watchdogVSSCount) watchdogVSSCount--;// cycle VSS watchdog timer down for vehicle stopped flag mode
 			else
 			{
 
-				volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afVehicleStoppedFlag); // flag vehicle as stopped
-				volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] &= ~(aAwakeVehicleMoving); // vehicle is no longer awake on detected vehicle movement
+				volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afVehicleStoppedFlag); // flag vehicle as stopped
+				volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] &= ~(aAwakeVehicleMoving); // vehicle is no longer awake on detected vehicle movement
 
 #if defined(useDragRaceFunction)
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestActive) // if accel test function is active
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestActive) // if accel test function is active
 				{
 
-					volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestClearFlags); // reset accel test capture flags
-					volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] |= (accelTestCompleteFlags); // signal that accel test is cancelled
-					volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+					volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestClearFlags); // reset accel test capture flags
+					volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] |= (accelTestCompleteFlags); // signal that accel test is cancelled
+					volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 
 				}
 
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-				if (volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestInProgress) // if coastdown test has started
+				if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestInProgress) // if coastdown test has started
 				{
 
-					volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
-					volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] |= (cdTestCompleteFlags); // signal that coastdown test is cancelled
-					volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saCoastdownTestFlag);
+					volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+					volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= (cdTestCompleteFlags); // signal that coastdown test is cancelled
+					volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saCoastdownTestFlag);
 
 				}
 
@@ -254,18 +239,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-		if ((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afSwapFEwithFCR) == 0) // if not yet showing fuel consumption rate instead of fuel economy
+		if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afSwapFEwithFCR) == 0) // if not yet showing fuel consumption rate instead of fuel economy
 		{
 
 			if (swapFEwithFCRcount) swapFEwithFCRcount--; // cycle down fuel display watchdog until it zeroes out
-			else volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afSwapFEwithFCR); // output fuel consumption rate function instead of fuel economy
+			else volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afSwapFEwithFCR); // output fuel consumption rate function instead of fuel economy
 
 		}
 
 	}
 
 #if defined(useBarFuelEconVsTime)
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cResetFEvTime) FEvTperiodIdx = FEvsTimeIdx; // initialize fuel econ vs time trip index variable
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cResetFEvTime)
+		volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)] = 0; // initialize fuel econ vs time trip index variable
 	else
 	{
 
@@ -273,41 +259,42 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else
 		{
 
-			volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cResetFEvTime);
-			FEvTperiodIdx++;
-			if (FEvTperiodIdx > FEvsTimeEndIdx) FEvTperiodIdx -= bgDataSize;
+			volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetFEvTime);
+			volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)]++;
+			if (volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)] >= bgDataSize)
+				volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)] = 0;
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cResetFEvTime)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cResetFEvTime)
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] &= ~(t0cResetFEvTime);
-		tripVar::reset(FEvTperiodIdx); // reset source trip variable
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cResetFEvTime);
+		volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] |= (t0sbResetFEvsTimeTrip);
 		FEvTimeCount = volatile32Variables[(uint16_t)(v32FEvsTimePeriodTimeoutIdx - v32VariableStartIdx)];
 
 	}
 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useCoastDownCalculator)
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestTriggered) // if coastdown test has been requested
+	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestTriggered) // if coastdown test has been requested
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saCoastdownTestFlag); // signal to main program that coastdown flags have changed
-		volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] &= ~(cdTestTriggered | cdTestSampleTaken); // clear coastdown test state
-		volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] |= (cdTestActive); // mark coastdown test as active
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestTriggered | cdTestSampleTaken); // clear coastdown test state
+		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= (cdTestActive); // mark coastdown test as active
 		coastdownCount = volatile32Variables[(uint16_t)(v32CoastdownPeriodIdx - v32VariableStartIdx)]; // reset coastdown timer
 		coastdownState = v32CoastdownMeasurement1Idx; // reset coastdown state
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestSampleTaken)
+	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestSampleTaken)
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saCoastdownTestFlag); // signal to main program that coastdown flags have changed
-		volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] &= ~(cdTestSampleTaken);
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saCoastdownTestFlag); // signal to main program that coastdown flags have changed
+		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestSampleTaken);
 		coastdownState++;
 
 		if (coastdownState < v32CoastdownPeriodIdx - v32VariableStartIdx) // if coastdown state is still valid
@@ -319,34 +306,34 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // otherwise, signal that coastdown test ended normally
 		{
 
-			volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] &= ~(cdTestActive); // make coastdown test no longer active
-			volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] |= cdTestFinished; // signal that coastdown test finished normally
+			volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestActive); // make coastdown test no longer active
+			volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= cdTestFinished; // signal that coastdown test finished normally
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestActive) // if coastdown test is active
+	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestActive) // if coastdown test is active
 	{
 
 		if (coastdownCount) coastdownCount--; // if coastdown timer hasn't elapsed
-		else if ((volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestSampleTaken) == 0) volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] |= (cdTestTakeSample); // otherwise, signal VSS handler to take a coastdown sample
+		else if ((volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestSampleTaken) == 0) volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= (cdTestTakeSample); // otherwise, signal VSS handler to take a coastdown sample
 
 	}
 
 #endif // defined(useCoastDownCalculator)
 #if defined(useDS1307clock)
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cReadRTC)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cReadRTC)
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] &= ~(t0cReadRTC); // acknowledge RTC read request
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cReadRTC); // acknowledge RTC read request
 		internalFlags |= (internalReadTWIrtc); // generate TWI RTC read request
 
 	}
 
 #endif // defined(useDS1307clock)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cEnableButtonSampling)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cEnableButtonSampling)
 	{
 
 		if (buttonSampleCount) buttonSampleCount--;
@@ -358,7 +345,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			internalFlags |= (internalReadTWIbutton); // generate TWI button read request
 #endif // defined(useTWIbuttons)
 #if defined(useAnalogButtons)
-			volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] |= (acSampleButtonChannel); // go sample analog button channel
+			volatile8Variables[(uint16_t)(v8AnalogCommandIdx - v8VariableStartIdx)] |= (acSampleButtonChannel); // go sample analog button channel
 #endif // defined(useAnalogButtons)
 
 		}
@@ -367,24 +354,24 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 #if defined(useInterruptBasedTWI)
-	if (volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiBlockMainProgram)
+	if (volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiInterruptInUse)
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiOpenMain) == twiBlockMainProgram) // if TWI section is finished processing
+		if ((volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiOpen) == 0) // if TWI section is finished processing
 			switch (TWIsampleState)
 			{
 
 				case 1: // TWI sample request has finished, now set up for TWI read sample
-					TWI::openChannel(TWIsampleAddress, TW_READ); // open TWI as master receiver
+					TWI::open(TWIsampleAddress, TW_READ); // open TWI as master receiver
 					twiDataBufferLen = TWIsampleLength - 1; // set number of bytes to read before stop is sent
-					TWI::transmitChannel(TWI_STOP); // go commit to read, send stop when read is finished
+					TWI::transmit(TWI_STOP); // go commit to read, send stop when read is finished
 
 					TWIsampleState++; // advance to waiting for TWI sample to complete
 
 					break;
 
 				case 2: // TWI read sample has finished, check if error occurred
-					if ((volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiErrorFlag) == 0)
+					if ((volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiErrorFlag) == 0)
 					{
 
 						TWIsampleState = nextTWIsampleState;
@@ -392,7 +379,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 					}
 				default:
-					volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiBlockMainProgram);
+					volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInterruptInUse);
 					break;
 
 #if defined(useDS1307clock)
@@ -400,23 +387,23 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 					for (uint8_t x = 0; x < TWIsampleLength; x++) volatile8Variables[(uint16_t)(v8RTCsecondIdx + x - v8VariableStartIdx)] = twiDataBuffer[(uint16_t)(x)];
 
 					// if the RTC clock is not halted, notify main program that RTC time has been read in
-					if ((volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)] & 0x80) == 0) volatile8Variables[(uint16_t)(v8Timer0StatusB - v8VariableStartIdx)] |= (t0sbReadRTC);
+					if ((volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)] & 0x80) == 0) volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] |= (t0sbReadRTC);
 
-					volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiBlockMainProgram);
+					volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInterruptInUse);
 					break;
 
 #endif // defined(useDS1307clock)
 #if defined(useTWIbuttons)
 				case 20:
-					if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cEnableButtonSampling)
+					if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cEnableButtonSampling)
 					{
 
-						thisButtonState = (twiDataBuffer[0] & buttonMask); // fetch button state that was just read in
-						volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
+						volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] = (twiDataBuffer[0] & buttonMask); // fetch button state that was just read in
+						volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 					}
 
-					volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] &= ~(twiBlockMainProgram);
+					volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] &= ~(twiInterruptInUse);
 					break;
 
 #endif // defined(useTWIbuttons)
@@ -426,7 +413,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiOpenInterrupt) == twiAllowISRactivity) // wait for TWI to be closed and allow ISR activity
+		if ((volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] & twiInUse) == 0) // wait for TWI to be closed and allow ISR activity
 		{
 
 			TWIsampleState = 1;
@@ -459,14 +446,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 				TWIsampleAddress = TWIaddressButton; // specify TWI button device address
 				TWIsampleLength = 1; // set up to read in 1 byte
 
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDbuttons)
 				TWIsampleRegister = MCP23017_B1_GPIOA; // specify bank A GPIO pin register
 				internalFlags |= (internalWriteTWIbyte);
 
-#else // defined(useAdafruitRGBLCDshield)
+#else // defined(useAdafruitRGBLCDbuttons)
 				internalFlags &= ~(internalWriteTWIbyte); // do not write out supplemental TWI register byte
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDbuttons)
 				nextTWIsampleState = 20;
 
 #else // defined(useTWIbuttons)
@@ -480,13 +467,13 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			if (TWIsampleState)
 			{
 
-				volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] |= (twiBlockMainProgram);
+				volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)] |= (twiInterruptInUse);
 
-				TWI::openChannel(TWIsampleAddress, TW_WRITE); // open TWI as master transmitter
+				TWI::open(TWIsampleAddress, TW_WRITE); // open TWI as master transmitter
 
 				if (internalFlags & internalWriteTWIbyte) TWI::writeByte(TWIsampleRegister); // if TWI register byte is to be output, go output it
 
-				TWI::transmitChannel(TWI_REPEAT_START); // go write out read request, with repeated start to set up for read
+				TWI::transmit(TWI_REPEAT_START); // go write out read request, with repeated start to set up for read
 
 			}
 
@@ -511,7 +498,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 				{
 
 					internalFlags |= (internalButtonValid); // signal that button state is valid
-					buttonPress = thisButtonState; // transfer button state to button press output variable
+					volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)] = volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)]; // transfer button state to button press output variable
 
 				}
 
@@ -521,22 +508,23 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		else // otherwise, long-press countdown has finished
 		{
 
-			buttonPress |= (longButtonBit); // signal that a "long" button press has been detected
+			volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)] |= (longButtonBit); // signal that a "long" button press has been detected
 			internalFlags |= (internalOutputButton);
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cProcessButton) // if button hardware reports reading in a button
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cProcessButton) // if button hardware reports reading in a button
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] &= ~(t0cProcessButton); // acknowledge report
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cProcessButton); // acknowledge report
 
-		if (thisButtonState != lastButtonState) // if there was a button state change since the last button was read in
+		// if there was a button state change since the last button was read in
+		if (volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] != volatile8Variables[(uint16_t)(v8LastButtonStateIdx - v8VariableStartIdx)])
 		{
 
-			if (thisButtonState == buttonsUp) // if it's all buttons being released
+			if (volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] == buttonsUp) // if it's all buttons being released
 			{
 
 				if (internalFlags & internalButtonValid) internalFlags |= (internalOutputButton);
@@ -553,7 +541,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		}
 
-		lastButtonState = thisButtonState;
+		volatile8Variables[(uint16_t)(v8LastButtonStateIdx - v8VariableStartIdx)] = volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)];
 
 	}
 
@@ -563,14 +551,11 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		internalFlags &= ~(internalOutputButton | internalProcessButton | internalButtonValid);
 		internalFlags |= (internalResetCursorTimer); // reset cursor timer
 
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cResetInputTimer); // reset input activity timer
-
-		// reset all display delays in progress
-		volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)]);
-		volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] = 0;
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetInputTimer); // reset display timer
 
 		// only pass button press if MPGuino was already awake
-		if ((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afActivityTimeoutFlag) == 0) volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saReadButton);
+		if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityTimeoutFlag) == 0)
+			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saReadButton);
 
 		buttonLongPressCount = 0; // reset button long-press timer
 
@@ -582,14 +567,14 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	else
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saJSONchangeSubtitle); // signal to JSON output routine to display next round of subtitles
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saJSONchangeSubtitle); // signal to JSON output routine to display next round of subtitles
 		JSONtimeoutCount = delay0Tick1600ms; // restart JSON output timeout count
 
 	}
 
 #endif // defined(useJSONoutput)
 #if defined(useBluetoothAdaFruitSPI)
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cEnableBLEsample)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cEnableBLEsample)
 	{
 
 		if (BLEtimeoutCount) BLEtimeoutCount--;
@@ -597,7 +582,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			BLEtimeoutCount = delay0Tick100ms;
-			volatile8Variables[(uint16_t)(v8Timer0StatusB - v8VariableStartIdx)] |= (t0sbSampleBLEfriend);
+			volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] |= (t0sbSampleBLEfriend);
 
 		}
 
@@ -610,183 +595,55 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 		sampleCount = delay0TickSampleLoop; // restart sample loop count
 
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saTakeSample); // signal to main program that a sampling should occur
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saTakeSample); // signal to main program that a sampling should occur
 
-		if (mainLoopHeartBeat == 0x80) mainLoopHeartBeat = 0x01; // wrap around the heartbeat bit, if necessary
-		else mainLoopHeartBeat <<= 1; // cycle the heartbeat bit
+		if (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] == 0x80) // wrap around the heartbeat bit, if necessary
+			volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] = 0x01;
+		else volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] <<= 1; // cycle the heartbeat bit
 
 #if defined(useAnalogRead)
-		volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] |= (acSampleChannelInit); // go sample all non-critical channels
+		volatile8Variables[(uint16_t)(v8AnalogCommandIdx - v8VariableStartIdx)] |= (acSampleChannelInit); // go sample all non-critical channels
 
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x01)
+	delay0Channel = 0x01;
+	delay0ChannelMask = 0xFF;
+	i = 0;
+
+	while (delay0Channel & delay0ChannelMask) // while there are still active timer0 delay channels to look at
 	{
 
-		if (timer0DelayCount[0]) timer0DelayCount[0]--; // bump timer delay value down by one tick
-		else
+		if (volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & delay0Channel) // examine this timer0 delay channel
 		{
 
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x01); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x01) // if this was a display delay
+			if (volatile16Variables[(uint16_t)(v16Timer0DelayCountIdx + i - v16VariableStartIdx)]) volatile16Variables[(uint16_t)(v16Timer0DelayCountIdx + i - v16VariableStartIdx)]--; // bump timer0 delay value down by one tick
+			else
 			{
 
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x01); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
+				volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] |= (delay0Channel); // signal that timer0 delay channel has completed
+
+				// if this timer0 delay channel is set to repeat, reset its count
+				if (volatile8Variables[(uint16_t)(v8Timer0DelayRepeatIdx - v8VariableStartIdx)] & delay0Channel)
+					volatile16Variables[(uint16_t)(v16Timer0DelayCountIdx + i - v16VariableStartIdx)] = volatile16Variables[(uint16_t)(v16Timer0DelayTickIdx + i - v16VariableStartIdx)];
+				else volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] &= ~(delay0Channel); // otherwise, free up this timer0 delay channel
 
 			}
 
 		}
 
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x02)
-	{
-
-		if (timer0DelayCount[1]) timer0DelayCount[1]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x02); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x02) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x02); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
+		i++;
+		delay0Channel <<= 1;
+		delay0ChannelMask <<= 1;
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x04)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cResetInputTimer) // if user input was received
 	{
 
-		if (timer0DelayCount[2]) timer0DelayCount[2]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x04); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x04) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x04); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x08)
-	{
-
-		if (timer0DelayCount[3]) timer0DelayCount[3]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x08); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x08) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x08); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x10)
-	{
-
-		if (timer0DelayCount[4]) timer0DelayCount[4]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x10); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x10) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x10); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x20)
-	{
-
-		if (timer0DelayCount[5]) timer0DelayCount[5]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x20); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x20) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x20); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x40)
-	{
-
-		if (timer0DelayCount[6]) timer0DelayCount[6]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x40); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x40) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x40); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & 0x80)
-	{
-
-		if (timer0DelayCount[7]) timer0DelayCount[7]--; // bump timer delay value down by one tick
-		else
-		{
-
-			volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(0x80); // signal to main program that delay timer has completed main program request
-			if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] & 0x80) // if this was a display delay
-			{
-
-				volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] &= ~(0x80); // clear display delay flag
-				if (volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] == 0) internalFlags |= (internalResetUpdateTimer); // reset update loop
-
-			}
-
-		}
-
-	}
-
-	if (volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] & t0cResetInputTimer) // if user input was received
-	{
-
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] &= ~(t0cResetInputTimer); // acknowledge request
-		volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] |= (aAwakeOnInput); // set awake status on input received
-		volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] &= ~(afUserInputFlag | afActivityTimeoutFlag);
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cResetInputTimer); // acknowledge request
+		volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] |= (aAwakeOnInput); // set awake status on input received
+		volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] &= ~(afUserInputFlag | afActivityTimeoutFlag);
 
 		inputTimeoutCount = volatile16Variables[(uint16_t)(v16InputTimeoutIdx - v16VariableStartIdx)];
 
@@ -796,8 +653,8 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		internalFlags &= ~(internalResetCursorTimer);
-		internalFlags |= (internalResetUpdateTimer);
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saShowCursor);
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetOutputTimer);
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saShowCursor);
 		cursorCount = delay0Tick100ms; // reset cursor count
 
 	}
@@ -809,58 +666,58 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		{
 
 			cursorCount = delay0Tick500ms; // reset cursor count
-			volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] ^= (t0saShowCursor); // toggle cursor show bit
+			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] ^= (t0saShowCursor); // toggle cursor show bit
 
 		}
 
 	}
 
 	if (updateCount) updateCount--;
-	else internalFlags |= (internalResetUpdateTimer);
+	else volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetOutputTimer);
 
-	if (internalFlags & internalResetUpdateTimer)
+	if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cResetOutputTimer)
 	{
 
-		internalFlags &= ~(internalResetUpdateTimer);
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] &= ~(t0cResetOutputTimer);
 
-		volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saUpdateDisplay); // signal to main program to update the user display
+		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saUpdateDisplay); // signal to main program to update the user display
 		updateCount = delay0TickUpdateLoop; // restart display update loop count
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeOnInput)
+	if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeOnInput)
 	{
 
 		if (inputTimeoutCount) inputTimeoutCount--;
 		else
 		{
 
-			volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] &= ~(aAwakeOnInput);
-			volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afUserInputFlag);
+			volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] &= ~(aAwakeOnInput);
+			volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afUserInputFlag);
 
 		}
 
 	}
 
-	if ((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afParkCheckFlags) == afNotParkedFlags) // if MPGuino has engine stop and vehicle stop flags set, but is not yet parked
+	if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afParkCheckFlags) == afNotParkedFlags) // if MPGuino has engine stop and vehicle stop flags set, but is not yet parked
 	{
 
 		if (parkTimeoutCount) parkTimeoutCount--; // run down park watchdog timer until it expires
-		else volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afParkFlag); // set vehicle parked flag
+		else volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afParkFlag); // set vehicle parked flag
 
 	}
 
-	if ((volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afValidFlags) == afActivityCheckFlags) // if there is no activity but the activity watchdog hasn't timed out yet
+	if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afValidFlags) == afActivityCheckFlags) // if there is no activity but the activity watchdog hasn't timed out yet
 	{
 
 		if (activityTimeoutCount) activityTimeoutCount--; // cycle down the activity timeout watchdog
-		else volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] |= (afActivityTimeoutFlag); // signal that MPGuino is in a period of inactivity
+		else volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] |= (afActivityTimeoutFlag); // signal that MPGuino is in a period of inactivity
 
 	}
 
-	previousActivity ^= (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afValidFlags); // detect any activity change since last timer0 tick
+	previousActivity ^= (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afValidFlags); // detect any activity change since last timer0 tick
 
-	if (previousActivity) volatile8Variables[(uint16_t)(v8ActivityChange - v8VariableStartIdx)] |= (previousActivity); // if there was any activity change at all, signal that the display needs updating
+	if (previousActivity) volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] |= (previousActivity); // if there was any activity change at all, signal that the display needs updating
 
 	// reset activity timeout watchdog if any of the fuel injector, VSS pulse, button press, or park flags have changed
 	if (previousActivity & afActivityCheckFlags) activityTimeoutCount = volatile16Variables[(uint16_t)(v16ActivityTimeoutIdx - v16VariableStartIdx)];
@@ -868,17 +725,17 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	// reset park timeout watchdog if any of the fuel injector or VSS pulse flags have changed
 	if (previousActivity & afNotParkedFlags) parkTimeoutCount = volatile16Variables[(uint16_t)(v16ParkTimeoutIdx - v16VariableStartIdx)];
 
-	previousActivity = (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afValidFlags); // save for next timer0 tick
+	previousActivity = (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afValidFlags); // save for next timer0 tick
 
 #if defined(useAnalogRead)
-	if (volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] & acSampleChannelActive)
+	if (volatile8Variables[(uint16_t)(v8AnalogCommandIdx - v8VariableStartIdx)] & acSampleChannelActive)
 	{
 
-		if (volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] & asHardwareReady)
+		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asHardwareReady)
 		{
 
-			volatile8Variables[(uint16_t)(v8AnalogCommand - v8VariableStartIdx)] |= (acSampleGround); // signal to ADC interrupt that the last requested conversion was for internal ground
-			volatile8Variables[(uint16_t)(v8AnalogStatus - v8VariableStartIdx)] &= ~(asHardwareReady);
+			volatile8Variables[(uint16_t)(v8AnalogCommandIdx - v8VariableStartIdx)] |= (acSampleGround); // signal to ADC interrupt that the last requested conversion was for internal ground
+			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asHardwareReady);
 
 			ADMUX = pgm_read_byte(&analogChannelValue[(uint16_t)(v16AnalogGroundIdx - v16AnalogStartIdx)]);
 			ADCSRA |= ((1 << ADSC) | (1 << ADIF) | (1 << ADIE)); // start ADC read, enable interrupt, and clear interrupt flag, because this crappy hardware allows the ADC interrupt to alway do free running mode
@@ -887,7 +744,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // useAnalogRead
+#endif // defined(useAnalogRead)
 #if defined(useDebugCPUreading)
 	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += TCNT0;
 
@@ -916,8 +773,9 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	static uint8_t value;
 #endif // defined(use4BitLCD)
 #if defined(useSimulatedFIandVSS)
-	static uint32_t debugVSSresetCount;
-	static uint32_t debugFIPresetCount;
+	static uint16_t debugVSStickCount;
+	static uint16_t debugFIPtickCount;
+	static uint16_t debugFIPWtickCount;
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugCPUreading)
 	uint8_t a;
@@ -927,62 +785,61 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 #endif // defined(useDebugCPUreading)
 
-	if (volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] & t1cResetTimer)
+	if (volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] & t1cResetTimer)
 	{
 
-		volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] &= ~(t1cResetTimer);
-		volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] = 0;
+		volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] &= ~(t1cResetTimer);
+
 #if defined(useBluetoothAdaFruitSPI)
 		chipSelectState = 0;
 		resetState = 0;
+
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useSimulatedFIandVSS)
-		debugVSScount = 0;
-		debugFIPcount = 0;
-		debugFIPWcount = 0;
-		debugVSSresetCount = 0;
-		debugFIPresetCount = 0;
-#endif // defined(useSimulatedFIandVSS)
+		debugVSStickCount = 0;
+		debugFIPtickCount = 0;
+		debugFIPWtickCount = 0;
 
+#endif // defined(useSimulatedFIandVSS)
 	}
 
 #if defined(useBluetoothAdaFruitSPI)
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleReset) // if main program requests bluetooth hardware reset
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleReset) // if main program requests bluetooth hardware reset
 	{
 
-		volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(bleReset | bleAssertFlags | blePacketWaitFlags); // clear any in-progress lesser waiting tasks
+		volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(bleReset | bleAssertFlags | blePacketWaitFlags); // clear any in-progress lesser waiting tasks
 		resetState = 1; // initialize reset state machine
 		chipSelectState = 0; // halt CS state machine
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAssert) // if main program requests to assert /CS
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleAssert) // if main program requests to assert /CS
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleResetting) == 0) // wait until reset is complete
+		if ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleResetting) == 0) // wait until reset is complete
 		{
 
-			volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(bleAssert); // acknowledge main program command
+			volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(bleAssert); // acknowledge main program command
 			chipSelectState = 1; // initialize CS state machine
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWait) // if main program requests waiting for a SDEP packet wait delay
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWait) // if main program requests waiting for a SDEP packet wait delay
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleResetting) == 0) // wait until reset is complete
+		if ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleResetting) == 0) // wait until reset is complete
 		{
 
-			volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(blePacketWait); // acknowledge main program command
+			volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(blePacketWait); // acknowledge main program command
 			responseDelay = delay1Tick250ms; // initialize response delay wait counter
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleResetting) // if hardware reset is in progress
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleResetting) // if hardware reset is in progress
 	{
 
 		switch (resetState)
@@ -1024,14 +881,14 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 				break;
 
 			default: // catch invalid reset states
-				volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(bleResetting); // mark hardware reset as completed
+				volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(bleResetting); // mark hardware reset as completed
 				break;
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & bleAsserting) // if /CS assertion is in progress
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleAsserting) // if /CS assertion is in progress
 	{
 
 		switch (chipSelectState)
@@ -1062,21 +919,21 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 				break;
 
 			default: // catch invalid chip select states
-				volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(bleAsserting); // mark chip select assert as completed
+				volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(bleAsserting); // mark chip select assert as completed
 				break;
 
 		}
 
 	}
 
-	if (volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] & blePacketWaiting) // if response delay is in progress
+	if (volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & blePacketWaiting) // if response delay is in progress
 	{
 
 		if (responseDelay) responseDelay--; // if response delay counter still valid, bump down by one
 		else
 		{
 
-			volatile8Variables[(uint16_t)(v8BLEstatus - v8VariableStartIdx)] &= ~(blePacketWaiting); // otherwise, signal that response delay timed out
+			volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] &= ~(blePacketWaiting); // otherwise, signal that response delay timed out
 			blefriend::releaseCS();
 
 		}
@@ -1085,66 +942,61 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useSimulatedFIandVSS)
-	if (volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] & t1cEnableDebug)
+	if (volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] & t1cEnableDebug)
 	{
 
-		if ((volatile8Variables[(uint16_t)(v8SignalSimModeFlags - v8VariableStartIdx)] & debugVSreadyFlags) == debugVSreadyFlags) // if VSS simulator is ready to output
+		if ((volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugVSreadyFlags) == debugVSreadyFlags) // if VSS simulator is ready to output
 		{
 
-			if (debugVSScount) debugVSScount--;
+			if (debugVSStickCount) debugVSStickCount--;
 			else
 			{
 
-				debugVSScount = debugVSStickLength;
+				debugVSStickCount = volatile16Variables[(uint16_t)(v16SignalSimVSStickLength - v16VariableStartIdx)];
 #if defined(__AVR_ATmega32U4__)
-				PORTB ^= (1 << PORTB7); // generate VSS pin interrupt
+				PORTB ^= (1 << PORTB7); // generate VSS pin signal
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-				PORTK ^= (1 << PORTK0); // generate VSS pin interrupt
+				PORTK ^= (1 << PORTK0); // generate VSS pin signal
+				PORTA ^= (1 << PORTA3); // generate VSS pin repeater signal
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-				PORTC ^= (1 << PORTC0); // generate VSS pin interrupt
+				PORTC ^= (1 << PORTC0); // generate VSS pin signal
 #endif // defined(__AVR_ATmega328P__)
 
 			}
 
 		}
 
-		if (volatile8Variables[(uint16_t)(v8SignalSimModeFlags - v8VariableStartIdx)] & debugVSSflag) // if VSS simulator is enabled
+		if ((volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugFIreadyFlags) == debugFIreadyFlags) // if fuel injector simulator is ready to output
 		{
 
-			if (debugVSSresetCount) debugVSSresetCount--;
-			else
+			if (debugFIPtickCount)
 			{
 
-				debugVSSresetCount = debugVSSresetLength;
-				volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] |= (t1sDebugUpdateVSS);
+				debugFIPtickCount--;
 
-			}
-
-		}
-
-		if ((volatile8Variables[(uint16_t)(v8SignalSimModeFlags - v8VariableStartIdx)] & debugFIreadyFlags) == debugFIreadyFlags) // if fuel injector simulator is ready to output
-		{
-
-			if (debugFIPcount)
-			{
-
-				debugFIPcount--;
-
-				if (debugFIPWcount) debugFIPWcount--;
-				else
+				if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugFIPfiring)
 				{
 
+					if (debugFIPWtickCount) debugFIPWtickCount--;
+					else
+					{
+
+						volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] &= ~(debugFIPfiring);
+
 #if defined(__AVR_ATmega32U4__)
-					PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin high to generate injector closed interrupt
+						PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pins high to generate injector closed interrupt
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-					PORTE |= ((1 << PORTE4) | (1 << PORTE5)); // drive injector sense pin high to generate injector closed interrupt
+						PORTE |= ((1 << PORTE5) | (1 << PORTE4)); // drive injector sense pins high to generate injector closed interrupt
+						PORTA |= ((1 << PORTA1) | (1 << PORTA0)); // drive injector sense repeater pins high
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-					PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin high to generate injector closed interrupt
+						PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pins high to generate injector closed interrupt
 #endif // defined(__AVR_ATmega328P__)
+
+					}
 
 				}
 
@@ -1152,36 +1004,27 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 			else
 			{
 
-				debugFIPcount = debugFIPtickLength;
-				debugFIPWcount = debugFIPWtickLength;
-				if (debugFIPWtickLength) // if DFCO is not commanded
+				debugFIPtickCount = volatile16Variables[(uint16_t)(v16SignalSimFIPtickLength - v16VariableStartIdx)];
+				debugFIPWtickCount = volatile16Variables[(uint16_t)(v16SignalSimFIPWtickLength - v16VariableStartIdx)];
+
+				if (debugFIPWtickCount) // if DFCO is not commanded
 				{
 
+					volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] |= (debugFIPfiring);
+
 #if defined(__AVR_ATmega32U4__)
-					PORTD &= ~((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin low to generate injector open interrupt
+					PORTD &= ~((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pins low to generate injector open interrupt
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-					PORTE &= ~((1 << PORTE4) | (1 << PORTE5)); // drive injector sense pin low to generate injector open interrupt
+					PORTE &= ~((1 << PORTE5) | (1 << PORTE4)); // drive injector sense pins low to generate injector open interrupt
+					PORTA &= ~((1 << PORTA1) | (1 << PORTA0)); // drive injector sense repeater pins low
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-					PORTD &= ~((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin low to generate injector open interrupt
+					PORTD &= ~((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pins low to generate injector open interrupt
 #endif // defined(__AVR_ATmega328P__)
 
 				}
-
-			}
-
-		}
-
-		if (volatile8Variables[(uint16_t)(v8SignalSimModeFlags - v8VariableStartIdx)] & debugInjectorFlag) // if injector simulator is enabled
-		{
-
-			if (debugFIPresetCount) debugFIPresetCount--;
-			else
-			{
-
-				debugFIPresetCount = debugFIPresetLength;
-				volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] |= (t1sDebugUpdateFIP);
+				else volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] &= ~(debugFIPfiring);
 
 			}
 
@@ -1191,89 +1034,26 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useLCDoutput)
-	if (volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] & t1cDelayLCD)
+	if (volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] & t1cDelayLCD)
 	{
 
 		if (lcdDelayCount) lcdDelayCount--;
-#if defined(useLCDbufferedOutput)
-		else
-		{
+		else volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] &= ~(t1cDelayLCD); // turn off LCD delay
 
-			if (ringBuffer::isBufferNotEmpty(rbIdxLCD)) // if there's at least one nybble in the LCD send buffer
-			{
-
-#if defined(useTWI4BitLCD)
-				// if buffer is not empty and TWI hardware is ready
-				if ((volatile8Variables[(uint16_t)(v8TWIstatus - v8VariableStartIdx)] & twiOpenMain) == 0)
-				{
-
-					volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] &= ~(t1sDoOutputTWI); // reset TWI master transmission in progress flag
-					volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] |= (t1sLoopFlag); // set loop flag
-
-					do
-					{
-
-						value = ringBuffer::pull(rbIdxLCD); // pull a buffered LCD nybble
-
-						if (value & lcdSendNybble) // if this nybble is to be sent out
-						{
-
-							if ((volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] & t1sDoOutputTWI) == 0) // if this is the first nybble to be output
-							{
-
-								TWI::openChannel(TWIaddressLCD, TW_WRITE); // open TWI as master transmitter
-#if defined(useAdafruitRGBLCDshield)
-								TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
-#endif // defined(useAdafruitRGBLCDshield)
-								volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] |= (t1sDoOutputTWI); // signal to complete TWI master transmission
-
-							}
-
-						}
-
-						LCD::outputNybble(value); // output the nybble and set timing
-
-						if (value & lcdSendNybble) // if this nybble is to be sent out
-						{
-
-							if ((value & lcdSendFlags) == lcdSendNybble) // if sending an ordinary data nybble, check if we can continue looping
-							{
-
-								if ((twiDataBufferSize - twiDataBufferLen) < 5) volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] &= ~(t1sLoopFlag); // if TWI send buffer is getting low, signal end of loop
-								if (ringBuffer::isBufferEmpty(rbIdxLCD)) volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] &= ~(t1sLoopFlag); // if LCD send buffer is empty, signal end of loop
-
-							}
-							else volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] &= ~(t1sLoopFlag); // otherwise, this is a special (command or reset) nybble, so signal end of loop
-
-						}
-						else volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] &= ~(t1sLoopFlag); // otherwise, this is just a delay request, so signal end of loop
-
-					}
-					while (volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] & t1sLoopFlag);
-
-					if (volatile8Variables[(uint16_t)(v8Timer1Status - v8VariableStartIdx)] & t1sDoOutputTWI) TWI::transmitChannel(TWI_STOP); // commit LCD port expander write, if required
-
-				}
-
-#endif // defined(useTWI4BitLCD)
-#if defined(usePort4BitLCD)
-				value = ringBuffer::pull(rbIdxLCD); // pull a buffered LCD byte
-
-				LCD::outputNybble(value); // output byte
-
-#endif // defined(usePort4BitLCD)
-			}
-			else volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] &= ~(t1cDelayLCD); // turn off LCD delay
-
-		}
-
-#else // defined(useLCDbufferedOutput)
-		else volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] &= ~(t1cDelayLCD); // turn off LCD delay
-
-#endif // defined(useLCDbufferedOutput)
 	}
 
 #endif // defined(useLCDoutput)
+#if defined(useBluetoothAdaFruitSPI)
+	if (((volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] & t1cEnableInterrupt) == 0) && ((volatile8Variables[(uint16_t)(v8BLEstatusIdx - v8VariableStartIdx)] & bleEnableInterrupt) == 0))
+#else // defined(useBluetoothAdaFruitSPI)
+	if ((volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] & t1cEnableInterrupt) == 0)
+#endif // defined(useBluetoothAdaFruitSPI)
+	{
+
+		heart::disableTimer1Interrupt();
+
+	}
+
 #if defined(useDebugCPUreading)
 	b = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
@@ -1286,10 +1066,6 @@ ISR( TIMER1_OVF_vect ) // LCD delay interrupt handler
 }
 
 #endif // defined(useTimer1Interrupt)
-volatile unsigned long thisInjectorOpenStart;
-volatile unsigned long thisEnginePeriodOpen; // engine speed measurement based on fuel injector open event
-volatile unsigned long thisEnginePeriodClose; // engine speed measurement based on fuel injector close event
-
 // fuel injector monitor interrupt pair
 //
 // this pair is responsible to measure fuel injector open pulse width, and engine speed
@@ -1321,33 +1097,34 @@ ISR( INT0_vect )
 #endif // defined(__AVR_ATmega328P__)
 {
 
-	static unsigned long lastInjectorOpenStart;
-	unsigned int a;
+	static uint32_t lastInjectorOpenStart;
+	uint16_t a;
 #if defined(useDebugCPUreading)
-	unsigned int b;
+	uint16_t b;
 #endif // defined(useDebugCPUreading)
 
-	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) a = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	a = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) a = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	thisInjectorOpenStart = timer0_overflow_count + (unsigned long)(a);
+	volatile32Variables[(uint16_t)(v32InjectorOpenTickStartIdx - v32VariableStartIdx)] = volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] + (uint32_t)(a);
 
-	if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dGoodEngineRotationOpen) thisEnginePeriodOpen = heart::findCycle0Length(lastInjectorOpenStart, thisInjectorOpenStart); // calculate length between fuel injector pulse starts
-	else thisEnginePeriodOpen = 0;
+	if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dGoodEngineRotationOpen)
+		volatile32Variables[(uint16_t)(v32EnginePeriodTickStartIdx - v32VariableStartIdx)] = heart::findCycle0Length(lastInjectorOpenStart, volatile32Variables[(uint16_t)(v32InjectorOpenTickStartIdx - v32VariableStartIdx)]); // calculate length between fuel injector pulse starts
+	else volatile32Variables[(uint16_t)(v32EnginePeriodTickStartIdx - v32VariableStartIdx)] = 0;
 
 #if defined(useChryslerMAPCorrection)
-	volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress | dSampleADC);
+	volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress | dSampleADC);
 #else // defined(useChryslerMAPCorrection)
-	volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress);
+	volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodEngineRotationOpen | dInjectorReadInProgress);
 #endif // defined(useChryslerMAPCorrection)
 
-	lastInjectorOpenStart = thisInjectorOpenStart;
+	lastInjectorOpenStart = volatile32Variables[(uint16_t)(v32InjectorOpenTickStartIdx - v32VariableStartIdx)];
 
 	watchdogInjectorCount = volatile16Variables[(uint16_t)(v16DetectEngineOffIdx - v16VariableStartIdx)]; // reset minimum engine speed watchdog timer
 
 #if defined(useDebugCPUreading)
-	b = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) b = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	b = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) b = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += b - a;
 
@@ -1373,48 +1150,49 @@ ISR( INT1_vect )
 #endif // defined(__AVR_ATmega328P__)
 {
 
-	static unsigned long lastInjectorCloseStart;
+	static uint32_t lastInjectorCloseStart;
 
 	uint8_t b;
-	unsigned int a;
+	uint16_t a;
 #if defined(useDebugCPUreading)
-	unsigned int c;
+	uint16_t c;
 #endif // defined(useDebugCPUreading)
-	unsigned long thisInjectorCloseStart;
-	unsigned long engineRotationPeriod;
-	unsigned long thisInjectorPulseLength;
-	unsigned long goodInjectorPulseLength;
+	uint32_t thisInjectorCloseStart;
+	uint32_t engineRotationPeriod;
+	uint32_t thisInjectorPulseLength;
+	uint32_t goodInjectorPulseLength;
 
-	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) a = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	a = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) a = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	thisInjectorCloseStart = timer0_overflow_count + (unsigned long)(a);
+	thisInjectorCloseStart = volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] + (uint32_t)(a);
 
-	if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dGoodEngineRotationClose) thisEnginePeriodClose = heart::findCycle0Length(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
-	else thisEnginePeriodClose = 0;
+	if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dGoodEngineRotationClose)
+		volatile32Variables[(uint16_t)(v32EnginePeriodTickCloseIdx - v32VariableStartIdx)] = heart::findCycle0Length(lastInjectorCloseStart, thisInjectorCloseStart); // calculate length between fuel injector pulse starts
+	else volatile32Variables[(uint16_t)(v32EnginePeriodTickCloseIdx - v32VariableStartIdx)] = 0;
 
-	if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dInjectorReadInProgress) // if there was a fuel injector open pulse detected, there's now a fuel injector pulse width to be measured
+	if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dInjectorReadInProgress) // if there was a fuel injector open pulse detected, there's now a fuel injector pulse width to be measured
 	{
 
-		volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dInjectorReadInProgress);
+		volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dInjectorReadInProgress);
 
-		b = (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dGoodEngineRotation);
+		b = (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dGoodEngineRotation);
 
 		switch (b)
 		{
 
 			case (dGoodEngineRotationClose):
-				engineRotationPeriod = thisEnginePeriodClose;
+				engineRotationPeriod = volatile32Variables[(uint16_t)(v32EnginePeriodTickCloseIdx - v32VariableStartIdx)];
 				b = dGoodInjectorRead;
 				break;
 
 			case (dGoodEngineRotationOpen):
-				engineRotationPeriod = thisEnginePeriodOpen;
+				engineRotationPeriod = volatile32Variables[(uint16_t)(v32EnginePeriodTickStartIdx - v32VariableStartIdx)];
 				b = dGoodInjectorRead;
 				break;
 
 			case (dGoodEngineRotation):
-				engineRotationPeriod = thisEnginePeriodClose + thisEnginePeriodOpen;
+				engineRotationPeriod = volatile32Variables[(uint16_t)(v32EnginePeriodTickCloseIdx - v32VariableStartIdx)] + volatile32Variables[(uint16_t)(v32EnginePeriodTickStartIdx - v32VariableStartIdx)];
 				engineRotationPeriod++; // perform pre-emptive rounding up from averaging operation
 				engineRotationPeriod >>= 1; // perform average of two measurements
 				b = dGoodInjectorRead;
@@ -1427,13 +1205,13 @@ ISR( INT1_vect )
 		}
 
 		// calculate fuel injector pulse length
-		thisInjectorPulseLength = heart::findCycle0Length(thisInjectorOpenStart, thisInjectorCloseStart) - volatile32Variables[(uint16_t)(v32InjectorOpenDelayIdx - v32VariableStartIdx)]; // strip off injector open delay time
+		thisInjectorPulseLength = heart::findCycle0Length(volatile32Variables[(uint16_t)(v32InjectorOpenTickStartIdx - v32VariableStartIdx)], thisInjectorCloseStart) - volatile32Variables[(uint16_t)(v32InjectorOpenDelayIdx - v32VariableStartIdx)]; // strip off injector open delay time
 
 		// if this pulse is larger than the maximum good pulse that could happen at the minimum valid engine speed, reject it
 		// 1 - pulse could be narrower than v32InjectorOpenDelayIdx
 		// 2 - pulse could be wider than the maximum allowable pulse width for minimum good engine speed
-		if (thisInjectorPulseLength > volatile32Variables[(uint16_t)(v32InjectorValidMaxWidthIdx - v32VariableStartIdx)]) volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dGoodInjectorWidth | dGoodInjectorRead);
-		else volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodInjectorWidth);
+		if (thisInjectorPulseLength > volatile32Variables[(uint16_t)(v32InjectorValidMaxWidthIdx - v32VariableStartIdx)]) volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dGoodInjectorWidth | dGoodInjectorRead);
+		else volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodInjectorWidth);
 
 		if (b) // if we have an engine rotation period measurement
 		{
@@ -1441,20 +1219,20 @@ ISR( INT1_vect )
 			// calculate good maximum fuel injector open time for injector pulse width sanity check
 			goodInjectorPulseLength = engineRotationPeriod - volatile32Variables[(uint16_t)(v32InjectorOpenDelayIdx - v32VariableStartIdx)];
 
-			if (thisInjectorPulseLength > goodInjectorPulseLength) volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] &= ~(dGoodInjectorRead); // if measured pulse is larger than largest good pulse, signal that last injector read may be bad
-			else volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodInjectorRead); // signal that last injector read is good
+			if (thisInjectorPulseLength > goodInjectorPulseLength) volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dGoodInjectorRead); // if measured pulse is larger than largest good pulse, signal that last injector read may be bad
+			else volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodInjectorRead); // signal that last injector read is good
 
 			// if measured engine speed is greater than the specified minimum good engine speed
 			if (engineRotationPeriod < volatile32Variables[(uint16_t)(v32MaximumEnginePeriodIdx - v32VariableStartIdx)])
 			{
 
-				volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] &= ~(afEngineOffFlag | afParkFlag | afActivityTimeoutFlag); // signal that engine is running, and vehicle is therefore no longer parked
-				volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] |= (aAwakeEngineRunning); // MPGuino is awake due to engine running
+				volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] &= ~(afEngineOffFlag | afParkFlag | afActivityTimeoutFlag); // signal that engine is running, and vehicle is therefore no longer parked
+				volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] |= (aAwakeEngineRunning); // MPGuino is awake due to engine running
 
 			}
 
 #if defined(trackIdleEOCdata)
-			if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is moving
+			if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is moving
 				// add to raw fuel injector total cycle accumulator
 				tripVar::update64(collectedEngCycleCount, engineRotationPeriod, curRawTripIdx);
 			else // if vehicle is not moving
@@ -1467,17 +1245,17 @@ ISR( INT1_vect )
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-			if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestActive)
+			if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestActive)
 			{
 
 				// add to raw accel test distance fuel injector total cycle accumulator
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestDistance) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestDistance) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawDistanceIdx);
 
 				// add to raw accel test full speed fuel injector total cycle accumulator
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestFullSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawFullSpeedIdx);
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestFullSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawFullSpeedIdx);
 
 				// add to raw accel test half speed fuel injector total cycle accumulator
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestHalfSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawHalfSpeedIdx);
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestHalfSpeed) tripVar::update64(collectedEngCycleCount, engineRotationPeriod, dragRawHalfSpeedIdx);
 
 			}
 
@@ -1485,10 +1263,10 @@ ISR( INT1_vect )
 		}
 
 		// if the injector pulse width is valid
-		if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dGoodInjectorWidth)
+		if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dGoodInjectorWidth)
 		{
 
-			volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
+			volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] |= (aAwakeOnInjector); // signal that MPGuino is awake due to detected injector
 
 #if defined(useChryslerMAPCorrection)
 			thisInjectorPulseLength *= volatile32Variables[(uint16_t)(v32InjectorCorrectionIdx - v32VariableStartIdx)]; // multiply by differential fuel pressure correction factor numerator
@@ -1496,7 +1274,7 @@ ISR( INT1_vect )
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(trackIdleEOCdata)
-			if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is moving
+			if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is moving
 				// update fuel injector open cycle accumulator, and fuel injector pulse count
 				tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, curRawTripIdx);
 			else // if vehicle is not moving
@@ -1509,19 +1287,19 @@ ISR( INT1_vect )
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useDragRaceFunction)
-			if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestActive)
+			if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestActive)
 			{
 
 				// update raw accel test distance fuel injector open cycle accumulator, and raw accel test distance fuel injector pulse count
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestDistance)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestDistance)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawDistanceIdx);
 
 				// update raw accel test full speed fuel injector open cycle accumulator, and raw accel test full speed fuel injector pulse count
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestFullSpeed)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestFullSpeed)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawFullSpeedIdx);
 
 				// update raw accel test half speed fuel injector open cycle accumulator, and raw accel test half speed fuel injector pulse count
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestHalfSpeed)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestHalfSpeed)
 					tripVar::update64(collectedInjCycleCount, collectedInjPulseCount, thisInjectorPulseLength, dragRawHalfSpeedIdx);
 
 			}
@@ -1531,14 +1309,14 @@ ISR( INT1_vect )
 
 	}
 
-	volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodEngineRotationClose);
+	volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodEngineRotationClose);
 	lastInjectorCloseStart = thisInjectorCloseStart;
 
-	watchdogInjectorCount = volatile32Variables[(uint16_t)(v16DetectEngineOffIdx - v32VariableStartIdx)]; // reset minimum engine speed watchdog timer
+	watchdogInjectorCount = volatile16Variables[(uint16_t)(v16DetectEngineOffIdx - v16VariableStartIdx)]; // reset minimum engine speed watchdog timer
 
 #if defined(useDebugCPUreading)
-	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	c = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) c = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c - a;
 
@@ -1559,16 +1337,16 @@ ISR( PCINT1_vect )
 	uint8_t p;
 	uint8_t q;
 
-	unsigned int a;
+	uint16_t a;
 #if defined(useDebugCPUreading)
-	unsigned int c;
+	uint16_t c;
 #endif // defined(useDebugCPUreading)
-	unsigned long thisTime;
+	uint32_t thisTime;
 
-	a = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) a = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	a = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) a = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	thisTime = timer0_overflow_count + (unsigned long)(a);
+	thisTime = volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] + (uint32_t)(a);
 
 #if defined(__AVR_ATmega32U4__)
 	p = PINB; // read current input pin
@@ -1592,7 +1370,9 @@ ISR( PCINT1_vect )
 #endif // defined(__AVR_ATmega328P__)
 	{
 
-		if (VSSpause) VSScount = VSSpause; // if there is a VSS debounce count defined, set VSS debounce count and let system timer handle the debouncing
+		// if there is a VSS debounce count defined, set VSS debounce count and let system timer handle the debouncing
+		if (volatile8Variables[(uint16_t)(v8VSSdebounceTickIdx - v8VariableStartIdx)])
+			volatile8Variables[(uint16_t)(v8VSSdebounceCountIdx - v8VariableStartIdx)] = volatile8Variables[(uint16_t)(v8VSSdebounceTickIdx - v8VariableStartIdx)];
 		else heart::updateVSS(thisTime); // otherwise, go process VSS pulse
 
 	}
@@ -1601,8 +1381,8 @@ ISR( PCINT1_vect )
 	if (q & buttonMask)
 	{
 
-		thisButtonState = (p & buttonMask) ^ buttonMask; // strip out all but relevant button bits
-		volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
+		volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] = (p & buttonMask) ^ buttonMask; // strip out all but relevant button bits
+		volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
 
 	}
 
@@ -1610,8 +1390,8 @@ ISR( PCINT1_vect )
 	lastPINxState = p; // remember the current input pin state for the next time this ISR gets called
 
 #if defined(useDebugCPUreading)
-	c = (unsigned int)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
-	if (TIFR0 & (1 << TOV0)) c = (unsigned int)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
+	c = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
+	if (TIFR0 & (1 << TOV0)) c = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
 	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c - a;
 
@@ -1838,29 +1618,29 @@ static void heart::updateVSS(uint32_t thisVSStime)
 #endif // defined(useDragRaceFunction)
 	static uint32_t cycleLength;
 
-	if (volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] & dGoodVSSsignal) // if a valid VSS signal had previously been read in
+	if (volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] & dGoodVSSsignal) // if a valid VSS signal had previously been read in
 	{
 
-		volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= (dGoodVSSRead); // mark valid VSS pulse measurement
-		volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] |= (aAwakeOnVSS); // MPGuino is awake on valid VSS pulse measurement
+		volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= (dGoodVSSRead); // mark valid VSS pulse measurement
+		volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] |= (aAwakeOnVSS); // MPGuino is awake on valid VSS pulse measurement
 
 		cycleLength = heart::findCycle0Length(lastVSStime, thisVSStime); // calculate VSS pulse length
 
 		if (cycleLength < volatile32Variables[(uint16_t)(v32MaximumVSSperiodIdx - v32VariableStartIdx)]) // if VSS period is less than that for minimum good vehicle speed
 		{
 
-			if (volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle has been previously flagged as not moving
+			if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle has been previously flagged as not moving
 			{
 
-				volatile8Variables[(uint16_t)(v8Activity - v8VariableStartIdx)] &= ~(afVehicleStoppedFlag | afSwapFEwithFCR | afParkFlag | afActivityTimeoutFlag); // signal that vehicle is moving, and vehicle is therefore no longer parked
-				volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] |= (aAwakeVehicleMoving); // MPGuino is awake on vehicle movement
+				volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] &= ~(afVehicleStoppedFlag | afSwapFEwithFCR | afParkFlag | afActivityTimeoutFlag); // signal that vehicle is moving, and vehicle is therefore no longer parked
+				volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] |= (aAwakeVehicleMoving); // MPGuino is awake on vehicle movement
 
 			}
 
 		}
 
 #if defined(trackIdleEOCdata)
-		if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeEngineRunning) // if the engine is running
+		if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeEngineRunning) // if the engine is running
 			// update raw VSS cycle accumulator, and raw VSS pulse count
 			tripVar::update64(collectedVSScycleCount, collectedVSSpulseCount, cycleLength, curRawTripIdx);
 		else // if the engine is not running
@@ -1873,27 +1653,27 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useCoastDownCalculator)
-		if (volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] & cdTestTakeSample) // if coastdown test is active, and a sample is requested
+		if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestTakeSample) // if coastdown test is active, and a sample is requested
 		{
 
-			volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] &= ~(cdTestTakeSample); // acknowledge sample request
-			volatile8Variables[(uint16_t)(v8CoastdownStatus - v8VariableStartIdx)] |= (cdTestSampleTaken); // signal that a sample has been taken
+			volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestTakeSample); // acknowledge sample request
+			volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= (cdTestSampleTaken); // signal that a sample has been taken
 			volatile32Variables[(uint16_t)(coastdownState)] = cycleLength; // take sample
 
 		}
 
 #endif // defined(useCoastDownCalculator)
 #if defined(useVehicleParameters)
-		if (volatile8Variables[(uint16_t)(v8Awake - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is considered to be moving
+		if (volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeVehicleMoving) // if vehicle is considered to be moving
 		{
 
 #if defined(useDragRaceFunction)
-			if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestTriggered) // if accel test function is triggered
+			if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestTriggered) // if accel test function is triggered
 			{
 
-				volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
-				volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] |= (accelTestActive);
-				volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+				volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestTriggered); // switch status from 'triggered' to 'active'
+				volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] |= (accelTestActive);
+				volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 
 				// initialize trap distance variables
 				accelTestDistanceCount = volatile32Variables[(uint16_t)(v32AccelDistanceValueIdx - v32VariableStartIdx)];
@@ -1901,10 +1681,10 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 			}
 
-			if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestActive) // if accel test function is active
+			if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestActive) // if accel test function is active
 			{
 
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestDistance)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestDistance)
 				{
 
 					if (accelTestDistanceCount)
@@ -1927,8 +1707,8 @@ static void heart::updateVSS(uint32_t thisVSStime)
 					else
 					{
 
-						volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
-						volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+						volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestDistance); // otherwise, mark drag function distance measurement as complete
+						volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 						volatile32Variables[(uint16_t)(v32DragRawInstantSpeedIdx - v32VariableStartIdx)] = accelTestVSStime; // store maximum recorded speed
 						volatile32Variables[(uint16_t)(v32DragRawTrapSpeedIdx - v32VariableStartIdx)] = cycleLength; // store trap speed
 
@@ -1936,14 +1716,14 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestHalfSpeed)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestHalfSpeed)
 				{
 
 					if (cycleLength < volatile32Variables[(uint16_t)(v32AccelHalfPeriodIdx - v32VariableStartIdx)])
 					{
 
-						volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestHalfSpeed); // mark drag function half speed measurement as complete
-						volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+						volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestHalfSpeed); // mark drag function half speed measurement as complete
+						volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 
 					}
 					else
@@ -1952,14 +1732,14 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if (volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestFullSpeed)
+				if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestFullSpeed)
 				{
 
 					if (cycleLength < volatile32Variables[(uint16_t)(v32AccelFullPeriodIdx - v32VariableStartIdx)])
 					{
 
-						volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestFullSpeed); // mark drag function full speed measurement as complete
-						volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+						volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestFullSpeed); // mark drag function full speed measurement as complete
+						volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 
 					}
 					else
@@ -1968,12 +1748,12 @@ static void heart::updateVSS(uint32_t thisVSStime)
 
 				}
 
-				if ((volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
+				if ((volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestMeasurementFlags) == 0) // if all drag measurements have completed, mark drag function as complete
 				{
 
-					volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] &= ~(accelTestActive); // switch status from 'active' to 'finished'
-					volatile8Variables[(uint16_t)(v8AccelerationFlags - v8VariableStartIdx)] |= (accelTestFinished);
-					volatile8Variables[(uint16_t)(v8Timer0StatusA - v8VariableStartIdx)] |= (t0saAccelTestFlag);
+					volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] &= ~(accelTestActive); // switch status from 'active' to 'finished'
+					volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] |= (accelTestFinished);
+					volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] |= (t0saAccelTestFlag);
 
 				}
 
@@ -1985,7 +1765,7 @@ static void heart::updateVSS(uint32_t thisVSStime)
 #endif // defined(useVehicleParameters)
 	}
 
-	volatile8Variables[(uint16_t)(v8Dirty - v8VariableStartIdx)] |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read
+	volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] |= dGoodVSSsignal; // annotate that a valid VSS pulse has been read
 	watchdogVSSCount = volatile16Variables[(uint16_t)(v16DetectVehicleStopIdx - v16VariableStartIdx)]; // reset minimum engine speed watchdog timer
 	lastVSStime = thisVSStime;
 
@@ -2122,14 +1902,25 @@ static void heart::initCore(void)
 	ACSR |= (1 << ACD); // disable analog comparator module
 	ADCSRB &= ~(1 << ACME); // disable analog comparator multiplexer
 
-#if defined(useDS1307clock)
-	volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] = (t0cResetTimer | t0cReadRTC);
-	volatile32Variables[(uint16_t)(v32ClockCycleIdx - v32VariableStartIdx)] = t0TicksPerDay;
-#else // defined(useDS1307clock)
-	volatile8Variables[(uint16_t)(v8Timer0Command - v8VariableStartIdx)] = t0cResetTimer;
-#endif // defined(useDS1307clock)
+	volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] = 0; // initialize timer 0 overflow counter
+
+	volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] = 0; // initialize status flags
+	volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] = 0;
+	volatile8Variables[(uint16_t)(v8DirtyIdx - v8VariableStartIdx)] &= ~(dGoodVehicleDrive);
+	volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] = 0;
+	volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] = (afActivityCheckFlags | afSwapFEwithFCR);
+
+	volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] = 0; // initialize dedicated delay flags
+
+	volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] = 0x01;
+
 #if defined(useTimer1Interrupt)
-	volatile8Variables[(uint16_t)(v8Timer1Command - v8VariableStartIdx)] = t1cResetTimer;
+	volatile8Variables[(uint16_t)(v8Timer1StatusIdx - v8VariableStartIdx)] = 0;
+
+#endif // defined(useTimer1Interrupt)
+	volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] = t0cResetTimer;
+#if defined(useTimer1Interrupt)
+	volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] = t1cResetTimer;
 #endif // defined(useTimer1Interrupt)
 
 	SREG = oldSREG; // restore interrupt flag status
@@ -2174,16 +1965,8 @@ static void heart::initHardware(void)
 	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
 
-#if defined(useTimer1Interrupt)
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
@@ -2217,16 +2000,8 @@ static void heart::initHardware(void)
 	// clear timer 1 output compare force bits for OC1A, OC1B, and OC1C
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B) | (1 << FOC1C));
 
-#if defined(useTimer1Interrupt)
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1C) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1C) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
@@ -2257,21 +2032,17 @@ static void heart::initHardware(void)
 	// clear timer 1 output compare force bits for OC1A and OC1B
 	TCCR1C &= ~((1 << FOC1A) | (1 << FOC1B));
 
-#if defined(useTimer1Interrupt)
-	// disable timer 1 interrupts
-	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A));
-
-	// enable timer1 overflow interrupt
-	TIMSK1 |= (1 << TOIE1);
-#else // defined(useTimer1Interrupt)
 	// disable timer 1 interrupts
 	TIMSK1 &= ~((1 << ICIE1) | (1 << OCIE1B) | (1 << OCIE1A) | (1 << TOIE1));
-#endif // defined(useTimer1Interrupt)
 
 	// clear timer 1 interrupt flags
 	TIFR1 |= ((1 << ICF1) | (1 << OCF1B) | (1 << OCF1A) | (1 << TOV1));
 
 #endif // defined(__AVR_ATmega328P__)
+#if defined(useTimer1Interrupt)
+	enableTimer1Interrupt();
+
+#endif // defined(useTimer1Interrupt)
 #endif // defined(useTimer1)
 #if defined(useTimer2)
 #if defined(__AVR_ATmega2560__)
@@ -2281,7 +2052,7 @@ static void heart::initHardware(void)
 	// set timer 2 to 8-bit phase correct PWM mode, TOP = 0xFF
 	TCCR2A &= ~(1 << WGM21);
 	TCCR2A |= (1 << WGM20);
-	TCCR2B &= ~(1 << WGM22);
+	TCCR2B &= ~((1 << WGM22) | (1 << WGM23));
 
 	// set timer 2 prescale factor to 64
 	TCCR2B &= ~((1 << CS22));
@@ -2387,17 +2158,54 @@ static void heart::initHardware(void)
 	OCR4C = 255;
 
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// turn on timer4 module
+	PRR1 &= ~(1 << PRTIM4);
+
+	// set timer 4 to 8-bit phase correct PWM mode, TOP = 0xFF
+	TCCR4A &= ~(1 << WGM41);
+	TCCR4A |= (1 << WGM40);
+	TCCR4B &= ~((1 << WGM42) | (1 << WGM43));
+
+	// set timer 4 prescale factor to 64
+	TCCR4B &= ~((1 << CS42));
+	TCCR4B |= ((1 << CS41) | (1 << CS40));
+
+	// disable timer 4 input capture noise canceler, select timer 4 falling edge for input capture
+	TCCR4B &= ~((1 << ICNC4) | (1 << ICES4));
+
+	// set OC4A to disabled
+	TCCR4A &= ~((1 << COM4A1) | (1 << COM4A0));
+
+	// set OC4B to disabled
+	TCCR4A &= ~((1 << COM4B1) | (1 << COM4B0));
+
+	// set OC4C to disabled
+	TCCR4A &= ~((1 << COM4C1) | (1 << COM4C0));
+
+	// clear timer 4 output compare force bits for OC4A, OC4B, and OC4C
+	TCCR4C &= ~((1 << FOC4A) | (1 << FOC4B) | (1 << FOC4C));
+
+	// disable timer 4 interrupts
+	TIMSK4 &= ~((1 << ICIE4) | (1 << OCIE4C) | (1 << OCIE4B) | (1 << OCIE4A) | (1 << TOIE4));
+
+	// clear timer 4 interrupt flags
+	TIFR4 |= ((1 << ICF4) | (1 << OCF4C) | (1 << OCF4B) | (1 << OCF4A) | (1 << TOV4));
+
+#endif // defined(__AVR_ATmega2560__)
 #endif // defined(useTimer4)
 	SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useBuffering)
 	ringBuffer::init();
+
 #endif // defined(useBuffering)
 #if defined(useTWIsupport)
 	TWI::init();
 #if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::init(); // go init MCP23017 port expander
 #endif // defined(useMCP23017portExpander)
+
 #endif // defined(useTWIsupport)
 #if defined(useSerial0Port)
 	serial0::init();
@@ -2438,6 +2246,10 @@ static void heart::initHardware(void)
 #if defined(useOutputPins)
 	outputPin::init();
 #endif // defined(useOutputPins)
+#if defined(useDS1307clock)
+
+	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cReadRTC); // tell timer0 to read RTC
+#endif // defined(useDS1307clock)
 
 }
 
@@ -2451,7 +2263,7 @@ static void heart::doGoDeepSleep(void)
 #if defined(useActivityLED)
 	activityLED::shutdown();
 #endif // defined(useActivityLED)
-	heart::changeBitFlagBits(v8Timer0Delay - v8VariableStartIdx, 0xFF, 0); // cancel any timer0 delays in progress
+	heart::changeBitFlagBits(v8Timer0DelayIdx - v8VariableStartIdx, 0xFF, 0); // cancel any timer0 delays in progress
 #if defined(useTFToutput)
 	TFT::shutdown(); // shut down the TFT display
 #endif // defined(useTFToutput)
@@ -2491,8 +2303,11 @@ static void heart::doGoDeepSleep(void)
 
 #if defined(useTimer4)
 #if defined(__AVR_ATmega32U4__)
-	PRR0 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
+	PRR1 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
 #endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	PRR1 |= (1 << PRTIM4); // shut off timer4 module to reduce power consumption
+#endif // defined(__AVR_ATmega2560__)
 
 #endif // defined(useTimer4)
 #if defined(useTimer2)
@@ -2504,22 +2319,12 @@ static void heart::doGoDeepSleep(void)
 #endif // defined(__AVR_ATmega328P__)
 
 #endif // defined(useTimer2)
+
+#if defined(useTimer1)
 #if defined(useTimer1Interrupt)
-#if defined(__AVR_ATmega32U4__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	// disable timer1 overflow interrupt
-	TIMSK1 &= ~(1 << TOIE1);
-#endif // defined(__AVR_ATmega328P__)
+	disableTimer1Interrupt();
 
 #endif // defined(useTimer1Interrupt)
-#if defined(useTimer1)
 #if defined(__AVR_ATmega32U4__)
 	PRR0 |= (1 << PRTIM1); // shut off timer1 module to reduce power consumption
 #endif // defined(__AVR_ATmega32U4__)
@@ -2540,22 +2345,6 @@ static void heart::doGoDeepSleep(void)
 #endif // useDeepSleep
 static uint32_t heart::findCycle0Length(uint32_t lastCycle, uint32_t thisCycle) // this is only to be meant to be used with interrupt handlers
 {
-
-	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
-	else thisCycle = thisCycle - lastCycle;
-
-	return thisCycle;
-
-}
-
-static uint32_t heart::findCycle0Length(uint8_t lastCycleIdx) // this is only to be meant to be used with the main program
-{
-
-	uint32_t thisCycle;
-	uint32_t lastCycle;
-
-	lastCycle = mainProgram32Variables[(uint16_t)(lastCycleIdx)];
-	thisCycle = cycles0();
 
 	if (thisCycle < lastCycle) thisCycle = 4294967295ul - lastCycle + thisCycle + 1;
 	else thisCycle = thisCycle - lastCycle;
@@ -2591,7 +2380,7 @@ static uint32_t heart::cycles0(void)
 	a = (uint16_t)(TCNT0); // do a microSeconds() - like read to determine loop length in cycles
 	if (TIFR0 & (1 << TOV0)) a = (uint16_t)(TCNT0) + 256; // if overflow occurred, re-read with overflow flag taken into account
 
-	t = timer0_overflow_count + (uint32_t)(a);
+	t = volatile32Variables[(uint16_t)(v32Timer0OverflowCountIdx - v32VariableStartIdx)] + (uint32_t)(a);
 
 	SREG = oldSREG; // restore state of interrupt flag
 
@@ -2604,85 +2393,74 @@ static void heart::wait0(uint16_t ms)
 
 	uint8_t delay0Channel;
 
-	delay0Channel = delay0(ms);
-	doDelay0(delay0Channel);
+	delay0Channel = delay0(ms, 0);
+
+	while (volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & delay0Channel) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
 }
 
-static void heart::doDelay0(uint8_t delay0Channel)
-{
-
-	while (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & delay0Channel) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-
-}
-
-static uint8_t heart::delay0(uint16_t ms)
+static uint8_t heart::delay0(uint16_t ms, uint8_t repeatFlag)
 {
 
 	uint8_t oldSREG;
 	uint8_t delay0Channel;
 	uint8_t i;
 
-	while (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] == 0xFF) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-
-	delay0Channel = 0x01;
-	i = 0;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-
-	while (volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] & delay0Channel)
+	do
 	{
 
-		i++;
-		delay0Channel <<= 1;
+		oldSREG = SREG; // save interrupt flag status
+		cli(); // disable interrupts to make the next operations atomic
+
+		delay0Channel = delayInt0(ms, repeatFlag);
+
+		SREG = oldSREG; // restore interrupt flag status
+
+		// if no timer0 delay timers were available, go perform idle sleep mode to wait for a timer0 channel to become available
+		if (delay0Channel == 0) heart::performSleepMode(SLEEP_MODE_IDLE);
 
 	}
-
-	timer0DelayCount[(uint16_t)(i)] = ms; // request a set number of timer tick delays per millisecond
-
-	if (ms) volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] |= (delay0Channel); // signal request to timer
-	else volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(delay0Channel);
-
-	SREG = oldSREG; // restore interrupt flag status
+	while (delay0Channel == 0); // keep looping while no timer0 delay timers are available
 
 	return delay0Channel;
 
 }
 
-static void heart::delayS(uint16_t ms)
+static uint8_t heart::delayInt0(uint16_t ms, uint8_t repeatFlag)
 {
 
-	uint8_t oldSREG;
+	uint8_t delay0Channel;
+	uint8_t i;
 
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	delay0Channel = 0x01;
+	i = 0;
 
-	// turn off all active display delays in progress
-	volatile8Variables[(uint16_t)(v8Timer0Delay - v8VariableStartIdx)] &= ~(volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)]);
-	volatile8Variables[(uint16_t)(v8Timer0DisplayDelay - v8VariableStartIdx)] = 0;
+	// find an available timer0 delay channel
+	while (volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & delay0Channel)
+	{
 
-	SREG = oldSREG; // restore interrupt flag status
+		i++;
+		delay0Channel <<= 1; // this will eventually go to 0 if there are no available timer0 delay channels
 
-	if (ms) heart::changeBitFlagBits(v8Timer0DisplayDelay - v8VariableStartIdx, 0, delay0(ms));
+	}
 
-}
+	// if an available timer0 delay channel is found, allocate it
+	if (delay0Channel)
+	{
 
-static uint8_t heart::testAndResetBitFlagBit(uint8_t bitFlagIdx, uint8_t maskAND)
-{
+		volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] |= (delay0Channel); // enable timer0 delay channel
+		volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] &= ~(delay0Channel); // reset timer0 delay channel signal
 
-	uint8_t oldSREG;
-	uint8_t retVal;
+		// if repeat flag is set, configure timer0 delay channel to do a repeating start once the channel completes
+		if (repeatFlag) volatile8Variables[(uint16_t)(v8Timer0DelayRepeatIdx - v8VariableStartIdx)] |= (delay0Channel);
+		else volatile8Variables[(uint16_t)(v8Timer0DelayRepeatIdx - v8VariableStartIdx)] &= ~(delay0Channel); // otherwise, signal to run just once and stop when complete
 
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+		volatile16Variables[(uint16_t)(v16Timer0DelayTickIdx + i - v16VariableStartIdx)] = ms; // save start value of timer0 delay channel
+		volatile16Variables[(uint16_t)(v16Timer0DelayCountIdx + i - v16VariableStartIdx)] = ms; // request a set number of timer tick delays per millisecond
 
-	retVal = (volatile8Variables[(uint16_t)(bitFlagIdx)] & maskAND);
-	if (retVal) volatile8Variables[(uint16_t)(bitFlagIdx)] &= ~(maskAND);
+	}
 
-	SREG = oldSREG; // restore interrupt flag status
-
-	return retVal;
+	return delay0Channel;
 
 }
 
@@ -2701,6 +2479,19 @@ static void heart::changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_
 
 	volatile8Variables[(uint16_t)(bitFlagIdx)] = ((volatile8Variables[(uint16_t)(bitFlagIdx)] & ~(maskAND)) | (maskOR)); // go perform atomic status flag change
 
+#if defined(useTimer1Interrupt)
+#if defined(useBluetoothAdaFruitSPI)
+	if (((bitFlagIdx == (v8Timer1CommandIdx - v8VariableStartIdx)) && (maskOR & t1cEnableInterrupt)) || ((bitFlagIdx == (v8BLEstatusIdx - v8VariableStartIdx)) && (maskOR & bleEnableInterrupt)))
+#else // defined(useBluetoothAdaFruitSPI)
+	if ((bitFlagIdx == (v8Timer1CommandIdx - v8VariableStartIdx)) && (maskOR & t1cEnableInterrupt))
+#endif // defined(useBluetoothAdaFruitSPI)
+	{
+
+		enableTimer1Interrupt();
+
+	}
+
+#endif // defined(useTimer1Interrupt)
 	SREG = oldSREG; // restore interrupt flag status
 
 }
@@ -2715,3 +2506,43 @@ static void heart::performSleepMode(uint8_t sleepMode)
 
 }
 
+#if defined(useTimer1Interrupt)
+__attribute__((always_inline))
+static void heart::enableTimer1Interrupt(void)
+{
+
+#if defined(__AVR_ATmega32U4__)
+	// enable timer 1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// enable timer 1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// enable timer 1 overflow interrupt
+	TIMSK1 |= (1 << TOIE1);
+#endif // defined(__AVR_ATmega328P__)
+
+}
+
+__attribute__((always_inline))
+static void heart::disableTimer1Interrupt(void)
+{
+
+#if defined(__AVR_ATmega32U4__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+	// disable timer1 overflow interrupt
+	TIMSK1 &= ~(1 << TOIE1);
+#endif // defined(__AVR_ATmega328P__)
+
+}
+
+#endif // defined(useTimer1Interrupt)
