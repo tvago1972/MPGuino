@@ -455,7 +455,7 @@ Logging Output / Debug Monitor I/O
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/EEPROM.h>
+#include <avr/eeprom.h>
 #include <avr/sleep.h>
 
 static const char titleMPGuino[] PROGMEM = {
