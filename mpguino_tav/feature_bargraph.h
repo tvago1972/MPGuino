@@ -21,11 +21,9 @@ static const char bgSpaces[] PROGMEM = {
 namespace bgFEvsTsupport /* fuel economy over time histograph support section prototype */
 {
 
-	static uint8_t getFEvTperiodIdx(void);
+	static uint8_t getFEvTimeIdx(void);
 
 };
-
-volatile uint8_t FEvTperiodIdx;
 
 static const char barFEvTfuncNames[] PROGMEM = {
 	"FuelUsed / Time" tcEOS
@@ -35,24 +33,24 @@ static const char barFEvTfuncNames[] PROGMEM = {
 };
 
 static const uint8_t barFEvTdisplayFuncs[] PROGMEM = {
-	 tFuelUsed
-	,tDistance
-	,tFuelEcon
-	,tFuelEcon
+	tFuelUsed,
+	tDistance,
+	tFuelEcon,
+	tFuelEcon,
 };
 
 static const uint8_t barFEvTgraphFuncs[] PROGMEM = {
-	 tFEvTgetConsumedFuel
-	,tFEvTgetDistance
-	,tFEvTgetFuelEconomy
-	,tFEvTgetFuelEconomy
+	tFEvTgetConsumedFuel,
+	tFEvTgetDistance,
+	tFEvTgetFuelEconomy,
+	tFEvTgetFuelEconomy,
 };
 
 static const uint8_t barFEvTdiffFuncs[] PROGMEM = {
-	 0
-	,0
-	,0
-	,1
+	0,
+	0,
+	0,
+	1,
 };
 
 #endif // defined(useBarFuelEconVsTime)
@@ -64,28 +62,26 @@ namespace bgFEvsSsupport /* fuel economy over speed histograph support section p
 
 };
 
-uint8_t FEvSpdTripIdx;
-
 static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrTestReg, 0x02,									// test VSS cycle value
 	instrBranchIfZero, 15,								// if zero, then speed is also zero
 	instrLdReg, 0x21,									// save denominator term for later
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
-	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
+	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
+	instrMul2byRdOnly, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
 	instrDiv2by1,										// divide to obtain vehicle speed
 
 //cont:
-	instrSubMainFromX, 0x02, mpFEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
-	instrBranchIfLTorE, 4,								// if vehicle speed is above minimum threshold, skip ahead
+	instrSubVariableFromX, 0x02, m32FEvsSpeedMinThresholdIdx,	// compare vehicle speed to minimum threshold
+	instrBranchIfLTorE, 5,								// if vehicle speed is above minimum threshold, skip ahead
 
 //badRet:
 	instrLdRegByte, 0x02, 0xFF,							// load a 255 into register 2
-	instrDone,											// exit to caller
+	instrSkip, 14,										// go store FE vs speed trip register index
 
 //cont2:
-	instrDiv2byMain, mpFEvsSpeedQuantumIdx,				// find trip index offset
+	instrDiv2byVariable, m32FEvsSpeedQuantumIdx,		// find trip index offset
 	instrLdRegByte, 0x01, bgDataSize - 1,				// is offset greater than the number of available trip slots
 	instrCmpXtoY, 0x21,
 	instrBranchIfLTorE, 2,								// if not, skip ahead
@@ -93,6 +89,7 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 
 //cont3:
 	instrAddByteToX, 0x02, FEvsSpeedIdx,				// obtain working fuel econ vs speed trip index value
+	instrStRegVariable, 0x02, m8FEvSpeedTripIdx,			// store working FS vs speed trip register index
 	instrDone											// exit to caller
 };
 
@@ -103,15 +100,15 @@ static const char barFEvSfuncNames[] PROGMEM = {
 };
 
 static const uint8_t barFEvSdisplayFuncs[] PROGMEM = {
-	 tFuelEcon
-	,tFuelUsed
-	,tDistance
+	tFuelEcon,
+	tFuelUsed,
+	tDistance,
 };
 
 static const uint8_t barFEvSgraphFuncs[] PROGMEM = {
-	 tFEvSgetFuelEconomy
-	,tFEvSgetConsumedFuel
-	,tFEvSgetDistance
+	tFEvSgetFuelEconomy,
+	tFEvSgetConsumedFuel,
+	tFEvSgetDistance,
 };
 
 #endif // defined(useBarFuelEconVsSpeed)

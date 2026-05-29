@@ -1,38 +1,41 @@
 static const char * findStr(const char * str, uint8_t strIdx);
-static unsigned long str2ull(char * strBuffer);
+static uint32_t str2ull(char * strBuffer);
 static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t &decPos, char &zeroChar, uint8_t &digCnt, uint8_t flg);
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx);
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, const uint8_t * prgmPtr);
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag);
 
 namespace text /* text support section prototype */
 {
 
-	static uint8_t charIn(interfaceDevice &dev);
+	static void initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void));
+	static void initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t));
+	static uint8_t chrIn(uint8_t devIdx);
 
-	static void gotoXY(interfaceDevice &dev, uint8_t x, uint8_t y);
-	static void newLine(interfaceDevice &dev);
-	static uint8_t charOut(interfaceDevice &dev, uint8_t chr, uint8_t chrCount);
-	static uint8_t charOut(interfaceDevice &dev, uint8_t chr);
+	static void gotoXY(uint8_t devIdx, uint8_t x, uint8_t y);
+	static void newLine(uint8_t devIdx);
+	static uint8_t charOut(uint8_t devIdx, uint8_t chr, uint8_t chrCount);
+	static uint8_t charOut(uint8_t devIdx, uint8_t chr);
 
-	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str);
-	static void statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx);
-	static void statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx);
-	static void statusOut(interfaceDevice &dev, const char * str);
-	static void initStatus(interfaceDevice &dev);
-	static void commitStatus(interfaceDevice &dev);
-	static void stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx);
-	static void stringOut(interfaceDevice &dev, const char * str);
-	static void stringOut(interfaceDevice &dev, char * str);
-	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx);
-	static void stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str);
-	static void hexNybbleOut(interfaceDevice &dev, uint8_t val);
-	static void hexByteOut(interfaceDevice &dev, uint8_t val);
-	static void hexWordOut(interfaceDevice &dev, uint16_t val);
-	static void hexDWordOut(interfaceDevice &dev, uint32_t val);
-	static void hexLWordOut(interfaceDevice &dev, uint64_t * val);
-	static void tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
-	static void tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
-	static void numberOut(interfaceDevice &dev, uint8_t decimalFlag);
+	static void statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, const char * str);
+	static void statusOut(uint8_t devIdx, const char * str, const char * sList, uint8_t strIdx);
+	static void statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx);
+	static void statusOut(uint8_t devIdx, const char * str);
+	static void initStatus(uint8_t devIdx);
+	static void commitStatus(uint8_t devIdx);
+	static void stringOut(uint8_t devIdx, const char * str, uint8_t strIdx);
+	static void stringOut(uint8_t devIdx, const char * str);
+	static void stringOut(uint8_t devIdx, char * str);
+	static void stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx);
+	static void stringOutIf(uint8_t devIdx, uint8_t condition, const char * str);
+	static void hexNybbleOut(uint8_t devIdx, uint8_t val);
+	static uint8_t nybble(uint8_t val);
+	static void hexByteOut(uint8_t devIdx, uint8_t val);
+	static void hexWordOut(uint8_t devIdx, uint16_t val);
+	static void hexDWordOut(uint8_t devIdx, uint32_t val);
+	static void hexLWordOut(uint8_t devIdx, uint64_t * val);
+	static void tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag);
+	static void tripFunctionOut(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag);
+	static void numberOut(uint8_t devIdx, uint8_t decimalFlag);
 
 };
 
@@ -76,12 +79,12 @@ static const uint8_t prgmAutoRangeNumber[] PROGMEM = {
 	instrBranchIfLT, 9,									// if valid, skip ahead
 	instrLxdI, 8,										// assume window length of 8 digits
 	instrSkip, 5,										// skip ahead
-	instrLdRegConst, 0x02, idxDecimalPoint,				// window length is 1 digit, load equivalent of decimal formatting term
-	instrSkip, 4,										// skip ahead
+	instrLdRegRdOnly, 0x02, idxDecimalPoint,			// window length is 1 digit, load equivalent of decimal formatting term
+	instrSkip, 5,										// skip ahead
 
 //cont:
-	instrLdRegConstIndexed, 0x02,						// load power of 10 corresponding to window into register 2
-	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrLdRegRdOnlyOffset, 0x02, idxTen,				// load power of 10 corresponding to window into register 2
+	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
 
 //cont2:
 	instrLxdI, 0,										// initialize decimal count with 0

@@ -4,11 +4,14 @@
 // personal use is perfectly fine
 // no warranties expressed or implied
 //
-// This version of MPGuino is only configured for use with saturation-type fuel injectors. It does not
-// support peak and hold fuel injectors, due to the relative complexity of having to add many more
-// electrical components to properly detect the peak and hold currents for two separate types of
-// peak and hold drivers (analog current and PWM). Look up "jaycar peak hold adapter" on the intertubes
-// if you want more information
+// This version of MPGuino can automatically process fuel injection signals for both saturated and
+// frequency-modulated peak/hold fuel injectors. There is no need to change any settings in order to
+// switch between saturated or frequency-modulated peak/hold fuel injection drivers.
+//
+// This version of MPGuino does not support analog-style peak/hold fuel injectors, due to the relative
+// complexity of having to add many more electrical components to properly detect the peak and hold
+// currents for the analog waveform. Look up "jaycar peak hold adapter" on the intertubes, if you want
+// more information.
 
 // Special thanks to the good folks at ecomodder.com, ardunio.cc, avrfreaks.net, cadsoft.de, atmel.com,
 // and all the folks who donate their time and resources and share their experiences freely
@@ -122,14 +125,14 @@ sensor configuration for Chrysler MAP/baro sensor
 
 -------------------------------------
 
-TFT Pins
-  MPGuino Colour Touch by abbalooga
+TFT Pins - MPGuino Colour Touch by abbalooga
+  Arduino Mega2560
     CS         PL2, Digital 47
-    RESET      PL5, Digital 44
     DC         PL1, Digital 48
+    LED        PB6, Digital 12
+    RESET      PL5, Digital 44
     SDI (MOSI) PB2, Digital 51
     SCK        PB1, Digital 52
-    LED        PB6, Digital 12, controlled by PWM on OC1B
 
 -------------------------------------
 
@@ -193,8 +196,7 @@ LCD Pins - Adafruit RGB LCD Shield
 
 -------------------------------------
 
-Touchscreen Pins
-  MPGuino Colour Touch by abbalooga
+Touchscreen Pins - MPGuino Colour Touch by abbalooga
     T_CLK      PB5, Digital 11, software SPI
     T_CS       PB4, Digital 10
     T_DIN      PH6, Digital 9, software SPI
@@ -306,6 +308,21 @@ Buttons - Adafruit RGB LCD Shield
 
 -------------------------------------
 
+Realtime Clock - DS1307-based hardware
+  legacy MPGuino hardware
+    SCL     PC5 (SCL), A5
+    SDA     PC4 (SDA), A4
+
+  TinkerKit! LCD module
+    SDA     PD1 (SDA), Digital 2
+    SCL     PD0 (SCL), Digital 3
+
+  Arduino Mega2560
+    SCL     PD0 (SCL), Digital 21
+    SDA     PD1 (SDA), Digital 20
+
+-------------------------------------
+
 Expansion outputs
   legacy MPGuino hardware
     EXP1       PB2, Digital 10, controlled by PWM on OC1B
@@ -342,8 +359,28 @@ Bluetooth I/O
 
  Adafruit Bluefruit LE Shield
   legacy MPGuino hardware
+   SCK      PB5 (SCK), Digital 13
+  MISO      PB4 (MISO), Digital 12
+  MOSI      PB3 (MOSI), Digital 11
+    CS      PB0, Digital 8
+   IRQ      PD7, Digital 7
+   RST      PD4, Digital 4
 
   Arduino Mega2560
+   SCK      PB1 (SCK), Digital 52
+  MISO      PB3 (MISO), Digital 50
+  MOSI      PB2 (MOSI), Digital 51
+    CS      PH5, Digital 8
+   IRQ      PH4, Digital 7
+   RST      PG5, Digital 4
+
+  Arduino Leonardo
+   SCK      PB1 (SCK)
+  MISO      PB3 (MISO)
+  MOSI      PB2 (MOSI)
+    CS      PB4, Digital 8
+   IRQ      PE6, Digital 7
+   RST      PD4, Digital 4
 
 -------------------------------------
 
@@ -429,7 +466,6 @@ static const char dateMPGuino[] PROGMEM = {
 	"2023-AUG-14" tcEOSCR
 };
 
-static void idleProcess(void); // place all time critical main program internal functionality here - no I/O!
 int main(void);
 
 #include "configs.h"
@@ -458,215 +494,60 @@ int main(void);
 #include "feature_base.h"
 #include "m_button.h"
 
-// this function is called whenever the main program has to wait for some external condition to occur
-// when the main program performs some I/O activity, the target peripheral may take some time to acknowledge the activity
-//    and let the main program know that the peripheral is ready for more activity
-// oftentimes, the main program has to wait for the peripheral in question, so instead of spinning its wheels, it will simply
-//    cause the processor to go to sleep by calling this function
-// any interrupt will wake up the processor - this also means the primary timer0
-// this function is therefore ideal for placing all purely internal operations that do not require direct interaction with the outside world
-//
-// - fuel/vehicle speed data transfers
-// - acceleration test state changes
-// - debug sensor simulation counter updates
-// - analog button read translations
-// - Chrysler fuel correction factor calculations
-// - any other operation not requiring interaction with peripherals that require waiting periods to finish
-//
-// said internal operations would hopelessly bog down interrupt handlers, were they loaded with these internal operations
-//
-static void idleProcess(void)
-{
-
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	uint32_t idleStart;
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useActivityLED)
-	activityLED::output(0);
-
-#endif // defined(useActivityLED)
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	idleStart = heart::cycles0(); // record starting time
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-	heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	idleTimerLength += heart::findCycle0Length(idleStart);
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useDebugCPUreading)
-	idleStart = heart::cycles0(); // record starting time
-
-#endif // defined(useDebugCPUreading)
-#if defined(useActivityLED)
-	activityLED::output(1);
-
-#endif // defined(useActivityLED)
-	// this is the part of the main loop that only executes twice a second (or what is defined by loopsPerSecond), to collect and process readings
-	if (timer0Status & t0sTakeSample) // if main timer has commanded a sample be taken
-	{
-
-		heart::changeBitFlags(timer0Status, t0sTakeSample, 0); // acknowledge sample command
-
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-		systemInfo::idleProcess();
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-		tripSupport::idleProcess();
-
-	}
-
-#if defined(useAnalogRead)
-#if defined(useChryslerMAPCorrection)
-	if (analogStatus & asReadMAPchannel)
-	{
-
-		heart::changeBitFlags(analogStatus, asReadMAPchannel, 0); // acknowledge ADC read completion
-
-		SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
-
-	}
-
-#endif // defined(useChryslerMAPCorrection)
-#if defined(useChryslerBaroSensor)
-	if (analogStatus & asReadBaroChannel)
-	{
-
-		heart::changeBitFlags(analogStatus, asReadBaroChannel, 0); // acknowledge ADC read completion
-
-		SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
-
-	}
-
-#endif // defined(useChryslerBaroSensor)
-#if defined(useAnalogButtons)
-	if (analogStatus & asReadButtonChannel)
-	{
-
-		heart::changeBitFlags(analogStatus, asReadButtonChannel, 0); // acknowledge ADC read completion
-
-		for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
-		{
-
-			if (analogValue[(uint16_t)(analogButtonChannelIdx)] >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
-			{
-
-#if defined(useTestAnalogButtonIdx)
-				thisButtonIdx = x;
-#endif //  defined(useTestAnalogButtonIdx)
-				button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
-				break;
-
-			}
-
-		}
-
-	}
-
-#endif // defined(useAnalogButtons)
-#endif // useAnalogRead
-#if defined(useDragRaceFunction)
-	if (timer0Status & t0sAccelTestFlag)
-	{
-
-		heart::changeBitFlags(timer0Status, t0sAccelTestFlag, 0); // acknowledge sample command
-
-		accelerationTest::idleProcess();
-
-	}
-
-#endif // defined(useDragRaceFunction)
-#if defined(useSimulatedFIandVSS)
-	if (timer1Status & t1sDebugUpdateFIP) // if debug fuel injector pulse period needs adjustment
-	{
-
-		heart::changeBitFlags(timer1Status, t1sDebugUpdateFIP, 0); // acknowledge debug update request
-
-		signalSim::idleProcessFuel();
-
-	}
-
-	if (timer1Status & t1sDebugUpdateVSS) // if VSS pulse period needs adjustment
-	{
-
-		heart::changeBitFlags(timer1Status, t1sDebugUpdateVSS, 0); // acknowledge debug update request
-
-		signalSim::idleProcessVSS();
-
-	}
-
-#endif // defined(useSimulatedFIandVSS)
-#if defined(useDebugCPUreading)
-	idleProcessTimerLength += heart::findCycle0Length(idleStart);
-
-#endif // defined(useDebugCPUreading)
-}
-
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
 
 int main(void)
 {
 
+#if defined(useSimulatedFIandVSS)
+	uint16_t signalSimFIPtickLength; // to force debug injector pulse width to a maximum good engine speed-dependent value
+	uint16_t signalSimFIPWopenTickLength;
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	uint16_t availableRAMptr;
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	uint8_t i;
 	uint8_t j;
-#if defined(useDebugCPUreading)
-	uint32_t displayStart;
-#endif // defined(useDebugCPUreading)
+	uint8_t oldSREG;
 
 	cli(); // disable interrupts while interrupts are being fiddled with
 
-	heart::initCore(); // go initialize core MPGuino functionality
+	heart::initCore(); // go initialize core MPGuino timers
 
-	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required
+	EEPROM::powerUpCheck(); // go check, and initialize EEPROM parameter storage if required - also initialize basic MPGuino functionality
 
 	tripSupport::init(); // go initialize trip variable storage
 
-#if defined(useSimulatedFIandVSS)
-	debugFlags = (debugVSSflag | debugInjectorFlag);
-	signalSim::configurePorts();
-
-#endif // defined(useSimulatedFIandVSS)
-#if defined(useDragRaceFunction)
-	accelerationTest::init();
-
-#endif // defined(useDragRaceFunction)
 	sei();
-
-	j = heart::delay0(delay1500msTick); // show splash screen for 1.5 seconds
 
 	heart::initHardware(); // initialize all human interface peripherals
 
-#if defined(useSavedTrips)
-	i = tripSave::doAutoAction(taaModeRead);
-
-#endif // defined(useSavedTrips)
 #if defined(useLCDoutput)
-	text::gotoXY(devLCD, 0, 0);
-	text::stringOut(devLCD, titleMPGuino);
-	text::stringOut(devLCD, dateMPGuino);
+	text::gotoXY(m8DevLCDidx, 0, 0);
+	text::stringOut(m8DevLCDidx, titleMPGuino);
+	text::stringOut(m8DevLCDidx, dateMPGuino);
+
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 #endif // defined(useLCDoutput)
 #if defined(outputLoggingSplash)
-	text::stringOut(devLogOutput, titleMPGuino);
-	text::stringOut(devLogOutput, dateMPGuino);
+	text::stringOut(m8DevLogOutputIdx, titleMPGuino);
+	text::stringOut(m8DevLogOutputIdx, dateMPGuino);
 
 #endif // defined(outputLoggingSplash)
 #if defined(outputDebugTerminalSplash)
-	text::stringOut(devDebugTerminal, titleMPGuino);
-	text::stringOut(devDebugTerminal, dateMPGuino);
+	text::stringOut(m8DevDebugTerminalIdx, titleMPGuino);
+	text::stringOut(m8DevDebugTerminalIdx, dateMPGuino);
 
-	terminalState = 0;
+	terminalState = tsInitInput;
+	decWindow = 10;
 
 #endif // defined(outputDebugTerminalSplash)
-	heart::doDelay0(j); // show splash screen for 1.5 seconds
+#if defined(useSimulatedFIandVSS)
+	signalSim::configurePorts(debugFIsaturatedFlag | debugVSSflag | debugInjectorFlag);
 
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useButtonInput)
-#if defined(useTestButtonValues)
-	cursor::moveAbsolute(buttonDisplayIdx, 0);
-
-#else // defined(useTestButtonValues)
 	// restore cursor positions from EEPROM
 	for (uint8_t x = 0; x < displayCountTotal; x++) displayCursor[(uint16_t)(x)] = EEPROM::readByte(x + eePtrDisplayCursorStart);
 
@@ -676,275 +557,707 @@ int main(void)
 	// restore working display index from EEPROM
 	workingDisplayIdx = EEPROM::readByte(pDisplayIdx);
 
+#endif // defined(useButtonInput)
+#if defined(useSavedTrips)
+	i = tripSave::doAutoAction(taaModeRead);
+
+#endif // defined(useSavedTrips)
+#if defined(useLCDoutput)
+	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+
+#endif // defined(useLCDoutput)
+
+#if defined(useButtonInput)
 	// call working display index initialization function
 	cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx);
 
-#endif // defined(useTestButtonValues)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 #if defined(useLCDoutput)
-	if (i) text::statusOut(devLCD, PSTR("AutoRestore Done"));
+	if (i) text::statusOut(m8DevLCDidx, PSTR("AutoRestore Done"));
 
 #endif // defined(useLCDoutput)
 #endif // defined(useSavedTrips)
-#if defined(useCPUreading)
-	mainStart = heart::cycles0();
-	idleTimerLength = 0;
 
-#endif // defined(useCPUreading)
-#if defined(useDebugCPUreading)
-	idleProcessTimerLength = 0;
-	monitorState = 0;
-	displayTimerLength = 0;
-	SWEET64timerLength = 0;
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	m32(m32DbgWorkingMainStartIdx) = heart::cycles0();
 
-#endif // defined(useDebugCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	while (true)
 	{
 
-#if defined(useDebugCPUreading)
-		displayStart = heart::cycles0();
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+		m32(m32CPUworkingLoopStartIdx) = m32(m32DbgWorkingMainStartIdx);
+		m32(m32CPUworkingMainStartIdx) = m32(m32DbgWorkingMainStartIdx);
 
-#endif // defined(useDebugCPUreading)
-		if (activityChangeFlags & afActivityTimeoutFlag)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainProcess | arMainDevices);
+
+#endif // defined(useActivityLED)
+#if defined(useChryslerMAPCorrection)
+		if (v08(v8AnalogStatusIdx) & asReadMAPchannel)
 		{
 
-			heart::changeBitFlags(activityChangeFlags, afActivityTimeoutFlag, 0); // clear activity change activity timeout flag
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
 
-			if (activityFlags & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+			v08(v8AnalogStatusIdx) &= ~(asReadMAPchannel);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
+
+		}
+
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useChryslerBaroSensor)
+		if (v08(v8AnalogStatusIdx) & asReadBaroChannel)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			v08(v8AnalogStatusIdx) &= ~(asReadBaroChannel);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
+
+		}
+
+#endif // defined(useChryslerBaroSensor)
+#if defined(useAnalogButtons)
+		if (v08(v8AnalogStatusIdx) & asReadButtonChannel)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			v08(v8AnalogStatusIdx) &= ~(asReadButtonChannel);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 			{
 
+				if (v16(v16AnalogButtonChannelIdx) >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
+				{
+
+					if (v08(v8ButtonStatusIdx) & btnCmdEnableSampling) button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
+
+					break;
+
+				}
+
+			}
+
+		}
+
+#endif // defined(useAnalogButtons)
+#if defined(useActivityLED)
+		activityLED::release(arMainDevices);
+
+#endif // defined(useActivityLED)
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainDevicesIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
+
+#endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainActivity);
+
+#endif // defined(useActivityLED)
+		if (v08(v8ActivityChangeIdx) & (afActivityTimeoutFlag | afEngineOffFlag | afVehicleStoppedFlag | afParkFlag))
+		{
+
+			if (v08(v8ActivityChangeIdx) & afActivityTimeoutFlag)
+			{
+
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				v08(v8ActivityChangeIdx) &= ~(afActivityTimeoutFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+				if (v08(v8ActivityIdx) & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+				{
+
 #ifdef useDeepSleep
-				heart::doGoDeepSleep();
+					heart::doGoDeepSleep();
 
 #else // useDeepSleep
 #if defined(useClockDisplay)
-				clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
+					clockDisplay::displayHandler(displayInitialEntryIdx, 0); // initialize the software clock
 
-				LCD::setBrightness(0); // set backlight brightness to zero
+					LCD::setBrightness(0); // set backlight brightness to zero
 
 #else // defined(useClockDisplay)
 #if defined(useLCDoutput)
-				LCD::shutdown(); // shut down the LCD display
+					LCD::shutdown(); // shut down the LCD display
 
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-				TFT::shutdown(); // shut down the TFT display
+					TFT::shutdown(); // shut down the TFT display
 
 #endif // defined(useTFToutput)
 #endif // defined(useClockDisplay)
 #endif // useDeepSleep
-			}
-			else // if MPGuino is commanded to wake up
-			{
+				}
+				else // if MPGuino is commanded to wake up
+				{
 
 #if defined(useLCDoutput)
-				LCD::init(); // re-initialize LCD device
+					LCD::init(); // re-initialize LCD device
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-				TFT::init(); // re-initialize TFT device
+					TFT::init(); // re-initialize TFT device
 #endif // defined(useTFToutput)
 #if defined(useButtonInput)
-				cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
+					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 #endif // defined(useButtonInput)
+
+				}
 
 			}
 
-		}
+			if (v08(v8ActivityChangeIdx) & afEngineOffFlag)
+			{
 
-		if (activityChangeFlags & afEngineOffFlag)
-		{
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
 
-			heart::changeBitFlags(activityChangeFlags, afEngineOffFlag, 0); // clear activity change engine off flag
+				v08(v8ActivityChangeIdx) &= ~(afEngineOffFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
-			// if engine start is detected
-			if (((activityFlags & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
+				// if engine start is detected
+				if (((v08(v8ActivityIdx) & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
-		}
+			}
 
-		if (activityChangeFlags & afVehicleStoppedFlag)
-		{
+			if (v08(v8ActivityChangeIdx) & afVehicleStoppedFlag)
+			{
 
-			heart::changeBitFlags(activityChangeFlags, afVehicleStoppedFlag, 0); // clear activity change vehicle stopped flag
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				v08(v8ActivityChangeIdx) &= ~(afVehicleStoppedFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
-			// if vehicle movement is detected
-			if (((activityFlags & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
+				// if vehicle movement is detected
+				if (((v08(v8ActivityIdx) & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
-			// if vehicle is stopped
-			if ((activityFlags & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
+				// if vehicle is stopped
+				if ((v08(v8ActivityIdx) & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
 
 #endif // defined(useDragRaceFunction)
-		}
+			}
 
-#if defined(useWindowTripFilter) || defined(useSavedTrips)
-		if (activityChangeFlags & afParkFlag)
-		{
-
-			heart::changeBitFlags(activityChangeFlags, afParkFlag, 0); // clear activity change park flag
-
-			if (activityFlags & afParkFlag) // if MPGuino is commanded to go park
+			if (v08(v8ActivityChangeIdx) & afParkFlag)
 			{
 
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
+
+				v08(v8ActivityChangeIdx) &= ~(afParkFlag);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+#if defined(useWindowTripFilter) || defined(useSavedTrips)
+				if (v08(v8ActivityIdx) & afParkFlag) // if MPGuino is commanded to go park
+				{
+
 #if defined(useButtonInput)
-#if !defined(useTestButtonValues)
-				// save working display index to EEPROM
-				if (workingDisplayIdx < displayMaxSavableIdx) EEPROM::writeByte(pDisplayIdx, workingDisplayIdx);
+					// save working display index to EEPROM
+					if (workingDisplayIdx < displayMaxSavableIdx) EEPROM::writeByte(pDisplayIdx, workingDisplayIdx);
 
-				// save cursor positions to EEPROM
-				for (uint8_t x = 0; x < displayCountTotal; x++)
-					EEPROM::writeByte(x + eePtrDisplayCursorStart, displayCursor[(uint16_t)(x)]);
+					// save cursor positions to EEPROM
+					for (uint8_t x = 0; x < displayCountTotal; x++)
+						EEPROM::writeByte(x + eePtrDisplayCursorStart, displayCursor[(uint16_t)(x)]);
 
-				// save menu heights to EEPROM
-				for (uint8_t x = 0; x < displayCountMenu; x++)
-					EEPROM::writeByte(x + eePtrMenuHeightStart, menuHeight[(uint16_t)(x)]);
+					// save menu heights to EEPROM
+					for (uint8_t x = 0; x < displayCountMenu; x++)
+						EEPROM::writeByte(x + eePtrMenuHeightStart, menuHeight[(uint16_t)(x)]);
 
-#endif // !defined(useTestButtonValues)
 #endif // defined(useButtonInput)
 #if defined(useWindowTripFilter)
-				tripSupport::resetWindowFilter(); // reset the window trip filter
+					tripSupport::resetWindowFilter(); // reset the window trip filter
 
 #endif // defined(useWindowTripFilter)
 #if defined(useSavedTrips)
-				i = tripSave::doAutoAction(taaModeWrite);
+					i = tripSave::doAutoAction(taaModeWrite);
 #if defined(useLCDoutput)
-				if (i) text::statusOut(devLCD, PSTR("AutoSave Done"));
+					if (i) text::statusOut(m8DevLCDidx, PSTR("AutoSave Done"));
 #endif // defined(useLCDoutput)
 
 #endif // defined(useSavedTrips)
+				}
+
+#endif // defined(useWindowTripFilter) || defined(useSavedTrips)
 			}
 
 		}
 
-#endif // defined(useWindowTripFilter) || defined(useSavedTrips)
-#if defined(useDebugTerminal)
-		terminal::mainProcess();
+#if defined(useActivityLED)
+		activityLED::release(arMainActivity);
 
-#endif // defined(useDebugTerminal)
-#if defined(useBluetooth)
-		bluetooth::mainProcess();
+#endif // defined(useActivityLED)
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainActivityIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
-#endif // defined(useBluetooth)
-#if defined(useButtonInput)
-		if (timer0Status & t0sReadButton) // see if any buttons were pressed, process related button function if so
+#endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainSample);
+
+#endif // defined(useActivityLED)
+		// this is the part of the main loop that only executes twice a second (or what is defined by samplesPerSecond), to collect and process readings
+		if (v08(v8Timer0Status0Idx) & t0saTakeSample)
 		{
 
-			heart::changeBitFlags(timer0Status, t0sReadButton, 0); // acknowledge sample command
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
 
-			cursor::doCommand(); // go perform button action
+			v08(v8Timer0Status0Idx) &= ~(t0saTakeSample);
 
-		}
+			oldRawTripIdx = curRawTripIdx; // save old raw trip variable index
+			curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set current raw trip variable index
+#if defined(trackIdleEOCdata)
+			oldRawEOCidleTripIdx = curRawEOCidleTripIdx; // save old raw EOC/idle trip variable index
+			curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set current raw EOC/idle trip variable index
+#endif // defined(trackIdleEOCdata)
 
-#endif // defined(useButtonInput)
-#if defined(useDataLoggingOutput) || defined(useJSONoutput)
-		// this part of the main loop handles logging data output
-		if (timer0Status & t0sOutputLogging)
-		{
+			SREG = oldSREG; // restore interrupt flag status
 
-			heart::changeBitFlags(timer0Status, t0sOutputLogging, 0); // acknowledge output serial command
+#if defined(useBarFuelEconVsTime)
+			if (v08(v8Timer0Status1Idx) & t0sbResetFEvsTimeTrip) 
+			{
 
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operations atomic
+
+				v08(v8Timer0Status1Idx) &= ~(t0sbResetFEvsTimeTrip);
+				i = v08(v8FEvTimeTripIdx);
+
+				SREG = oldSREG; // restore interrupt flag status
+
+				tripVar::reset(i + FEvsTimePeriodIdx); // reset source trip variable
+
+			}
+
+#endif // defined(useBarFuelEconVsTime)
+			for (uint8_t x = 0; x < tripUpdateListSize; x++)
+			{
+
+				i = tripSupport::translateTripIndex(x, 0);
+				j = tripSupport::translateTripIndex(x, 1);
+
+				if (j & 0x80) tripVar::transfer(i, j & 0x7F); // if transfer bit set, do trip transfer
+				else tripVar::update(i, j); // otherwise, just do trip update
+
+			}
+
+			tripVar::reset(oldRawTripIdx); // reset old raw trip variable
+#if defined(trackIdleEOCdata)
+			tripVar::reset(oldRawEOCidleTripIdx); // reset old raw EOC/idle trip variable
+#endif // defined(trackIdleEOCdata)
+
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+			if((uint16_t)__brkval == 0) availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)&__bss_end);
+			else availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)__brkval);
+
+			m32(m32AvailableRAMidx) = availableRAMptr;
+
+#if defined(useDebugCPUreading)
+			if (m08(m8PeekFlags) & peekEnableCPUread)
+			{
+
+				m32(m32CPUsampledMainLoopIdx) = m32(m32CPUworkingMainLoopIdx);
+				m32(m32CPUsampledMainProcessIdx) = m32(m32CPUworkingMainProcessIdx);
+				m32(m32CPUsampledIdleProcessIdx) = m32(m32CPUworkingIdleProcessIdx);
+				m32(m32DbgSampledMainDevicesIdx) = m32(m32DbgWorkingMainDevicesIdx);
+				m32(m32DbgSampledMainActivityIdx) = m32(m32DbgWorkingMainActivityIdx);
+				m32(m32DbgSampledMainSampleIdx) = m32(m32DbgWorkingMainSampleIdx);
+				m32(m32DbgSampledMainOutputIdx) = m32(m32DbgWorkingMainOutputIdx);
+				m32(m32DbgSampledMainOtherIdx) = m32(m32DbgWorkingMainOtherIdx);
+				m32(m32DbgSampledS64processIdx) = m32(m32DbgWorkingS64processIdx);
+
+			}
+#else // defined(useDebugCPUreading)
+			m32(m32CPUsampledMainLoopIdx) = m32(m32CPUworkingMainLoopIdx);
+			m32(m32CPUsampledMainProcessIdx) = m32(m32CPUworkingMainProcessIdx);
+			m32(m32CPUsampledIdleProcessIdx) = m32(m32CPUworkingIdleProcessIdx);
+#endif // defined(useDebugCPUreading)
+
+			m32(m32CPUworkingMainLoopIdx) = 0;
+			m32(m32CPUworkingMainProcessIdx) = 0;
+			m32(m32CPUworkingIdleProcessIdx) = 0;
+#if defined(useDebugCPUreading)
+			m32(m32DbgWorkingMainDevicesIdx) = 0;
+			m32(m32DbgWorkingMainActivityIdx) = 0;
+			m32(m32DbgWorkingMainSampleIdx) = 0;
+			m32(m32DbgWorkingMainOutputIdx) = 0;
+			m32(m32DbgWorkingMainOtherIdx) = 0;
+			m32(m32DbgWorkingS64processIdx) = 0;
+#endif // defined(useDebugCPUreading)
+
+#if defined(useDebugCPUreading)
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			if (m08(m8PeekFlags) & peekEnableCPUread)
+			{
+
+				m32(m32DbgSampledInterruptProcessIdx) = v32(v32WorkingTimer0Idx);
+#if defined(useTimer1Interrupt)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingTimer1Idx);
+#endif // defined(useTimer1Interrupt)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingInjectorOpenIdx);
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingInjectorCloseIdx);
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingVSSpulseIdx);
+#if defined(useAnalogRead)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingAnalogIdx);
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingTwoWireIdx);
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial0Idx);
+#if defined(useSerial0PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial0InputIdx);
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial1Idx);
+#if defined(useSerial1PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial1InputIdx);
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial2Idx);
+#if defined(useSerial2PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial2InputIdx);
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial3Idx);
+#if defined(useSerial3PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial3InputIdx);
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
+				m32(m32DbgSampledTimer0Idx) = v32(v32WorkingTimer0Idx);
+#if defined(useTimer1Interrupt)
+				m32(m32DbgSampledTimer1Idx) = v32(v32WorkingTimer1Idx);
+#endif // defined(useTimer1Interrupt)
+				m32(m32DbgSampledInjectorOpenIdx) = v32(v32WorkingInjectorOpenIdx);;
+				m32(m32DbgSampledInjectorCloseIdx) = v32(v32WorkingInjectorCloseIdx);;
+				m32(m32DbgSampledVSSpulseIdx) = v32(v32WorkingVSSpulseIdx);;
+#if defined(useAnalogRead)
+				m32(m32DbgSampledAnalogIdx) = v32(v32WorkingAnalogIdx);
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+				m32(m32DbgSampledTwoWireIdx) = v32(v32WorkingTwoWireIdx);
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+				m32(m32DbgSampledSerial0Idx) = v32(v32WorkingSerial0Idx);
+#if defined(useSerial0PortInput)
+				m32(m32DbgSampledSerial0InputIdx) = v32(v32WorkingSerial0InputIdx);
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+				m32(m32DbgSampledSerial1Idx) = v32(v32WorkingSerial1Idx);
+#if defined(useSerial1PortInput)
+				m32(m32DbgSampledSerial1InputIdx) = v32(v32WorkingSerial1InputIdx);
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+				m32(m32DbgSampledSerial2Idx) = v32(v32WorkingSerial2Idx);
+#if defined(useSerial2PortInput)
+				m32(m32DbgSampledSerial2InputIdx) = v32(v32WorkingSerial2InputIdx);
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+				m32(m32DbgSampledSerial3Idx) = v32(v32WorkingSerial3Idx);
+#if defined(useSerial3PortInput)
+				m32(m32DbgSampledSerial3InputIdx) = v32(v32WorkingSerial3InputIdx);
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
+			}
+
+			v32(v32WorkingTimer0Idx) = 0;
+#if defined(useTimer1Interrupt)
+			v32(v32WorkingTimer1Idx) = 0;
+#endif // defined(useTimer1Interrupt)
+			v32(v32WorkingInjectorOpenIdx) = 0;
+			v32(v32WorkingInjectorCloseIdx) = 0;
+			v32(v32WorkingVSSpulseIdx) = 0;
+#if defined(useAnalogRead)
+			v32(v32WorkingAnalogIdx) = 0;
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+			v32(v32WorkingTwoWireIdx) = 0;
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+			v32(v32WorkingSerial0Idx) = 0;
+#if defined(useSerial0PortInput)
+			v32(v32WorkingSerial0InputIdx) = 0;
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+			v32(v32WorkingSerial1Idx) = 0;
+#if defined(useSerial1PortInput)
+			v32(v32WorkingSerial1InputIdx) = 0;
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+			v32(v32WorkingSerial2Idx) = 0;
+#if defined(useSerial2PortInput)
+			v32(v32WorkingSerial2InputIdx) = 0;
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+			v32(v32WorkingSerial3Idx) = 0;
+#if defined(useSerial3PortInput)
+			v32(v32WorkingSerial3InputIdx) = 0;
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
+			SREG = oldSREG; // restore interrupt flag status
+
+#endif // defined(useDebugCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDataLoggingOutput)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
 
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-			if ((awakeFlags & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
+			if (v08(v8Timer0Status0Idx) & t0saOutputJSON) doOutputJSON();
 
 #endif // defined(useJSONoutput)
-		}
-
-#endif // defined(useDataLoggingOutput) || defined(useJSONoutput)
 #if defined(useBluetooth)
-		bluetooth::mainOutput();
+			if (EEPROM::readByte(pBluetoothOutputIdx)) bluetooth::mainOutput();
 
 #endif // defined(useBluetooth)
-		// this part of the main loop handles screen output to the user
-		// it can execute either after the samples are collected and processed above, or after a key has been pressed
-		if (timer0Status & t0sUpdateDisplay)
-		{
-
-			heart::changeBitFlags(timer0Status, t0sUpdateDisplay, 0); // acknowledge update display command
-
-#if defined(useOutputPins)
-			outputPin::setOutputPin1(0);
-			outputPin::setOutputPin2(1);
-
-#endif // defined(useOutputPins)
-#if defined(useBarFuelEconVsSpeed)
-			FEvSpdTripIdx = (uint8_t)(SWEET64::runPrgm(prgmFEvsSpeed, instantIdx));
-
-#endif // defined(useBarFuelEconVsSpeed)
-			// this section handles all MPGuino activity modes
-			// engine running and vehicle in motion and a button being pressed
-			// engine not running and vehicle in motion (Engine Off Coasting) and a button being pressed
-			// engine running and vehicle stopped and a button being pressed
-			// engine stopped and vehicle stopped and a button being pressed
-			// engine running and vehicle in motion
-			// engine not running and vehicle in motion (Engine Off Coasting)
-			// engine running and vehicle stopped
-			// engine stopped and vehicle stopped
-			//
-			// in addition, two independent timers are dedicated to these activity modes
-			//
-			// the park timer counts down from a stored parameter value once MPGuino detects engine not running and vehicle stopped
-			// if the park timer goes to zero, the vehicle is said to be parked, and MPGuino goes to parked mode
-			// parked mode is exited once MPGuino detects that the engine runs OR the vehicle is in motion
-			//
-			// the activity timer counts down from a stored parameter value once MPGuino detects engine not running, vehicle stopped, and no button press occurs
-			// if the activity timer goes to zero, MPGuino goes to sleep mode
-			// sleep mode is exited once MPGuino detects that the engine runs OR the vehicle is in motion OR a button press occurs
-			//
-			// if the park timer setting in stored parameters is larger than the activity timer, MPGuino will skip parked mode
-			i = activityFlags & afValidFlags; // fetch a local copy of activity flags
-
-			switch (i)
+#if defined(useDS1307clock)
+			if (v08(v8Timer0Status1Idx) & t0sbReadRTC)
 			{
 
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afParkFlag): // engine stopped, vehicle stopped, no buttons pressed for a while
-				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag): // engine stopped, vehicle stopped for a while
-				case (afVehicleStoppedFlag | afUserInputFlag): // vehicle stopped, button not pressed
-				case (afEngineOffFlag | afUserInputFlag): // engine stopped, button not pressed
-				case (afVehicleStoppedFlag): // vehicle stopped
-				case (afEngineOffFlag): // engine stopped
-				case (afVehicleStoppedFlag | afEngineOffFlag): // engine stopped, vehicle stopped
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag): // engine stopped, vehicle stopped, button not pressed
-				case 0: // engine running and vehicle in motion
-				case (afUserInputFlag): // engine running, vehicle in motion, button not pressed
-#if defined(useButtonInput)
-					cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
-#endif // defined(useButtonInput)
-					break;
+				oldSREG = SREG; // save interrupt flag status
+				cli(); // disable interrupts to make the next operation atomic
 
-				case (afVehicleStoppedFlag | afEngineOffFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, activity timeout reached
-				case (afVehicleStoppedFlag | afEngineOffFlag | afUserInputFlag | afActivityTimeoutFlag): // engine stopped, vehicle stopped, no buttons pressed, park timeout reached, activity timeout reached
-#ifndef useDeepSleep
-#if defined(useClockDisplay)
-					clockDisplay::displayHandler(displayOutputIdx, 0); // display the software clock
+				v08(v8Timer0Status1Idx) &= ~(t0sbReadRTC);
 
-#endif // defined(useClockDisplay)
-#endif // useDeepSleep
-					break;
+				SREG = oldSREG; // restore interrupt flag status
 
-				default: // handle unexpected cases
-#if defined(useLCDoutput)
-					text::hexByteOut(devLCD, i);
-#endif // defined(useLCDoutput)
-					break;
+				clockSet::setFromRTC();
 
 			}
 
+#endif // defined(useDS1307clock)
 		}
 
+#if defined(useActivityLED)
+		activityLED::release(arMainSample);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-		displayTimerLength =+ heart::findCycle0Length(displayStart);
+		m32(m32DbgWorkingMainSampleIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
 #endif // defined(useDebugCPUreading)
-		idleProcess(); // all functions are completed at this point, so wait for an interrupt to occur
+#if defined(useActivityLED)
+		activityLED::assert(arMainOther);
 
+#endif // defined(useActivityLED)
+#if defined(useBluetooth)
+		bluetooth::mainProcess();
+
+#endif // defined(useBluetooth)
+#if defined(useDebugTerminal)
+		terminal::mainProcess();
+
+#endif // defined(useDebugTerminal)
+#if defined(useActivityLED)
+		activityLED::release(arMainOther);
+
+#endif // defined(useActivityLED)
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainOtherIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
+
+#endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainOutput);
+
+#endif // defined(useActivityLED)
+#if defined(useButtonInput)
+		if (v08(v8ButtonStatusIdx) & btnStatusButtonRead) cursor::doCommand(); // if any buttons were pressed, go perform button action
+
+#endif // defined(useButtonInput)
+#if defined(useDragRaceFunction)
+		if (v08(v8Timer0Status1Idx) & t0sbAccelTestFlag)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operations atomic
+
+			v08(v8Timer0Status1Idx) &= ~(t0sbAccelTestFlag);
+			accelTestStatus = v08(v8AccelerationFlagsIdx); // copy accel test flag status to this loop
+
+			SREG = oldSREG; // restore interrupt flag status
+
+			i = (lastAccelTestStatus ^ accelTestStatus) & accelTestClearFlags; // detect any drag race flag changes
+
+			lastAccelTestStatus = accelTestStatus; // copy current accel test flag status for next loop
+
+			if (i)
+			{
+
+				i = accelTestStatus & accelTestClearFlags;
+
+				switch (i)
+				{
+
+					case (accelTestTriggered | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsReady;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsActive;
+						break;
+
+					case (accelTestFinished):
+						SWEET64::runPrgm(prgmTransferAccelTestTrips, 0);
+						accelTestState = atsFinished;
+						break;
+
+					case (accelTestFinished | accelTestCancelled):
+						accelTestState = atsCancelled;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestHalfSpeed):
+						accelTestState = atsCheckPointDist;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed | accelTestDistance):
+						accelTestState = atsCheckPointHalf;
+						break;
+
+					case (accelTestActive | accelTestFullSpeed):
+						accelTestState = atsCheckPointDistHalf;
+						break;
+
+					case (accelTestActive | accelTestHalfSpeed | accelTestDistance):
+						accelTestState = atsCheckPointFull;
+						break;
+
+					case (accelTestActive | accelTestHalfSpeed):
+						accelTestState = atsCheckPointDistFull;
+						break;
+
+					case (accelTestActive | accelTestDistance):
+						accelTestState = atsCheckPointHalfFull;
+						break;
+
+					case (accelTestActive):
+						accelTestState = atsCheckPointDistHalfFull;
+						break;
+
+					default:
+						accelTestState = atsInvalidState;
+						break;
+
+				}
+
+			}
+			else accelTestState = atsNoStatusChange;
+
+		}
+
+#endif // defined(useDragRaceFunction)
+		// this part of the main loop handles screen output to the user
+		// it can execute either after the samples are collected and processed above, or after a key has been pressed
+		if (v08(v8Timer0Status0Idx) & t0saUpdateDisplay)
+		{
+
+			oldSREG = SREG; // save interrupt flag status
+			cli(); // disable interrupts to make the next operation atomic
+
+			v08(v8Timer0Status0Idx) &= ~(t0saUpdateDisplay);
+
+			SREG = oldSREG; // restore interrupt flag status
+
+#if defined(useButtonInput)
+#if defined(useDebugTerminal)
+			if ((m08(m8PeekFlags) & peekStatusMessage) && (v08(v8Timer0Status0Idx) & t0saDisplayDelayActive))
+			{
+
+				text::charOut(m8DevDebugTerminalIdx, '*');
+
+			}
+
+			if (m08(m8PeekFlags) & peekOutputFlags)
+			{
+
+				text::charOut(m8DevDebugTerminalIdx, '*');
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0CommandIdx));
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status0Idx));
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status1Idx));
+#if defined(useTWIsupport)
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8TWIstatusIdx));
+#endif // defined(useTWIsupport)
+				text::newLine(m8DevDebugTerminalIdx);
+
+			}
+
+#endif // defined(useDebugTerminal)
+#if defined(useClockDisplay) && !defined(useDeepSleep)
+			if (v08(v8ActivityIdx) & afActivityTimeoutFlag) clockDisplay::displayHandler(displayOutputIdx, 0);
+			else cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
+
+#else // defined(useClockDisplay) && !defined(useDeepSleep)
+			cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
+
+#endif // defined(useClockDisplay) && !defined(useDeepSleep)
+#endif // defined(useButtonInput)
+		}
+
+#if defined(useActivityLED)
+		activityLED::release(arMainProcess | arMainOutput);
+
+#endif // defined(useActivityLED)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainOutputIdx) -= m32(m32DbgWorkingMainStartIdx);
+#endif // defined(useDebugCPUreading)
+		m32(m32CPUworkingMainProcessIdx) += heart::getCycle0Length(m32CPUworkingMainStartIdx);
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainOutputIdx) += m32(m32DbgWorkingMainStartIdx);
+#endif // defined(useDebugCPUreading)
+		m32(m32CPUworkingIdleStartIdx) = m32(m32DbgWorkingMainStartIdx);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arIdleProcess);
+
+#endif // defined(useActivityLED)
+		heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+
+#if defined(useActivityLED)
+		activityLED::release(arIdleProcess);
+
+#endif // defined(useActivityLED)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+		m32(m32CPUworkingIdleProcessIdx) += heart::getCycle0Length(m32CPUworkingIdleStartIdx);
+		m32(m32CPUworkingMainLoopIdx) += heart::getCycle0Length(m32CPUworkingLoopStartIdx);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	}
 
 }

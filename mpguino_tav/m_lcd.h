@@ -24,9 +24,9 @@ namespace LCD /* LCD hardware support section prototype */
 #if defined(useLCDcontrast)
 	static void setContrast(uint8_t idx);
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	static void setRGBcolor(uint8_t idx);
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useLCDfonts)
 	static void loadCGRAMfont(const char * fontPtr);
 #endif // defined(useLCDfonts)
@@ -38,29 +38,20 @@ namespace LCD /* LCD hardware support section prototype */
 #endif // defined(useLCDgraphics)
 #if defined(use4BitLCD)
 	static void writeCommand(uint8_t value);
-	static void writeByte(uint8_t value, uint8_t flags, uint8_t delay);
-	static void writeNybble(uint8_t value, uint8_t flags);
-	static void outputNybble(uint8_t s);
+	static void writeByte(uint8_t value, uint8_t flags);
+	static void outputNybble(uint8_t value);
 #endif // defined(use4BitLCD)
 
 };
 
-interfaceDevice devLCD;
-
-#if defined(useLCDbufferedOutput)
-ringBufferVariable lcdBuffer;
-
-static volatile uint8_t LCDdata[32];
-
-#endif // defined(useLCDbufferedOutput)
 // these flags provide flow control for the LCD::writeData character output routine
 static const uint8_t lcdCharGotoXY =	0b00000010;
 static const uint8_t lcdCharOutput =	0b00000001;
 
-static uint8_t LCDaddressX;
-static uint8_t LCDaddressY;
+static uint8_t lcdPositionX;
+static uint8_t lcdPositionY;
 
-static volatile unsigned int lcdDelayCount;
+static volatile uint16_t lcdDelayCount;
 
 #if defined(useLCDgraphics)
 static const uint8_t cgramFlagDirty =		0b10000000;
@@ -129,10 +120,7 @@ static const uint8_t lcdContrast =			0; // not used
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
-static volatile uint8_t portLCD; // LCD port register expander byte
-#if defined(useAdafruitRGBLCDshield)
-static volatile uint8_t portSwitches; // contains two out of the three LCD backlighting LED pins
-
+#if defined(useAdafruitRGBLCDdisplay)
 static const uint8_t lcdDirection =			0b01000000; // Legacy and Mega2560 Arduino LCDs have their pin R/W (5) tied directly to ground, so they don't need this assignment
 static const uint8_t lcdRegisterSelect =	0b10000000; // GPIO B
 static const uint8_t lcdEnable =			0b00100000; // GPIO B
@@ -144,23 +132,19 @@ static const uint8_t lcdBrightnessRed =		0b01000000; // GPIO A
 static const uint8_t lcdBrightnessGreen =	0b10000000; // GPIO A
 static const uint8_t lcdBrightnessBlue =	0b00000001; // GPIO B
 
-static const uint8_t lcdAddress =			0x20;
-
 static const uint8_t RGBcolors[8] PROGMEM =
 {
-
-	 0b11000001	// off
-	,0b01000001	// green
-	,0b10000001	// red
-	,0b00000001	// yeller
-	,0b11000000	// blue
-	,0b01000000	// cyan
-	,0b10000000	// magenta
-	,0b00000000	// white
-
+	0b11000001,	// off
+	0b01000001,	// green
+	0b10000001,	// red
+	0b00000001,	// yeller
+	0b11000000,	// blue
+	0b01000000,	// cyan
+	0b10000000,	// magenta
+	0b00000000,	// white
 };
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
 
 // these definitions are for any TWI LCD module using a PCF8574 port expander
@@ -173,8 +157,6 @@ static const uint8_t lcdBit2 =				0b01000000;
 static const uint8_t lcdBit1 =				0b00100000;
 static const uint8_t lcdBit0 =				0b00010000;
 static const uint8_t lcdBrightness =		0b00001000;
-
-static const uint8_t lcdAddress =			0x27; // typical, though PCF8574 allows for 0x20 through 0x27
 
 #endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
 #endif // defined(useTWI4BitLCD)
@@ -206,39 +188,45 @@ static const uint8_t lcdSetCGRAMaddress =			0b01000000;
 
 static const uint8_t lcdSetDDRAMaddress =			0b10000000;
 
-// these flags tell LCD::writeData whether to output the passed in character, and how to handle the character if it is output
-static const uint8_t lcdSendNybble =				0b00001000;
+// these flags tell LCD::writeByte whether to output the passed in character, and how to handle the character if it is output
+static const uint8_t lcdTWIbufferLoop =				0b00100000;
+static const uint8_t lcdOutputHighNybble =			0b00010000;
+static const uint8_t lcdOutputLowNybble =			0b00001000;
 static const uint8_t lcdDataByte =					0b00000100;
-static const uint8_t lcdCommandByte =				0b00000000;
 
-// these flags tell LCD::writeData what kind of delay is associated with the character
+static const uint8_t lcdOutputByte =				(lcdOutputHighNybble | lcdOutputLowNybble);
+
+// these flags tell LCD::writeByte what kind of delay is associated with the character
 static const uint8_t lcdDelay0015ms =				0x03;
 static const uint8_t lcdDelay4100us =				0x02;
 static const uint8_t lcdDelay0100us =				0x01;
 static const uint8_t lcdDelay0040us =				0x00;
-static const uint8_t lcdDelayFlags =				lcdDataByte | 0x03;
-static const uint8_t lcdSendFlags =					lcdSendNybble | 0x03;
+static const uint8_t lcdDelayFlags =				0x03;
 
-static const uint16_t delayLCD015000usTick = (uint16_t)(ceil)((double)(15200ul * systemProcessorSpeed) / (double)(510ul)) - 1; // initial LCD delay for 4-bit initialization
-static const uint16_t delayLCD004100usTick = (uint16_t)(ceil)((double)(4100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // secondary LCD delay for 4-bit initialization
-static const uint16_t delayLCD000100usTick = (uint16_t)(ceil)((double)(100ul * systemProcessorSpeed) / (double)(510ul)) - 1; // final LCD delay for 4-bit initialization
-static const uint16_t delayLCD000040usTick = (uint16_t)(ceil)((double)(40ul * systemProcessorSpeed) / (double)(510ul)); // normal LCD character transmission delay
+static const uint8_t lcdOutputCommandByte =			(lcdOutputByte);
+static const uint8_t lcdOutputDataByte =			(lcdTWIbufferLoop | lcdOutputByte | lcdDataByte | lcdDelay0040us); // allow this byte to fill TWI buffer as required
+
+// these bits filter out the 4-bit component for port writing
+static const uint8_t lcdOutputMask73 =				0b10001000;
+static const uint8_t lcdOutputMask62 =				0b01000100;
+static const uint8_t lcdOutputMask51 =				0b00100010;
+static const uint8_t lcdOutputMask40 =				0b00010001;
 
 static uint8_t LCDgotoXYaddress;
 
 static const uint8_t lcdBaseYposition[] PROGMEM = {
-	 lcdSetDDRAMaddress
-	,lcdSetDDRAMaddress | 0x40
-	,lcdSetDDRAMaddress | 0x14
-	,lcdSetDDRAMaddress | 0x54
+	lcdSetDDRAMaddress,
+	lcdSetDDRAMaddress | 0x40,
+	lcdSetDDRAMaddress | 0x14,
+	lcdSetDDRAMaddress | 0x54,
 };
 
 static const uint8_t lcdDisplayModes[] PROGMEM = {
-	 lcdDisplayControl																		// turn off display
-	,lcdDisplayControl | lcdDCdisplayShow													// turn on display, no cursor, no character blink (default)
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorBlinkControl							// turn on display, no cursor, with character blink
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl								// turn on display, cursor, no character blink
-	,lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl | lcdDCcursorBlinkControl	// turn on display, cursor, with character blink
+	lcdDisplayControl,																		// turn off display
+	lcdDisplayControl | lcdDCdisplayShow,													// turn on display, no cursor, no character blink (default)
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorBlinkControl,							// turn on display, no cursor, with character blink
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl,								// turn on display, cursor, no character blink
+	lcdDisplayControl | lcdDCdisplayShow | lcdDCcursorControl | lcdDCcursorBlinkControl,	// turn on display, cursor, with character blink
 };
 
 #endif // defined(use4BitLCD)

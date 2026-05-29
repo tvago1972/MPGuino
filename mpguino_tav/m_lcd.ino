@@ -5,26 +5,21 @@ static void LCD::init(void)
 {
 
 #if defined(useSerialLCD)
-	devLCDserial.controlFlags &= ~(odvFlagCRLF);
+	m08(m8DevLCDserialIdx) &= ~(odvFlagCRLF);
 
-	heart::wait0(delay0100msTick); // wait for 100 ms to allow serial LCD to initialize
+	heart::wait0(delay0Tick100ms); // wait for 100 ms to allow serial LCD to initialize
 
 #endif // defined(useSerialLCD)
 #if defined(use4BitLCD)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
-	devLCD.chrOut = LCD::writeData;
-	devLCD.controlFlags |= (odvFlagEnableOutput);
+	text::initDev(m8DevLCDidx, (odvFlagEnableOutput), writeData);
 
-#if defined(useLCDbufferedOutput)
-	ringBuffer::init(lcdBuffer, LCDdata);
-
-#endif // defined(useLCDbufferedOutput)
 	lcdDelayCount = 0; // reset LCD delay count
-	timer1Command &= ~(t1cDelayLCD); // turn off LCD delay
+	v08(v8Timer1CommandIdx) &= ~(t1cDelayLCD); // turn off LCD delay
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -44,7 +39,6 @@ static void LCD::init(void)
 	DDRD |= (lcdBit2 | lcdBit1);
 	DDRE |= lcdEnable;
 	DDRF |= (lcdRegisterSelect | lcdBit0 | lcdDirection);
-	PORTF &= ~lcdDirection; // write a zero to this pin - MPGuino has no need to read anything from the LCD module
 
 #else // defined(useTinkerkitLCDmodule)
 	// any port commands for any other ATmega32U4 board goes here
@@ -100,37 +94,25 @@ static void LCD::init(void)
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
-	portLCD = 0; // reset LCD port byte
-#if defined(useAdafruitRGBLCDshield)
-	portSwitches = 0; // reset button port byte (contains two of the three LCD backlight LED bits)
+	v08(v8LCDportByteIdx) = 0; // reset LCD port byte
+#if defined(useAdafruitRGBLCDdisplay)
+	v08(v8SwitchPortByteIdx) = 0; // reset button port byte (contains two of the three LCD backlight LED bits)
 
 	MCP23017portExpanderSupport::setTransferMode(adaTWIbyteMode);
-#endif // defined(useAdafruitRGBLCDshield)
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useTWI4BitLCD)
 
 	// perform reset by instruction on LCD interface
 	// the below 5 lines actually take up less space than using a PROGMEM table / loop to write these values
-	writeNybble(lcdNullValue, lcdDelay0015ms); // wait for more than 15 msec
-	writeNybble(0b00110000, lcdCommandByte | lcdSendNybble | lcdDelay4100us); // send (B0011) to DB7-4, then wait for more than 4.1 ms
-	writeNybble(0b00110000, lcdCommandByte | lcdSendNybble | lcdDelay0100us); // send (B0011) to DB7-4, then wait for more than 100 us
-	writeNybble(0b00110000, lcdCommandByte | lcdSendNybble | lcdDelay0100us); // send (B0011) to DB7-4, then wait for more than 100 us
-	writeNybble(0b00100000, lcdCommandByte | lcdSendNybble | lcdDelay0100us); // send (B0010) to DB7-4 for 4 bit mode, then wait for more than 40 us
+	writeByte(lcdNullValue, lcdDelay0015ms); // wait for more than 15 msec
+	writeByte(0b00110000, (lcdOutputHighNybble | lcdDelay4100us)); // send (B0011) to DB7-4, then wait for more than 4.1 ms
+	writeByte(0b00110000, (lcdOutputHighNybble | lcdDelay0100us)); // send (B0011) to DB7-4, then wait for more than 100 us
+	writeByte(0b00110000, (lcdOutputHighNybble | lcdDelay0100us)); // send (B0011) to DB7-4, then wait for more than 100 us
+	writeByte(0b00100000, (lcdOutputHighNybble | lcdDelay0100us)); // send (B0010) to DB7-4 for 4 bit mode, then wait for more than 40 us
 
 	// ready to use normal LCD output function now!
 	writeCommand(lcdFunctionSet | lcdFSnumberOfLines); // 4-bit interface, 2 display lines, 5x8 font
 
-#if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
-
-#endif // defined(useLCDbufferedOutput)
 #endif // defined(use4BitLCD)
 #if defined(useLCDgraphics)
 	for (uint8_t x = 0; x < 64; x++) CGRAMbuffer[(uint16_t)(x)] = cgramFlagDirty;
@@ -144,14 +126,10 @@ static void LCD::init(void)
 	writeData(0x16); // display control - turn on display, no cursor, no blink
 	writeData(0x0C); // clear display, set cursor position to zero
 
-#if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer to force the LCD screen to clear
+#if defined(useLCDserialBufferedOutput)
+	ringBuffer::flush(rbIdxLCDserial); // clear the LCD buffer to force the LCD screen to clear
 
-#endif // defined(useLCDbufferedOutput)
-#if defined(LCDserialBuffer)
-	ringBuffer::flush(LCDserialBuffer); // clear the LCD buffer to force the LCD screen to clear
-
-#endif // defined(LCDserialBuffer)
+#endif // defined(useLCDserialBufferedOutput)
 }
 
 static void LCD::shutdown(void)
@@ -162,12 +140,9 @@ static void LCD::shutdown(void)
 	setContrast(255); // turn off LCD contrast
 #endif // defined(useLCDcontrast)
 	writeData(0x15); // display control - turn off display
-#if defined(LCDserialBuffer)
-	ringBuffer::flush(LCDserialBuffer); // flush LCD output buffer to force the LCD display to turn off
-#endif // defined(LCDserialBuffer)
-#if defined(useLCDbufferedOutput)
-	ringBuffer::flush(lcdBuffer); // flush LCD output buffer
-#endif // defined(useLCDbufferedOutput)
+#if defined(useLCDserialBufferedOutput)
+	ringBuffer::flush(rbIdxLCDserial); // flush LCD output buffer to force the LCD display to turn off
+#endif // defined(useLCDserialBufferedOutput)
 
 #if defined(use4BitLCD)
 #if defined(usePort4BitLCD)
@@ -179,7 +154,7 @@ static void LCD::shutdown(void)
 	DDRE &= ~(lcdEnable);
 	DDRF &= ~(lcdRegisterSelect | lcdBit0 | lcdDirection);
 
-	PORTB |= lcdContrast; // ensure LCD contrast is turned off
+	PORTB |= (lcdContrast); // ensure LCD contrast is turned off
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 
 	// set OC1A to disabled
@@ -197,9 +172,9 @@ static void LCD::shutdown(void)
 	// disable LCD pins
 	DDRA &= ~(lcdBit3 | lcdBit2 | lcdBit1 | lcdBit0 | lcdEnable | lcdRegisterSelect);
 
-	PORTB |= lcdContrast; // ensure LCD contrast is turned off
+	PORTB |= (lcdContrast); // ensure LCD contrast is turned off
 #if defined(useInvertedLegacyLCDbrightness)
-	PORTB |= lcdBrightness; // ensure LCD brightness is turned off
+	PORTB |= (lcdBrightness); // ensure LCD brightness is turned off
 #else // defined(useInvertedLegacyLCDbrightness)
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 #endif // defined(useInvertedLegacyLCDbrightness)
@@ -220,9 +195,9 @@ static void LCD::shutdown(void)
 	DDRB &= ~(lcdBit3 | lcdBit2 | lcdBit1);
 	DDRD &= ~(lcdBit0 | lcdEnable | lcdRegisterSelect);
 
-	PORTD |= lcdContrast;
+	PORTD |= (lcdContrast);
 #if defined(useInvertedLegacyLCDbrightness)
-	PORTB |= lcdBrightness; // ensure LCD brightness is turned off
+	PORTB |= (lcdBrightness); // ensure LCD brightness is turned off
 #else // defined(useInvertedLegacyLCDbrightness)
 	PORTB &= ~(lcdBrightness); // ensure LCD brightness is turned off
 #endif // defined(useInvertedLegacyLCDbrightness)
@@ -285,15 +260,15 @@ static void LCD::setBrightness(uint8_t idx)
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	if (idx) idx = EEPROM::readByte(pLCDcolorIdx); // get LCD backlight color
 
 	setRGBcolor(idx); // set LCD backlight color
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
-	if (idx) portLCD |= lcdBrightness; // turn on LCD backlight
-	else portLCD &= ~(lcdBrightness); // turn off LCD backlight
+	if (idx) v08(v8LCDportByteIdx) |= (lcdBrightness); // turn on LCD backlight
+	else v08(v8LCDportByteIdx) &= ~(lcdBrightness); // turn off LCD backlight
 
 #endif // defined(useSainSmart2004LCD) || defined(useGenericTWILCD)
 #endif // defined(useTWI4BitLCD)
@@ -338,7 +313,7 @@ static void LCD::setContrast(uint8_t idx)
 }
 
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 static void LCD::setRGBcolor(uint8_t idx)
 {
 
@@ -350,30 +325,23 @@ static void LCD::setRGBcolor(uint8_t idx)
 	RGBbitMask = pgm_read_byte(&RGBcolors[(uint16_t)(idx & 0x07)]); // read the LCD backlight color bitmask pattern
 
 	byt = RGBbitMask; // get the color bitmask pattern
-	byt ^= portSwitches; // flip the color bitmask by what's stored in the portSwitches register
+	byt ^= v08(v8SwitchPortByteIdx); // flip the color bitmask by what's stored in the portSwitches register
 	byt &= (lcdBrightnessRed | lcdBrightnessGreen); // strip out all but the relevant bits
-	portSwitches ^= byt; // flip again - restores non-relevant bits and causes relevant bits to change according to RGBbitMask
+	v08(v8SwitchPortByteIdx) ^= byt; // flip again - restores non-relevant bits and causes relevant bits to change according to RGBbitMask
 
 	byt = RGBbitMask; // get the color bitmask
-	byt ^= portLCD; // flip the color bitmask by what's stored in the portLCD register
+	byt ^= v08(v8LCDportByteIdx); // flip the color bitmask by what's stored in the portLCD register
 	byt &= (lcdBrightnessBlue); // strip out all but the relevant bit
-	portLCD ^= byt; // flip again - restores non-relevant bits and causes relevant bit to change according to RGBbitMask
+	v08(v8LCDportByteIdx) ^= byt; // flip again - restores non-relevant bits and causes relevant bit to change according to RGBbitMask
 
-#if defined(useInterruptBasedTWI)
-	TWI::disableISRactivity(); // disable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
-	MCP23017portExpanderSupport::writeRegister16Bit(MCP23017_B0_OLATx, portSwitches, portLCD); // write out 16-bit register (which sets address mode to toggle)
+	// write out 16-bit register (which sets address mode to toggle)
+	MCP23017portExpanderSupport::writeRegister16Bit(MCP23017_B0_OLATx, v08(v8SwitchPortByteIdx), v08(v8LCDportByteIdx));
 
 	MCP23017portExpanderSupport::setTransferMode(adaTWIbyteMode); // set address mode to byte mode
 
-#if defined(useInterruptBasedTWI)
-	TWI::enableISRactivity(); // enable ISR-based TWI activity
-
-#endif // defined(useInterruptBasedTWI)
 }
 
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #if defined(useLCDfonts)
 static void LCD::loadCGRAMfont(const char * fontPtr)
 {
@@ -446,7 +414,7 @@ static void LCD::flushCGRAM(void)
 
 			}
 
-			writeByte(b & ~(cgramFlagDirty), lcdDataByte, lcdDelay0040us);
+			writeByte(b & ~(cgramFlagDirty), (lcdOutputDataByte));
 			y++;
 
 		}
@@ -496,7 +464,6 @@ static void LCD::writeData(uint8_t value)
 {
 
 	uint8_t charFlags;
-	uint8_t x;
 
 	charFlags = 0;
 
@@ -505,39 +472,39 @@ static void LCD::writeData(uint8_t value)
 
 		case 0x08: // go back one character
 			charFlags |= (lcdCharGotoXY);
-			LCDaddressX--;
+			lcdPositionX--;
 			break;
 
 		case 0x09:	// tab (go forward one character)
 			charFlags |= (lcdCharGotoXY);
-			LCDaddressX++;
+			lcdPositionX++;
 			break;
 
 		case 0x0D: // carriage return with clreol
 #if defined(blankScreenOnMessage)
-			if (timer0DisplayDelayFlags == 0)
+			if ((v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) == 0)
 #else // defined(blankScreenOnMessage)
-			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
+			if (((v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) == 0) || (lcdPositionY))
 #endif // defined(blankScreenOnMessage)
 			{
 
-				while (LCDaddressX < LCDcharWidth)
+				while (lcdPositionX < LCDcharWidth)
 				{
 
 #if defined(use4BitLCD)
-					writeByte(' ', lcdDataByte, lcdDelay0040us);
+					writeByte(' ', (lcdOutputDataByte));
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 					LCDserialPort::chrOut(' ');
 #endif // defined(useSerialLCD)
-					LCDaddressX++;
+					lcdPositionX++;
 
 				}
 
 			}
-			LCDaddressX = 0;
+			lcdPositionX = 0;
 		case 0x0A: // linefeed
-			LCDaddressY++;
+			lcdPositionY++;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -549,15 +516,15 @@ static void LCD::writeData(uint8_t value)
 #if defined(useSerialLCD)
 			charFlags |= (lcdCharOutput);
 #endif // defined(useSerialLCD)
-			LCDaddressY = 0;
-			LCDaddressX = 0;
+			lcdPositionY = 0;
+			lcdPositionX = 0;
 			break;
 
 		case 0x80 ... 0xCF: // hijack the gotoxy characters
 			value &= 0x7F;
-			LCDaddressY = value / 20;
-			LCDaddressX = value % 20;
-			if (devLCD.controlFlags & odvFlagDoubleHeight) LCDaddressY += 2;
+			lcdPositionY = value / 20;
+			lcdPositionX = value % 20;
+			if (m08(m8DevLCDidx) & odvFlagDoubleHeight) lcdPositionY += 2;
 			charFlags |= (lcdCharGotoXY);
 			break;
 
@@ -567,8 +534,7 @@ static void LCD::writeData(uint8_t value)
 		case 0x18:	// turn on display with cursor and no blink
 		case 0x19:	// turn on display with cursor and character blink
 #if defined(use4BitLCD)
-			x = value - 0x15;
-			writeCommand(pgm_read_byte(&lcdDisplayModes[(uint16_t)(x)])); // set display mode
+			writeCommand(pgm_read_byte(&lcdDisplayModes[(uint16_t)(value - 0x15)])); // set display mode
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 			charFlags |= (lcdCharOutput);
@@ -585,14 +551,14 @@ static void LCD::writeData(uint8_t value)
 		case 0x00 ... 0x07: // print defined CGRAM characters 0 through 7
 		case 0x20 ... 0x7F: // print normal characters
 #if defined(blankScreenOnMessage)
-			if (timer0DisplayDelayFlags == 0)
+			if ((v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) == 0)
 #else // defined(blankScreenOnMessage)
-			if ((timer0DisplayDelayFlags == 0) || (LCDaddressY))
+			if (((v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) == 0) || (lcdPositionY))
 #endif // defined(blankScreenOnMessage)
 			{
 
-				if ((LCDaddressX < LCDcharWidth) && (LCDaddressY < LCDcharHeight)) charFlags |= (lcdCharOutput);
-				LCDaddressX++;
+				if ((lcdPositionX < LCDcharWidth) && (lcdPositionY < LCDcharHeight)) charFlags |= (lcdCharOutput);
+				lcdPositionX++;
 
 			}
 			break;
@@ -608,7 +574,7 @@ static void LCD::writeData(uint8_t value)
 	}
 
 #if defined(use4BitLCD)
-	LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[(uint16_t)(LCDaddressY & 0x03)]) + LCDaddressX;
+	LCDgotoXYaddress = pgm_read_byte(&lcdBaseYposition[(uint16_t)(lcdPositionY & 0x03)]) + lcdPositionX;
 
 #endif // defined(use4BitLCD)
 	if (charFlags & lcdCharGotoXY)
@@ -618,7 +584,7 @@ static void LCD::writeData(uint8_t value)
 		writeCommand(LCDgotoXYaddress);
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
-		LCDserialPort::chrOut(0x80 + LCDaddressY * 20 + LCDaddressX);
+		LCDserialPort::chrOut(0x80 + lcdPositionY * 20 + lcdPositionX);
 #endif // defined(useSerialLCD)
 
 	}
@@ -627,11 +593,11 @@ static void LCD::writeData(uint8_t value)
 	{
 
 #if defined(use4BitLCD)
-		writeByte(value, lcdDataByte, lcdDelay0040us);
+		writeByte(value, (lcdOutputDataByte));
 #endif // defined(use4BitLCD)
 #if defined(useSerialLCD)
 		LCDserialPort::chrOut(value);
-		if (value == 0x0C) heart::wait0(delay0005msTick); // wait for 5 ms to allow cls to complete
+		if (value == 0x0C) heart::wait0(delay0Tick5ms); // wait for 5 ms to allow cls to complete
 #endif // defined(useSerialLCD)
 
 	}
@@ -650,107 +616,57 @@ static void LCD::writeCommand(uint8_t value)
 		case lcdClearDisplay:
 		case lcdReturnHome:
 		case lcdReturnHome | lcdClearDisplay:
-			delay = lcdDelay0015ms;
+			delay = (lcdOutputCommandByte | lcdDelay0015ms);
 			break;
 
 		default:
-			delay = lcdDelay0040us;
+			delay = (lcdTWIbufferLoop | lcdOutputCommandByte | lcdDelay0040us); // allow this byte to fill TWI buffer as required
 			break;
 
 	}
 
-	writeByte(value, lcdCommandByte, delay);
+	writeByte(value, delay);
 
 }
 
-static void LCD::writeByte(uint8_t value, uint8_t flags, uint8_t delay)
+static void LCD::writeByte(uint8_t value, uint8_t flags)
 {
 
-	flags |= lcdSendNybble;
-
-	writeNybble(value, (flags | lcdDelay0040us)); // send the high nybble with standard 40 us delay
-	writeNybble(value << 4, (flags | delay)); // send the low nybble with the specified delay
-
-}
-
-static void LCD::writeNybble(uint8_t value, uint8_t flags)
-{
-
-#if defined(useLCDbufferedOutput)
-	ringBuffer::push(lcdBuffer, (value & 0xF0) | (flags & 0x0F));
-#else // defined(useLCDbufferedOutput)
-#if defined(usePort4BitLCD)
 	uint8_t oldSREG;
 
-#endif // defined(usePort4BitLCD)
-	while (timer1Command & t1cDelayLCD) idleProcess(); // wait for LCD timer delay to complete
+#if defined(useDebugLEDactivity)
+	PORTC |= (LEDdebugLCD);
 
+#endif // defined(useDebugLEDactivity)
+	// wait for the LCD timer delay to complete
+	while (v08(v8Timer1CommandIdx) & t1cDelayLCD) heart::performSleepMode(SLEEP_MODE_IDLE); // while waiting, go idle
+
+#if defined(useDebugLEDactivity)
+	PORTC &= ~(LEDdebugLCD);
+
+#endif // defined(useDebugLEDactivity)
 #if defined(useTWI4BitLCD)
-	if (flags & lcdSendNybble)
-	{
-
-#if defined(useInterruptBasedTWI)
-		TWI::disableISRactivity(); // disable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
-		TWI::openChannelMain(lcdAddress, TW_WRITE); // open TWI as master transmitter
-#if defined(useAdafruitRGBLCDshield)
-		TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
-#endif // defined(useAdafruitRGBLCDshield)
-
-	}
+	if (flags & lcdOutputByte) TWImain::open(TWIaddressLCD, TW_WRITE); // open TWI as master transmitter
 
 #endif // defined(useTWI4BitLCD)
-#if defined(usePort4BitLCD)
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
-#endif // defined(usePort4BitLCD)
+	cli(); // disable interrupts to make the next operations atomic
 
-	outputNybble((value & 0xF0) | (flags & 0x0F));
-
-#if defined(usePort4BitLCD)
-	SREG = oldSREG; // restore interrupt flag status
-#endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
+#if defined(useAdafruitRGBLCDdisplay)
+	if (flags & lcdOutputByte) TWI::writeByte(MCP23017_B1_OLATB); // specify bank B output latch register address
 
-	if (flags & lcdSendNybble)
-	{
-
-		TWI::transmitChannel(TWI_STOP); // commit LCD port expander write
-#if defined(useInterruptBasedTWI)
-		TWI::enableISRactivity(); // enable ISR-based TWI activity
-#endif // defined(useInterruptBasedTWI)
-
-	}
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useTWI4BitLCD)
-#endif // defined(useLCDbufferedOutput)
-
-	heart::changeBitFlags(timer1Command, 0, t1cDelayLCD); // enable LCD delay
-
-}
-
-static void LCD::outputNybble(uint8_t LCDchar)
-{
-
-	uint8_t x;
-
-	if (LCDchar & lcdSendNybble)
+	if (flags & lcdOutputByte)
 	{
 
+		 // set nybble type (command or data)
 #if defined(useTWI4BitLCD)
-		portLCD &= ~(lcdRegisterSelect | lcdDirection | lcdBit3 | lcdBit2 | lcdBit1 | lcdBit0);
-		if (LCDchar & lcdDataByte) portLCD |= (lcdRegisterSelect); // set nybble type (command or data)
-		if (LCDchar & 0b10000000) portLCD |= (lcdBit3); // set bit 3
-		if (LCDchar & 0b01000000) portLCD |= (lcdBit2); // set bit 2
-		if (LCDchar & 0b00100000) portLCD |= (lcdBit1); // set bit 1
-		if (LCDchar & 0b00010000) portLCD |= (lcdBit0); // set bit 0
+		v08(v8LCDportByteIdx) &= ~(lcdDirection); // set data direction to write
 
-		portLCD |= (lcdEnable); // set enable high
-
-		TWI::writeByte(portLCD); // write LCD port expander register
-
-		portLCD &= ~(lcdEnable); // set enable low to 'tickle' enable bit (it will take TWI subsystem at least 22.5 us to write the update, which is larger than 50 ns required for enable 'tickling'
-
-		TWI::writeByte(portLCD); // write LCD port expander register
+		if (flags & lcdDataByte) v08(v8LCDportByteIdx) |= (lcdRegisterSelect);
+		else v08(v8LCDportByteIdx) &= ~(lcdRegisterSelect);
 
 #endif // defined(useTWI4BitLCD)
 #if defined(usePort4BitLCD)
@@ -758,134 +674,197 @@ static void LCD::outputNybble(uint8_t LCDchar)
 #if defined(useTinkerkitLCDmodule)
 		PORTF &= ~(lcdDirection); // set data direction to write
 
-		PORTE |= (lcdEnable); // set enable high
-
-		if (LCDchar & lcdDataByte) PORTF |= (lcdRegisterSelect); // set nybble type (command or data)
+		if (flags & lcdDataByte) PORTF |= (lcdRegisterSelect);
 		else PORTF &= ~(lcdRegisterSelect);
 
-		if (LCDchar & 0b10000000) PORTB |= (lcdBit3); // set bit 3
-		else PORTB &= ~(lcdBit3);
-
-		if (LCDchar & 0b01000000) PORTD |= (lcdBit2); // set bit 2
-		else PORTD &= ~(lcdBit2);
-
-		if (LCDchar & 0b00100000) PORTD |= (lcdBit1); // set bit 1
-		else PORTD &= ~(lcdBit1);
-
-		if (LCDchar & 0b00010000) PORTF |= (lcdBit0); // set bit 0
-		else PORTF &= ~(lcdBit0);
-
-		PORTE &= ~(lcdEnable); // set enable low to 'tickle' enable bit
-
 #endif // defined(useTinkerkitLCDmodule)
-		// any port commands for any other ATmega32U4 board goes here
+		// any LCD register select set commands for any other ATmega32U4 board goes here
 
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 #if defined(useArduinoMega2560)
-		PORTA |= (lcdEnable); // set enable high
-
-		if (LCDchar & lcdDataByte) PORTA |= (lcdRegisterSelect); // set nybble type (command or data)
+		if (flags & lcdDataByte) PORTA |= (lcdRegisterSelect);
 		else PORTA &= ~(lcdRegisterSelect);
 
-		if (LCDchar & 0b10000000) PORTA |= (lcdBit3); // set bit 3
-		else PORTA &= ~(lcdBit3);
-
-		if (LCDchar & 0b01000000) PORTA |= (lcdBit2); // set bit 2
-		else PORTA &= ~(lcdBit2);
-
-		if (LCDchar & 0b00100000) PORTA |= (lcdBit1); // set bit 1
-		else PORTA &= ~(lcdBit1);
-
-		if (LCDchar & 0b00010000) PORTA |= (lcdBit0); // set bit 0
-		else PORTA &= ~(lcdBit0);
-
-		PORTA &= ~(lcdEnable); // set enable low to 'tickle' enable bit
-
 #endif // defined(useArduinoMega2560)
-		// any port commands for any other ATmega2560 board goes here
+		// any LCD register select set commands for any other ATmega2560 board goes here
 
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 #if defined(useLegacyLCD)
-		PORTD |= (lcdEnable); // set enable high
-
-		if (LCDchar & lcdDataByte) PORTD |= (lcdRegisterSelect); // set nybble type (command or data)
+		if (flags & lcdDataByte) PORTD |= (lcdRegisterSelect);
 		else PORTD &= ~(lcdRegisterSelect);
 
-		if (LCDchar & 0b10000000) PORTB |= (lcdBit3); // set bit 3
-		else PORTB &= ~(lcdBit3);
-
-		if (LCDchar & 0b01000000) PORTB |= (lcdBit2); // set bit 2
-		else PORTB &= ~(lcdBit2);
-
-		if (LCDchar & 0b00100000) PORTB |= (lcdBit1); // set bit 1
-		else PORTB &= ~(lcdBit1);
-
-		if (LCDchar & 0b00010000) PORTD |= (lcdBit0); // set bit 0
-		else PORTD &= ~(lcdBit0);
-
-		PORTD &= ~(lcdEnable); // set enable low to 'tickle' enable bit
-
 #endif // defined(useLegacyLCD)
-		PORTB |= (lcdEnable); // set enable high
-
-		if (LCDchar & lcdDataByte) PORTB |= (lcdRegisterSelect); // set nybble type (command or data)
+#if defined(useDFR0009LCD)
+		if (flags & lcdDataByte) PORTB |= (lcdRegisterSelect);
 		else PORTB &= ~(lcdRegisterSelect);
 
-		if (LCDchar & 0b10000000) PORTD |= (lcdBit3); // set bit 3
-		else PORTD &= ~(lcdBit3);
-
-		if (LCDchar & 0b01000000) PORTD |= (lcdBit2); // set bit 2
-		else PORTD &= ~(lcdBit2);
-
-		if (LCDchar & 0b00100000) PORTD |= (lcdBit1); // set bit 1
-		else PORTD &= ~(lcdBit1);
-
-		if (LCDchar & 0b00010000) PORTD |= (lcdBit0); // set bit 0
-		else PORTD &= ~(lcdBit0);
-
-		PORTB &= ~(lcdEnable); // set enable low to 'tickle' enable bit
-
-#if defined(useDFR0009LCD)
 #endif // defined(useDFR0009LCD)
-		// any port commands for any other ATmega168/328/328P board goes here
+		// any LCD register select set commands for any other ATmega168/328/328P board goes here
 
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(usePort4BitLCD)
+		if (flags & lcdOutputHighNybble) outputNybble(value & 0xF0); // send the high nybble
+		if (flags & lcdOutputLowNybble) outputNybble(value & 0x0F); // send the low nybble
+
 	}
 
-	x = LCDchar & lcdDelayFlags;
-
-	switch (x) // lcdDelayCount is an accumulated tick count due to TWI output mechanism
+	switch (flags & lcdDelayFlags)
 	{
 
-		case lcdDelay0015ms:
-			lcdDelayCount += delayLCD015000usTick;
+		case (lcdDelay0015ms):
+			lcdDelayCount = delay1Tick15200us;
 			break;
 
-		case lcdDelay4100us:
-			lcdDelayCount += delayLCD004100usTick;
+		case (lcdDelay4100us):
+			lcdDelayCount = delay1Tick4100us;
 			break;
 
-		case lcdDelay0100us:
-			lcdDelayCount += delayLCD000100usTick;
+#if defined(usePort4BitLCD)
+		case (lcdDelay0100us):
+			lcdDelayCount = delay1Tick100us;
 			break;
 
-		case lcdDelay0040us:
-			lcdDelayCount += delayLCD000040usTick;
+		case (lcdDelay0040us):
+			lcdDelayCount = delay1Tick40us;
 			break;
 
-		case lcdDataByte | lcdDelay0040us:
-			lcdDelayCount += delayLCD000040usTick;
-			break;
-
+#endif // defined(usePort4BitLCD)
 		default:
-			lcdDelayCount += delayLCD004100usTick;
+			lcdDelayCount = 0;
 			break;
 
 	}
 
+#if defined(useTWI4BitLCD)
+	if (flags & lcdOutputByte) TWI::transmit(TWI_STOP); // commit LCD port expander write
+
+#endif // defined(useTWI4BitLCD)
+	if (lcdDelayCount)
+	{
+
+		v08(v8Timer1CommandIdx) |= (t1cDelayLCD); // enable LCD delay
+
+		heart::enableTimer1Interrupt(); // enable timer1 interrupt
+
+	}
+
+	SREG = oldSREG; // restore interrupt flag status
+
+}
+
+static void LCD::outputNybble(uint8_t value)
+{
+
+#if defined(useTWI4BitLCD)
+	if (value & lcdOutputMask73) v08(v8LCDportByteIdx) |= (lcdBit3); // set bit 3
+	else v08(v8LCDportByteIdx) &= ~(lcdBit3);
+
+	if (value & lcdOutputMask62) v08(v8LCDportByteIdx) |= (lcdBit2); // set bit 2
+	else v08(v8LCDportByteIdx) &= ~(lcdBit2);
+
+	if (value & lcdOutputMask51) v08(v8LCDportByteIdx) |= (lcdBit1); // set bit 1
+	else v08(v8LCDportByteIdx) &= ~(lcdBit1);
+
+	if (value & lcdOutputMask40) v08(v8LCDportByteIdx) |= (lcdBit0); // set bit 0
+	else v08(v8LCDportByteIdx) &= ~(lcdBit0);
+
+	v08(v8LCDportByteIdx) |= (lcdEnable); // set enable high
+
+	TWI::writeByte(v08(v8LCDportByteIdx)); // write LCD port expander register
+
+	v08(v8LCDportByteIdx) &= ~(lcdEnable); // set enable low to 'tickle' enable bit (it will take TWI subsystem at least 90 us to write the update, which is larger than 50 ns required for enable 'tickling'
+
+	TWI::writeByte(v08(v8LCDportByteIdx)); // write LCD port expander register
+
+#endif // defined(useTWI4BitLCD)
+#if defined(usePort4BitLCD)
+#if defined(__AVR_ATmega32U4__)
+#if defined(useTinkerkitLCDmodule)
+	PORTE |= (lcdEnable); // set enable high
+
+	if (value & lcdOutputMask73) PORTB |= (lcdBit3); // set bit 3
+	else PORTB &= ~(lcdBit3);
+
+	if (value & lcdOutputMask62) PORTD |= (lcdBit2); // set bit 2
+	else PORTD &= ~(lcdBit2);
+
+	if (value & lcdOutputMask51) PORTD |= (lcdBit1); // set bit 1
+	else PORTD &= ~(lcdBit1);
+
+	if (value & lcdOutputMask40) PORTF |= (lcdBit0); // set bit 0
+	else PORTF &= ~(lcdBit0);
+
+	PORTE &= ~(lcdEnable); // set enable low to 'tickle' enable bit
+
+#endif // defined(useTinkerkitLCDmodule)
+	// any port commands for any other ATmega32U4 board goes here
+
+#endif // defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega2560__)
+#if defined(useArduinoMega2560)
+	PORTA |= (lcdEnable); // set enable high
+
+	if (value & lcdOutputMask73) PORTA |= (lcdBit3); // set bit 3
+	else PORTA &= ~(lcdBit3);
+
+	if (value & lcdOutputMask62) PORTA |= (lcdBit2); // set bit 2
+	else PORTA &= ~(lcdBit2);
+
+	if (value & lcdOutputMask51) PORTA |= (lcdBit1); // set bit 1
+	else PORTA &= ~(lcdBit1);
+
+	if (value & lcdOutputMask40) PORTA |= (lcdBit0); // set bit 0
+	else PORTA &= ~(lcdBit0);
+
+	PORTA &= ~(lcdEnable); // set enable low to 'tickle' enable bit
+
+#endif // defined(useArduinoMega2560)
+	// any port commands for any other ATmega2560 board goes here
+
+#endif // defined(__AVR_ATmega2560__)
+#if defined(__AVR_ATmega328P__)
+#if defined(useLegacyLCD)
+	PORTD |= (lcdEnable); // set enable high
+
+	if (value & lcdOutputMask73) PORTB |= (lcdBit3); // set bit 3
+	else PORTB &= ~(lcdBit3);
+
+	if (value & lcdOutputMask62) PORTB |= (lcdBit2); // set bit 2
+	else PORTB &= ~(lcdBit2);
+
+	if (value & lcdOutputMask51) PORTB |= (lcdBit1); // set bit 1
+	else PORTB &= ~(lcdBit1);
+
+	if (value & lcdOutputMask40) PORTD |= (lcdBit0); // set bit 0
+	else PORTD &= ~(lcdBit0);
+
+	PORTD &= ~(lcdEnable); // set enable low to 'tickle' enable bit
+
+#endif // defined(useLegacyLCD)
+#if defined(useDFR0009LCD)
+	PORTB |= (lcdEnable); // set enable high
+
+	if (value & lcdOutputMask73) PORTD |= (lcdBit3); // set bit 3
+	else PORTD &= ~(lcdBit3);
+
+	if (value & lcdOutputMask62) PORTD |= (lcdBit2); // set bit 2
+	else PORTD &= ~(lcdBit2);
+
+	if (value & lcdOutputMask51) PORTD |= (lcdBit1); // set bit 1
+	else PORTD &= ~(lcdBit1);
+
+	if (value & lcdOutputMask40) PORTD |= (lcdBit0); // set bit 0
+	else PORTD &= ~(lcdBit0);
+
+	PORTB &= ~(lcdEnable); // set enable low to 'tickle' enable bit
+
+#endif // defined(useDFR0009LCD)
+	// any port commands for any other ATmega168/328/328P board goes here
+
+#endif // defined(__AVR_ATmega328P__)
+#endif // defined(usePort4BitLCD)
 }
 
 #endif // defined(use4BitLCD)

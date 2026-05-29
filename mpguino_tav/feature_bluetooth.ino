@@ -19,71 +19,51 @@ static const uint8_t prgmCheckInstantSpeed[] PROGMEM = {
 static void bluetooth::init(void)
 {
 
-#if defined(useBluetoothAdaFruitSPI)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
-	devBluetooth.chrOut = chrOut;
-	devBluetooth.chrIn = chrIn;
-
-	PORTB &= ~(1 << PORTB0); // disable CS when this pin becomes an output
-	PORTD &= ~(1 << PORTD4); // force /RST low when this pin becomes an output
-
-	DDRB |= (1 << DDB0); // turn CS to an output pin
-	DDRD &= ~(1 << DDD7); // turn IRQ to an input pin
-	DDRD |= (1 << DDD4); // turn /RST to an output pin
+	v08(v8btOutputStatusIdx) = btoFlagContinuousOutput;
+	btOutputListIdx = btolTripFunctionIdx;
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	heart::wait0(delay0005msTick); // hold /RST low for 5 ms
+#if defined(useBluetoothAdaFruitSPI)
+	m08(m8btInputStateIdx) = (btiResetFlag);
 
-	PORTD |= (1 << PORTD4); // pull /RST high
-	PORTB |= (1 << PORTB0); // enable CS
-
-	heart::wait0(delay0002msTick); // wait for 2 ms to allow Bluefruit module to become ready
+	text::initDev(m8DevBluetoothIdx, (odvFlagEnableOutput), blefriend::chrOut, chrIn);
 
 #else // defined(useBluetoothAdaFruitSPI)
-	devBluetooth.controlFlags &= ~(odvFlagCRLF);
+	m08(m8DevBluetoothIdx) &= ~(odvFlagCRLF);
+	m08(m8btInputStateIdx) = 0;
 
 #endif // defined(useBluetoothAdaFruitSPI)
-	btInputState = 0;
-	btOutputState = btoFlagContinuousOutput;
-	btOutputListIdx = btolTripFunctionIdx;
-
 }
 
 static void bluetooth::shutdown(void)
 {
 
-#if defined(useBluetoothAdaFruitSPI)
 	uint8_t oldSREG;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
-	PORTB &= ~(1 << PORTB0);
-	PORTD &= ~((1 << PORTD7) | (1 << PORTD4));
-
-	DDRB |= (1 << DDB0); // turn all PORTB pins to input
-	DDRD &= ~((1 << DDD7) | (1 << DDD4)); // turn all PORTD pins to input
+	v08(v8btOutputStatusIdx) = 0;
 
 	SREG = oldSREG; // restore interrupt flag status
 
-#endif // defined(useBluetoothAdaFruitSPI)
-	btInputState = 0;
-	btOutputState = 0;
+	m08(m8btInputStateIdx) = 0;
 
 }
 
 #if defined(useBluetoothAdaFruitSPI)
-static void bluetooth::chrOut(uint8_t chr)
-{
-}
-
 static uint8_t bluetooth::chrIn(void)
 {
+
+	if (ringBuffer::testBuffer(rbIdxBluetoothIn, bufferIsEmpty)) return 0;
+	else return ringBuffer::pull(rbIdxBluetoothIn);
+
 }
 
 #endif // defined(useBluetoothAdaFruitSPI)
@@ -107,259 +87,328 @@ static void bluetooth::mainProcess(void)
 
 	uint8_t btChar;
 	uint16_t btFormat;
+	uint8_t c;
+	uint8_t k;
 	union union_16 * btF = (union union_16 *)(&btFormat);
 
-	do
+#if defined(useBluetoothAdaFruitSPI)
+	if (m08(m8btInputStateIdx) & btiResetFlag) // if performing a /RST cycle
 	{
 
-		btChar = text::charIn(devBluetooth); // read in a character from the input buffer
-
-		if (btChar) // if a valid character was read in
+		if ((v08(v8BLEstatusIdx) & bleResetFlags) == 0) // if /RST cycle is completed
 		{
 
-#if defined(useDebugTerminal)
-			if (peek & peekBluetoothInput) text::charOut(devDebugTerminal, btChar);
+			m08(m8btInputStateIdx) &= ~(btiResetFlag); // mark /RST cycle as completed
 
-#endif // defined(useDebugTerminal)
-			switch (btInputState)
+			for (uint8_t x = 0; x < 4; x++)
 			{
 
-				case 'M':	// processing an expanded command
-					switch (btChar)
-					{
+				text::stringOut(m8DevBluetoothIdx, btResetString, x); // send a string of reset message
 
-						case 'M':	// output selected EEPROM parameter list
-							heart::changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
+				blefriend::outputBufferWithResponse(); // go output via AT wrapper, and pop response from input
 
-							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
+			}
 
-							btOutputState &= ~(btoOutputFlags); // clear all output flags
-							btOutputState |= (btoFlagSingleShotOutput);
-							btOutputListIdx = btolParameterIdx;
-							break;
+			ringBuffer::empty(rbIdxBLEfriendIn);
 
-						case 'R':	// reset current trip
-							tripSupport::doResetTrip(0);
+			 // set for a 1/2 sec delay so that smartphone app can have time to process variable just transmitted
+			heart::changeBitFlagBits(v8btOutputStatusIdx, 0, (btoFlagDelay | btoFlagDelayInit500ms));
+
+		}
+
+	}
+
+#else // defined(useBluetoothAdaFruitSPI)
+	m08(m8btInputStateIdx) &= ~(btiResetFlag);
+
+#endif // defined(useBluetoothAdaFruitSPI)
+	if ((m08(m8btInputStateIdx) & btiResetFlag) == 0)
+	{
+
+#if defined(useBluetoothAdaFruitSPI)
+		if (m08(m8btInputStateIdx) & btiAllowPolling)
+		{
+
+			if (v08(v8Timer0Status1Idx) & t0sbSampleBLEfriend)
+			{
+
+				heart::changeBitFlagBits(v8Timer0Status1Idx, t0sbSampleBLEfriend, 0);
+
+				text::stringOut(m8DevBluetoothIdx, btInputString);
+				blefriend::outputBufferWithResponse(); // output GATT input request via 0xFFE1 characteristic
+
+				k = 1;
+
+				while (ringBuffer::testBufferNot(rbIdxBLEfriendIn, bufferIsEmpty)) // read GATT response from 0xFFE1 characteristic
+				{
+
+					c = ringBuffer::pull(rbIdxBLEfriendIn);
+
+					if (c < 0x20) k = 0;
+
+					if ((k) && (c != ' ')) ringBuffer::push(rbIdxBluetoothIn, c);
+
+				}
+
+
+			}
+
+		}
+
+#endif // defined(useBluetoothAdaFruitSPI)
+		do
+		{
+
+			btChar = text::chrIn(m8DevBluetoothIdx); // read in a character from the input buffer
+
+			if (btChar) // if a valid character was read in
+			{
+
+#if defined(useDebugTerminal)
+				if (m08(m8PeekFlags) & peekBluetoothInput) text::charOut(m8DevDebugTerminalIdx, btChar);
+
+#endif // defined(useDebugTerminal)
+				switch (m08(m8btInputStateIdx))
+				{
+
+					case 'M':	// processing an expanded command
+						switch (btChar)
+						{
+
+							case 'M':	// output selected EEPROM parameter list
+								heart::changeBitFlagBits(v8btOutputStatusIdx, btoOutputFlags, btoFlagSingleShotOutput); // clear all output flags, set up for one-shot output
+
+								btOutputListIdx = btolParameterIdx;
+								break;
+
+							case 'R':	// reset current trip
+								tripSupport::doResetTrip(0);
 #if defined(useSavedTrips)
-							tripSave::doWriteTrip(0);
+								tripSave::doWriteTrip(0);
 #endif // defined(useSavedTrips)
-							break;
+								break;
 
-						case 'T':	// reset tank trip
-							tripSupport::doResetTrip(1);
+							case 'T':	// reset tank trip
+								tripSupport::doResetTrip(1);
 #if defined(useSavedTrips)
-							tripSave::doWriteTrip(1);
+								tripSave::doWriteTrip(1);
 #endif // defined(useSavedTrips)
-							break;
+								break;
 
-						default:	// unsupported command
-							break;
+							default:	// unsupported command
+								break;
 
-					}
+						}
 
-					btInputState = 0;
-					break;
+						m08(m8btInputStateIdx) = 0;
+						break;
 
-				case '!':
-					switch (btChar)
-					{
+					case '!':
+						switch (btChar)
+						{
 
-						case '!':
-							heart::changeBitFlags(timer0Command, 0, t0cResetBluetoothOutput); // reset bluetooth output
-
-							while (timer0Command & t0cResetBluetoothOutput); // wait for timer0 to acknowledge reset
-
-							btOutputState &= ~(btoOutputFlags); // clear all output flags
-							btOutputState |= (btoFlagContinuousOutput);
-							btOutputListIdx = btolTripFunctionIdx;
-							btInputState = 1; // treat this also as a variable write, with special character substituting for '!'
-							btInpBuffIdx = 0; // reset input buffer
-							break;
-
-						default:	// unsupported command
-							btInputState = 0;
-							break;
-
-					}
-
-					break;
-
-				case 0:		// normal command processing
-					switch (btChar)
-					{
-
-						case '!':	// initialize and output selected trip functions
-						case 'M':	// process expanded command
-							btInputState = btChar; // save input state
-							break;
-
-						default:	// unrecognized command - could be a variable write
-							btFormat = findFormat(btChar); // go find the corresponding output format
-
-							if (btFormat) // if format was found, this is a variable write
-							{
-
-								btInputState = btChar; // save variable character
+							case '!':
+								heart::changeBitFlagBits(v8btOutputStatusIdx, btoOutputFlags, btoFlagContinuousOutput); // clear all output flags, set up for continuous output
+								btOutputListIdx = btolTripFunctionIdx;
+								m08(m8btInputStateIdx) = 1; // treat this also as a variable write, with special character substituting for '!'
 								btInpBuffIdx = 0; // reset input buffer
+								break;
 
-							}
+							default:	// unsupported command
+								m08(m8btInputStateIdx) = 0;
+								break;
 
-							break;
+						}
 
-					}
-					break;
+						break;
 
-				default:	// K-delimited string processing
-					switch (btChar)
-					{
+					case 0:		// normal command processing
+						switch (btChar)
+						{
 
-						default:	// unrecognized character - reset number input
-							btInputState = 0;
-							break;
+							case '!':	// initialize and output selected trip functions
+							case 'M':	// process expanded command
+								m08(m8btInputStateIdx) = btChar; // save input state
+								break;
 
-						case '0' ... '9':	// digits
-							if (btInputState & 0x80) // if in check digit mode, and read in digit does not equal stored digit, abort
-							{
+							default:	// unrecognized command - could be a variable write
+								btFormat = findFormat(btChar); // go find the corresponding output format
 
-								if (btChar != btInpBuff[(uint16_t)(btInpBuffIdx++)]) btInputState = 0;
-
-							}
-							else // if not, we are in digit storage mode
-								btInpBuff[(uint16_t)(btInpBuffIdx++)] = btChar; // store digit
-
-							break;
-
-						case 'K':	// number string terminator
-							btInputState ^= 0x80; // toggle digit mode
-
-							if (btInputState & 0x80) btInpBuff[(uint16_t)(btInpBuffIdx)] = 0; // if in check digit mode, mark end of string
-							else // if back in digit storage mode, time to convert number string
-							{
-
-								// if end of digit string is correct, then the two input digit strings are identical
-								if (btInpBuff[(uint16_t)(btInpBuffIdx)] == 0)
+								if (btFormat) // if format was found, this is a variable write
 								{
 
-									if (btInputState == 1) btChar = '!'; // re-translate back to '!' for output
-									else btChar = btInputState;
+									m08(m8btInputStateIdx) = btChar; // save variable character
+									btInpBuffIdx = 0; // reset input buffer
 
-									btFormat = findFormat(btChar); // go find the corresponding output format
+								}
 
-									if (btFormat)
+								break;
+
+						}
+						break;
+
+					default:	// K-delimited string processing
+						switch (btChar)
+						{
+
+							default:	// unrecognized character - reset number input
+								m08(m8btInputStateIdx) = 0;
+								break;
+
+							case '0' ... '9':	// digits
+								if (m08(m8btInputStateIdx) & 0x80) // if in check digit mode, and read in digit does not equal stored digit, abort
+								{
+
+									if (btChar != btInpBuff[(uint16_t)(btInpBuffIdx++)]) m08(m8btInputStateIdx) = 0;
+
+								}
+								else // if not, we are in digit storage mode
+									btInpBuff[(uint16_t)(btInpBuffIdx++)] = btChar; // store digit
+
+								break;
+
+							case 'K':	// number string terminator
+								m08(m8btInputStateIdx) ^= 0x80; // toggle digit mode
+
+								if (m08(m8btInputStateIdx) & 0x80) btInpBuff[(uint16_t)(btInpBuffIdx)] = 0; // if in check digit mode, mark end of string
+								else // if back in digit storage mode, time to convert number string
+								{
+
+									// if end of digit string is correct, then the two input digit strings are identical
+									if (btInpBuff[(uint16_t)(btInpBuffIdx)] == 0)
 									{
 
-										switch (btF->u8[0])
+										if (m08(m8btInputStateIdx) == 1) btChar = '!'; // re-translate back to '!' for output
+										else btChar = m08(m8btInputStateIdx);
+
+										btFormat = findFormat(btChar); // go find the corresponding output format
+
+										if (btFormat)
 										{
 
-											case tGetBTparameterValue:
-												str2ull(btInpBuff); // convert digit string into a number
+											switch (btF->u08[0])
+											{
+
+												case tGetBTparameterValue:
+													str2ull(btInpBuff); // convert digit string into a number
 #if defined(usePartialRefuel)
-												if (btF->u8[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
+													if (btF->u08[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
 #endif // defined(usePartialRefuel)
-												parameterEdit::onEEPROMchange(prgmWriteBTparameterValue, btF->u8[1]);
-												heart::changeBitFlags(timer0Command, 0, t0cInputReceived);
-												break;
+													EEPROM::onChange(prgmWriteBTparameterValue, btF->u08[1]);
+													heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
+													break;
 
-											case tFetchMainProgramValue:
-												str2ull(btInpBuff); // convert digit string into a number
-												SWEET64::runPrgm(prgmWriteMainProgramValue, btF->u8[1]);
-												heart::changeBitFlags(timer0Command, 0, t0cInputReceived);
-												break;
+												case tGetProgramVariableValue:
+													str2ull(btInpBuff); // convert digit string into a number
+													SWEET64::runPrgm(prgmWriteProgramVariableValue, btF->u08[1]);
+													heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
+													break;
 
-											default:
-												break;
+												default:
+													break;
+
+											}
 
 										}
 
 									}
 
+									m08(m8btInputStateIdx) = 0; // reset input state
+
 								}
 
-								btInputState = 0; // reset input state
+								btInpBuffIdx = 0;
 
-							}
+								break;
 
-							btInpBuffIdx = 0;
+						}
+						break;
 
-							break;
-
-					}
-					break;
-
-			}
-
-		}
-
-	}
-	while (btChar);
-
-#if defined(bluetoothSerialBuffer)
-	if (btOutputState & btoFlagFlushBuffer) // flush the output ring buffer
-	{
-
-		if (bluetoothSerialBuffer.status & bufferIsEmpty) // if the output ring buffer is flushed
-		{
-
-			btOutputState &= ~(btoFlagFlushBuffer);
-			btDelayFlag = heart::delay0(delay0020msTick); // set for a 20 ms delay
-			btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
-
-		}
-
-	}
-
-#endif // defined(bluetoothSerialBuffer)
-	if (btOutputState & btoFlagDelay) // check if output delay is finished
-	{
-
-		if ((timer0DelayFlags & btDelayFlag) == 0) btOutputState &= ~(btoFlagDelay); // if delay is finished, allow output to continue
-
-	}
-
-	if ((btOutputState & btoOutputActiveFlags) == btoFlagActiveOutput)
-	{
-
-		do
-		{
-
-			btChar = pgm_read_byte(btOutputString++); // read in a character of output list
-
-			if (btChar)  // if this is a valid character
-			{
-
-				btFormat = findFormat(btChar); // go find the corresponding output format
-
-				if (btFormat) // if this is a valid format
-				{
-
-					text::charOut(devBluetooth, btChar); // output character corresponding to output format
-
-					if ((btF->u8[1] == instantIdx) && (btF->u8[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
-					{
-
-						if (SWEET64::runPrgm(prgmCheckInstantSpeed, 0) == 0) btF->u8[0] = tFuelRate;
-
-					}
-
-					btChar = ((btF->u8[0] < dfMaxValDisplayCount) ? 7 : 10);
-
-					text::tripFunctionOut(devBluetooth, btFormat, btChar, (dfOutputBluetooth));
-
-#if defined(bluetoothSerialBuffer)
-					btOutputState |= (btoFlagFlushBuffer);
-
-#else // defined(bluetoothSerialBuffer)
-					btDelayFlag = heart::delay0(delay0020msTick); // set for a 20 ms delay
-					btOutputState |= (btoFlagDelay); // allows smartphone app time to process variable just transmitted
-
-#endif // defined(bluetoothSerialBuffer)
 				}
 
 			}
-			else btOutputState &= ~(btoFlagActiveOutput); // finished outputting list
 
 		}
-		while ((btChar) && (btFormat == 0)); // loop back if we found a valid character but an invalid format for that character
+		while (btChar);
+
+#if defined(rbIdxBluetoothSerial)
+		if (v08(v8btOutputStatusIdx) & btoFlagFlushBuffer) // flush the output ring buffer
+		{
+
+			if (ringBuffer::testBuffer(rbIdxBluetoothSerial, bufferIsEmpty)) // if the output ring buffer is flushed
+			{
+
+				// set up for a 20 ms delay to allow smartphone app to process variable just transmitted
+				heart::changeBitFlagBits(v8btOutputStatusIdx, btoFlagFlushBuffer, (btoFlagDelayInit20ms | btoFlagDelay));
+
+			}
+
+		}
+
+#endif // defined(rbIdxBluetoothSerial)
+		if ((v08(v8btOutputStatusIdx) & btoOutputActiveFlags) == btoFlagActiveOutput)
+		{
+
+			do
+			{
+
+				btChar = pgm_read_byte(btOutputStringPtr++); // read in a character of output list
+
+				if (btChar)  // if this is a valid character
+				{
+
+					btFormat = findFormat(btChar); // go find the corresponding output format
+
+					if (btFormat) // if this is a valid format
+					{
+
+#if defined(useBluetoothAdaFruitSPI)
+						text::stringOut(m8DevBluetoothIdx, btOutputString);
+#endif // defined(useBluetoothAdaFruitSPI)
+						text::charOut(m8DevBluetoothIdx, btChar); // output character corresponding to output format
+#if defined(useDebugTerminal)
+						if (m08(m8PeekFlags) & peekBluetoothOutput) text::charOut(m8DevDebugTerminalIdx, btChar);
+#endif // defined(useDebugTerminal)
+
+						if ((btF->u08[1] == instantIdx) && (btF->u08[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
+						{
+
+							if (SWEET64::runPrgm(prgmCheckInstantSpeed, 0) == 0) btF->u08[0] = tFuelRate;
+
+						}
+
+						btChar = ((btF->u08[0] < dfMaxValDisplayCount) ? 7 : 10);
+
+						text::tripFunctionOut(m8DevBluetoothIdx, btFormat, btChar, (dfOutputBluetooth));
+#if defined(useDebugTerminal)
+						if (m08(m8PeekFlags) & peekBluetoothOutput) text::tripFunctionOut(m8DevDebugTerminalIdx, btFormat, btChar, (dfOutputBluetooth));
+#endif // defined(useDebugTerminal)
+#if defined(useBluetoothAdaFruitSPI)
+						blefriend::outputBufferWithResponse(); // send out via 0xFFE1 characteristic
+						ringBuffer::empty(rbIdxBLEfriendIn); // pop response from input buffer
+
+						// set up for a 20 ms delay to allow smartphone app to process variable just transmitted
+						heart::changeBitFlagBits(v8btOutputStatusIdx, 0, (btoFlagDelayInit20ms | btoFlagDelay));
+
+#else // defined(useBluetoothAdaFruitSPI)
+#if defined(rbIdxBluetoothSerial)
+						heart::changeBitFlagBits(v8btOutputStatusIdx, 0, btoFlagFlushBuffer);
+
+#else // defined(rbIdxBluetoothSerial)
+						// set up for a 20 ms delay to allow smartphone app to process variable just transmitted
+						heart::changeBitFlagBits(v8btOutputStatusIdx, 0, (btoFlagDelayInit20ms | btoFlagDelay));
+
+#endif // defined(rbIdxBluetoothSerial)
+#endif // defined(useBluetoothAdaFruitSPI)
+					}
+
+				}
+				else heart::changeBitFlagBits(v8btOutputStatusIdx, btoFlagActiveOutput, 0); // finished outputting list
+
+			}
+			while ((btChar) && (btFormat == 0)); // loop back if we found a valid character but an invalid format for that character
+
+		}
 
 	}
 
@@ -368,20 +417,13 @@ static void bluetooth::mainProcess(void)
 static void bluetooth::mainOutput(void)
 {
 
-	if (activityFlags & afBluetoothOutput)
+	if ((v08(v8btOutputStatusIdx) & btoOutputEnabledFlags) && ((v08(v8btOutputStatusIdx) & btoFlagActiveOutput) == 0))
 	{
 
-		heart::changeBitFlags(activityFlags, afBluetoothOutput, 0); // acknowledge update bluetooth output command
+		// clear single-shot flag, and enable bluetooth::mainProcess output
+		heart::changeBitFlagBits(v8btOutputStatusIdx, btoFlagSingleShotOutput, btoFlagActiveOutput);
 
-		if ((btOutputState & btoOutputEnabledFlags) && ((btOutputState & btoFlagActiveOutput) == 0))
-		{
-
-			btOutputState &= ~(btoFlagSingleShotOutput); // clear single-shot flag
-			btOutputState |= (btoFlagActiveOutput); // enable bluetooth::mainProcess output
-
-			btOutputString = findStr(btOutputList, btOutputListIdx); // get selected bluetooth output list string pointer
-
-		}
+		btOutputStringPtr = findStr(btOutputList, btOutputListIdx); // get selected bluetooth output list string pointer
 
 	}
 

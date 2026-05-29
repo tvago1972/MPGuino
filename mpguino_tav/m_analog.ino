@@ -13,7 +13,7 @@
 ISR( ADC_vect )
 {
 
-	unsigned int rawRead;
+	uint16_t rawRead;
 	union union_16 * rawValue = (union union_16 *)(&rawRead);
 	uint8_t analogChannelIdx;
 	uint8_t analogChannelMask;
@@ -26,13 +26,13 @@ ISR( ADC_vect )
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 #endif // defined(useDebugCPUreading)
 
-	rawValue->u8[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
-	rawValue->u8[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
+	rawValue->u08[0] = ADCL; // (locks ADC sample result register from AtMega hardware)
+	rawValue->u08[1] = ADCH; // (releases ADC sample result register to AtMega hardware)
 
-	if (analogCommand & acSampleGround)
+	if (v08(v8AnalogCommandIdx) & acSampleGround)
 	{
 
-		analogCommand &= ~(acSampleGround); // signal that internal ground was read
+		v08(v8AnalogCommandIdx) &= ~(acSampleGround); // signal that internal ground was read
 
 		flag = 1;
 		analogChannelMask = acSampleChannel0; // start with highest priority channel
@@ -41,7 +41,7 @@ ISR( ADC_vect )
 		while ((flag) && (analogChannelMask))
 		{
 
-			if (analogCommand & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
+			if (v08(v8AnalogCommandIdx) & analogChannelMask) flag = 0; // if a commanded analog channel was detected, exit the loop
 			else
 			{
 
@@ -55,17 +55,17 @@ ISR( ADC_vect )
 		if (analogChannelMask)
 		{
 
-			analogStatus &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
+			v08(v8AnalogStatusIdx) &= ~(analogChannelMask); // main program really doesn't care that a ground was read, it's not useful, so don't signal it
 			analogValueIdx = analogChannelIdx; // save the analog index value
 			analogBitmask = analogChannelMask; // save the analog bitmask
-			analogCommand &= ~(analogChannelMask); // clear the relevant bit in analog command status
+			v08(v8AnalogCommandIdx) &= ~(analogChannelMask); // clear the relevant bit in analog command status
 			flag = 1;
 
 		}
 		else
 		{
 
-			analogCommand &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+			v08(v8AnalogCommandIdx) &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 			flag = 0;
 
 		}
@@ -74,13 +74,14 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogValue[(uint16_t)(analogValueIdx)] = rawRead; // save the value just read in
-		analogStatus |= (analogBitmask); // signal to main program that an analog channel was read in
-		if (analogCommand & acSampleChannelActive)
+		v16(analogValueIdx + v16AnalogStartIdx) = rawRead; // save the value just read in
+		v08(v8AnalogStatusIdx) |= (analogBitmask); // signal to main program that an analog channel was read in
+
+		if (v08(v8AnalogCommandIdx) & acSampleChannelActive)
 		{
 
-			analogCommand |= (acSampleGround); // signal that next read is for internal ground
-			analogChannelIdx = analogGroundIdx;
+			v08(v8AnalogCommandIdx) |= (acSampleGround); // signal that next read is for internal ground
+			analogChannelIdx = v16AnalogGroundIdx;
 			flag = 1;
 
 		}
@@ -98,8 +99,8 @@ ISR( ADC_vect )
 	else
 	{
 
-		analogStatus |= (asHardwareReady);
-		analogCommand &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
+		v08(v8AnalogStatusIdx) |= (asHardwareReady);
+		v08(v8AnalogCommandIdx) &= ~(acSampleChannelActive); // an invalid channel was requested, so ignore it
 		ADCSRA |= (1 << ADIF);
 		ADCSRA &= ~(1 << ADIE); // shut off analog interrupt and clear analog interrupt flag
 
@@ -111,7 +112,7 @@ ISR( ADC_vect )
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatileVariables[(uint16_t)(vInterruptAccumulatorIdx)] += c;
+	v32(v32WorkingAnalogIdx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -121,10 +122,10 @@ ISR( ADC_vect )
  /* ADC voltage display section */
 
 static const uint16_t analogReadPageFormats[4] PROGMEM = {
-	 (analog0Idx << 8 ) |			(tAnalogChannel)	// Voltages
-	,(analog1Idx << 8 ) |			(tAnalogChannel)
-	,(analog2Idx << 8 ) |			(tAnalogChannel)
-	,(analog3Idx << 8 ) |			(tAnalogChannel)
+	(v16Analog0Idx << 8 ) |			(tAnalogChannel),	// Voltages
+	(v16Analog1Idx << 8 ) |			(tAnalogChannel),
+	(v16Analog2Idx << 8 ) |			(tAnalogChannel),
+	(v16Analog3Idx << 8 ) |			(tAnalogChannel),
 };
 
 static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
@@ -135,7 +136,7 @@ static uint8_t analogReadViewer::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, analogReadDisplayTitles, cursorPos); // briefly display screen name
+			text::statusOut(m8DevLCDidx, analogReadDisplayTitles, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getAnalogReadPageFormats, cursorPos, 136, 0);

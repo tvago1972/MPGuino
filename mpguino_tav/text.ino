@@ -1,46 +1,88 @@
 /* text support section */
 
-static uint8_t text::charIn(interfaceDevice &dev)
+static const uint8_t prgmRoundOffNumber[] PROGMEM = {
+	instrTestReg, 0x02,									// test register 2
+	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
+	instrCmpIndex, 2,									// check if 3 or more right hand digits were specified
+	instrBranchIfGT, 17,								// if so, just exit
+	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
+	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
+	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
+	instrDiv2byRdOnly, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
+	instrSkip, 6,										// skip to adjustment
+
+//to10ths:
+	instrDiv2byByte, 100,								// shift number right 2 digits
+	instrSkip, 2,										// skip to adjustment
+
+//to100ths:
+	instrDiv2byByte, 10,								// shift number right 1 digit
+
+//adjust:
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+
+//exit:
+	instrJump, tFormatToNumber							// go call prgmFormatToNumber to perform actual formatting
+};
+
+static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void))
+{
+
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn = charIn;
+	m08(devIdx) |= (devStatus);
+
+}
+
+static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t))
+{
+
+	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
+	m08(devIdx) |= (devStatus);
+
+}
+
+static uint8_t text::chrIn(uint8_t devIdx)
 {
 
 	uint8_t retVal;
 
-	if (dev.chrIn) retVal = dev.chrIn();
+	if (deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn) retVal = deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn();
 	else retVal = 0;
 
 	return retVal;
 
 }
 
-static void text::gotoXY(interfaceDevice &dev, uint8_t xPos, uint8_t yPos)
+static void text::gotoXY(uint8_t devIdx, uint8_t xPos, uint8_t yPos)
 {
 
-	charOut(dev, 0x80 + yPos * 20 + xPos);
+	charOut(devIdx, 0x80 + yPos * 20 + xPos);
 
 }
 
-static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr, uint8_t chrCount)
+static uint8_t text::charOut(uint8_t devIdx, uint8_t chr, uint8_t chrCount)
 {
 
-	while (chrCount--) charOut(dev, chr);
+	while (chrCount--) charOut(devIdx, chr);
 
 }
 
-static void text::newLine(interfaceDevice &dev)
+static void text::newLine(uint8_t devIdx)
 {
 
-	charOut(dev, 0x0D);
+	charOut(devIdx, 0x0D);
 
 }
 
-static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
+static uint8_t text::charOut(uint8_t devIdx, uint8_t chr)
 {
 
 	uint8_t retVal;
 
 	retVal = 1;
 
-	if (dev.chrOut)
+	if (deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut)
 	{
 
 		switch (chr)
@@ -49,38 +91,38 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 			case 0x00:	// tcEOS, end-of-string
 				retVal = 0;
 			case 0xED:	// tcOON, enable device output
-				dev.controlFlags |= (odvFlagEnableOutput);
+				m08(devIdx) |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEB:	// tcOMOFF, disable device output for metric mode
-				if (metricFlag & metricMode) dev.controlFlags &= ~(odvFlagEnableOutput);
-				else dev.controlFlags |= (odvFlagEnableOutput);
+				if (m08(m8MetricModeFlags) & mmDisplayMetric) m08(devIdx) &= ~(odvFlagEnableOutput);
+				else m08(devIdx) |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEC:	// tcOTOG, toggle device output enable
-				dev.controlFlags ^= (odvFlagEnableOutput);
+				m08(devIdx) ^= (odvFlagEnableOutput);
 				break;
 
 			case 0xEE:	// tcOOFF, disable device output
-				dev.controlFlags &= ~(odvFlagEnableOutput);
+				m08(devIdx) &= ~(odvFlagEnableOutput);
 				break;
 
 			case 0x0D:	// tcEOSCR, output carriage return, defined as end of string
 				retVal = 0;
 			case 0xEF:	// tcCR, output carriage return not at end of string
-				dev.controlFlags |= (odvFlagEnableOutput);
-				dev.chrOut(0x0D);
-				if (dev.controlFlags & odvFlagCRLF) dev.chrOut(0x0A);
+				m08(devIdx) |= (odvFlagEnableOutput);
+				deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0D);
+				if (m08(devIdx) & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0A);
 				break;
 
 			case 0xF0 ... 0xF7: // print CGRAM character
 				chr &= 0x07;
 			case 0x20 ... 0x7F: // print normal character
-				if (dev.controlFlags & odvFlagEnableOutput) dev.chrOut(chr);
+				if (m08(devIdx) & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
 				break;
 
 			default:
-				dev.chrOut(chr);
+				deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
 				break;
 
 		}
@@ -92,191 +134,200 @@ static uint8_t text::charOut(interfaceDevice &dev, uint8_t chr)
 
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx, const char * str)
+static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, const char * str)
 {
 
-	initStatus(dev);
-	stringOut(dev, findStr(sList, strIdx));
-	stringOut(dev, str);
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, findStr(sList, strIdx));
+	stringOut(devIdx, str);
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, findStr(sList, strIdx));
-		stringOut(devDebugTerminal, str);
-		newLine(devDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, findStr(sList, strIdx));
+		stringOut(m8DevDebugTerminalIdx, str);
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * str, const char * sList, uint8_t strIdx)
+static void text::statusOut(uint8_t devIdx, const char * str, const char * sList, uint8_t strIdx)
 {
 
-	initStatus(dev);
-	stringOut(dev, str);
-	stringOut(dev, findStr(sList, strIdx));
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, str);
+	stringOut(devIdx, findStr(sList, strIdx));
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, str);
-		stringOut(devDebugTerminal, findStr(sList, strIdx));
-		newLine(devDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, str);
+		stringOut(m8DevDebugTerminalIdx, findStr(sList, strIdx));
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * sList, uint8_t strIdx)
+static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx)
 {
 
-	statusOut(dev, findStr(sList, strIdx));
+	statusOut(devIdx, findStr(sList, strIdx));
 
 }
 
-static void text::statusOut(interfaceDevice &dev, const char * str)
+static void text::statusOut(uint8_t devIdx, const char * str)
 {
 
-	initStatus(dev);
-	stringOut(dev, str);
-	commitStatus(dev);
+	initStatus(devIdx);
+	stringOut(devIdx, str);
+	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (peek & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
-		stringOut(devDebugTerminal, str);
-		newLine(devDebugTerminal);
+		stringOut(m8DevDebugTerminalIdx, str);
+		newLine(m8DevDebugTerminalIdx);
 
 	}
 
 #endif // defined(useDebugTerminal)
 }
 
-static void text::initStatus(interfaceDevice &dev)
+static void text::initStatus(uint8_t devIdx)
 {
 
-	heart::delayS(0);
+	// clear any display delay already in progress
+	heart::changeBitFlagBits(v8Timer0Status0Idx, t0saDisplayDelayFlags, 0);
 
 #if defined(blankScreenOnMessage)
-	charOut(dev, 0x0C); // clear the entire screen
+	charOut(devIdx, 0x0C); // clear the entire screen
 #else // defined(blankScreenOnMessage)
-	gotoXY(dev, 0, 0); // go to the first line
+	gotoXY(devIdx, 0, 0); // go to the first line
 #endif // defined(blankScreenOnMessage)
 
 }
 
-static void text::commitStatus(interfaceDevice &dev)
+static void text::commitStatus(uint8_t devIdx)
 {
 
-	newLine(dev);
-	heart::delayS(holdDelay);
+	newLine(devIdx);
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 }
 
-static void text::stringOut(interfaceDevice &dev, const char * str, uint8_t strIdx)
+static void text::stringOut(uint8_t devIdx, const char * str, uint8_t strIdx)
 {
 
-	stringOut(dev, findStr(str, strIdx));
+	stringOut(devIdx, findStr(str, strIdx));
 
 }
 
-static void text::stringOut(interfaceDevice &dev, const char * str)
+static void text::stringOut(uint8_t devIdx, const char * str)
 {
 
-	while (charOut(dev, pgm_read_byte(str++))) ;
+	while (charOut(devIdx, pgm_read_byte(str++))) ;
 
 }
 
-static void text::stringOut(interfaceDevice &dev, char * str)
+static void text::stringOut(uint8_t devIdx, char * str)
 {
 
-	while (charOut(dev, * str++));
+	while (charOut(devIdx, * str++));
 
 }
 
-static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str, uint8_t strIdx)
+static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
-	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
-	else dev.controlFlags &= ~(odvFlagEnableOutput);
+	if (condition) m08(devIdx) |= (odvFlagEnableOutput);
+	else m08(devIdx) &= ~(odvFlagEnableOutput);
 
-	stringOut(dev, str, strIdx);
+	stringOut(devIdx, str, strIdx);
 
 }
 
-static void text::stringOutIf(interfaceDevice &dev, uint8_t condition, const char * str)
+static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str)
 {
 
-	if (condition) dev.controlFlags |= (odvFlagEnableOutput);
-	else dev.controlFlags &= ~(odvFlagEnableOutput);
+	if (condition) m08(devIdx) |= (odvFlagEnableOutput);
+	else m08(devIdx) &= ~(odvFlagEnableOutput);
 
-	stringOut(dev, str);
+	stringOut(devIdx, str);
 
 }
 
-static void text::hexNybbleOut(interfaceDevice &dev, uint8_t val)
+static void text::hexNybbleOut(uint8_t devIdx, uint8_t val)
+{
+
+	charOut(devIdx, nybble(val));
+
+}
+
+static uint8_t text::nybble(uint8_t val)
 {
 
 	val &= 0x0F;
 	val |= 0x30;
 	if (val > 0x39) val += 0x07;
-	charOut(dev, val);
+	return val;
 
 }
 
-static void text::hexByteOut(interfaceDevice &dev, uint8_t val)
+static void text::hexByteOut(uint8_t devIdx, uint8_t val)
 {
 
-	hexNybbleOut(dev, val >> 4);
-	hexNybbleOut(dev, val);
+	hexNybbleOut(devIdx, val >> 4);
+	hexNybbleOut(devIdx, val);
 
 }
 
-static void text::hexWordOut(interfaceDevice &dev, uint16_t val)
+static void text::hexWordOut(uint8_t devIdx, uint16_t val)
 {
 
-	union union_16 * vee = (union union_16 *) &val;
+	union union_16 * vee = (union union_16 *)(&val);
 
-	for (uint8_t i = 1; i < 2; i--) hexByteOut(dev, vee->u8[i]);
+	for (uint8_t i = 1; i < 2; i--) hexByteOut(devIdx, vee->u08[i]);
 
 }
 
-static void text::hexDWordOut(interfaceDevice &dev, uint32_t val)
+static void text::hexDWordOut(uint8_t devIdx, uint32_t val)
 {
 
-	union union_32 * vee = (union union_32 *) &val;
+	union union_32 * vee = (union union_32 *)(&val);
 
-	for (uint8_t i = 3; i < 4; i--) hexByteOut(dev, vee->u8[i]);
+	hexWordOut(devIdx, vee->u16[1]);
+	hexWordOut(devIdx, vee->u16[0]);
 
 }
 
-static void text::hexLWordOut(interfaceDevice &dev, uint64_t * val)
+static void text::hexLWordOut(uint8_t devIdx, uint64_t * val)
 {
 
-	union union_64 * vee = (union union_64 *) val;
+	union union_64 * vee = (union union_64 *)(val);
 
-	for (uint8_t i = 7; i < 8; i--) hexByteOut(dev, vee->u8[i]);
+	for (uint8_t i = 7; i < 8; i--) hexByteOut(devIdx, vee->u08[i]);
 
 }
 
-static void text::tripFunctionOut(interfaceDevice &dev, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
 
-	tripFunctionOut(dev, tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+	tripFunctionOut(devIdx, tC->u08[1], tC->u08[0], windowLength, decimalFlag);
 
 }
 
-static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
+static void text::tripFunctionOut(uint8_t devIdx, uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	uint8_t i;
@@ -305,21 +356,21 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t
 					if (decimalFlag & dfOutputSpiffyTag)
 					{
 
-						charOut(dev, 0xF0 + mainCalcFuncVar.labelIdx);
-						charOut(dev, 0xF1 + mainCalcFuncVar.labelIdx);
+						charOut(devIdx, 0xF0 + mainCalcFuncVar.labelIdx);
+						charOut(devIdx, 0xF1 + mainCalcFuncVar.labelIdx);
 
 					}
 					else
 					{
 
-						charOut(dev, mainCalcFuncVar.tripChar);
-						charOut(dev, mainCalcFuncVar.calcChar);
+						charOut(devIdx, mainCalcFuncVar.tripChar);
+						charOut(devIdx, mainCalcFuncVar.calcChar);
 
 					}
 
 #else // defined(useSpiffyTripLabels)
-					charOut(dev, mainCalcFuncVar.tripChar);
-					charOut(dev, mainCalcFuncVar.calcChar);
+					charOut(devIdx, mainCalcFuncVar.tripChar);
+					charOut(devIdx, mainCalcFuncVar.calcChar);
 
 #endif // defined(useSpiffyTripLabels)
 				}
@@ -328,8 +379,8 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t
 			else
 			{
 
-				if (decimalFlag & dfBlinkCalc) charOut(dev, ' ', windowLength); // output blanks corresponding to number
-				else numberOut(dev, decimalFlag);
+				if (decimalFlag & dfBlinkCalc) charOut(devIdx, ' ', windowLength); // output blanks corresponding to number
+				else numberOut(devIdx, decimalFlag);
 
 			}
 
@@ -345,7 +396,7 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t
 
 			if (decimalFlag & dfOutputTag) windowLength += 2;
 
-			charOut(dev, ' ', windowLength);
+			charOut(devIdx, ' ', windowLength);
 
 		}
 
@@ -353,7 +404,7 @@ static void text::tripFunctionOut(interfaceDevice &dev, uint8_t tripIdx, uint8_t
 
 }
 
-static void text::numberOut(interfaceDevice &dev, uint8_t decimalFlag)
+static void text::numberOut(uint8_t devIdx, uint8_t decimalFlag)
 {
 
 	uint8_t c;
@@ -373,20 +424,20 @@ static void text::numberOut(interfaceDevice &dev, uint8_t decimalFlag)
 
 			if (((c >= '1') && (c <= '9')) || ((* strBuffer) == 0)) f = 1;
 
-			if ((c != '.') && (f)) c = charOut(dev, c);
+			if ((c != '.') && (f)) c = charOut(devIdx, c);
 
 		}
 		while (c);
 
 	}
-	else stringOut(dev, nBuff); // output the number
+	else stringOut(devIdx, nBuff); // output the number
 
 #if defined(useDebugTerminal) || defined(useJSONoutput)
 	if ((decimalFlag & dfOutputLabelCheck) == dfOutputLabel)
 	{
 
-		charOut(dev, ' ');
-		stringOut(dev, mainCalcFuncVar.calcFormatLabelPtr);
+		charOut(devIdx, ' ');
+		stringOut(devIdx, mainCalcFuncVar.calcFormatLabelPtr);
 
 	}
 
@@ -412,7 +463,7 @@ static const char * findStr(const char * str, uint8_t strIdx)
 
 }
 
-static unsigned long str2ull(char * strBuffer)
+static uint32_t str2ull(char * strBuffer)
 {
 
 	uint8_t c;
@@ -427,7 +478,7 @@ static unsigned long str2ull(char * strBuffer)
 	f = 1;
 	loopFlag = 1;
 
-	SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
+	SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
 
 	while ((loopFlag) && (x < 17))
 	{
@@ -454,7 +505,7 @@ static unsigned long str2ull(char * strBuffer)
 
 	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
 
-	return ((union union_64 *)(&s64reg[s64reg2]))->ul[0];
+	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u32[0];
 
 }
 
@@ -488,12 +539,12 @@ static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t
 //
 // this routine can handle numbers up to 9999999999
 //
-// if called with prgmIdx = tRoundOffNumber, also inserts the decimal point in the string specified by the value in decimalPlaces
+// if called with decimalFlag != 0, also inserts the decimal point in the string specified by the value in decimalPlaces
 //
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, const uint8_t * prgmPtr)
 {
 
-	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[s64reg2]);
+	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]);
 
 	uint8_t l;
 	uint8_t value;
@@ -503,28 +554,28 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 	uint8_t flg;
 	char zeroChar;
 
-	SWEET64::doCalculate(decimalPlaces, prgmIdx); // call SWEET64 routine to perform decimal point rounding to next nearest decimal place
+	SWEET64::runPrgm(prgmPtr, decimalPlaces); // call SWEET64 routine to perform decimal formatting
 
-	l = tmpPtr2->u8[6];	// load total length of binary-coded decimal bytes of converted number
+	l = tmpPtr2->u08[6];	// load total length of binary-coded decimal bytes of converted number
 
 	if (l == 255) strcpy_P(strBuffer, overFlowStr); // if length is 255, this number overflowed
 	else
 	{
 
-		if (prgmIdx == tRoundOffNumber) flg = 1; // if using tRoundOffNumber to process number, do decimal conversion
+		if (prgmPtr == prgmRoundOffNumber) flg = 1;
 		else flg = 0;
 
-		if (flg) decPos = 11 - decimalPlaces; // if using tRoundOffNumber, compute decimal position
+		if (flg) decPos = 11 - decimalPlaces; // if inserting decimal point, compute decimal position
 		else decPos = 11;
 
-		zeroChar = (char)(tmpPtr2->u8[7]);	// load leading zero character
+		zeroChar = (char)(tmpPtr2->u08[7]);	// load leading zero character
 		strPos = 0; // set initial string buffer position
 		digCnt = 0; // set initial digit count
 
 		for (uint8_t x = 0; x < l; x++) // go through all of the binary-coded decimal bytes of converted number
 		{
 
-			value = tmpPtr2->u8[(uint16_t)(x)];	// load a binary-coded decimal byte of number
+			value = tmpPtr2->u08[(uint16_t)(x)];	// load a binary-coded decimal byte of number
 
 			storeDigit(value / 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 10's place digit in string buffer
 			storeDigit(value % 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 1's place digit in string buffer
@@ -561,27 +612,29 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 //
 // sample debug monitor outputs:
 //
-// ]6<2.0u (overflow='-', do not ignore decimal point)        ]6<2.c0u (overflow='9', ignore decimal point)
-// 00: 00 06 02                                               00: c0 06 02
-//     0000000000000005 -   0.01 -                                0000000000000005 -    0.01 -
-// 01: 0000000000000037 -   0.06 -                            01: 0000000000000037 -    0.06 -
-// 02: 000000000000022B -   0.56 -                            02: 000000000000022B -    0.56 -
-// 03: 00000000000015B3 -   5.56 -                            03: 00000000000015B3 -    5.56 -
-// 04: 000000000000D903 -  55.56 -                            04: 000000000000D903 -   55.56 -
-// 05: 0000000000087A23 - 555.56 -                            05: 0000000000087A23 -  555.56 -
-// 06: 000000000054C563 - 5555.6 -                            06: 000000000054C563 - 5555.56 -
-// 07: 00000000034FB5E3 -  55556 -                            07: 00000000034FB5E3 - 55555.6 -
-// 08: 00000000211D1AE3 - 555556 -                            08: 00000000211D1AE3 - 555556 -
-// 09: 000000014B230CE3 - ------ -                            09: 000000014B230CE3 - 999999 -
-// 0A: 0000000CEF5E80E3 - ------ -                            0A: 0000000CEF5E80E3 - 999999 -
-// 0B: 0000008159B108E3 - ------ -                            0B: 0000008159B108E3 - 999999 -
-// 0C: 0000050D80EA58E3 - ------ -                            0C: 0000050D80EA58E3 - 999999 -
-// 0D: 00003287092778E3 - ------ -                            0D: 00003287092778E3 - 999999 -
+// (overflow='-', do not ignore decimal point)                (overflow='9', ignore decimal point)
+//
+// ]6<2.0u                                                    ]6<2.c0u
+// decimalFlags=00, windowLen=06, places=02                   decimalFlags=C0, windowLen=06, places=02
+// 00: 0000000000000005 -   0.01                              00: 0000000000000005 -    0.01
+// 01: 0000000000000037 -   0.06                              01: 0000000000000037 -    0.06
+// 02: 000000000000022B -   0.56                              02: 000000000000022B -    0.56
+// 03: 00000000000015B3 -   5.56                              03: 00000000000015B3 -    5.56
+// 04: 000000000000D903 -  55.56                              04: 000000000000D903 -   55.56
+// 05: 0000000000087A23 - 555.56                              05: 0000000000087A23 -  555.56
+// 06: 000000000054C563 - 5555.6                              06: 000000000054C563 - 5555.56
+// 07: 00000000034FB5E3 -  55556                              07: 00000000034FB5E3 - 55555.6
+// 08: 00000000211D1AE3 - 555556                              08: 00000000211D1AE3 - 555556
+// 09: 000000014B230CE3 - ------                              09: 000000014B230CE3 - 999999
+// 0A: 0000000CEF5E80E3 - ------                              0A: 0000000CEF5E80E3 - 999999
+// 0B: 0000008159B108E3 - ------                              0B: 0000008159B108E3 - 999999
+// 0C: 0000050D80EA58E3 - ------                              0C: 0000050D80EA58E3 - 999999
+// 0D: 00003287092778E3 - ------                              0D: 00003287092778E3 - 999999
 //
 static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLength, uint8_t decimalFlag) // format number for output
 {
 
-	union union_64 * tmpPtr3 = (union union_64 *)(&s64reg[s64reg3]);
+	union union_64 * tmpPtr3 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_3)]);
 
 	uint8_t d;
 	uint8_t e;
@@ -595,7 +648,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 	f = ((decimalFlag & dfIgnoreDecimalPoint) ? 0 : 1); // shrink window if decimal point is considered
 
 	SWEET64::runPrgm(prgmAutoRangeNumber, windowLength - f); // fetch supportable decimal digit count for window
-	d = tmpPtr3->u8[0];
+	d = tmpPtr3->u08[0];
 	f = 0; // initially signal no overflow occurred
 
 	if (decimalPlaces > d)
@@ -606,7 +659,8 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 
 	}
 
-	if (f == 0) ull2str(strBuffer, decimalPlaces, tRoundOffNumber); // perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+	// perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+	if (f == 0) ull2str(strBuffer, decimalPlaces, prgmRoundOffNumber);
 
 	if ((strBuffer[2] == '-') || (f)) f = 1; // if number overflowed
 	else

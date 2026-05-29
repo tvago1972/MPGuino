@@ -92,13 +92,13 @@ static void tripVar::update(uint8_t srcTripIdx, uint8_t destTripIdx)
 
 }
 
-static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t value, uint8_t destTripIdx)
+static void tripVar::update64(uint64_t collectedArray[], uint8_t valueIdx, uint8_t destTripIdx)
 {
 
 #if defined(useAssemblyLanguage)
 	union union_64 * an;
 
-	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
+	an = (union union_64 *)(&collectedArray[(uint16_t)(destTripIdx)]);
 
 	uint8_t x;
 
@@ -129,60 +129,12 @@ static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t value, ui
 		"	brne l_add64a%=			\n"
 
 		: "+e" (an), "+r" (x)
-		: "r" (value)
+		: "r" (v32(valueIdx))
 
 	);
 #else // defined(useAssemblyLanguage)
-	collectedCycleArray[(uint16_t)(destTripIdx)] += value;
+	collectedArray[(uint16_t)(destTripIdx)] += v32(valueIdx);
 #endif // defined(useAssemblyLanguage)
-
-}
-
-static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t collectedPulseArray[], uint32_t value, uint8_t destTripIdx)
-{
-
-#if defined(useAssemblyLanguage)
-	union union_64 * an;
-
-	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
-
-	uint8_t x;
-
-	asm volatile(
-		"	ld	__tmp_reg__, %a0	\n"		// 0
-		"   add __tmp_reg__, %A2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 1
-		"   adc __tmp_reg__, %B2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 2
-		"   adc __tmp_reg__, %C2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 3
-		"   adc __tmp_reg__, %D2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ldi	%A1, 4				\n"		// initialize counter
-
-		"l_add64a%=:				\n"
-		"	ld	__tmp_reg__, %a0	\n"		// 4
-		"   adc __tmp_reg__, __zero_reg__    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-		"	dec	%A1					\n"
-		"	brne l_add64a%=			\n"
-
-		: "+e" (an), "+r" (x)
-		: "r" (value)
-
-	);
-#else // defined(useAssemblyLanguage)
-	update64(collectedCycleArray, value, destTripIdx);
-#endif // defined(useAssemblyLanguage)
-
-	collectedPulseArray[(uint16_t)(destTripIdx)]++;
 
 }
 
@@ -229,7 +181,7 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 		: "e" (ann)
 	);
 #else // defined(useAssemblyLanguage)
-	unsigned int enn;
+	uint16_t enn;
 	union union_16 * n = (union union_16 *)(&enn);
 
 	c = 0;
@@ -237,12 +189,12 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 	for (x = 0; x < 8; x++)
 	{
 
-		n->u8[0] = c;
-		n->u8[1] = 0;
-		enn += an->u8[(uint16_t)(x)];
-		enn += ann->u8[(uint16_t)(x)];
-		an->u8[(uint16_t)(x)] = n->u8[0];
-		c = n->u8[1];
+		n->u08[0] = c;
+		n->u08[1] = 0;
+		enn += an->u08[(uint16_t)(x)];
+		enn += ann->u08[(uint16_t)(x)];
+		an->u08[(uint16_t)(x)] = n->u08[0];
+		c = n->u08[1];
 
 	}
 #endif // defined(useAssemblyLanguage)
@@ -303,59 +255,12 @@ static void tripSupport::init(void)
 	curRawEOCidleTripIdx = raw0eocIdleTripIdx;
 #endif // defined(trackIdleEOCdata)
 
+	SREG = oldSREG; // restore interrupt flag status
+
 	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
 
-	SREG = oldSREG; // restore interrupt flag status
-
-}
-
-static void tripSupport::idleProcess(void)
-{
-
-	uint8_t oldSREG;
-	uint8_t k;
-	uint8_t m;
-
-	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts to make the next operations atomic
-
-	curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set new raw trip variable index
-#if defined(trackIdleEOCdata)
-	curRawEOCidleTripIdx ^= (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx); // set new raw EOC/idle trip variable index
-#endif // defined(trackIdleEOCdata)
-
-	SREG = oldSREG; // restore interrupt flag status
-
-	for (uint8_t x = 0; x < tripUpdateListSize; x++)
-	{
-
-		k = translateTripIndex(x, 0);
-		m = translateTripIndex(x, 1);
-
-		if (m > raw1tripIdx) // if a valid target trip variable was specified
-		{
-
-			if (m & 0x80) // if transfer bit set
-			{
-
-				tripVar::transfer(k, m & 0x7F); // if transfer bit set, do trip transfer
-				tripVar::reset(k); // reset source trip variable
-
-			}
-			else tripVar::update(k, m); // otherwise, just do trip update
-
-		}
-
-	}
-
 #if defined(useWindowTripFilter)
-	if (awakeFlags & aAwakeOnVehicle)
-	{
-
-		wtpCurrentIdx++;
-		if (wtpCurrentIdx == windowTripFilterIdx + windowTripFilterSize) wtpCurrentIdx = windowTripFilterIdx;
-
-	}
+	m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
 
 #endif // defined(useWindowTripFilter)
 }
@@ -367,36 +272,41 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 	uint8_t j;
 
 	j = pgm_read_byte(&tripUpdateList[(uint16_t)(tripTransferIdx)][(uint16_t)(tripDirIndex)]);
-	i = j & 0x7F; // strip off upper bit for now, to look at the trip index in question
+	i = j & 0x7F; // strip off transfer/update bit for now, to look at the trip index in question
 
 	switch (i)
 	{
 
 		case 0x7F:		// replace generic raw trip index with old raw trip index
-			i = curRawTripIdx ^ (raw0tripIdx ^ raw1tripIdx);
+			i = oldRawTripIdx;
 			break;
 
 #if defined(trackIdleEOCdata)
 		case 0x7E:		// replace generic idle/eoc raw trip index with old idle/eoc raw trip index
-			i = curRawEOCidleTripIdx ^ (raw0eocIdleTripIdx ^ raw1eocIdleTripIdx);
+			i = oldRawEOCidleTripIdx;
 			break;
 
 #endif // defined(trackIdleEOCdata)
 #if defined(useWindowTripFilter)
 		case 0x7D:		// replace generic window trip index with current window trip index
-			i = wtpCurrentIdx;
+			i = m08(m8CurrentWindowTripIdx) + windowTripFilterIdx - 1;
+
+			if ((--m08(m8CurrentWindowTripIdx)) == 0)
+				m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
+
 			break;
 
 #endif // defined(useWindowTripFilter)
 #if defined(useBarFuelEconVsTime)
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
-			i = bgFEvsTsupport::getFEvTperiodIdx();
+			i = bgFEvsTsupport::getFEvTimeIdx();
 			break;
 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
-			i = FEvSpdTripIdx;
+			SWEET64::runPrgm(prgmFEvsSpeed, instantIdx);
+			i = m08(m8FEvSpeedTripIdx);
 			break;
 
 #endif // defined(useBarFuelEconVsSpeed)
@@ -405,8 +315,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 
 	}
 
-	if (i < tripSlotCount) i |= (j & 0x80); // restore high bit as it tells whether to update or transfer
-	else i = 0; // invalid values get remapped to 0
+	if (tripDirIndex) i |= (j & 0x80); // restore transfer/update bit if this is the destination trip index
 
 	return i;
 
@@ -459,7 +368,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			break;
 
 		case menuFirstLineOutIdx:
-			text::stringOut(devLCD, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
+			text::stringOut(m8DevLCDidx, tripSaveMenuTitles, cursorPos + menuTitlesOffset);
 			break;
 
 		case menuSecondLineInitIdx:
@@ -489,15 +398,15 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 			if (thisCursorPos == tsfAddPartialIdx)
 			{
 
-				text::stringOut(devLCD, pBuff); // output supplementary information
-				text::newLine(devLCD); // clear to the end of the line
+				text::stringOut(m8DevLCDidx, pBuff); // output supplementary information
+				text::newLine(m8DevLCDidx); // clear to the end of the line
 
 			}
 
 #endif //  defined(usePartialRefuel)
 #if defined(useSavedTrips)
 			if ((thisCursorPos == tsfCurrentLoadIdx) || (thisCursorPos == tsfTankLoadIdx))
-				text::stringOutIf(devLCD, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
+				text::stringOutIf(m8DevLCDidx, (EEPROM::readByte(pgm_read_byte(&tripSignatureList[(uint16_t)(thisTripSlot)])) == guinosig), tripSlotStatus);
 
 #endif //  defined(useSavedTrips)
 			break;
@@ -515,9 +424,9 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 					break;
 
 				case tsfZeroPartialIdx:
-					SWEET64::init64byt((union union_64 *)(&s64reg[s64reg2]), 0); // initialize 64-bit number to zero
-					parameterEdit::onEEPROMchange(prgmWriteParameterValue, numberEditObj.parameterIdx);
-					text::statusOut(devLCD, PSTR("PartialFuel RST"));
+					SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
+					EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx);
+					text::statusOut(m8DevLCDidx, PSTR("PartialFuel RST"));
 					break;
 
 #endif //  defined(usePartialRefuel)
@@ -525,14 +434,14 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 				case tsfCurrentSaveIdx:
 				case tsfTankSaveIdx:
 					doWriteTrip(thisTripSlot);
-					text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
+					text::statusOut(m8DevLCDidx, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Saved"));
 					break;
 
 				case tsfCurrentLoadIdx:
 				case tsfTankLoadIdx:
 					i = doReadTrip(thisTripSlot);
-					if (i) text::statusOut(devLCD, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
-					else text::statusOut(devLCD, PSTR("Nothing to load"));
+					if (i) text::statusOut(m8DevLCDidx, tripFormatReverseNames, thisTripSlot + 1, PSTR(" Trip Loaded"));
+					else text::statusOut(m8DevLCDidx, PSTR("Nothing to load"));
 					break;
 
 				case tsfCurrentResetIdx: // current trip reset
@@ -571,6 +480,7 @@ static void tripSave::goSaveTank(void)
 
 }
 
+#if defined(useSavedTrips)
 static void tripSave::goSaveCurrent(void)
 {
 
@@ -580,6 +490,7 @@ static void tripSave::goSaveCurrent(void)
 
 }
 
+#endif // defined(useSavedTrips)
 #endif // defined(useButtonInput)
 #if defined(useSavedTrips)
 static uint8_t tripSave::doAutoAction(uint8_t taaMode)
@@ -616,12 +527,12 @@ static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 {
 
-	metricFlag &= ~(EEPROMbulkChangeFlag);
+	m08(m8EEPROMchangeStatus) &= ~(ecsEEPROMchangeDetected);
 
 	if (tripSlot) SWEET64::runPrgm(prgmSaveTankToEEPROM, 0);
 	else SWEET64::runPrgm(prgmSaveCurrentToEEPROM, 0);
 
-	return (metricFlag & EEPROMbulkChangeFlag);
+	return (m08(m8EEPROMchangeStatus) & ecsEEPROMchangeDetected);
 
 }
 
@@ -647,7 +558,7 @@ static void tripSupport::resetTank(void)
 static void tripSupport::outputResetStatus(uint8_t tripSlot)
 {
 
-	text::statusOut(devLCD, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
+	text::statusOut(m8DevLCDidx, tripFormatReverseNames, tripSlot + 1, PSTR(" Trip Reset"));
 
 }
 
@@ -656,7 +567,7 @@ static void tripSupport::outputResetStatus(uint8_t tripSlot)
 static void tripSupport::resetWindowFilter(void)
 {
 
-	wtpCurrentIdx = windowTripFilterIdx;
+	m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
 
 	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
 
@@ -667,47 +578,47 @@ static void tripSupport::resetWindowFilter(void)
 /* Chrysler returnless fuel pressure correction display section */
 
 static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogMAPchannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogMAPfloorIdx,		// is reading below MAP sensor voltage floor?
+	instrLdRegVariable, 0x02, v16AnalogMAPchannelIdx,	// load analog channel ADC step value
+	instrSubVariableFromX, 0x02, m32AnalogMAPfloorIdx,	// is reading below MAP sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
-	instrMul2byMain, mpAnalogMAPnumerIdx,				// perform conversion to get pressure units per volts value
-	instrDiv2byMain, mpAnalogMAPdenomIdx,				// divide by pressure units per volts value
+	instrMul2byVariable, m32AnalogMAPnumerIdx,			// perform conversion to get pressure units per volts value
+	instrDiv2byVariable, m32AnalogMAPdenomIdx,			// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pMAPsensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpMAPpressureIdx,				// store resulting MAP sensor reading
+	instrStRegVariable, 0x02, m32MAPpressureIdx,		// store resulting MAP sensor reading
 #if defined(useChryslerBaroSensor)
 	instrDone											// exit to caller
 };
 
 static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
-	instrLdRegVoltage, 0x02, analogBaroChannelIdx,		// load analog channel ADC step value
-	instrSubMainFromX, 0x02, mpAnalogBaroFloorIdx,		// is reading below barometric sensor voltage floor?
+	instrLdRegVariable, 0x02, v16AnalogBaroChannelIdx,	// load analog channel ADC step value
+	instrSubVariableFromX, 0x02, m32AnalogBaroFloorIdx,	// is reading below barometric sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue
 	instrLdRegByte, 0x02, 0,							// zero out result in register 2
 
 //cont1:
-	instrMul2byMain, mpAnalogBaroNumerIdx,				// convert to obtain pressure units per volts value
-	instrDiv2byMain, mpAnalogBaroDenomIdx,				// divide by pressure units per volts value
+	instrMul2byVariable, m32AnalogBaroNumerIdx,			// convert to obtain pressure units per volts value
+	instrDiv2byVariable, m32AnalogBaroDenomIdx,			// divide by pressure units per volts value
 	instrAddEEPROMtoX, 0x02, pBaroSensorOffsetIdx,		// add pressure offset value from EEPROM
-	instrStRegMain, 0x02, mpBaroPressureIdx,			// store resulting barometric sensor reading
+	instrStRegVariable, 0x02, m32BaroPressureIdx,		// store resulting barometric sensor reading
 #endif // defined(useChryslerBaroSensor)
-	instrLdRegMain, 0x02, mpFuelPressureIdx,			// get fuel system differential pressure
-	instrAddMainToX, 0x02, mpBaroPressureIdx,			// add to reference barometric pressure to get fuel system absolute pressure
-	instrSubMainFromX, 0x02, mpMAPpressureIdx,			// subtract MAP to get differential pressure across the fuel injector
-	instrStRegMain, 0x02, mpInjPressureIdx,				// store differential pressure across the fuel injector
-	instrMul2byConst, idxCorrectionFactor2,				// set up for iSqrt
-	instrDiv2byMain, mpFuelPressureIdx,					// divide by the fuel system differential pressure
+	instrLdRegVariable, 0x02, m32FuelPressureIdx,		// get fuel system differential pressure
+	instrAddVariableToX, 0x02, m32BaroPressureIdx,		// add to reference barometric pressure to get fuel system absolute pressure
+	instrSubVariableFromX, 0x02, m32MAPpressureIdx,		// subtract MAP to get differential pressure across the fuel injector
+	instrStRegVariable, 0x02, m32InjPressureIdx,		// store differential pressure across the fuel injector
+	instrMul2byRdOnly, idxCorrectionFactor2,			// set up for iSqrt
+	instrDiv2byVariable, m32FuelPressureIdx,			// divide by the fuel system differential pressure
 	instrTestReg, 0x02,									// test whether overflow occurred
 	instrBranchIfOverflow, 6,							// if overflow occurred, go handle it
 	instrIsqrt, 0x02,									// perform square root on result
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
+	instrStRegVariable, 0x02, v32InjectorCorrectionIdx,	// save square root of presssure differential ratio as fuel injector correction factor
 	instrDone,											// return to caller
 
 //cont3:
-	instrLdRegConst, 0x02, idxCorrectionFactor,
-	instrStRegVolatile, 0x02, vInjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
+	instrLdRegRdOnly, 0x02, idxCorrectionFactor,
+	instrStRegVariable, 0x02, v32InjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 	instrDone											// return to caller
 };
 
@@ -719,7 +630,7 @@ static uint8_t pressureCorrect::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
+			text::statusOut(m8DevLCDidx, pressureCorrectDisplayTitles, cursorPos); // briefly display display name
 
 		case displayOutputIdx:
 			mainDisplay::outputPage(getPressureCorrectPageFormats, cursorPos, 136, 0);

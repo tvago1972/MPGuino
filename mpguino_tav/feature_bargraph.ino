@@ -7,7 +7,7 @@ static void bgFEvsSsupport::reset(void)
 
 	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
 
-	FEvSpdTripIdx = 255;
+	m08(m8FEvSpeedTripIdx) = 255;
 
 }
 
@@ -15,18 +15,20 @@ static void bgFEvsSsupport::reset(void)
 #if defined(useBarFuelEconVsTime)
 /* fuel economy over time histograph support section */
 
-static uint8_t bgFEvsTsupport::getFEvTperiodIdx(void)
+static uint8_t bgFEvsTsupport::getFEvTimeIdx(void)
 {
 
 	uint8_t oldSREG;
 	uint8_t retVal;
 
 	oldSREG = SREG; // save interrupt flag status
-	cli(); // disable interrupts
+	cli(); // disable interrupts to make the next operations atomic
 
-	retVal = FEvTperiodIdx;
+	retVal = v08(v8FEvTimeTripIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
+
+	retVal += FEvsTimePeriodIdx;
 
 	return retVal;
 
@@ -61,7 +63,7 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 
 //loop2:
 	instrTestReg, 0x03,									// is high value zero
-	instrBranchIfE, 42,									// if so, just store a zero - can't divide by zero
+	instrBranchIfE, 19,									// if so, just store a zero - can't divide by zero
 	instrCallImplied,									// go call input function
 	instrBranchIfNotE, 12,								// if function result is not zero, go skip
 	instrBranchIfOverflow, 5,
@@ -78,10 +80,10 @@ static const uint8_t prgmGenerateHistographData[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 
 //cont3:
-	instrStRegBGdataIndexed, 0x02,						// save normalized value
+	instrStRegVariableOffset, 0x02, m8BarGraphIdx, 		// save normalized value
 	instrAddIndex, 1,									// bump index up
 	instrCmpIndex, bgDataSize,							// processed through all of fuel econ vs time trip variable bank?
-	instrBranchIfLT, 225,								// if not, loop back
+	instrBranchIfLT, 224,								// if not, loop back
 	instrDone											// return to caller
 };
 
@@ -116,7 +118,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			line0CalcIdx = line1CalcIdx;
 			line0TripIdx = currentIdx;
 
-			line1TripIdx = bgFEvsTsupport::getFEvTperiodIdx();
+			line1TripIdx = bgFEvsTsupport::getFEvTimeIdx();
 			break;
 
 #endif // defined(useBarFuelEconVsTime)
@@ -124,7 +126,8 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
 
-			if (FEvSpdTripIdx < tripSlotCount) i = FEvSpdTripIdx - FEvsSpeedIdx + 1;
+			if (m08(m8FEvSpeedTripIdx) < tripSlotCount)
+				i = m08(m8FEvSpeedTripIdx) - FEvsSpeedIdx + 1;
 			else i = 0;
 
 			graphCursorPos = i - 1;
@@ -135,9 +138,9 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			if (i)
 			{
 
-				line0TripIdx = FEvSpdTripIdx;
+				line0TripIdx = m08(m8FEvSpeedTripIdx);
 
-				if (mainLoopHeartBeat & 0b11110001)
+				if (v08(v8HeartbeatBitmaskIdx) & 0b11110001)
 				{
 
 					line1CalcIdx = tSpeed;
@@ -172,7 +175,7 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 		case displayInitialEntryIdx:
 		case displayCursorUpdateIdx:
-			text::statusOut(devLCD, labelList, cursorPos); // briefly display screen name
+			text::statusOut(m8DevLCDidx, labelList, cursorPos); // briefly display screen name
 
 		case displayOutputIdx:
 			graphData(graphCursorPos, graphCalcIdx, differentialFlag);
@@ -193,11 +196,11 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 static void barGraphSupport::displayBarGraphLine(uint8_t lineNumber, uint8_t tripIdx, uint8_t calcIdx)
 {
 
-	text::stringOut(devLCD, bgSpaces, lineNumber);
+	text::stringOut(m8DevLCDidx, bgSpaces, lineNumber);
 
-	text::tripFunctionOut(devLCD, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
+	text::tripFunctionOut(m8DevLCDidx, tripIdx, calcIdx, (LCDcharWidth / 2) - 2, (dfOutputTag));
 
-	text::newLine(devLCD);
+	text::newLine(m8DevLCDidx);
 
 }
 
@@ -249,7 +252,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++) // this is for calculating the mean of the dataset
 	{
 
-		byt = bargraphData[(uint16_t)(x)];
+		byt = m08(x + m8BarGraphIdx);
 
 		switch (byt)
 		{
@@ -312,8 +315,8 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++)
 	{
 
-		byt = bargraphData[(uint16_t)(x)];
-		blinkFlag = ((x == cursorPos) && (mainLoopHeartBeat & 0b10001000));
+		byt = m08(x + m8BarGraphIdx);
+		blinkFlag = ((x == cursorPos) && (v08(v8HeartbeatBitmaskIdx) & 0b10001000));
 
 		switch (byt)
 		{

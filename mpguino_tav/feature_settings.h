@@ -26,9 +26,9 @@ static const uint8_t displayCountSettingsDisplay = 2
 #if defined(useLCDcontrast)
 	+ 1
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	+ 1
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 	+ 1
@@ -36,15 +36,18 @@ static const uint8_t displayCountSettingsDisplay = 2
 #if defined(useOutputPins)
 	+ 2
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	+ 1
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	+ 1
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
 	+ 1
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	+ 1
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	+ 1
 #endif // defined(useBarFuelEconVsTime)
@@ -57,6 +60,9 @@ static const uint8_t displayCountSettingsFuel = 5
 #if defined(useFuelPressure)
 	+ 1
 #endif // defined(useFuelPressure)
+#if defined(useSimulatedFIandVSS)
+	+ 2
+#endif // defined(useSimulatedFIandVSS)
 #ifdef useCalculatedFuelFactor
 	+ 3
 #endif // useCalculatedFuelFactor
@@ -121,9 +127,9 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 #if defined(useLCDcontrast)
 	"Contrast" tcEOSCR
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
 	"LCD BG Color" tcEOSCR
-#endif // defined(useAdafruitRGBLCDshield)
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
 #ifdef useImperialGallon
@@ -136,15 +142,18 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 	"OutPtPin 1 Mode" tcEOSCR
 	"OutPtPin 2 Mode" tcEOSCR
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
 	"V(diode)*1000" tcEOSCR
-#endif // defined(useCarVoltageOutput)
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
 	"DLogSerial 1-Yes" tcEOSCR
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
 	"JSONoutput 1-Yes" tcEOSCR
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	"BToutput 1-Yes" tcEOSCR
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
 	"FE/Time Period s" tcEOSCR
 #endif // defined(useBarFuelEconVsTime)
@@ -168,6 +177,10 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 	"Inj Delay (us)" tcEOSCR
 	"Revs/Inj Pulse" tcEOSCR
 	"Min good RPM" tcEOSCR
+#if defined(useSimulatedFIandVSS)
+	"SimFIpeakTime us" tcEOSCR
+	"SimFIpeakHi us" tcEOSCR
+#endif // defined(useSimulatedFIandVSS)
 
 // vehicle speed sensor settings
 
@@ -243,119 +256,126 @@ static const char settingsParameterList[] PROGMEM = {
 
 // display settings
 
-	 pMetricModeIdx
-	,pAlternateFEidx
+	pMetricModeIdx,
+	pAlternateFEidx,
 #if defined(useLCDoutput)
 #if defined(useLCDcontrast)
-	,pContrastIdx
+	pContrastIdx,
 #endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDshield)
-	,pLCDcolorIdx
-#endif // defined(useAdafruitRGBLCDshield)
+#if defined(useAdafruitRGBLCDdisplay)
+	pLCDcolorIdx,
+#endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	,pCostPerQuantity
+	pCostPerQuantity,
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	,pOutputPin1Mode
-	,pOutputPin2Mode
+	pOutputPin1Mode,
+	pOutputPin2Mode,
 #endif // defined(useOutputPins)
-#if defined(useCarVoltageOutput)
-	,pVoltageOffset
-#endif // defined(useCarVoltageOutput)
+#if defined(useAlternatorVoltage)
+	pVoltageOffset,
+#endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
-	,pSerialDataLoggingIdx
+	pSerialDataLoggingIdx,
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-	,pJSONoutputIdx
+	pJSONoutputIdx,
 #endif // defined(useJSONoutput)
+#if defined(useBluetooth)
+	pBluetoothOutputIdx,
+#endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-	,pFEvsTimeIdx
+	pFEvsTimeIdx,
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-	,pBarLowSpeedCutoffIdx
-	,pBarSpeedQuantumIdx
+	pBarLowSpeedCutoffIdx,
+	pBarSpeedQuantumIdx,
 #endif // defined(useBarFuelEconVsSpeed)
 
-// fuel injection settings
+// fuel injection settings,
 
 #if defined(useFuelPressure)
-	,pSysFuelPressureIdx
+	pSysFuelPressureIdx,
 #endif // defined(useFuelPressure)
-#ifdef useCalculatedFuelFactor
-	,pRefFuelPressureIdx
-	,pInjectorCountIdx
-	,pInjectorSizeIdx
-#endif // useCalculatedFuelFactor
-	,pMicroSecondsPerGallonIdx
-	,pInjEdgeTriggerIdx
-	,pInjectorSettleTimeIdx
-	,pInjPer2CrankRevIdx
-	,pMinGoodRPMidx
+#ifdef useCalculatedFuelFactor,
+	pRefFuelPressureIdx,
+	pInjectorCountIdx,
+	pInjectorSizeIdx,
+#endif // useCalculatedFuelFactor,
+	pMicroSecondsPerGallonIdx,
+	pInjEdgeTriggerIdx,
+	pInjectorSettleTimeIdx,
+	pInjPer2CrankRevIdx,
+	pMinGoodRPMidx,
+#if defined(useSimulatedFIandVSS)
+	pPeakHoldSimPeriodIdx,
+	pPeakHoldSimActiveIdx,
+#endif // defined(useSimulatedFIandVSS)
 
-// vehicle speed sensor settings
+// vehicle speed sensor settings,
 
-	,pPulsesPerDistanceIdx
-	,pVSSpauseIdx
-	,pMinGoodSpeedidx
+	pPulseEdgePerDistanceIdx,
+	pVSSpauseIdx,
+	pMinGoodSpeedidx,
 
-// fuel tank size settings
+// fuel tank size settings,
 
-	,pTankSizeIdx
-	,pTankBingoSizeIdx
+	pTankSizeIdx,
+	pTankBingoSizeIdx,
 
 #if defined(useChryslerMAPCorrection)
-// Chrysler MAP sensor settings
+// Chrysler MAP sensor settings,
 
-	,pMAPsensorFloorIdx
-	,pMAPsensorCeilingIdx
-	,pMAPsensorRangeIdx
-	,pMAPsensorOffsetIdx
+	pMAPsensorFloorIdx,
+	pMAPsensorCeilingIdx,
+	pMAPsensorRangeIdx,
+	pMAPsensorOffsetIdx,
 #if defined(useChryslerBaroSensor)
-	,pBaroSensorFloorIdx
-	,pBaroSensorCeilingIdx
-	,pBaroSensorRangeIdx
-	,pBaroSensorOffsetIdx
+	pBaroSensorFloorIdx,
+	pBaroSensorCeilingIdx,
+	pBaroSensorRangeIdx,
+	pBaroSensorOffsetIdx,
 #else // defined(useChryslerBaroSensor)
-	,pBarometricPressureIdx
+	pBarometricPressureIdx,
 #endif // defined(useChryslerBaroSensor)
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-// drag race / coastdown calc settings
+// drag race / coastdown calc settings,
 
-	,pVehicleMassIdx
+	pVehicleMassIdx,
 #if defined(useCoastDownCalculator)
-	,pVehicleFrontalAreaIdx
-	,pLocustDensityIdx
-	,pCoefficientDidx
-	,pCoefficientVidx
-	,pCoefficientRRidx
-	,pCoastdownSamplePeriodIdx
+	pVehicleFrontalAreaIdx,
+	pLocustDensityIdx,
+	pCoefficientDidx,
+	pCoefficientVidx,
+	pCoefficientRRidx,
+	pCoastdownSamplePeriodIdx,
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
-	,pDragSpeedIdx
-	,pDragDistanceIdx
-	,pDragAutoFlagIdx
+	pDragSpeedIdx,
+	pDragDistanceIdx,
+	pDragAutoFlagIdx,
 #endif // defined(useDragRaceFunction)
 
 #endif // defined(useVehicleParameters)
-// timeout settings
+// timeout settings,
 
-	,pIdleTimeoutIdx
-	,pEOCtimeoutIdx
-	,pButtonTimeoutIdx
-	,pParkTimeoutIdx
-	,pActivityTimeoutIdx
-	,pWakeupResetCurrentOnEngineIdx
-	,pWakeupResetCurrentOnMoveIdx
+	pIdleTimeoutIdx,
+	pEOCtimeoutIdx,
+	pButtonTimeoutIdx,
+	pParkTimeoutIdx,
+	pActivityTimeoutIdx,
+	pWakeupResetCurrentOnEngineIdx,
+	pWakeupResetCurrentOnMoveIdx,
 #if defined(useSavedTrips)
-	,pAutoSaveActiveIdx
+	pAutoSaveActiveIdx,
 #endif // defined(useSavedTrips)
 
-// miscellaneous settings
+// miscellaneous settings,
 
-	,pScratchpadIdx
+	pScratchpadIdx,
 };
 
 #endif // defined(useButtonInput)
@@ -378,7 +398,6 @@ namespace parameterEdit /* parameter editor/entry section prototype */
 {
 
 	static uint8_t sharedFunctionCall(uint8_t cmd);
-	static uint8_t onEEPROMchange(const uint8_t * sched, uint8_t parameterIdx);
 #if defined(useButtonInput)
 	static uint8_t menuHandler(uint8_t cmd, uint8_t cursorPos);
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);

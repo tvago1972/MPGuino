@@ -1,4 +1,4 @@
-#if defined(__AVR_ATmega32U4__)
+#if defined(__AVR_ATmega32U4__) && false
 static void usbSupport::init(void)
 {
 
@@ -85,13 +85,9 @@ static void usbDevice::init(void)
 
 	UDIEN = ((1 << EORSTE) | (1 << SOFE)); // enable End-Of-Reset, Start-Of-Frame interrupts
 
-	ringBuffer::init(USBoutputBuffer, USBoutputData);
-	ringBuffer::init(USBinputBuffer, USBinputData);
-
-	devUSB.chrOut = chrOut;
-	devUSB.chrIn = chrIn;
-
 	SREG = oldSREG; // restore interrupt flag status
+
+	text::initDev(m8DevUSBidx, 0, chrOut, chrIn);
 
 }
 
@@ -122,14 +118,23 @@ static void usbDevice::shutdown(void)
 static void usbDevice::chrOut(uint8_t chr)
 {
 
-	ringBuffer::push(USBoutputBuffer, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxUSBout, bufferIsFull)) heart::performSleepMode(SLEEP_MODE_IDLE); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxUSBout, chr);
+
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 
 static uint8_t usbDevice::chrIn(void)
 {
 
-	return ringBuffer::pull(USBinputBuffer);
+	return ringBuffer::pull(rbIdxUSBin);
 
 }
 

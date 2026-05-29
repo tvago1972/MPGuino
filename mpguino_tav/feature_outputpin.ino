@@ -31,12 +31,12 @@ static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
 	instrCmpIndex, 6,									// outputting remaining value?
 	instrBranchIfE, 7,									// go do conversion if so
 	instrLdReg, 0x21,									// shift contents to register 1
-	instrLdRegMain, 0x02, mpTankSizeIdx,				// fetch calculated tank size in injector open cycles
+	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrSubYfromX, 0x12,								// subtract remaining fuel value from tank size
 
 //analogOut2:
 	instrMul2byByte, 255,								// multiply tank quantity by 255
-	instrDiv2byMain, mpTankSizeIdx,						// divide by calculated tank size
+	instrDiv2byVariable, m64TankSizeIdx,				// divide by calculated tank size
 	instrDone,											// return to caller
 
 // US (inst FE > accumulated FE) = /(inst FE <= accumulated FE)
@@ -102,16 +102,16 @@ static void outputPin::init(void)
 
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-	// set OC1B to clear-up/set-down for EXP1 option pin
-	TCCR1A &= ~(1 << COM1B0);
-	TCCR1A |= (1 << COM1B1);
+	// set OC5A to clear-up/set-down for EXP1 option pin
+	TCCR5A &= ~(1 << COM5A0);
+	TCCR5A |= (1 << COM5A1);
 
-	// set OC2A to clear-up/set-down for EXP2 option pin
-	TCCR2A &= ~(1 << COM2A0);
-	TCCR2A |= (1 << COM2A1);
+	// set OC5B to clear-up/set-down for EXP2 option pin
+	TCCR5A &= ~(1 << COM5B0);
+	TCCR5A |= (1 << COM5B1);
 
 	// enable EXP1 and EXP2 option pin outputs
-	DDRB |= ((1 << DDB6) | (1 << DDB4));
+	DDRL |= ((1 << DDL4) | (1 << DDL3));
 
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
@@ -152,13 +152,13 @@ static void outputPin::shutdown(void)
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 	// disable expansion pin output
-	DDRB &= ~((1 << DDB6) | (1 << DDB4));
+	DDRL &= ~((1 << DDL4) | (1 << DDL3));
 
-	// set OC1B to disabled for EXP1 option pin
-	TCCR1A &= ~((1 << COM1B1) | (1 << COM1B0));
+	// set OC5A to disabled for EXP1 option pin
+	TCCR5A &= ~(_BV(COM5A1) | _BV(COM5A0));
 
-	// set OC2A to disabled for EXP2 option pin
-	TCCR2A &= ~((1 << COM2A1) | (1 << COM2A0));
+	// set OC5B to disabled for EXP2 option pin
+	TCCR5A &= ~(_BV(COM5B1) | _BV(COM5B0));
 
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
@@ -185,7 +185,7 @@ static void outputPin::setOutputPin1(uint8_t pin)
 	OCR4A = val;
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-	OCR1B = val;
+	OCR5A = val;
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 	OCR1B = val;
@@ -203,7 +203,7 @@ static void outputPin::setOutputPin2(uint8_t pin)
 	OCR4D = val;
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-	OCR2A = val;
+	OCR5B = val;
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 	OCR2A = val;
