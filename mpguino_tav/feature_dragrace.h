@@ -17,7 +17,7 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 	instrTestReg, 0x02,									// test regular half speed register elapsed time
 	instrBranchIfZero, 4,								// if zero, then perform copy
 	instrCmpXtoY, 0x21,									// compare raw half speed elapsed time to regular half speed elapsed time
-	instrBranchIfGT, 8,									// if raw half speed elapsed time is smaller than regular half speed elapsed time, skip
+	instrBranchIfGT, 8,									// if regular half speed elapsed time is greater than raw half speed elapsed time, skip
 
 //copyHalfSpeed:
 	instrLxdI, dragRawHalfSpeedIdx,						// transfer accel test raw half speed trip to accel test half speed trip
@@ -45,7 +45,7 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
 	instrBranchIfZero, 16,								// if zero, then perform copy
 	instrLdRegTripVar, 0x01, dragRawDistanceIdx, rvVSScycleIdx,	// load raw distance register elapsed time
-	instrLdRegTripVar, 0x02, dragDistanceIdx, rvVSScycleIdx,		// load regular distance register elapsed time
+	instrLdRegTripVar, 0x02, dragDistanceIdx, rvVSScycleIdx,	// load regular distance register elapsed time
 	instrTestReg, 0x02,									// test regular distance register elapsed time
 	instrBranchIfZero, 4,								// if zero, then perform copy
 	instrCmpXtoY, 0x21,									// compare raw distance elapsed time to regular distance elapsed time
@@ -60,15 +60,15 @@ static const uint8_t prgmTransferAccelTestTrips[] PROGMEM = {
 //cont3:
 	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag
 	instrBranchIfZero, 14,								// if zero, then perform copy
-	instrLdRegVariable, 0x02, v32DragRawInstantSpeedIdx,	// load raw top speed
-	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load regular top speed
+	instrLdRegVariable, 0x02, v32DragRawTopSpeedIdx,	// load raw top speed
+	instrLdRegVariable, 0x01, m32DragTopSpeedIdx,		// load regular top speed
 	instrTestReg, 0x01,									// test regular top speed
 	instrBranchIfZero, 4,								// if zero, then perform copy
 	instrCmpXtoY, 0x21,									// compare raw top speed to regular top speed
 	instrBranchIfGT, 3,									// if raw top speed is smaller than regular top speed, skip
 
 //copyTopSpeed:
-	instrStRegVariable, 0x02, m32DragInstantSpeedIdx,	// store raw top speed value to regular top speed
+	instrStRegVariable, 0x02, m32DragTopSpeedIdx,		// store raw top speed value to regular top speed
 
 //cont4:
 	instrLdRegEEPROM, 0x01, pDragAutoFlagIdx,			// fetch accel test autotrigger flag

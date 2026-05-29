@@ -29,7 +29,7 @@ MM                - output selected EEPROM parameter values
 MR                - reset current trip and save to EEPROM
 MT                - reset tank trip (and partial, if configured) and save to EEPROM
 !                 - initialize and output selected trip functions
-RdddddddddddK     - store pPulsesPerDistanceIdx value to EEPROM
+RdddddddddddK     - store pPulseEdgePerDistanceIdx value to EEPROM
 SdddddddddddK     - store pMicroSecondsPerGallonIdx value to EEPROM
 TdddddddddddK     - store pInjPer2CrankRevIdx value to EEPROM
 UdddddddddddK     - store pMetricModeIdx value to EEPROM
@@ -59,7 +59,7 @@ Lddddddddddd      - Current fuel quantity consumed
 
 output set from MM command
 --------------------------
-Rddddddddddd      - pPulsesPerDistanceIdx
+Rddddddddddd      - pPulseEdgePerDistanceIdx
 Sddddddddddd      - pMicroSecondsPerGallonIdx
 Tddddddddddd      - pInjPer2CrankRevIdx
 Uddddddddddd      - pMetricModeIdx
@@ -71,24 +71,26 @@ Zddddddddddd      - pVoltageOffset
 
 */
 
-static uint8_t btInputState;
-
+// the following flags are for use with m8btInputStateIdx
+//
 static const uint8_t btiResetFlag =				0b10000000;
 static const uint8_t btiStringInput =			0b01000000;
 static const uint8_t btiGetSecondaryCharacter =	0b00100000;
 static const uint8_t btiAllowPolling =			0b00010000;
 
-static uint8_t btOutputState;
-
 static const uint8_t btoFlagActiveOutput =		0b10000000;
 static const uint8_t btoFlagSingleShotOutput =	0b01000000;
 static const uint8_t btoFlagContinuousOutput =	0b00100000;
-static const uint8_t btoFlagDelay =				0b00010000;
-static const uint8_t btoFlagFlushBuffer =		0b00001000;
+static const uint8_t btoFlagFlushBuffer =		0b00010000;
+static const uint8_t btoFlagDelay =				0b00001000;
+static const uint8_t btoFlagDelayInit20ms =		0b00000100;
+static const uint8_t btoFlagDelayInit500ms =	0b00000010;
 
 static const uint8_t btoOutputFlags =			(btoFlagActiveOutput | btoFlagSingleShotOutput | btoFlagContinuousOutput | btoFlagDelay | btoFlagFlushBuffer);
 static const uint8_t btoOutputEnabledFlags =	(btoFlagSingleShotOutput | btoFlagContinuousOutput);
 static const uint8_t btoOutputActiveFlags =		(btoFlagActiveOutput | btoFlagDelay | btoFlagFlushBuffer);
+static const uint8_t btoDelayInitFlags =		(btoFlagDelayInit20ms | btoFlagDelayInit500ms);
+static const uint8_t btoDelayFlags =			(btoDelayInitFlags | btoFlagDelay);
 
 static uint8_t btOutputListIdx;
 
@@ -123,7 +125,7 @@ static const bluetoothFunction btFunctionList[] PROGMEM = {
 #if defined(usePartialRefuel)
 	{'@',	((pRefuelSizeIdx << 8 ) |				(tGetBTparameterValue))},
 #endif // defined(usePartialRefuel)
-	{'R',	((pPulsesPerDistanceIdx << 8 ) |		(tGetBTparameterValue))},
+	{'R',	((pPulseEdgePerDistanceIdx << 8 ) |		(tGetBTparameterValue))},
 	{'S',	((pMicroSecondsPerGallonIdx << 8 ) |	(tGetBTparameterValue))},
 	{'T',	((pInjPer2CrankRevIdx << 8 ) |			(tGetBTparameterValue))},
 	{'U',	((pMetricModeIdx << 8 ) |				(tGetBTparameterValue))},

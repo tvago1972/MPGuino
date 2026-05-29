@@ -118,7 +118,16 @@ static void usbDevice::shutdown(void)
 static void usbDevice::chrOut(uint8_t chr)
 {
 
-	ringBuffer::pushMain(rbIdxUSBout, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxUSBout, bufferIsFull)) heart::performSleepMode(SLEEP_MODE_IDLE); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxUSBout, chr);
+
+	SREG = oldSREG; // restore interrupt flag status
 
 }
 

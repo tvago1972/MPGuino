@@ -10,13 +10,6 @@
 
 */
 
-static uint32_t SWEET64::doCalculate(uint8_t tripIdx, uint8_t calcIdx)
-{
-
-	return runPrgm((const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(calcIdx)])), tripIdx);
-
-}
-
 static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 {
 
@@ -24,9 +17,13 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	union union_32 * iLW = (union union_32 *)(&instrLWord);
 
 #if defined(useDebugCPUreading)
-	activity::record(arSWEET64, 0);
+	m32(m32DbgWorkingS64StartIdx) = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+	activityLED::assert(arSWEET64);
+
+#endif // defined(useActivityLED)
 	s64reg8[(uint16_t)(si64reg8trip)] = tripIdx; // store user-provided trip index value
 	s64reg8[(uint16_t)(si64reg8flags)] = 0; // initialize processor flags
 	s64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize stack pointer
@@ -45,11 +42,15 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	}
 	while (s64reg8[(uint16_t)(si64reg8valid)]);
 
+#if defined(useActivityLED)
+	activityLED::release(arSWEET64);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-	activity::record(0, arSWEET64);
+	m32(m32DbgWorkingS64processIdx) += heart::getCycle0Length(m32DbgWorkingS64StartIdx);
 
 #endif // defined(useDebugCPUreading)
-	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->ul[0];
+	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u32[0];
 
 }
 
@@ -59,23 +60,23 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 	uint8_t isValid;
 	uint8_t reg;
 
-	if (prgmPtr) instrLWord->u8[0] = pgm_read_byte(prgmPtr++); // read opcode byte
+	if (prgmPtr) instrLWord->u08[0] = pgm_read_byte(prgmPtr++); // read opcode byte
 
-	if (instrLWord->u8[0] < maxValidSWEET64instr) // if opcode byte is valid
+	if (instrLWord->u08[0] < maxValidSWEET64instr) // if opcode byte is valid
 	{
 
 		isValid = s64vRegisterOperation; // initially assume this instruction deals with 64-bit registers
 
-		instrLWord->ui[0] = pgm_read_word(&opcodeFetchWord[(uint16_t)(instrLWord->u8[0])]); // read expanded opcode word
-		instrLWord->ui[1] = 0; // reset 64-bit register byte definitions
+		instrLWord->u16[0] = pgm_read_word(&opcodeFetchWord[(uint16_t)(instrLWord->u08[0])]); // read expanded opcode word
+		instrLWord->u16[1] = 0; // reset 64-bit register byte definitions
 
-		switch (instrLWord->u8[1] & rxxMask) // categorize opcode according to how it accesses the 64 bit registers
+		switch (instrLWord->u08[1] & rxxMask) // categorize opcode according to how it accesses the 64 bit registers
 		{
 
 			case r00:	// do not fetch register operand
 				isValid &= ~(s64vRegisterOperation); // this instruction does not deal with 64-bit registers
 				isValid |= (s64vReadInRegisterByte); // must ensure that isValid remains non-zero ("register byte read in" is nonsensical with no "register operation" flag)
-				if (instrLWord->u8[0] < eMaxBranchInstrIdx) isValid |= (s64vRelativeOperand);
+				if (instrLWord->u08[0] < eMaxBranchInstrIdx) isValid |= (s64vRelativeOperand);
 				break;
 
 			case r01:	// fetch rX and rY from program
@@ -156,7 +157,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 					{
 
 
-						if (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) reg >>= 4; // if in metric mode, shift rY into rX
+						if (m08(m8MetricModeFlags) & mmDisplayMetric) reg >>= 4; // if in metric mode, shift rY into rX
 						else reg &= 0x0F; // otherwise, throw rY away and keep rX
 
 						s64operands[(uint16_t)(s64oprRegXY)] = reg;
@@ -178,13 +179,13 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 
 			if (isValid & s64vRegisterOperation)
 			{
-				instrLWord->u8[2] = instrLWord->u8[0] & ixxMask;
-				instrLWord->u8[3] = instrLWord->u8[0] & mxxMask;
+				instrLWord->u08[2] = instrLWord->u08[0] & ixxMask;
+				instrLWord->u08[3] = instrLWord->u08[0] & mxxMask;
 			}
 
 			s64operands[(uint16_t)(s64oprPrimary)] = 0;
 
-			switch (instrLWord->u8[1] & pxxMask) // pull primary operand to work with
+			switch (instrLWord->u08[1] & pxxMask) // pull primary operand to work with
 			{
 
 				case p00:	// do not fetch primary operand
@@ -215,7 +216,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 
 			s64operands[(uint16_t)(s64oprExtra)] = 0;
 
-			switch (instrLWord->u8[1] & sxxMask) // pull extra operand to work with
+			switch (instrLWord->u08[1] & sxxMask) // pull extra operand to work with
 			{
 
 				case s00:	// do not fetch secondary operand
@@ -292,7 +293,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 		branchFlag = false;
 
 		// perform supplemental opcode parsing, and set up to disable interrupts according to instruction and operand index value
-		switch (instrLWord->u8[2])
+		switch (instrLWord->u08[2])
 		{
 
 			case i18:	// load rX with trip variable
@@ -379,7 +380,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 		}
 
-		switch (instrLWord->u8[2]) // perform load or store operation, according to ixx
+		switch (instrLWord->u08[2]) // perform load or store operation, according to ixx
 		{
 
 			case i00:	// do nothing
@@ -440,23 +441,23 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				{
 
 					case v8VariableStartIdx:
-						volatile8Variables[(uint16_t)(operand)] = regX->u8[0];
+						volatile8Variables[(uint16_t)(operand)] = regX->u08[0];
 						break;
 
 					case m8VariableStartIdx:
-						mainProgram8Variables[(uint16_t)(operand)] = regX->u8[0];
+						mainProgram8Variables[(uint16_t)(operand)] = regX->u08[0];
 						break;
 
 					case v16VariableStartIdx:
-						volatile16Variables[(uint16_t)(operand)] = regX->ui[0];
+						volatile16Variables[(uint16_t)(operand)] = regX->u16[0];
 						break;
 
 					case v32VariableStartIdx:
-						volatile32Variables[(uint16_t)(operand)] = regX->ul[0];
+						volatile32Variables[(uint16_t)(operand)] = regX->u32[0];
 						break;
 
 					case m32VariableStartIdx:
-						mainProgram32Variables[(uint16_t)(operand)] = regX->ul[0];
+						mainProgram32Variables[(uint16_t)(operand)] = regX->u32[0];
 						break;
 
 					case m64VariableStartIdx:
@@ -496,7 +497,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				if (operand >= bgDataSize) operand = 0; // shift index
 				operand++;
 
-				operand += volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)]; // add to trip variable value
+				operand += v08(v8FEvTimeTripIdx); // add to trip variable value
 				if (operand >= bgDataSize) operand -= bgDataSize; // perform wrap-around if required
 
 				operand += FEvsTimePeriodIdx; // shift back into trip index space
@@ -560,7 +561,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					{
 
 						case rvInjPulseIdx:
-							if (operand < tripSlotFullCount) collectedInjPulseCount[(uint16_t)(operand)] = regX->ul[0];
+							if (operand < tripSlotFullCount) collectedInjPulseCount[(uint16_t)(operand)] = regX->u32[0];
 							break;
 
 						case rvVSScycleIdx:
@@ -572,7 +573,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 							break;
 
 						case rvVSSpulseIdx:
-							collectedVSSpulseCount[(uint16_t)(operand)] = regX->ul[0];
+							collectedVSSpulseCount[(uint16_t)(operand)] = regX->u32[0];
 							break;
 
 						case rvInjCycleIdx:
@@ -633,14 +634,14 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 #if defined(useIsqrt)
 			case i28:	// integer square root
 #if defined(useDebugCPUreading)
-				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
+				m32(m32DbgWorkingMathStartIdx) = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
-				regX->ul[0] = iSqrt(regX->ul[0]);
+				regX->u32[0] = iSqrt(regX->u32[0]);
 #if defined(useDebugCPUreading)
 
-				mainProgram32Variables[(uint16_t)(m32DebugAccS64sqrtIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx, heart::cycles0());
-				mainProgram32Variables[(uint16_t)(m32DebugCountS64sqrtIdx - m32VariableStartIdx)]++;
+				m32(m32DebugAccS64sqrtIdx) += heart::getCycle0Length(m32DbgWorkingMathStartIdx);
+				m32(m32DebugCountS64sqrtIdx)++;
 
 #endif // defined(useDebugCPUreading)
 				break;
@@ -670,8 +671,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				instr = pgm_read_byte(++s64BCDptr); // fetch total BCD byte length
 				extra = pgm_read_byte(++s64BCDptr); // fetch divisor string length
 
-				regX->u8[7] = operand; // store leading zero character
-				regX->u8[6] = instr; // store total BCD byte length
+				regX->u08[7] = operand; // store leading zero character
+				regX->u08[6] = instr; // store total BCD byte length
 
 				if (operand) // if this is a non-zero leading zero character
 				{
@@ -681,8 +682,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 						operand = pgm_read_byte(++s64BCDptr); // get indexed divisor
 
-						regX->u8[(uint16_t)(--instr)] = (uint8_t)(regY->ul[0] % operand); // put result of (source register) mod divisor into indexed byte of (target register)
-						regY->ul[0] /= operand; // divide (source register) by divisor
+						regX->u08[(uint16_t)(--instr)] = (uint8_t)(regY->u32[0] % operand); // put result of (source register) mod divisor into indexed byte of (target register)
+						regY->u32[0] /= operand; // divide (source register) by divisor
 
 					}
 
@@ -698,7 +699,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 		if (branchFlag) SREG = oldSREG; // restore interrupt flag status
 
-		switch (instrLWord->u8[3]) // perform basic arithmetic operation, given mxx
+		switch (instrLWord->u08[3]) // perform basic arithmetic operation, given mxx
 		{
 
 			case m00:	// non-arithmetic
@@ -722,28 +723,28 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 			case m05:	// multiply		r2 = r2 * r5
 #if defined(useDebugCPUreading)
-				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
+				m32(m32DbgWorkingMathStartIdx) = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
 				mult64(prgmReg64);
 #if defined(useDebugCPUreading)
 
-				mainProgram32Variables[(uint16_t)(m32DebugAccS64multIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx, heart::cycles0());
-				mainProgram32Variables[(uint16_t)(m32DebugCountS64multIdx - m32VariableStartIdx)]++;
+				m32(m32DebugAccS64multIdx) += heart::getCycle0Length(m32DbgWorkingMathStartIdx);
+				m32(m32DebugCountS64multIdx)++;
 
 #endif // defined(useDebugCPUreading)
 				break;
 
 			case m06:	// divide		r2 = r2 / r5 rmdr r1 and qadj r5
 #if defined(useDebugCPUreading)
-				mainProgram32Variables[(uint16_t)(m32DbgWorkingMathStartIdx - m32VariableStartIdx)] = heart::cycles0();
+				m32(m32DbgWorkingMathStartIdx) = heart::cycles0();
 
 #endif // defined(useDebugCPUreading)
 				div64(prgmReg64);
 #if defined(useDebugCPUreading)
 
-				mainProgram32Variables[(uint16_t)(m32DebugAccS64divIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMathStartIdx - m32VariableStartIdx, heart::cycles0());
-				mainProgram32Variables[(uint16_t)(m32DebugCountS64divIdx - m32VariableStartIdx)]++;
+				m32(m32DebugAccS64divIdx) += heart::getCycle0Length(m32DbgWorkingMathStartIdx);
+				m32(m32DebugCountS64divIdx)++;
 
 #endif // defined(useDebugCPUreading)
 				break;
@@ -761,7 +762,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 		if (isValid & s64vRelativeOperand) // instruction is a conditional branching instruction
 		{
 
-			switch (instrLWord->u8[0])
+			switch (instrLWord->u08[0])
 			{
 
 				case e01:	// instrBranchIfGTorE
@@ -805,19 +806,19 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					break;
 
 				case e11:	// instrBranchIfMetricMode
-					branchFlag = (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric);
+					branchFlag = (m08(m8MetricModeFlags) & mmDisplayMetric);
 					break;
 
 				case e12:	// instrBranchIfSAEmode
-					branchFlag = ((mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) == 0);
+					branchFlag = ((m08(m8MetricModeFlags) & mmDisplayMetric) == 0);
 					break;
 
 				case e13:	// instrBranchIfFuelOverDist (L/100km or G/100mi)
-					branchFlag = (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE);
+					branchFlag = (m08(m8MetricModeFlags) & mmDisplayAlternateFE);
 					break;
 
 				case e14:	// instrBranchIfDistOverFuel (MPG or KPL)
-					branchFlag = ((mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE) == 0);
+					branchFlag = ((m08(m8MetricModeFlags) & mmDisplayAlternateFE) == 0);
 					break;
 
 				case e15:	// instrSkip
@@ -842,7 +843,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 		else // instruction is not a conditional branching instruction
 		{
 
-			switch (instrLWord->u8[0])
+			switch (instrLWord->u08[0])
 			{
 
 				case e18:	// instrTestIndex
@@ -920,7 +921,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 				case e30:	// clear register flag
 				case e31:	// set register flag
-					flagSet((instrLWord->u8[0] == e31), operand);
+					flagSet((instrLWord->u08[0] == e31), operand);
 					break;
 
 				default:	// invalid sxx code detected, exit program
@@ -929,7 +930,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 			}
 
-			switch (instrLWord->u8[0]) // this is to allow multiple instructions to test the index register
+			switch (instrLWord->u08[0]) // this is to allow multiple instructions to test the index register
 			{
 
 				case e23:	// load index
@@ -991,7 +992,7 @@ static void SWEET64::copy64(union union_64 * an, union union_64 * ann) // an = a
 		: "e" (ann)
 	);
 #else // defined(useAssemblyLanguage)
-	for (uint8_t x = 0; x < 4; x++) an->ui[(uint16_t)(x)] = ann->ui[(uint16_t)(x)];
+	for (uint8_t x = 0; x < 4; x++) an->u16[(uint16_t)(x)] = ann->u16[(uint16_t)(x)];
 #endif // defined(useAssemblyLanguage)
 
 }
@@ -1019,9 +1020,9 @@ static void SWEET64::swap64(union union_64 * an, union union_64 * ann) // swap a
 	for (x = 0; x < 4; x++)
 	{
 
-		aing = ann->ui[(uint16_t)(x)];
-		ann->ui[(uint16_t)(x)] = an->ui[(uint16_t)(x)];
-		an->ui[(uint16_t)(x)] = aing;
+		aing = ann->u16[(uint16_t)(x)];
+		ann->u16[(uint16_t)(x)] = an->u16[(uint16_t)(x)];
+		an->u16[(uint16_t)(x)] = aing;
 
 	}
 #endif // defined(useAssemblyLanguage)
@@ -1065,19 +1066,19 @@ static void SWEET64::shr64(union union_64 * an)
 	for (x = 7; x < 8; x--)
 	{
 
-		n->u8[1] = an->u8[(uint16_t)(x)];
-		n->u8[0] = 0;
+		n->u08[1] = an->u08[(uint16_t)(x)];
+		n->u08[0] = 0;
 		enn >>= 1;
 		m = c;
-		m |= n->u8[1];
-		c = n->u8[0];
-		an->u8[(uint16_t)(x)] = m;
+		m |= n->u08[1];
+		c = n->u08[0];
+		an->u08[(uint16_t)(x)] = m;
 		z |= m;
 
 	}
 
 #endif // defined(useAssemblyLanguage)
-	m = an->u8[7];
+	m = an->u08[7];
 
 	flagSet64(m, z, c);
 
@@ -1121,13 +1122,13 @@ static void SWEET64::shl64(union union_64 * an)
 	for (x = 0; x < 8; x++)
 	{
 
-		n->u8[0] = an->u8[(uint16_t)(x)];
-		n->u8[1] = 0;
+		n->u08[0] = an->u08[(uint16_t)(x)];
+		n->u08[1] = 0;
 		enn <<= 1;
 		m = c;
-		m |= n->u8[0];
-		c = n->u8[1];
-		an->u8[(uint16_t)(x)] = m;
+		m |= n->u08[0];
+		c = n->u08[1];
+		an->u08[(uint16_t)(x)] = m;
 		z |= m;
 
 	}
@@ -1187,13 +1188,13 @@ static void SWEET64::adc64(union union_64 * an, union union_64 * ann)
 	for (x = 0; x < 8; x++)
 	{
 
-		n->u8[0] = c;
-		n->u8[1] = 0;
-		enn += an->u8[(uint16_t)(x)];
-		enn += ann->u8[(uint16_t)(x)];
-		m = n->u8[0];
-		c = n->u8[1];
-		an->u8[(uint16_t)(x)] = m;
+		n->u08[0] = c;
+		n->u08[1] = 0;
+		enn += an->u08[(uint16_t)(x)];
+		enn += ann->u08[(uint16_t)(x)];
+		m = n->u08[0];
+		c = n->u08[1];
+		an->u08[(uint16_t)(x)] = m;
 		z |= m;
 
 	}
@@ -1256,13 +1257,13 @@ static void SWEET64::sbc64(union union_64 * an, union union_64 * ann, uint8_t sb
 	for (x = 0; x < 8; x++)
 	{
 
-		n->u8[1] = c;
-		n->u8[0] = c;
-		enn += an->u8[(uint16_t)(x)];
-		enn -= ann->u8[(uint16_t)(x)];
-		m = n->u8[0];
-		c = n->u8[1];
-		if (sbcFlag) an->u8[(uint16_t)(x)] = m;
+		n->u08[1] = c;
+		n->u08[0] = c;
+		enn += an->u08[(uint16_t)(x)];
+		enn -= ann->u08[(uint16_t)(x)];
+		m = n->u08[0];
+		c = n->u08[1];
+		if (sbcFlag) an->u08[(uint16_t)(x)] = m;
 		z |= m;
 
 	}
@@ -1305,7 +1306,7 @@ static void SWEET64::registerTest64(union union_64 * an)
 	for (x = 0; x < 8; x++)
 	{
 
-		m = an->u8[(uint16_t)(x)];
+		m = an->u08[(uint16_t)(x)];
 		z |= m;
 		if (m != 0xFF) v = 1;
 
@@ -1462,7 +1463,7 @@ static void SWEET64::mult64(uint64_t * prgmReg64)
 		for (uint8_t x = 0; x <= m; x++)
 		{
 
-			enn = multiplier->u8[(uint16_t)(x)] * multiplicand->u8[(uint16_t)(m - x)];
+			enn = multiplier->u08[(uint16_t)(x)] * multiplicand->u08[(uint16_t)(m - x)];
 
 			c = 0;
 
@@ -1472,18 +1473,18 @@ static void SWEET64::mult64(uint64_t * prgmReg64)
 				if (m + i < 8)
 				{
 
-					p->u8[0] = c;
-					p->u8[1] = 0;
-					pee += an->u8[(uint16_t)(m + i)];
-					pee += n->u8[(uint16_t)(i)];
-					an->u8[(uint16_t)(m + i)] = p->u8[0];
-					c = p->u8[1];
+					p->u08[0] = c;
+					p->u08[1] = 0;
+					pee += an->u08[(uint16_t)(m + i)];
+					pee += n->u08[(uint16_t)(i)];
+					an->u08[(uint16_t)(m + i)] = p->u08[0];
+					c = p->u08[1];
 
 				}
 
 			}
 
-			if ((c) && (m < 6)) an->u8[(uint16_t)(m + 2)]++;
+			if ((c) && (m < 6)) an->u08[(uint16_t)(m + 2)]++;
 
 		}
 
@@ -1736,7 +1737,7 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 		x = 64;							// start off with a dividend size of 64 bits
 
 		y = 7; //
-		while ((x) && (an->u8[(uint16_t)(y)] == 0))		// examine dividend for leading zero bytes
+		while ((x) && (an->u08[(uint16_t)(y)] == 0))		// examine dividend for leading zero bytes
 		{
 
 			y--;						// if this byte is zero, skip to look at next byte
@@ -1750,8 +1751,8 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 			for (z = 7; z < 8; z--)
 			{
 
-				if (y < 7) an->u8[(uint16_t)(z)] = an->u8[(uint16_t)(y)];
-				else an->u8[(uint16_t)(z)] = 0;
+				if (y < 7) an->u08[(uint16_t)(z)] = an->u08[(uint16_t)(y)];
+				else an->u08[(uint16_t)(z)] = 0;
 				y--;
 
 			}
@@ -1770,9 +1771,9 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 			if (s) adc64(ann, divisor); // add M to A if previous operation resulted in A < 0
 			else sbc64(ann, divisor, 1); // subtract M from A if previous operation resulted in A >= 0
 
-			s = (ann->u8[7] & 0x80); // get previous operation sign bit
+			s = (ann->u08[7] & 0x80); // get previous operation sign bit
 
-			if (s == 0) an->u8[0] |= 0x01; // if previous operation resulted in A >= 0, then adjust quotient
+			if (s == 0) an->u08[0] |= 0x01; // if previous operation resulted in A >= 0, then adjust quotient
 
 			x--; // reduce dividend bit count by one
 
@@ -1952,8 +1953,8 @@ static void SWEET64::init64byt(union union_64 * an, uint8_t byt)
 		: "r" (byt)
 	);
 #else // defined(useAssemblyLanguage)
-	for (uint8_t x = 1; x < 8; x++) an->u8[(uint16_t)(x)] = 0;
-	an->u8[0] = byt;
+	for (uint8_t x = 1; x < 8; x++) an->u08[(uint16_t)(x)] = 0;
+	an->u08[0] = byt;
 #endif // defined(useAssemblyLanguage)
 
 }
@@ -1975,8 +1976,8 @@ static void SWEET64::init64(union union_64 * an, uint32_t dWordL)
 		: "r" (dWordL)
 	);
 #else // defined(useAssemblyLanguage)
-	an->ul[1] = 0;
-	an->ul[0] = dWordL;
+	an->u32[1] = 0;
+	an->u32[0] = dWordL;
 #endif // defined(useAssemblyLanguage)
 
 }

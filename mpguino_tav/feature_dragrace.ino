@@ -118,11 +118,11 @@ static void accelerationTest::triggerTest(void)
 
 	uint8_t retVal;
 
-	if (volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)] & accelTestInProgress)
+	if (v08(v8AccelerationFlagsIdx) & accelTestInProgress)
 	{
 
 		// reset accel test capture flags, and signal that accel test is cancelled
-		heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, accelTestClearFlags, accelTestCompleteFlags);
+		heart::changeBitFlagBits(v8AccelerationFlagsIdx, accelTestClearFlags, accelTestCompleteFlags);
 
 		// force manual accel test triggering
 		EEPROM::writeByte(pDragAutoFlagIdx, 0);
@@ -133,16 +133,16 @@ static void accelerationTest::triggerTest(void)
 	else
 	{
 
-		if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
+		if (v08(v8ActivityIdx) & afVehicleStoppedFlag) // if vehicle is stopped, set drag trigger
 		{
 
-			heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
+			heart::changeBitFlagBits(v8AccelerationFlagsIdx, accelTestClearFlags, 0); // turn off all acceleration test functionality in interrupt-land
 
 			tripVar::reset(dragRawHalfSpeedIdx); // zero out acceleration 1/2 speed setpoint data
 			tripVar::reset(dragRawFullSpeedIdx); // zero out acceleration full speed setpoint data
 			tripVar::reset(dragRawDistanceIdx); // zero out acceleration distance setpoint data
 
-			heart::changeBitFlagBits(v8AccelerationFlagsIdx - v8VariableStartIdx, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in v8AccelerationFlagsIdx register
+			heart::changeBitFlagBits(v8AccelerationFlagsIdx, 0, (accelTestTriggered | accelTestMeasurementFlags)); // set drag flags in v8AccelerationFlagsIdx register
 
 			retVal = attTriggerNormal;
 

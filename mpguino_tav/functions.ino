@@ -1,9 +1,16 @@
+static const uint8_t prgmFormatToH9MMSStime[] PROGMEM = {
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
+	instrDone											// exit to caller
+};
+
+
 static void translateCalcIdx(uint16_t tripCalc, uint8_t windowLength, uint8_t decimalFlag)
 {
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
 
-	translateCalcIdx(tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+	translateCalcIdx(tC->u08[1], tC->u08[0], windowLength, decimalFlag);
 
 }
 
@@ -22,7 +29,7 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 
 		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
-		if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afSwapFEwithFCR) // do fuel consumption rate swap with fuel economy here
+		if (v08(v8ActivityIdx) & afVehicleIdleFlag) // do fuel consumption rate swap with fuel economy here
 		{
 
 			if ((tripIdx == instantIdx) && (calcIdx == tFuelEcon)) calcIdx = tFuelRate;
@@ -40,10 +47,10 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 			calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(calcIdx)]); // read calculation format index
 
 			// shift index up one if this is an SI/SAE format
-			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric)) calcFmtIdx++;
+			if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (m08(m8MetricModeFlags) & mmDisplayMetric)) calcFmtIdx++;
 
 			// shift index up two if this has two separate formats
-			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayAlternateFE)) calcFmtIdx += 2;
+			if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (m08(m8MetricModeFlags) & mmDisplayAlternateFE)) calcFmtIdx += 2;
 
 		}
 		else calcFmtIdx = calcFormatTimeInMillisecondsIdx;
@@ -71,10 +78,13 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 		mainCalcFuncVar.calcFormatLabelPtr = findStr(calcFormatLabels, mainCalcFuncVar.calcFmtIdx);
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
-		if (mainCalcFuncVar.calcFmtIdx == calcFormatTimeHHmmSSIdx)
+		// perform calculation
+		mainCalcFuncVar.value = SWEET64::runPrgm((const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(mainCalcFuncVar.calcIdx)])), mainCalcFuncVar.tripIdx);
+
+		if (mainCalcFuncVar.calcFmtIdx == calcFormatTimeH9mmSSIdx)
 		{
 
-			ull2str(nBuff, mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx);
+			ull2str(nBuff, 0, prgmFormatToH9MMSStime);
 
 			if (windowLength > 6)
 			{
@@ -89,7 +99,6 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 		else
 		{
 
-			mainCalcFuncVar.value = SWEET64::doCalculate(mainCalcFuncVar.tripIdx, mainCalcFuncVar.calcIdx); // perform calculation
 			ull2str(nBuff, mainCalcFuncVar.decimalPlaces, windowLength, decimalFlag); // format output for window length and number of decimal places
 
 		}

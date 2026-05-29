@@ -40,7 +40,7 @@ static void button::init(void)
 
 #endif // defined(useTWIbuttons)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cEnableButtonSampling);
+	heart::changeBitFlagBits(v8ButtonStatusIdx, 0, btnCmdEnableSampling);
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
@@ -82,7 +82,7 @@ static void button::shutdown(void)
 
 #endif // defined(useLegacyButtons)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, t0cEnableButtonSampling, 0);
+	heart::changeBitFlagBits(v8ButtonStatusIdx, btnCmdEnableSampling, 0);
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 }
@@ -96,8 +96,8 @@ static void button::inject(uint8_t buttonValue)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	volatile8Variables[(uint16_t)(v8ThisButtonStateIdx - v8VariableStartIdx)] = buttonValue;
-	volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cProcessButton); // send timer0 notification that a button was just read in
+	v08(v8ThisButtonStateIdx) = buttonValue;
+	v08(v8ButtonStatusIdx) |= (btnCmdInjectButton); // send notification that a button was just read in
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -268,11 +268,11 @@ static void cursor::doCommand(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operation atomic
 
-	volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saReadButton);
+	v08(v8ButtonStatusIdx) &= ~(btnStatusButtonRead);
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	bp = volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)]; // capture button state
+	bp = v08(v8ButtonPressIdx); // capture button state
 	bpPtr = (const buttonVariable *)(pgm_read_word(&(displayParameters[(uint16_t)(workingDisplayIdx)].buttonList)));
 
 	while (true)
@@ -295,7 +295,7 @@ static void cursor::noSupport(void)
 
 	text::initStatus(m8DevLCDidx);
 	text::stringOut(m8DevLCDidx, PSTR("Btn 0x"));
-	text::hexByteOut(m8DevLCDidx, volatile8Variables[(uint16_t)(v8ButtonPressIdx - v8VariableStartIdx)]);
+	text::hexByteOut(m8DevLCDidx, v08(v8ButtonPressIdx));
 	text::stringOut(m8DevLCDidx, PSTR(" Pressed"));
 	text::commitStatus(m8DevLCDidx);
 
@@ -427,14 +427,14 @@ static void cursor::updateDisplay(uint8_t thisDisplayIdx, uint8_t cmd)
 		if (outFlg)
 		{
 
-			mainProgram8Variables[(uint16_t)(m8DevLCDidx - m8VariableStartIdx)] |= (odvFlagDoubleHeight);
+			m08(m8DevLCDidx) |= (odvFlagDoubleHeight);
 
 			text::gotoXY(m8DevLCDidx, 0, 0);
 
 			// call indexed support section screen refresh function
 			((displayHandlerFunc)pgm_read_word(&displayParameters[(uint16_t)(callingDisplayIdx)].displayHandlerPtr))(cmd, bottomCursorPos);
 
-			mainProgram8Variables[(uint16_t)(m8DevLCDidx - m8VariableStartIdx)] &= ~(odvFlagDoubleHeight);
+			m08(m8DevLCDidx) &= ~(odvFlagDoubleHeight);
 			lineCount += 2;
 
 		}

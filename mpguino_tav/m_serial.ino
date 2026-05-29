@@ -70,15 +70,26 @@ static void serial0::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial0Port)
-	ringBuffer::pushMain(rbIdxSerial0Out, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxSerial0Out, bufferIsFull)) heart::sleepModeIdle(LEDdebugUARTout | LEDdebugUART0); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxSerial0Out, chr);
+
 	UCSR0B |= (1 << UDRIE0); // enable data register empty interrupt
+
+	SREG = oldSREG; // restore interrupt flag status
+
 #else // defined(useBufferedSerial0Port)
-	while ((UCSR0A & (1 << UDRE0)) == 0) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+	while ((UCSR0A & (1 << UDRE0)) == 0) heart::sleepModeIdle(LEDdebugUARTin | LEDdebugUART0); // go perform idle sleep mode
 
 	UCSR0A &= ~(1 << TXC0); // clear transmit complete flag
 	UDR0 = chr; //send the data
-#endif // defined(useBufferedSerial0Port)
 
+#endif // defined(useBufferedSerial0Port)
 }
 
 #if defined(useSerial0PortInput)
@@ -109,7 +120,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR0A & ((1 << FE0) | (1 << DOR0) | (1 << UPE0)));
-	volatile8Variables[(uint16_t)(v8Serial0StatusIdx - v8VariableStartIdx)] |= errFlags;
+	v08(v8Serial0StatusIdx) |= errFlags;
 
 	chr = UDR0; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial0In, chr);
@@ -120,7 +131,7 @@ ISR( _VECTOR(18) ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial0InputIdx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -144,7 +155,7 @@ ISR( USART_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(rbIdxSerial0Out)) UDR0 = ringBuffer::pull(rbIdxSerial0Out); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::testBufferNot(rbIdxSerial0Out, bufferIsEmpty)) UDR0 = ringBuffer::pull(rbIdxSerial0Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR0B &= ~(1 << UDRIE0); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -153,7 +164,7 @@ ISR( USART_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial0Idx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -222,10 +233,21 @@ static void serial1::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial1Port)
-	ringBuffer::pushMain(rbIdxSerial1Out, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxSerial1Out, bufferIsFull)) heart::sleepModeIdle(LEDdebugUARTout | LEDdebugUART1); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxSerial1Out, chr);
+
 	UCSR1B |= (1 << UDRIE1); // enable data register empty interrupt
+
+	SREG = oldSREG; // restore interrupt flag status
+
 #else // defined(useBufferedSerial1Port)
-	while ((UCSR1A & (1 << UDRE1)) == 0) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+	while ((UCSR1A & (1 << UDRE1)) == 0) heart::sleepModeIdle(LEDdebugUARTin | LEDdebugUART1); // go perform idle sleep mode
 
 	UCSR1A &= ~(1 << TXC1); // clear transmit complete flag
 	UDR1 = chr; //send the data
@@ -256,7 +278,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR1A & ((1 << FE1) | (1 << DOR1) | (1 << UPE1)));
-	volatile8Variables[(uint16_t)(v8Serial1StatusIdx - v8VariableStartIdx)] |= errFlags;
+	v08(v8Serial1StatusIdx) |= errFlags;
 
 	chr = UDR1; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial1In, chr);
@@ -267,7 +289,7 @@ ISR( USART1_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial1InputIdx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -291,7 +313,7 @@ ISR( USART1_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(rbIdxSerial1Out)) UDR1 = ringBuffer::pull(rbIdxSerial1Out); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::testBufferNot(rbIdxSerial1Out, bufferIsEmpty)) UDR1 = ringBuffer::pull(rbIdxSerial1Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR1B &= ~(1 << UDRIE1); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -300,7 +322,7 @@ ISR( USART1_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial1Idx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -369,10 +391,21 @@ static void serial2::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial2Port)
-	ringBuffer::pushMain(rbIdxSerial2Out, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxSerial2Out, bufferIsFull)) heart::sleepModeIdle(LEDdebugUARTout | LEDdebugUART2); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxSerial2Out, chr);
+
 	UCSR2B |= (1 << UDRIE2); // enable data register empty interrupt
+
+	SREG = oldSREG; // restore interrupt flag status
+
 #else // defined(useBufferedSerial2Port)
-	while ((UCSR2A & (1 << UDRE2)) == 0) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+	while ((UCSR2A & (1 << UDRE2)) == 0) heart::sleepModeIdle(LEDdebugUARTin | LEDdebugUART2); // go perform idle sleep mode
 
 	UCSR2A &= ~(1 << TXC2); // clear transmit complete flag
 	UDR2 = chr; //send the data
@@ -403,7 +436,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR2A & ((1 << FE2) | (1 << DOR2) | (1 << UPE2)));
-	volatile8Variables[(uint16_t)(v8Serial2StatusIdx - v8VariableStartIdx)] |= errFlags;
+	v08(v8Serial2StatusIdx) |= errFlags;
 
 	chr = UDR2; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial2In, chr);
@@ -414,7 +447,7 @@ ISR( USART2_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial2InputIdx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -433,7 +466,7 @@ ISR( USART2_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(rbIdxSerial2Out)) UDR2 = ringBuffer::pull(rbIdxSerial2Out); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::testBufferNot(rbIdxSerial2Out, bufferIsEmpty)) UDR2 = ringBuffer::pull(rbIdxSerial2Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR2B &= ~(1 << UDRIE2); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -442,7 +475,7 @@ ISR( USART2_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial2Idx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -511,10 +544,21 @@ static void serial3::chrOut(uint8_t chr)
 {
 
 #if defined(useBufferedSerial3Port)
-	ringBuffer::pushMain(rbIdxSerial3Out, chr);
+	uint8_t oldSREG;
+
+	while (ringBuffer::testBuffer(rbIdxSerial3Out, bufferIsFull)) heart::sleepModeIdle(LEDdebugUARTout | LEDdebugUART3); // while waiting, go idle
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts
+
+	ringBuffer::push(rbIdxSerial3Out, chr);
+
 	UCSR3B |= (1 << UDRIE3); // enable data register empty interrupt
+
+	SREG = oldSREG; // restore interrupt flag status
+
 #else // defined(useBufferedSerial3Port)
-	while ((UCSR3A & (1 << UDRE3)) == 0) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+	while ((UCSR3A & (1 << UDRE3)) == 0) heart::sleepModeIdle(LEDdebugUARTin | LEDdebugUART3); // go perform idle sleep mode
 
 	UCSR3A &= ~(1 << TXC3); // clear transmit complete flag
 	UDR3 = chr; //send the data
@@ -545,7 +589,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 #endif // defined(useDebugCPUreading)
 
 	errFlags = (UCSR3A & ((1 << FE3) | (1 << DOR3) | (1 << UPE3)));
-	volatile8Variables[(uint16_t)(v8Serial3StatusIdx - v8VariableStartIdx)] |= errFlags;
+	v08(v8Serial3StatusIdx) |= errFlags;
 
 	chr = UDR3; // clear receive buffer
 	if ((errFlags) == 0) ringBuffer::push(rbIdxSerial3In, chr);
@@ -556,7 +600,7 @@ ISR( USART3_RX_vect ) // called whenever USART receiver gets a character
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial3InputIdx) += c;
 
 #endif // defined(useDebugCPUreading)
 }
@@ -575,7 +619,7 @@ ISR( USART3_UDRE_vect ) // called whenever USART data buffer empties
 	a = TCNT0; // do a microSeconds() - like read to determine interrupt length in cycles
 
 #endif // defined(useDebugCPUreading)
-	if (ringBuffer::isBufferNotEmpty(rbIdxSerial3Out)) UDR3 = ringBuffer::pull(rbIdxSerial3Out); // if buffer is not empty, send a buffered character to the serial hardware
+	if (ringBuffer::testBufferNot(rbIdxSerial3Out, bufferIsEmpty)) UDR3 = ringBuffer::pull(rbIdxSerial3Out); // if buffer is not empty, send a buffered character to the serial hardware
 	else UCSR3B &= ~(1 << UDRIE3); // otherwise, disable data register empty interrupt
 
 #if defined(useDebugCPUreading)
@@ -584,7 +628,7 @@ ISR( USART3_UDRE_vect ) // called whenever USART data buffer empties
 	if (b < a) c = 256 - a + b; // an overflow occurred
 	else c = b - a;
 
-	volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] += c;
+	v32(v32WorkingSerial3Idx) += c;
 
 #endif // defined(useDebugCPUreading)
 }

@@ -4,11 +4,14 @@
 // personal use is perfectly fine
 // no warranties expressed or implied
 //
-// This version of MPGuino is only configured for use with saturation-type fuel injectors. It does not
-// support peak and hold fuel injectors, due to the relative complexity of having to add many more
-// electrical components to properly detect the peak and hold currents for two separate types of
-// peak and hold drivers (analog current and PWM). Look up "jaycar peak hold adapter" on the intertubes
-// if you want more information
+// This version of MPGuino can automatically process fuel injection signals for both saturated and
+// frequency-modulated peak/hold fuel injectors. There is no need to change any settings in order to
+// switch between saturated or frequency-modulated peak/hold fuel injection drivers.
+//
+// This version of MPGuino does not support analog-style peak/hold fuel injectors, due to the relative
+// complexity of having to add many more electrical components to properly detect the peak and hold
+// currents for the analog waveform. Look up "jaycar peak hold adapter" on the intertubes, if you want
+// more information.
 
 // Special thanks to the good folks at ecomodder.com, ardunio.cc, avrfreaks.net, cadsoft.de, atmel.com,
 // and all the folks who donate their time and resources and share their experiences freely
@@ -517,18 +520,14 @@ int main(void)
 
 	sei();
 
-	j = heart::delay0(delay0Tick1500ms, 0); // show splash screen for 1.5 seconds
-
 	heart::initHardware(); // initialize all human interface peripherals
 
-#if defined(useSavedTrips)
-	i = tripSave::doAutoAction(taaModeRead);
-
-#endif // defined(useSavedTrips)
 #if defined(useLCDoutput)
 	text::gotoXY(m8DevLCDidx, 0, 0);
 	text::stringOut(m8DevLCDidx, titleMPGuino);
 	text::stringOut(m8DevLCDidx, dateMPGuino);
+
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 #endif // defined(useLCDoutput)
 #if defined(outputLoggingSplash)
@@ -544,13 +543,11 @@ int main(void)
 	decWindow = 10;
 
 #endif // defined(outputDebugTerminalSplash)
-	while (volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & j) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-
-#if defined(useButtonInput)
 #if defined(useSimulatedFIandVSS)
-	signalSim::configurePorts(debugVSSflag | debugInjectorFlag);
+	signalSim::configurePorts(debugFIsaturatedFlag | debugVSSflag | debugInjectorFlag);
 
 #endif // defined(useSimulatedFIandVSS)
+#if defined(useButtonInput)
 	// restore cursor positions from EEPROM
 	for (uint8_t x = 0; x < displayCountTotal; x++) displayCursor[(uint16_t)(x)] = EEPROM::readByte(x + eePtrDisplayCursorStart);
 
@@ -560,6 +557,17 @@ int main(void)
 	// restore working display index from EEPROM
 	workingDisplayIdx = EEPROM::readByte(pDisplayIdx);
 
+#endif // defined(useButtonInput)
+#if defined(useSavedTrips)
+	i = tripSave::doAutoAction(taaModeRead);
+
+#endif // defined(useSavedTrips)
+#if defined(useLCDoutput)
+	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+
+#endif // defined(useLCDoutput)
+
+#if defined(useButtonInput)
 	// call working display index initialization function
 	cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx);
 
@@ -570,122 +578,31 @@ int main(void)
 
 #endif // defined(useLCDoutput)
 #endif // defined(useSavedTrips)
-	j = 0;
 
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+	m32(m32DbgWorkingMainStartIdx) = heart::cycles0();
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	while (true)
 	{
 
-#if defined(useActivityRecord)
-#if defined(useDebugCPUreading)
-		activity::record((arMainProcess | arMainDevices), j);
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+		m32(m32CPUworkingLoopStartIdx) = m32(m32DbgWorkingMainStartIdx);
+		m32(m32CPUworkingMainStartIdx) = m32(m32DbgWorkingMainStartIdx);
 
-#else // defined(useDebugCPUreading)
-		activity::record((arMainProcess), j);
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainProcess | arMainDevices);
 
-#endif // defined(useDebugCPUreading)
-#endif // defined(useActivityRecord)
-#if defined(useSimulatedFIandVSS)
-		if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugEnableFlags)
-		{
-
-			if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugInjectorFlag) // if injector simulator is enabled
-			{
-
-				// if timer0 delay for fuel injector simulator is timed out
-				if (volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)])
-				{
-
-					// reset timer0 delay for fuel injector simulator
-					heart::changeBitFlagBits(v8Timer0DelaySignalIdx - v8VariableStartIdx, mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)], 0);
-
-					if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)]) mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)]--;
-					else
-					{
-
-						mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)] = debugFIPlength - 1;
-						mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] += 0x40;
-
-					}
-
-					if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] & 0x40)
-					{
-
-						if (mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] & 0x80) i = debugFIPlength - mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)] - 1;
-						else i = mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)];
-
-						signalSimFIPtickLength = pgm_read_word(&debugFIPvalues[(uint16_t)(i)]); // read stored engine period countdown value
-						signalSimFIPWopenTickLength = pgm_read_word(&debugFIPWvalues[(uint16_t)(i)]); // read stored fuel injector open period value
-
-						// if fuel injector open period value is greater than stored engine period countdown value, use the stored engine period countdown value instead
-						if (signalSimFIPWopenTickLength > (signalSimFIPtickLength - 63)) signalSimFIPWopenTickLength = signalSimFIPtickLength - 63;
-
-						oldSREG = SREG; // save interrupt flag status
-						cli(); // disable interrupts to make the next operation atomic
-
-						volatile16Variables[(uint16_t)(v16SignalSimFIPtickLength - v16VariableStartIdx)] = signalSimFIPtickLength;
-						volatile16Variables[(uint16_t)(v16SignalSimFIPWtickLength - v16VariableStartIdx)] = signalSimFIPWopenTickLength;
-
-						volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] |= (debugFIPready);
-
-						SREG = oldSREG; // restore interrupt flag status
-
-					}
-
-				}
-
-			}
-
-			if (volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] & debugVSSflag) // if VSS simulator is enabled
-			{
-
-				// if timer0 delay for VSS simulator is timed out
-				if (volatile8Variables[(uint16_t)(v8Timer0DelaySignalIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)])
-				{
-
-					// reset timer0 delay for VSS simulator
-					heart::changeBitFlagBits(v8Timer0DelaySignalIdx - v8VariableStartIdx, mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)], 0);
-
-					if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)]) mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)]--;
-					else
-					{
-
-						mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)] = debugVSSlength - 1;
-						mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] += 0x40;
-
-					}
-
-					if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] & 0x40)
-					{
-
-						if (mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] & 0x80) i = mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)];
-						else i = debugVSSlength - mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)] - 1;
-
-						oldSREG = SREG; // save interrupt flag status
-						cli(); // disable interrupts to make the next operations atomic
-
-						volatile16Variables[(uint16_t)(v16SignalSimVSStickLength - v16VariableStartIdx)] = pgm_read_word(&debugVSSvalues[(uint16_t)(i)]);
-
-						volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] |= (debugVSSready);
-
-						SREG = oldSREG; // restore interrupt flag status
-
-					}
-
-				}
-
-			}
-
-		}
-
-#endif // defined(useSimulatedFIandVSS)
+#endif // defined(useActivityLED)
 #if defined(useChryslerMAPCorrection)
-		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadMAPchannel)
+		if (v08(v8AnalogStatusIdx) & asReadMAPchannel)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operation atomic
 
-			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadMAPchannel);
+			v08(v8AnalogStatusIdx) &= ~(asReadMAPchannel);
 
 			SREG = oldSREG; // restore interrupt flag status
 
@@ -695,13 +612,13 @@ int main(void)
 
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useChryslerBaroSensor)
-		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadBaroChannel)
+		if (v08(v8AnalogStatusIdx) & asReadBaroChannel)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operation atomic
 
-			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadBaroChannel);
+			v08(v8AnalogStatusIdx) &= ~(asReadBaroChannel);
 
 			SREG = oldSREG; // restore interrupt flag status
 
@@ -711,23 +628,23 @@ int main(void)
 
 #endif // defined(useChryslerBaroSensor)
 #if defined(useAnalogButtons)
-		if (volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] & asReadButtonChannel)
+		if (v08(v8AnalogStatusIdx) & asReadButtonChannel)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operation atomic
 
-			volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] &= ~(asReadButtonChannel);
+			v08(v8AnalogStatusIdx) &= ~(asReadButtonChannel);
 
 			SREG = oldSREG; // restore interrupt flag status
 
 			for (uint8_t x = analogButtonCount - 1; x < analogButtonCount; x--)
 			{
 
-				if (volatile16Variables[(uint16_t)(v16AnalogButtonChannelIdx - v16VariableStartIdx)] >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
+				if (v16(v16AnalogButtonChannelIdx) >= pgm_read_word(&analogButtonThreshold[(uint16_t)(x)]))
 				{
 
-					if (volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] & t0cEnableButtonSampling) button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
+					if (v08(v8ButtonStatusIdx) & btnCmdEnableSampling) button::inject(pgm_read_byte(&analogTranslate[(uint16_t)(x)]));
 
 					break;
 
@@ -738,24 +655,32 @@ int main(void)
 		}
 
 #endif // defined(useAnalogButtons)
+#if defined(useActivityLED)
+		activityLED::release(arMainDevices);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-		activity::record(arMainActivity, arMainDevices);
+		m32(m32DbgWorkingMainDevicesIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
 #endif // defined(useDebugCPUreading)
-		if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & (afActivityTimeoutFlag | afEngineOffFlag | afVehicleStoppedFlag | afParkFlag))
+#if defined(useActivityLED)
+		activityLED::assert(arMainActivity);
+
+#endif // defined(useActivityLED)
+		if (v08(v8ActivityChangeIdx) & (afActivityTimeoutFlag | afEngineOffFlag | afVehicleStoppedFlag | afParkFlag))
 		{
 
-			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afActivityTimeoutFlag)
+			if (v08(v8ActivityChangeIdx) & afActivityTimeoutFlag)
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operation atomic
 
-				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afActivityTimeoutFlag);
+				v08(v8ActivityChangeIdx) &= ~(afActivityTimeoutFlag);
 
 				SREG = oldSREG; // restore interrupt flag status
 
-				if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
+				if (v08(v8ActivityIdx) & afActivityTimeoutFlag) // if MPGuino is commanded to go asleep
 				{
 
 #ifdef useDeepSleep
@@ -796,57 +721,57 @@ int main(void)
 
 			}
 
-			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afEngineOffFlag)
+			if (v08(v8ActivityChangeIdx) & afEngineOffFlag)
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operation atomic
 
-				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afEngineOffFlag);
+				v08(v8ActivityChangeIdx) &= ~(afEngineOffFlag);
 
 				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
 				// if engine start is detected
-				if (((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
+				if (((v08(v8ActivityIdx) & afEngineOffFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnEngineIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 			}
 
-			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afVehicleStoppedFlag)
+			if (v08(v8ActivityChangeIdx) & afVehicleStoppedFlag)
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operation atomic
 
-				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afVehicleStoppedFlag);
+				v08(v8ActivityChangeIdx) &= ~(afVehicleStoppedFlag);
 
 				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
 				// if vehicle movement is detected
-				if (((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
+				if (((v08(v8ActivityIdx) & afVehicleStoppedFlag) == 0) && (EEPROM::readByte(pWakeupResetCurrentOnMoveIdx))) tripSupport::resetCurrent();
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
 				// if vehicle is stopped
-				if ((volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
+				if ((v08(v8ActivityIdx) & afVehicleStoppedFlag) && (EEPROM::readByte(pDragAutoFlagIdx))) accelerationTest::triggerTest();
 
 #endif // defined(useDragRaceFunction)
 			}
 
-			if (volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] & afParkFlag)
+			if (v08(v8ActivityChangeIdx) & afParkFlag)
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operation atomic
 
-				volatile8Variables[(uint16_t)(v8ActivityIdxChangeIdx - v8VariableStartIdx)] &= ~(afParkFlag);
+				v08(v8ActivityChangeIdx) &= ~(afParkFlag);
 
 				SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useWindowTripFilter) || defined(useSavedTrips)
-				if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afParkFlag) // if MPGuino is commanded to go park
+				if (v08(v8ActivityIdx) & afParkFlag) // if MPGuino is commanded to go park
 				{
 
 #if defined(useButtonInput)
@@ -880,18 +805,26 @@ int main(void)
 
 		}
 
+#if defined(useActivityLED)
+		activityLED::release(arMainActivity);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-		activity::record(arMainSample, arMainActivity);
+		m32(m32DbgWorkingMainActivityIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
 #endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainSample);
+
+#endif // defined(useActivityLED)
 		// this is the part of the main loop that only executes twice a second (or what is defined by samplesPerSecond), to collect and process readings
-		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saTakeSample)
+		if (v08(v8Timer0Status0Idx) & t0saTakeSample)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operations atomic
 
-			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saTakeSample);
+			v08(v8Timer0Status0Idx) &= ~(t0saTakeSample);
 
 			oldRawTripIdx = curRawTripIdx; // save old raw trip variable index
 			curRawTripIdx ^= (raw0tripIdx ^ raw1tripIdx); // set current raw trip variable index
@@ -903,14 +836,14 @@ int main(void)
 			SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useBarFuelEconVsTime)
-			if (volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] & t0sbResetFEvsTimeTrip) 
+			if (v08(v8Timer0Status1Idx) & t0sbResetFEvsTimeTrip) 
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operations atomic
 
-				volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] &= ~(t0sbResetFEvsTimeTrip);
-				i = volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)];
+				v08(v8Timer0Status1Idx) &= ~(t0sbResetFEvsTimeTrip);
+				i = v08(v8FEvTimeTripIdx);
 
 				SREG = oldSREG; // restore interrupt flag status
 
@@ -939,65 +872,174 @@ int main(void)
 			if((uint16_t)__brkval == 0) availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)&__bss_end);
 			else availableRAMptr = ((uint16_t)&availableRAMptr) - ((uint16_t)__brkval);
 
-			mainProgram32Variables[(uint16_t)(m32AvailableRAMidx - m32VariableStartIdx)] = availableRAMptr;
+			m32(m32AvailableRAMidx) = availableRAMptr;
 
 #if defined(useDebugCPUreading)
-			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekEnableCPUread)
+			if (m08(m8PeekFlags) & peekEnableCPUread)
 			{
 
-				mainProgram32Variables[(uint16_t)(m32CPUsampledMainLoopIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32CPUsampledMainProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32CPUsampledIdleProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledMainDevicesIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainDevicesIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledMainActivityIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainActivityIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledMainSampleIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainSampleIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledMainOutputIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOutputIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledMainOtherIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOtherIdx - m32VariableStartIdx)];
-				mainProgram32Variables[(uint16_t)(m32DbgSampledS64processIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32DbgWorkingS64processIdx - m32VariableStartIdx)];
+				m32(m32CPUsampledMainLoopIdx) = m32(m32CPUworkingMainLoopIdx);
+				m32(m32CPUsampledMainProcessIdx) = m32(m32CPUworkingMainProcessIdx);
+				m32(m32CPUsampledIdleProcessIdx) = m32(m32CPUworkingIdleProcessIdx);
+				m32(m32DbgSampledMainDevicesIdx) = m32(m32DbgWorkingMainDevicesIdx);
+				m32(m32DbgSampledMainActivityIdx) = m32(m32DbgWorkingMainActivityIdx);
+				m32(m32DbgSampledMainSampleIdx) = m32(m32DbgWorkingMainSampleIdx);
+				m32(m32DbgSampledMainOutputIdx) = m32(m32DbgWorkingMainOutputIdx);
+				m32(m32DbgSampledMainOtherIdx) = m32(m32DbgWorkingMainOtherIdx);
+				m32(m32DbgSampledS64processIdx) = m32(m32DbgWorkingS64processIdx);
 
 			}
 #else // defined(useDebugCPUreading)
-			mainProgram32Variables[(uint16_t)(m32CPUsampledMainLoopIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)];
-			mainProgram32Variables[(uint16_t)(m32CPUsampledMainProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)];
-			mainProgram32Variables[(uint16_t)(m32CPUsampledIdleProcessIdx - m32VariableStartIdx)] = mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)];
+			m32(m32CPUsampledMainLoopIdx) = m32(m32CPUworkingMainLoopIdx);
+			m32(m32CPUsampledMainProcessIdx) = m32(m32CPUworkingMainProcessIdx);
+			m32(m32CPUsampledIdleProcessIdx) = m32(m32CPUworkingIdleProcessIdx);
 #endif // defined(useDebugCPUreading)
 
-			mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)] = 0;
+			m32(m32CPUworkingMainLoopIdx) = 0;
+			m32(m32CPUworkingMainProcessIdx) = 0;
+			m32(m32CPUworkingIdleProcessIdx) = 0;
 #if defined(useDebugCPUreading)
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainDevicesIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainActivityIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainSampleIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOutputIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOtherIdx - m32VariableStartIdx)] = 0;
-			mainProgram32Variables[(uint16_t)(m32DbgWorkingS64processIdx - m32VariableStartIdx)] = 0;
+			m32(m32DbgWorkingMainDevicesIdx) = 0;
+			m32(m32DbgWorkingMainActivityIdx) = 0;
+			m32(m32DbgWorkingMainSampleIdx) = 0;
+			m32(m32DbgWorkingMainOutputIdx) = 0;
+			m32(m32DbgWorkingMainOtherIdx) = 0;
+			m32(m32DbgWorkingS64processIdx) = 0;
 #endif // defined(useDebugCPUreading)
 
 #if defined(useDebugCPUreading)
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operations atomic
 
-			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekEnableCPUread)
-				mainProgram32Variables[(uint16_t)(m32DbgSampledInterruptProcessIdx - m32VariableStartIdx)] = volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)];
+			if (m08(m8PeekFlags) & peekEnableCPUread)
+			{
 
-			volatile32Variables[(uint16_t)(v32WorkingInterruptProcessIdx - v32VariableStartIdx)] = 0;
+				m32(m32DbgSampledInterruptProcessIdx) = v32(v32WorkingTimer0Idx);
+#if defined(useTimer1Interrupt)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingTimer1Idx);
+#endif // defined(useTimer1Interrupt)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingInjectorOpenIdx);
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingInjectorCloseIdx);
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingVSSpulseIdx);
+#if defined(useAnalogRead)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingAnalogIdx);
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingTwoWireIdx);
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial0Idx);
+#if defined(useSerial0PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial0InputIdx);
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial1Idx);
+#if defined(useSerial1PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial1InputIdx);
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial2Idx);
+#if defined(useSerial2PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial2InputIdx);
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial3Idx);
+#if defined(useSerial3PortInput)
+				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial3InputIdx);
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
+				m32(m32DbgSampledTimer0Idx) = v32(v32WorkingTimer0Idx);
+#if defined(useTimer1Interrupt)
+				m32(m32DbgSampledTimer1Idx) = v32(v32WorkingTimer1Idx);
+#endif // defined(useTimer1Interrupt)
+				m32(m32DbgSampledInjectorOpenIdx) = v32(v32WorkingInjectorOpenIdx);;
+				m32(m32DbgSampledInjectorCloseIdx) = v32(v32WorkingInjectorCloseIdx);;
+				m32(m32DbgSampledVSSpulseIdx) = v32(v32WorkingVSSpulseIdx);;
+#if defined(useAnalogRead)
+				m32(m32DbgSampledAnalogIdx) = v32(v32WorkingAnalogIdx);
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+				m32(m32DbgSampledTwoWireIdx) = v32(v32WorkingTwoWireIdx);
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+				m32(m32DbgSampledSerial0Idx) = v32(v32WorkingSerial0Idx);
+#if defined(useSerial0PortInput)
+				m32(m32DbgSampledSerial0InputIdx) = v32(v32WorkingSerial0InputIdx);
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+				m32(m32DbgSampledSerial1Idx) = v32(v32WorkingSerial1Idx);
+#if defined(useSerial1PortInput)
+				m32(m32DbgSampledSerial1InputIdx) = v32(v32WorkingSerial1InputIdx);
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+				m32(m32DbgSampledSerial2Idx) = v32(v32WorkingSerial2Idx);
+#if defined(useSerial2PortInput)
+				m32(m32DbgSampledSerial2InputIdx) = v32(v32WorkingSerial2InputIdx);
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+				m32(m32DbgSampledSerial3Idx) = v32(v32WorkingSerial3Idx);
+#if defined(useSerial3PortInput)
+				m32(m32DbgSampledSerial3InputIdx) = v32(v32WorkingSerial3InputIdx);
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
+			}
+
+			v32(v32WorkingTimer0Idx) = 0;
+#if defined(useTimer1Interrupt)
+			v32(v32WorkingTimer1Idx) = 0;
+#endif // defined(useTimer1Interrupt)
+			v32(v32WorkingInjectorOpenIdx) = 0;
+			v32(v32WorkingInjectorCloseIdx) = 0;
+			v32(v32WorkingVSSpulseIdx) = 0;
+#if defined(useAnalogRead)
+			v32(v32WorkingAnalogIdx) = 0;
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+			v32(v32WorkingTwoWireIdx) = 0;
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+			v32(v32WorkingSerial0Idx) = 0;
+#if defined(useSerial0PortInput)
+			v32(v32WorkingSerial0InputIdx) = 0;
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+			v32(v32WorkingSerial1Idx) = 0;
+#if defined(useSerial1PortInput)
+			v32(v32WorkingSerial1InputIdx) = 0;
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+			v32(v32WorkingSerial2Idx) = 0;
+#if defined(useSerial2PortInput)
+			v32(v32WorkingSerial2InputIdx) = 0;
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+			v32(v32WorkingSerial3Idx) = 0;
+#if defined(useSerial3PortInput)
+			v32(v32WorkingSerial3InputIdx) = 0;
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
 
 			SREG = oldSREG; // restore interrupt flag status
 
 #endif // defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useOutputPins)
-			outputPin::setOutputPin1(0);
-			outputPin::setOutputPin2(1);
-
-#endif // defined(useOutputPins)
 #if defined(useDataLoggingOutput)
 			if (EEPROM::readByte(pSerialDataLoggingIdx)) doOutputDataLog();
 
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-			if ((volatile8Variables[(uint16_t)(v8AwakeIdx - v8VariableStartIdx)] & aAwakeOnVehicle) && (EEPROM::readByte(pJSONoutputIdx))) doOutputJSON();
+			if (v08(v8Timer0Status0Idx) & t0saOutputJSON) doOutputJSON();
 
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
@@ -1005,13 +1047,13 @@ int main(void)
 
 #endif // defined(useBluetooth)
 #if defined(useDS1307clock)
-			if (volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] & t0sbReadRTC)
+			if (v08(v8Timer0Status1Idx) & t0sbReadRTC)
 			{
 
 				oldSREG = SREG; // save interrupt flag status
 				cli(); // disable interrupts to make the next operation atomic
 
-				volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)] &= ~(t0sbReadRTC);
+				v08(v8Timer0Status1Idx) &= ~(t0sbReadRTC);
 
 				SREG = oldSREG; // restore interrupt flag status
 
@@ -1022,10 +1064,18 @@ int main(void)
 #endif // defined(useDS1307clock)
 		}
 
+#if defined(useActivityLED)
+		activityLED::release(arMainSample);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-		activity::record(arMainOther, arMainSample);
+		m32(m32DbgWorkingMainSampleIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
 #endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainOther);
+
+#endif // defined(useActivityLED)
 #if defined(useBluetooth)
 		bluetooth::mainProcess();
 
@@ -1034,23 +1084,31 @@ int main(void)
 		terminal::mainProcess();
 
 #endif // defined(useDebugTerminal)
+#if defined(useActivityLED)
+		activityLED::release(arMainOther);
+
+#endif // defined(useActivityLED)
 #if defined(useDebugCPUreading)
-		activity::record(arMainOutput, arMainOther);
+		m32(m32DbgWorkingMainOtherIdx) += heart::getCycle0Length(m32DbgWorkingMainStartIdx);
 
 #endif // defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arMainOutput);
+
+#endif // defined(useActivityLED)
 #if defined(useButtonInput)
-		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saReadButton) cursor::doCommand(); // if any buttons were pressed, go perform button action
+		if (v08(v8ButtonStatusIdx) & btnStatusButtonRead) cursor::doCommand(); // if any buttons were pressed, go perform button action
 
 #endif // defined(useButtonInput)
 #if defined(useDragRaceFunction)
-		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saAccelTestFlag)
+		if (v08(v8Timer0Status1Idx) & t0sbAccelTestFlag)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operations atomic
 
-			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saAccelTestFlag);
-			accelTestStatus = volatile8Variables[(uint16_t)(v8AccelerationFlagsIdx - v8VariableStartIdx)]; // copy accel test flag status to this loop
+			v08(v8Timer0Status1Idx) &= ~(t0sbAccelTestFlag);
+			accelTestStatus = v08(v8AccelerationFlagsIdx); // copy accel test flag status to this loop
 
 			SREG = oldSREG; // restore interrupt flag status
 
@@ -1125,34 +1183,34 @@ int main(void)
 #endif // defined(useDragRaceFunction)
 		// this part of the main loop handles screen output to the user
 		// it can execute either after the samples are collected and processed above, or after a key has been pressed
-		if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saUpdateDisplay)
+		if (v08(v8Timer0Status0Idx) & t0saUpdateDisplay)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts to make the next operation atomic
 
-			volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saUpdateDisplay);
+			v08(v8Timer0Status0Idx) &= ~(t0saUpdateDisplay);
 
 			SREG = oldSREG; // restore interrupt flag status
 
 #if defined(useButtonInput)
 #if defined(useDebugTerminal)
-			if ((mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage) && (mainProgram8Variables[(uint16_t)(m8Delay0FlagLCDidx - m8VariableStartIdx)]))
+			if ((m08(m8PeekFlags) & peekStatusMessage) && (v08(v8Timer0Status0Idx) & t0saDisplayDelayActive))
 			{
 
 				text::charOut(m8DevDebugTerminalIdx, '*');
 
 			}
 
-			if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekOutputFlags)
+			if (m08(m8PeekFlags) & peekOutputFlags)
 			{
 
 				text::charOut(m8DevDebugTerminalIdx, '*');
-				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)]);
-				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)]);
-				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8Timer0Status1Idx - v8VariableStartIdx)]);
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0CommandIdx));
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status0Idx));
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status1Idx));
 #if defined(useTWIsupport)
-				text::hexByteOut(m8DevDebugTerminalIdx, volatile8Variables[(uint16_t)(v8TWIstatusIdx - v8VariableStartIdx)]);
+				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8TWIstatusIdx));
 #endif // defined(useTWIsupport)
 				text::newLine(m8DevDebugTerminalIdx);
 
@@ -1160,7 +1218,7 @@ int main(void)
 
 #endif // defined(useDebugTerminal)
 #if defined(useClockDisplay) && !defined(useDeepSleep)
-			if (volatile8Variables[(uint16_t)(v8ActivityIdx - v8VariableStartIdx)] & afActivityTimeoutFlag) clockDisplay::displayHandler(displayOutputIdx, 0);
+			if (v08(v8ActivityIdx) & afActivityTimeoutFlag) clockDisplay::displayHandler(displayOutputIdx, 0);
 			else cursor::updateDisplay(workingDisplayIdx, displayOutputIdx); // call indexed support section screen refresh function
 
 #else // defined(useClockDisplay) && !defined(useDeepSleep)
@@ -1170,21 +1228,36 @@ int main(void)
 #endif // defined(useButtonInput)
 		}
 
-#if defined(useActivityRecord)
+#if defined(useActivityLED)
+		activityLED::release(arMainProcess | arMainOutput);
+
+#endif // defined(useActivityLED)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useDebugCPUreading)
-		activity::record(arIdleProcess, (arMainProcess | arMainOutput));
-
-#else // defined(useDebugCPUreading)
-		activity::record(arIdleProcess, arMainProcess);
-
+		m32(m32DbgWorkingMainOutputIdx) -= m32(m32DbgWorkingMainStartIdx);
 #endif // defined(useDebugCPUreading)
-#endif // defined(useActivityRecord)
+		m32(m32CPUworkingMainProcessIdx) += heart::getCycle0Length(m32CPUworkingMainStartIdx);
+#if defined(useDebugCPUreading)
+		m32(m32DbgWorkingMainOutputIdx) += m32(m32DbgWorkingMainStartIdx);
+#endif // defined(useDebugCPUreading)
+		m32(m32CPUworkingIdleStartIdx) = m32(m32DbgWorkingMainStartIdx);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
+#if defined(useActivityLED)
+		activityLED::assert(arIdleProcess);
+
+#endif // defined(useActivityLED)
 		heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
 
-#if defined(useActivityRecord)
-		j = arIdleProcess;
+#if defined(useActivityLED)
+		activityLED::release(arIdleProcess);
 
-#endif // defined(useActivityRecord)
+#endif // defined(useActivityLED)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
+		m32(m32CPUworkingIdleProcessIdx) += heart::getCycle0Length(m32CPUworkingIdleStartIdx);
+		m32(m32CPUworkingMainLoopIdx) += heart::getCycle0Length(m32CPUworkingLoopStartIdx);
+
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 	}
 
 }

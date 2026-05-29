@@ -1,11 +1,36 @@
 /* text support section */
 
+static const uint8_t prgmRoundOffNumber[] PROGMEM = {
+	instrTestReg, 0x02,									// test register 2
+	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
+	instrCmpIndex, 2,									// check if 3 or more right hand digits were specified
+	instrBranchIfGT, 17,								// if so, just exit
+	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
+	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
+	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
+	instrDiv2byRdOnly, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
+	instrSkip, 6,										// skip to adjustment
+
+//to10ths:
+	instrDiv2byByte, 100,								// shift number right 2 digits
+	instrSkip, 2,										// skip to adjustment
+
+//to100ths:
+	instrDiv2byByte, 10,								// shift number right 1 digit
+
+//adjust:
+	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
+
+//exit:
+	instrJump, tFormatToNumber							// go call prgmFormatToNumber to perform actual formatting
+};
+
 static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(uint8_t), uint8_t (* charIn)(void))
 {
 
 	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
 	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrIn = charIn;
-	mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (devStatus);
+	m08(devIdx) |= (devStatus);
 
 }
 
@@ -13,7 +38,7 @@ static void text::initDev(uint8_t devIdx, uint8_t devStatus, void (* charOut)(ui
 {
 
 	deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut = charOut;
-	mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (devStatus);
+	m08(devIdx) |= (devStatus);
 
 }
 
@@ -66,34 +91,34 @@ static uint8_t text::charOut(uint8_t devIdx, uint8_t chr)
 			case 0x00:	// tcEOS, end-of-string
 				retVal = 0;
 			case 0xED:	// tcOON, enable device output
-				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+				m08(devIdx) |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEB:	// tcOMOFF, disable device output for metric mode
-				if (mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] & mmDisplayMetric) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
-				else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+				if (m08(m8MetricModeFlags) & mmDisplayMetric) m08(devIdx) &= ~(odvFlagEnableOutput);
+				else m08(devIdx) |= (odvFlagEnableOutput);
 				break;
 
 			case 0xEC:	// tcOTOG, toggle device output enable
-				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] ^= (odvFlagEnableOutput);
+				m08(devIdx) ^= (odvFlagEnableOutput);
 				break;
 
 			case 0xEE:	// tcOOFF, disable device output
-				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
+				m08(devIdx) &= ~(odvFlagEnableOutput);
 				break;
 
 			case 0x0D:	// tcEOSCR, output carriage return, defined as end of string
 				retVal = 0;
 			case 0xEF:	// tcCR, output carriage return not at end of string
-				mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
+				m08(devIdx) |= (odvFlagEnableOutput);
 				deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0D);
-				if (mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0A);
+				if (m08(devIdx) & odvFlagCRLF) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(0x0A);
 				break;
 
 			case 0xF0 ... 0xF7: // print CGRAM character
 				chr &= 0x07;
 			case 0x20 ... 0x7F: // print normal character
-				if (mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
+				if (m08(devIdx) & odvFlagEnableOutput) deviceDefs[(uint16_t)(devIdx - m8DevStartIdx)].chrOut(chr);
 				break;
 
 			default:
@@ -118,7 +143,7 @@ static void text::statusOut(uint8_t devIdx, const char * sList, uint8_t strIdx, 
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
 		stringOut(m8DevDebugTerminalIdx, findStr(sList, strIdx));
@@ -139,7 +164,7 @@ static void text::statusOut(uint8_t devIdx, const char * str, const char * sList
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
 		stringOut(m8DevDebugTerminalIdx, str);
@@ -166,7 +191,7 @@ static void text::statusOut(uint8_t devIdx, const char * str)
 	commitStatus(devIdx);
 
 #if defined(useDebugTerminal)
-	if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekStatusMessage)
+	if (m08(m8PeekFlags) & peekStatusMessage)
 	{
 
 		stringOut(m8DevDebugTerminalIdx, str);
@@ -180,8 +205,8 @@ static void text::statusOut(uint8_t devIdx, const char * str)
 static void text::initStatus(uint8_t devIdx)
 {
 
-	// clear all display delays in progress for this device
-	mainProgram8Variables[(uint16_t)(devIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = 0;
+	// clear any display delay already in progress
+	heart::changeBitFlagBits(v8Timer0Status0Idx, t0saDisplayDelayFlags, 0);
 
 #if defined(blankScreenOnMessage)
 	charOut(devIdx, 0x0C); // clear the entire screen
@@ -195,7 +220,7 @@ static void text::commitStatus(uint8_t devIdx)
 {
 
 	newLine(devIdx);
-	mainProgram8Variables[(uint16_t)(devIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = heart::delay0(delay0Tick2000ms, 0);
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 }
 
@@ -223,8 +248,8 @@ static void text::stringOut(uint8_t devIdx, char * str)
 static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str, uint8_t strIdx)
 {
 
-	if (condition) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
-	else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
+	if (condition) m08(devIdx) |= (odvFlagEnableOutput);
+	else m08(devIdx) &= ~(odvFlagEnableOutput);
 
 	stringOut(devIdx, str, strIdx);
 
@@ -233,8 +258,8 @@ static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * st
 static void text::stringOutIf(uint8_t devIdx, uint8_t condition, const char * str)
 {
 
-	if (condition) mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] |= (odvFlagEnableOutput);
-	else mainProgram8Variables[(uint16_t)(devIdx - m8VariableStartIdx)] &= ~(odvFlagEnableOutput);
+	if (condition) m08(devIdx) |= (odvFlagEnableOutput);
+	else m08(devIdx) &= ~(odvFlagEnableOutput);
 
 	stringOut(devIdx, str);
 
@@ -270,7 +295,7 @@ static void text::hexWordOut(uint8_t devIdx, uint16_t val)
 
 	union union_16 * vee = (union union_16 *)(&val);
 
-	for (uint8_t i = 1; i < 2; i--) hexByteOut(devIdx, vee->u8[i]);
+	for (uint8_t i = 1; i < 2; i--) hexByteOut(devIdx, vee->u08[i]);
 
 }
 
@@ -279,8 +304,8 @@ static void text::hexDWordOut(uint8_t devIdx, uint32_t val)
 
 	union union_32 * vee = (union union_32 *)(&val);
 
-	hexWordOut(devIdx, vee->ui[1]);
-	hexWordOut(devIdx, vee->ui[0]);
+	hexWordOut(devIdx, vee->u16[1]);
+	hexWordOut(devIdx, vee->u16[0]);
 
 }
 
@@ -289,7 +314,7 @@ static void text::hexLWordOut(uint8_t devIdx, uint64_t * val)
 
 	union union_64 * vee = (union union_64 *)(val);
 
-	for (uint8_t i = 7; i < 8; i--) hexByteOut(devIdx, vee->u8[i]);
+	for (uint8_t i = 7; i < 8; i--) hexByteOut(devIdx, vee->u08[i]);
 
 }
 
@@ -298,7 +323,7 @@ static void text::tripFunctionOut(uint8_t devIdx, uint16_t tripCalc, uint8_t win
 
 	union union_16 * tC = (union union_16 *)(&tripCalc);
 
-	tripFunctionOut(devIdx, tC->u8[1], tC->u8[0], windowLength, decimalFlag);
+	tripFunctionOut(devIdx, tC->u08[1], tC->u08[0], windowLength, decimalFlag);
 
 }
 
@@ -480,7 +505,7 @@ static uint32_t str2ull(char * strBuffer)
 
 	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
 
-	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->ul[0];
+	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u32[0];
 
 }
 
@@ -514,9 +539,9 @@ static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t
 //
 // this routine can handle numbers up to 9999999999
 //
-// if called with prgmIdx = tRoundOffNumber, also inserts the decimal point in the string specified by the value in decimalPlaces
+// if called with decimalFlag != 0, also inserts the decimal point in the string specified by the value in decimalPlaces
 //
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, const uint8_t * prgmPtr)
 {
 
 	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]);
@@ -529,28 +554,28 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t prgmIdx)
 	uint8_t flg;
 	char zeroChar;
 
-	SWEET64::doCalculate(decimalPlaces, prgmIdx); // call SWEET64 routine to perform decimal point rounding to next nearest decimal place
+	SWEET64::runPrgm(prgmPtr, decimalPlaces); // call SWEET64 routine to perform decimal formatting
 
-	l = tmpPtr2->u8[6];	// load total length of binary-coded decimal bytes of converted number
+	l = tmpPtr2->u08[6];	// load total length of binary-coded decimal bytes of converted number
 
 	if (l == 255) strcpy_P(strBuffer, overFlowStr); // if length is 255, this number overflowed
 	else
 	{
 
-		if (prgmIdx == tRoundOffNumber) flg = 1; // if using tRoundOffNumber to process number, do decimal conversion
+		if (prgmPtr == prgmRoundOffNumber) flg = 1;
 		else flg = 0;
 
-		if (flg) decPos = 11 - decimalPlaces; // if using tRoundOffNumber, compute decimal position
+		if (flg) decPos = 11 - decimalPlaces; // if inserting decimal point, compute decimal position
 		else decPos = 11;
 
-		zeroChar = (char)(tmpPtr2->u8[7]);	// load leading zero character
+		zeroChar = (char)(tmpPtr2->u08[7]);	// load leading zero character
 		strPos = 0; // set initial string buffer position
 		digCnt = 0; // set initial digit count
 
 		for (uint8_t x = 0; x < l; x++) // go through all of the binary-coded decimal bytes of converted number
 		{
 
-			value = tmpPtr2->u8[(uint16_t)(x)];	// load a binary-coded decimal byte of number
+			value = tmpPtr2->u08[(uint16_t)(x)];	// load a binary-coded decimal byte of number
 
 			storeDigit(value / 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 10's place digit in string buffer
 			storeDigit(value % 10, strBuffer, strPos, decPos, zeroChar, digCnt, flg); // store 1's place digit in string buffer
@@ -623,7 +648,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 	f = ((decimalFlag & dfIgnoreDecimalPoint) ? 0 : 1); // shrink window if decimal point is considered
 
 	SWEET64::runPrgm(prgmAutoRangeNumber, windowLength - f); // fetch supportable decimal digit count for window
-	d = tmpPtr3->u8[0];
+	d = tmpPtr3->u08[0];
 	f = 0; // initially signal no overflow occurred
 
 	if (decimalPlaces > d)
@@ -634,7 +659,8 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 
 	}
 
-	if (f == 0) ull2str(strBuffer, decimalPlaces, tRoundOffNumber); // perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+	// perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
+	if (f == 0) ull2str(strBuffer, decimalPlaces, prgmRoundOffNumber);
 
 	if ((strBuffer[2] == '-') || (f)) f = 1; // if number overflowed
 	else

@@ -60,6 +60,9 @@ static const uint8_t displayCountSettingsFuel = 5
 #if defined(useFuelPressure)
 	+ 1
 #endif // defined(useFuelPressure)
+#if defined(useSimulatedFIandVSS)
+	+ 2
+#endif // defined(useSimulatedFIandVSS)
 #ifdef useCalculatedFuelFactor
 	+ 3
 #endif // useCalculatedFuelFactor
@@ -174,6 +177,10 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 	"Inj Delay (us)" tcEOSCR
 	"Revs/Inj Pulse" tcEOSCR
 	"Min good RPM" tcEOSCR
+#if defined(useSimulatedFIandVSS)
+	"SimFIpeakTime us" tcEOSCR
+	"SimFIpeakHi us" tcEOSCR
+#endif // defined(useSimulatedFIandVSS)
 
 // vehicle speed sensor settings
 
@@ -301,10 +308,14 @@ static const char settingsParameterList[] PROGMEM = {
 	pInjectorSettleTimeIdx,
 	pInjPer2CrankRevIdx,
 	pMinGoodRPMidx,
+#if defined(useSimulatedFIandVSS)
+	pPeakHoldSimPeriodIdx,
+	pPeakHoldSimActiveIdx,
+#endif // defined(useSimulatedFIandVSS)
 
 // vehicle speed sensor settings,
 
-	pPulsesPerDistanceIdx,
+	pPulseEdgePerDistanceIdx,
 	pVSSpauseIdx,
 	pMinGoodSpeedidx,
 

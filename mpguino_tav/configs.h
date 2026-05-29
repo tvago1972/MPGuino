@@ -18,7 +18,7 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
+//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
 //#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
@@ -30,6 +30,11 @@
 #define useLoggingSerialPort2 true			// select logging output on serial port channel 2 (ATmega2560 board)
 //#define useLoggingSerialPort3 true			// select logging output on serial port channel 3 (ATmega2560 board)
 //#define useLoggingSerialUSB true			// select logging output on USB CDC output (TinkerKit! LCD module)
+//
+// Logging serial output settings - if the corresponding serial output port is not selected, these will be ignored
+//
+//#define useLoggingBufferedOutput true		// speed up logging output on serial port
+#define useLoggingSerialBaudRate 9600
 
 // JSON output port options
 //   - if useJSONoutput is not selected, the below output port options will be ignored
@@ -40,6 +45,11 @@
 //#define useJSONserialPort2 true			// select JSON output on serial port channel 2 (ATmega2560 board)
 //#define useJSONserialPort3 true			// select JSON output on serial port channel 3 (ATmega2560 board)
 //#define useJSONserialUSB true			// select JSON output on USB CDC output (TinkerKit! LCD module)
+//
+// JSON output port settings - if the corresponding serial output port is not selected, these will be ignored
+//
+#define useJSONserialBufferedOutput true	// speed up JSON output on serial port
+#define useJSONserialBaudRate 19200
 
 // debug terminal I/O port options
 //   - if useDebugTerminal is not selected, the below output port options will be ignored
@@ -50,6 +60,11 @@
 //#define useDebugTerminalSerialPort2 true	// select serial port channel 2 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialPort3 true	// select serial port channel 3 for PC-MPGuino terminal interface (ATmega2560 board)
 //#define useDebugTerminalSerialUSB true		// select USB CDC output for PC-MPGuino terminal interface (TinkerKit! LCD module)
+//
+// Debug terminal serial output settings - if the corresponding serial output port is not selected, these will be ignored
+//
+#define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
+#define useDebugTerminalSerialBaudRate 38400
 
 // Bluetooth output port options
 //   - if useBluetooth is not selected, the below output port options will be ignored
@@ -60,6 +75,11 @@
 //#define useBluetoothSerialPort2 true		// select Bluetooth output on serial port channel 2 (ATmega2560 board)
 //#define useBluetoothSerialPort3 true		// select Bluetooth output on serial port channel 3 (ATmega2560 board)
 #define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
+//
+// Bluetooth serial output settings - if the corresponding serial output port is not selected, these will be ignored
+//
+#define useBluetoothBufferedOutput true		// speed up Bluetooth output on serial port
+#define useBluetoothSerialBaudRate 9600
 
 // options for debugging terminal interface between PC and MPGuino
 //   - mainly used to conserve space on ATmega328/128 and ATmega32U4 boards
@@ -96,8 +116,13 @@
 //#define useLCDserialPort1 true				// select serial LCD module output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useLCDserialPort2 true				// select serial LCD module output on serial port channel 2 (ATmega2560 board)
 //#define useLCDserialPort3 true				// select serial LCD module output on serial port channel 3 (ATmega2560 board)
+//
+// LCD serial output settings - if the corresponding serial output port is not selected, these will be ignored
+//
+//#define useLCDserialBufferedOutput true			// Speed up LCD output on serial port
+#define useLCDserialBaudRate 19200
 
-// the below option only works if useLegacyLCD is selected. If useLegacyLCD is not selected, the below option will not be inserted at all
+// the below option only works if useLegacyLCD is selected. If useLegacyLCD is not selected, the below option will be ignored
 //
 //#define useInvertedLegacyLCDbrightness true	// For alternate LCD backlight connections
 
@@ -115,6 +140,7 @@
 // core selectable options - any conflicts will be reported at compile time
 // *** these features will be supported, regardless of what user interface is chosen for MPGuino ***
 //
+#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
 #define useSavedTrips true					// Ability to save current or tank trips to EEPROM
 #define trackIdleEOCdata true				// Ability to track engine idling and EOC modes
 #define useWindowTripFilter true			// Smooths out "jumpy" instant FE figures that are caused by modern OBDII engine computers
@@ -124,7 +150,7 @@
 #define useAlternatorVoltage true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// Ability to use a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
-//#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
+#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 #define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 #define useDS1307clock true					// Shows 24 hour clock driven off a DS1307-based RTC module via TWI, and provides a means to set it
@@ -147,26 +173,6 @@
 //#define useDeepSleep true					// (inw) places MPGuino into deep sleep after activity timeout
 //#define useCalculatedFuelFactor true		// (inw) Ability to calculate that pesky us/gal (or L) factor from easily available published fuel injector data
 
-// performance enhancement options
-//   - all may be chosen independently of one another
-//   - if the performance enhancement option depends on a base option that is not selected, the performance enhancement is ignored
-//
-//#define useLCDbufferedOutput true			// Speed up LCD output
-//#define useBluetoothBufferedOutput true		// speed up Bluetooth output on serial port
-//#define useLoggingBufferedOutput true		// speed up logging output on serial port
-//#define useJSONbufferedOutput true			// speed up JSON output on serial port
-#define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
-#define useAssemblyLanguage true			// Speeds up many low-level MPGuino functions
-
-// serial speed options
-//   - if the corresponding serial port is not selected, serial speed option will be ignored
-//
-#define useLCDserialBaudRate 19200
-#define useBluetoothSerialBaudRate 9600
-#define useLoggingSerialBaudRate 9600
-#define useJSONserialBaudRate 19200
-#define useDebugTerminalSerialBaudRate 38400
-
 // TWI defined addresses for various MPGuino TWI selected peripherals
 //  - PCF8574 expander allows for addressTWILCD values 0x20 through 0x27
 //
@@ -184,9 +190,10 @@
 
 // other program measurement and debugging tools
 //
-#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
-#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
+//#define useSimulatedFIandVSS true			// forces simulation of VSS and fuel injector events
+//#define useActivityLED true					// indicates when MPGuino is awake vs idle/asleep
 //#define useDebugAnalog true					// forces ADC support to be compiled in, along with a dedicated analog screen
+//#define useDebugLEDactivity true			// for ATmega2560 boards only, provides 8 output LED driver pins for monitoring SLEEP_MODE_IDLE usage
 
 // these #defines are used to select various features to support the above choices
 // do not mess with them, or compilation errors will occur
@@ -199,6 +206,12 @@
 #if not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
 #warning *** Unknown board - hardware features may not work! ***
 #endif // not(__AVR_ATmega32U4__) && not(__AVR_ATmega2560__) && not(__AVR_ATmega328P__)
+
+#if defined(useDebugLEDactivity)
+#if !defined(__AVR_ATmega2560__)
+#error *** useDebugLEDactivity only supported on ATmega2560 boards!!! ***
+#endif // !defined(__AVR_ATmega2560__)
+#endif // defined(useDebugLEDactivity)
 
 #if defined(useTinkerkitLCDmodule) && defined(useLegacyButtons)
 #error *** CANNOT configure for TinkerkitLCDmodule and Legacy Buttons!!! ***
@@ -518,7 +531,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useJSONserialPort3
 #undef useJSONserialBaudRate
 #undef useJSONserialUSB
-#undef useJSONbufferedOutput
+#undef useJSONserialBufferedOutput
 #endif // defined(useJSONoutput)
 
 #if defined(useDebugTerminal)
@@ -559,11 +572,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define serial0BaudRate useLCDserialBaudRate
 #define m8DevLCDserialIdx m8DevSerial0idx
 #define LCDserialPort serial0
-#if defined(useLCDbufferedOutput)
-#undef useLCDbufferedOutput
+#if defined(useLCDserialBufferedOutput)
 #define useBufferedSerial0Port true
 #define rbIdxLCDserial rbIdxSerial0Out
-#endif // defined(useLCDbufferedOutput)
+#endif // defined(useLCDserialBufferedOutput)
 #endif // defined(useLCDserialPort0)
 
 #if defined(useLCDserialPort1)
@@ -580,11 +592,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define serial1BaudRate useLCDserialBaudRate
 #define m8DevLCDserialIdx m8DevSerial1idx
 #define LCDserialPort serial1
-#if defined(useLCDbufferedOutput)
-#undef useLCDbufferedOutput
+#if defined(useLCDserialBufferedOutput)
 #define useBufferedSerial1Port true
 #define rbIdxLCDserial rbIdxSerial1Out
-#endif // defined(useLCDbufferedOutput)
+#endif // defined(useLCDserialBufferedOutput)
 #endif // defined(useLCDserialPort1)
 
 #if defined(useLCDserialPort2)
@@ -601,11 +612,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define serial2BaudRate useLCDserialBaudRate
 #define m8DevLCDserialIdx m8DevSerial2idx
 #define LCDserialPort serial2
-#if defined(useLCDbufferedOutput)
-#undef useLCDbufferedOutput
+#if defined(useLCDserialBufferedOutput)
 #define useBufferedSerial2Port true
 #define rbIdxLCDserial rbIdxSerial2Out
-#endif // defined(useLCDbufferedOutput)
+#endif // defined(useLCDserialBufferedOutput)
 #endif // defined(useLCDserialPort2)
 
 #if defined(useLCDserialPort3)
@@ -622,11 +632,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define serial3BaudRate useLCDserialBaudRate
 #define m8DevLCDserialIdx m8DevSerial3idx
 #define LCDserialPort serial3
-#if defined(useLCDbufferedOutput)
-#undef useLCDbufferedOutput
+#if defined(useLCDserialBufferedOutput)
 #define useBufferedSerial3Port true
 #define rbIdxLCDserial rbIdxSerial3Out
-#endif // defined(useLCDbufferedOutput)
+#endif // defined(useLCDserialBufferedOutput)
 #endif // defined(useLCDserialPort3)
 
 #if defined(useBluetoothSerialPort0)
@@ -807,9 +816,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useSerial0Port true
 #define serial0BaudRate useJSONserialBaudRate
 #define m8DevJSONoutputIdx m8DevSerial0idx
-#if defined(useJSONbufferedOutput)
+#if defined(useJSONserialBufferedOutput)
 #define useBufferedSerial0Port true
-#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialBufferedOutput)
 #endif // defined(useJSONserialPort0)
 
 #if defined(useJSONserialPort1)
@@ -825,9 +834,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useSerial1Port true
 #define serial1BaudRate useJSONserialBaudRate
 #define m8DevJSONoutputIdx m8DevSerial1idx
-#if defined(useJSONbufferedOutput)
+#if defined(useJSONserialBufferedOutput)
 #define useBufferedSerial1Port true
-#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialBufferedOutput)
 #endif // defined(useJSONserialPort1)
 
 #if defined(useJSONserialPort2)
@@ -843,9 +852,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useSerial2Port true
 #define serial2BaudRate useJSONserialBaudRate
 #define m8DevJSONoutputIdx m8DevSerial2idx
-#if defined(useJSONbufferedOutput)
+#if defined(useJSONserialBufferedOutput)
 #define useBufferedSerial2Port true
-#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialBufferedOutput)
 #endif // defined(useJSONserialPort2)
 
 #if defined(useJSONserialPort3)
@@ -861,9 +870,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useSerial3Port true
 #define serial3BaudRate useJSONserialBaudRate
 #define m8DevJSONoutputIdx m8DevSerial3idx
-#if defined(useJSONbufferedOutput)
+#if defined(useJSONserialBufferedOutput)
 #define useBufferedSerial3Port true
-#endif // defined(useJSONbufferedOutput)
+#endif // defined(useJSONserialBufferedOutput)
 #endif // defined(useJSONserialPort3)
 
 #if defined(useJSONserialUSB)
@@ -984,8 +993,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 
 #if defined(useBufferedSerial0Port) || defined(useBufferedSerial1Port) || defined(useBufferedSerial2Port) || defined(useBufferedSerial3Port) \
 	|| defined(useSerial0PortInput) || defined(useSerial1PortInput) || defined(useSerial2PortInput) || defined(useSerial3PortInput) \
-	|| defined(useLCDbufferedOutput) \
-	|| defined(useUSBserial)
+	|| defined(__AVR_ATmega32U4__)
 #define useBuffering true
 #endif
 
@@ -997,6 +1005,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(usePort4BitLCD) || defined(useTWI4BitLCD)
 #define use4BitLCD true
 #define useTimer1Interrupt true
+#undef useLCDserialBufferedOutput
 #endif // defined(usePort4BitLCD) || defined(useTWI4BitLCD)
 
 #if defined(usePort4BitLCD) || defined (useSerialLCD) || defined(useTWI4BitLCD)
@@ -1011,19 +1020,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useTimer1 true
 #endif // defined(useTimer1Interrupt)
 
-#if defined(useOutputPins)
-#if defined(__AVR_ATmega32U4__)
-#define useTimer4 true
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-#define useTimer2 true
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-#define useTimer1 true
-#define useTimer2 true
-#endif // defined(__AVR_ATmega328P__)
-#endif // defined(useOutputPins)
-
 // this section catches configuration errors
 
 #if defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
@@ -1033,48 +1029,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
 #error *** Button hardware configuration error detected!!! ***
 #endif // ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
-
-#if defined(useUSBserial)
-#if defined(__AVR_ATmega328P__)
-#error *** Cannot use ATmega328/128 hardware and useUSBserial!!! ***
-#endif // defined(__AVR_ATmega328P__)
-#if defined(__AVR_ATmega2560__)
-#error *** Cannot use ATmega2560 hardware and useUSBserial!!! ***
-#endif // defined(__AVR_ATmega2560__)
-#endif // defined(useUSBserial)
-
-#if defined(useSerial0Port)
-#if defined(__AVR_ATmega32U4__)
-#error *** Cannot use ATmega32U4 and Serial Port 0!!! ***
-#endif // defined(__AVR_ATmega32U4__)
-#endif // defined(useSerial0Port)
-
-#if defined(useSerial1Port)
-#if defined(useTinkerkitLCDmodule)
-#error *** Serial Port 1 on TinkerKit! LCD module conflicts with fuel injector sense ports!!! ***
-#endif // defined(useTinkerkitLCDmodule)
-#if defined(__AVR_ATmega328P__)
-#error *** Cannot use ATmega328/128 and Serial Port 1!!! ***
-#endif // defined(__AVR_ATmega328P__)
-#endif // defined(useSerial1Port)
-
-#if defined(useSerial2Port)
-#if defined(__AVR_ATmega32U4__)
-#error *** Cannot use ATmega32U4 and Serial Port 2!!! ***
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega328P__)
-#error *** Cannot use ATmega328/128 and Serial Port 2!!! ***
-#endif // defined(__AVR_ATmega328P__)
-#endif // defined(useSerial2Port)
-
-#if defined(useSerial3Port)
-#if defined(__AVR_ATmega32U4__)
-#error *** Cannot use ATmega32U4 and Serial Port 3!!! ***
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega328P__)
-#error *** Cannot use ATmega328/128 and Serial Port 3!!! ***
-#endif // defined(__AVR_ATmega328P__)
-#endif // defined(useSerial3Port)
 
 // Really, dcb? Really? You couldn't have used something else for LCD data bit 3?
 #if defined(useLegacyLCD) && defined(__AVR_ATmega328P__) && ( defined(useActivityLED) || defined(useHardwareSPI) )
@@ -1119,10 +1073,6 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define usePressure true
 #endif // defined(useFuelPressure)
 
-#if defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
-#define useActivityRecord true
-#endif // defined(useCPUreading) || defined(useDebugCPUreading) || defined(useActivityLED)
-
 // LCD-specific major feature define configurations
 
 #if defined(useClockSupport) && defined(useButtonInput)
@@ -1160,4 +1110,3 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(usePartialRefuel) || defined(useSavedTrips)
 #define useEnhancedTripReset true
 #endif // defined(usePartialRefuel) || defined(useSavedTrips)
-

@@ -28,21 +28,21 @@ static char nBuff[17]; // used by bigDigit::, barGraphSupport::, systemInfo::, d
 
 // calculation indexes into SWEET64 S64programList[] for display functions to either screen or logging output
 #define nextAllowedValue 0
-static const uint8_t tEngineRunTime =				nextAllowedValue;				// engine runtime (hhmmss)
-static const uint8_t tRangeTime =					tEngineRunTime + 1;				// estimated total runtime from full tank (hhmmss)
-static const uint8_t tReserveTime =					tRangeTime + 1;					// estimated reserve runtime from full tank (hhmmss)
-static const uint8_t tBingoTime =					tReserveTime + 1;				// estimated bingo fuel runtime from full tank (hhmmss)
-static const uint8_t tTimeToEmpty =					tBingoTime + 1;					// estimated remaining engine runtime (hhmmss)
-static const uint8_t tReserveTimeToEmpty =			tTimeToEmpty + 1;				// estimated remaining reserve engine runtime (hhmmss)
-static const uint8_t tBingoTimeToEmpty =			tReserveTimeToEmpty + 1;		// estimated bingo fuel quantity engine runtime (hhmmss)
-static const uint8_t tMotionTime =					tBingoTimeToEmpty + 1;			// time vehicle in motion (hhmmss)
+static const uint8_t tEngineRunTime =				nextAllowedValue;				// engine runtime (H9mmSS)
+static const uint8_t tRangeTime =					tEngineRunTime + 1;				// estimated total runtime from full tank (H9mmSS)
+static const uint8_t tReserveTime =					tRangeTime + 1;					// estimated reserve runtime from full tank (H9mmSS)
+static const uint8_t tBingoTime =					tReserveTime + 1;				// estimated bingo fuel runtime from full tank (H9mmSS)
+static const uint8_t tTimeToEmpty =					tBingoTime + 1;					// estimated remaining engine runtime (H9mmSS)
+static const uint8_t tReserveTimeToEmpty =			tTimeToEmpty + 1;				// estimated remaining reserve engine runtime (H9mmSS)
+static const uint8_t tBingoTimeToEmpty =			tReserveTimeToEmpty + 1;		// estimated bingo fuel quantity engine runtime (H9mmSS)
+static const uint8_t tMotionTime =					tBingoTimeToEmpty + 1;			// time vehicle in motion (H9mmSS)
 static const uint8_t tInjectorOpenTime =			tMotionTime + 1;				// fuel used (milliseconds)
 static const uint8_t tInjectorTotalTime =			tInjectorOpenTime + 1;			// engine run time (milliseconds)
 static const uint8_t tVSStotalTime =				tInjectorTotalTime + 1;			// time vehicle in motion (milliseconds)
 static const uint8_t tEngineSpeed =					tVSStotalTime + 1;				// engine speed (1/m)
 static const uint8_t tInjectorPulseCount =			tEngineSpeed + 1;				// fuel injector pulse count
-static const uint8_t tVSSpulseCount =				tInjectorPulseCount + 1;		// VSS pulse count
-static const uint8_t tDistance =					tVSSpulseCount + 1;				// vehicle distance traveled (SI/SAE)
+static const uint8_t tVSSpulseEdgeCount =			tInjectorPulseCount + 1;		// VSS pulse edge count
+static const uint8_t tDistance =					tVSSpulseEdgeCount + 1;			// vehicle distance traveled (SI/SAE)
 static const uint8_t tSpeed =						tDistance + 1;					// vehicle speed (SI/SAE)
 static const uint8_t tFuelUsed =					tSpeed + 1;						// fuel quantity used (SI/SAE)
 static const uint8_t tFuelRate =					tFuelUsed + 1;					// fuel consumption rate (SI/SAE)
@@ -121,14 +121,10 @@ static const uint8_t tCalculateFuelQuantity =		tConvertToMilliSeconds + 1;		// c
 static const uint8_t tCalculateFuelDistance =		tCalculateFuelQuantity + 1;
 static const uint8_t tCalculateFuelTime =			tCalculateFuelDistance + 1;
 static const uint8_t tCalculateSpeed =				tCalculateFuelTime + 1;
-static const uint8_t tFormatToHHMMSStime =			tCalculateSpeed + 1;
-static const uint8_t tFormatToH9MMSStime =			tFormatToHHMMSStime + 1;
-static const uint8_t tFormatToNumber =				tFormatToH9MMSStime + 1;
-static const uint8_t tRoundOffNumber =				tFormatToNumber + 1;
-static const uint8_t tLoadTrip =					tRoundOffNumber + 1;
+static const uint8_t tFormatToNumber =				tCalculateSpeed + 1;
+static const uint8_t tLoadTrip =					tFormatToNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
-static const uint8_t tReadTicksToSeconds =			tSaveTrip + 1;
-#define nextAllowedValue tReadTicksToSeconds + 1
+#define nextAllowedValue tSaveTrip + 1
 #if defined(useBarFuelEconVsTime)
 static const uint8_t tFEvTgetDistance =				nextAllowedValue;
 static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
@@ -150,20 +146,20 @@ static const uint8_t dfMaxValTotalCount =			nextAllowedValue;				// maximum inde
 
 #if defined(useDebugTerminalLabels)
 static const char terminalTripFuncNames[] PROGMEM = {
-	"tEngineRunTime" tcEOS				// engine runtime (hhmmss)
-	"tRangeTime" tcEOS					// estimated total runtime from full tank (hhmmss)
-	"tReserveTime" tcEOS				// estimated reserve runtime from full tank (hhmmss)
-	"tBingoTime" tcEOS					// estimated bingo fuel runtime from full tank (hhmmss)
-	"tTimeToEmpty" tcEOS				// estimated remaining engine runtime (hhmmss)
-	"tReserveTimeToEmpty" tcEOS			// estimated remaining reserve engine runtime (hhmmss)
-	"tBingoTimeToEmpty" tcEOS			// estimated bingo fuel quantity engine runtime (hhmmss)
-	"tMotionTime" tcEOS					// time vehicle in motion (hhmmss)
+	"tEngineRunTime" tcEOS				// engine runtime (H9mmSS)
+	"tRangeTime" tcEOS					// estimated total runtime from full tank (H9mmSS)
+	"tReserveTime" tcEOS				// estimated reserve runtime from full tank (H9mmSS)
+	"tBingoTime" tcEOS					// estimated bingo fuel runtime from full tank (H9mmSS)
+	"tTimeToEmpty" tcEOS				// estimated remaining engine runtime (H9mmSS)
+	"tReserveTimeToEmpty" tcEOS			// estimated remaining reserve engine runtime (H9mmSS)
+	"tBingoTimeToEmpty" tcEOS			// estimated bingo fuel quantity engine runtime (H9mmSS)
+	"tMotionTime" tcEOS					// time vehicle in motion (H9mmSS)
 	"tInjectorOpenTime" tcEOS			// fuel used (milliseconds)
 	"tInjectorTotalTime" tcEOS			// engine run time (milliseconds)
 	"tVSStotalTime" tcEOS				// time vehicle in motion (milliseconds)
 	"tEngineSpeed" tcEOS				// engine speed (1/m)
 	"tInjectorPulseCount" tcEOS			// fuel injector pulse count
-	"tVSSpulseCount" tcEOS				// VSS pulse count
+	"tVSSpulseEdgeCount" tcEOS			// VSS pulse edge count
 	"tDistance" tcEOS					// vehicle distance traveled (SI/SAE)
 	"tSpeed" tcEOS						// vehicle speed (SI/SAE)
 	"tFuelUsed" tcEOS					// fuel quantity used (SI/SAE)
@@ -224,13 +220,9 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tCalculateFuelDistance" tcEOS
 	"tCalculateFuelTime" tcEOS
 	"tCalculateSpeed" tcEOS
-	"tFormatToHHMMSStime" tcEOS
-	"tFormatToH9MMSStime" tcEOS
 	"tFormatToNumber" tcEOS
-	"tRoundOffNumber" tcEOS
 	"tLoadTrip" tcEOS
 	"tSaveTrip" tcEOS
-	"tReadTicksToSeconds" tcEOS
 #if defined(useBarFuelEconVsTime)
 	"tFEvTgetDistance" tcEOS
 	"tFEvTgetConsumedFuel" tcEOS
@@ -247,39 +239,39 @@ static const char terminalTripFuncNames[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminalLabels)
-static const uint8_t prgmEngineRunTime[] PROGMEM = {	// tEngineRunTime - engine runtime (hhmmss)
+static const uint8_t prgmEngineRunTime[] PROGMEM = {	// tEngineRunTime - engine runtime (H9mmSS)
 	instrLdRegTripVarIndexed, 0x02, rvEngCycleIdx,		// load injector pulse cycle value into register 2
 	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+	instrDone											// exit to caller
 };
 
-static const uint8_t prgmRangeTime[] PROGMEM = {		// tRangeTime - estimated total runtime from full tank (hhmmss)
+static const uint8_t prgmRangeTime[] PROGMEM = {		// tRangeTime - estimated total runtime from full tank (H9mmSS)
 	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
 
-static const uint8_t prgmReserveTime[] PROGMEM = {		// tReserveTime - estimated reserve runtime from full tank (hhmmss)
+static const uint8_t prgmReserveTime[] PROGMEM = {		// tReserveTime - estimated reserve runtime from full tank (H9mmSS)
 	instrLdRegVariable, 0x02, m64TankSizeIdx,			// fetch calculated tank size in injector open cycles
 	instrSubVariableFromX, 0x02, m64BingoTankSizeIdx,	// subtract bingo fuel value in cycles from remaining fuel in cycles to get reserve fuel in cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
 
-static const uint8_t prgmBingoTime[] PROGMEM = {		// tBingoTime - estimated bingo fuel runtime from full tank (hhmmss)
+static const uint8_t prgmBingoTime[] PROGMEM = {		// tBingoTime - estimated bingo fuel runtime from full tank (H9mmSS)
 	instrLdRegVariable, 0x02, m64BingoTankSizeIdx,		// fetch bingo tank size in injector open cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
 
-static const uint8_t prgmTimeToEmpty[] PROGMEM = {		// tTimeToEmpty - estimated remaining engine runtime (hhmmss)
+static const uint8_t prgmTimeToEmpty[] PROGMEM = {		// tTimeToEmpty - estimated remaining engine runtime (H9mmSS)
 	instrCall, tCalculateRemainingTank,					// fetch remaining fuel value in injector open cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
 
-static const uint8_t prgmReserveTimeToEmpty[] PROGMEM = {	// tReserveTimeToEmpty - estimated remaining reserve engine runtime (hhmmss)
+static const uint8_t prgmReserveTimeToEmpty[] PROGMEM = {	// tReserveTimeToEmpty - estimated remaining reserve engine runtime (H9mmSS)
 	instrCall, tCalculateRemainingReserve,				// fetch reserve fuel quantity in injector open cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
 
-static const uint8_t prgmBingoTimeToEmpty[] PROGMEM = {	// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (hhmmss)
+static const uint8_t prgmBingoTimeToEmpty[] PROGMEM = {	// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (H9mmSS)
 	instrCall, tCalculateBingoFuel,						// fetch bingo fuel value in injector open cycles
 	instrJump, tCalculateFuelTime						// go format it
 };
@@ -294,18 +286,12 @@ static const uint8_t prgmCalculateFuelTime[] PROGMEM = {	// tCalculateFuelTime
 	instrDiv2byRdOnly, idxMicroSecondsPerSecond,		// shift number downward - high numeric precision no longer needed
 
 //cont:
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
+	instrDone											// exit to caller
 };
 
-static const uint8_t prgmMotionTime[] PROGMEM = {		// tMotionTime - time vehicle in motion (hhmmss)
+static const uint8_t prgmMotionTime[] PROGMEM = {		// tMotionTime - time vehicle in motion (H9mmSS)
 	instrLdRegTripVarIndexed, 0x02, rvVSScycleIdx,		// load VSS cycle value into register 2
 	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by cycles per second value
-	instrJump, tFormatToH9MMSStime						// go format the number to hhmmss time
-};
-
-static const uint8_t prgmFormatToH9MMSStime[] PROGMEM = {	// tFormatToH9MMSStime
-	instrLdReg, 0x21,									// move time in seconds into register 1
-	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
@@ -349,7 +335,7 @@ static const uint8_t prgmInjectorPulseCount[] PROGMEM = {	// tInjectorPulseCount
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmVSSpulseCount[] PROGMEM = {	// tInjectorPulseCount - fuel injector pulse count
+static const uint8_t prgmVSSpulseEdgeCount[] PROGMEM = {	// tVSSpulseEdgeCount - VSS pulse edge count
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load trip vehicle speed sensor pulse count
 	instrMul2byRdOnly, idxDecimalPoint,					// multiply by decimal point factor for output as an integer
 	instrDone											// exit to caller
@@ -358,7 +344,7 @@ static const uint8_t prgmVSSpulseCount[] PROGMEM = {	// tInjectorPulseCount - fu
 static const uint8_t prgmDistance[] PROGMEM = {			// tDistance - vehicle distance traveled (SI/SAE)
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS cycle value into register 2
 	instrMul2byRdOnly, idxDecimalPoint,					// perform output decimal formatting
-	instrDiv2byEEPROM, pPulsesPerDistanceIdx,			// divide by pulse per distance value and store in register 2
+	instrDiv2byEEPROM, pPulseEdgePerDistanceIdx,		// divide by pulse edges per unit distance value and store in register 2
 	instrDone											// exit to caller
 };
 
@@ -393,7 +379,7 @@ static const uint8_t prgmFuelEcon[] PROGMEM = {			// tFuelEcon - fuel economy (S
 	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume to get the denominator for fuel economy
 	instrLdReg, 0x21,									// save denominator for later
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by the pulse edges per unit distance factor to get the numerator for fuel economy
 	instrBranchIfFuelOverDist, 6,						// if MPGuino is in metric mode, skip ahead
 	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
 	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or km/L)
@@ -442,10 +428,10 @@ static const uint8_t prgmBingoDistanceToEmpty[] PROGMEM = {	// tBingoDistanceToE
 static const uint8_t prgmCalculateFuelDistance[] PROGMEM = {	// tCalculateFuelDistance
 	instrTestReg, 0x02,									// test inputted fuel quantity
 	instrBranchIfZero, 18,								// if inputted fuel quantity is zero, exit to caller
-	instrMul2byTripVarIndexed, rvVSSpulseIdx,			// multiply input fuel quantity by accumulated distance travelled pulses to get the numerator for distance to empty
+	instrMul2byTripVarIndexed, rvVSSpulseIdx,			// multiply input fuel quantity by accumulated distance traveled pulses to get the numerator for distance to empty
 	instrLdReg, 0x23,									// move numerator to register 3 for now
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycles
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply accumulated fuel injector open cycles by pulses per unit distance factor
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply accumulated fuel injector open cycles by pulse edges per unit distance factor
 	instrDiv2byRdOnly, idxDecimalPoint,					// divide by decimal point constant to get denominator / decimal factor
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrLdReg, 0x21,									// move modified denominator to register 1 for now
@@ -565,7 +551,7 @@ static const uint8_t prgmFuelCostPerDistance[] PROGMEM = {
 	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume value to get the denominator for fuel cost per distance
 	instrLdReg, 0x21,									// save denominator term
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel cost per distance
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by the pulse edges per unit distance factor to get the numerator for fuel cost per distance
 	instrMul2byEEPROM, pCostPerQuantity,				// multiply the numerator by the fuel cost per unit quantity
 	instrDiv2by1,										// divide the numerator by the denominator
 	instrDone
@@ -573,7 +559,7 @@ static const uint8_t prgmFuelCostPerDistance[] PROGMEM = {
 
 static const uint8_t prgmDistancePerFuelCost[] PROGMEM = {
 	instrLdRegTripVarIndexed, 0x02, rvInjCycleIdx,		// fetch the accumulated fuel injector open cycle measurement
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the denominator for distance per fuel cost
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by the pulse edges edges per unit distance factor to get the denominator for distance per fuel cost
 	instrMul2byEEPROM, pCostPerQuantity,				// multiply the denominator by the cost per unit quantity of fuel
 	instrLdReg, 0x21,									// save the denominator term
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// fetch the accumulated number of VSS pulses counted
@@ -676,31 +662,6 @@ static const uint8_t prgmAlternatorChannel[] PROGMEM = {
 };
 
 #endif // defined(useAlternatorVoltage)
-static const uint8_t prgmRoundOffNumber[] PROGMEM = {
-	instrTestReg, 0x02,									// test register 2
-	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
-	instrCmpIndex, 2,									// check if 3 or more right hand digits were specified
-	instrBranchIfGT, 17,								// if so, just exit
-	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
-	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
-	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
-	instrDiv2byRdOnly, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
-	instrSkip, 6,										// skip to adjustment
-
-//to10ths:
-	instrDiv2byByte, 100,								// shift number right 2 digits
-	instrSkip, 2,										// skip to adjustment
-
-//to100ths:
-	instrDiv2byByte, 10,								// shift number right 1 digit
-
-//adjust:
-	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-
-//exit:
-	instrJump, tFormatToNumber							// go call prgmFormatToNumber to perform actual formatting
-};
-
 static const uint8_t prgmFormatToNumber[] PROGMEM = {	// tFormatToNumber
 	instrTestReg, 0x02,									// test register 2
 	instrBranchIfOverflow, 13,							// if register 2 has overflow value, exit
@@ -854,12 +815,6 @@ static const uint8_t prgmSaveTrip[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmReadTicksToSeconds[] PROGMEM = {
-	instrLdRegVariableIndexed, 0x02,
-	instrDiv2byRdOnly, idxTicksPerSecond,
-	instrJump, tFormatToHHMMSStime						// go format the number to hhmmss time
-};
-
 #if defined(useBarFuelEconVsTime)
 static const uint8_t prgmFEvTgetDistance[] PROGMEM = {
 	instrLdRegTripFEvTindexed, 0x02, rvVSSpulseIdx,		// load indexed VSS pulses from fuel econ vs time trip variable bank
@@ -880,7 +835,7 @@ static const uint8_t prgmFEvTgetFuelEconomy[] PROGMEM = {
 	instrLdReg, 0x21,									// save denominator (for G/100mi or L/100km) for later
 	instrLdRegTripFEvTindexed, 0x02, rvInjCycleIdx,		// load indexed injector cycles from fuel econ vs time trip variable bank
 	instrBranchIfE, 22,
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by the pulse edges per unit distance factor to get the numerator for fuel economy
 	instrBranchIfFuelOverDist, 6,						// if MPGuino currently outputting fuel econ as fuel over distance, skip
 	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
 	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
@@ -927,7 +882,7 @@ static const uint8_t prgmFEvSgetFuelEconomy[] PROGMEM = {
 	instrLdReg, 0x21,									// save denominator (for G/100mi or L/100km) for later
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvInjCycleIdx,	// load indexed injector cycles from fuel econ vs speed trip variable bank
 	instrBranchIfE, 22,
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// multiply by the pulses per unit distance factor to get the numerator for fuel economy
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by the pulse edges per unit distance factor to get the numerator for fuel economy
 	instrBranchIfFuelOverDist, 6,						// if MPGuino currently outputting fuel econ as fuel over distance, skip
 	instrSwapReg, 0x21,									// swap the numerator and denominator terms around
 	instrMul2byRdOnly, idxDecimalPoint,					// put in the decimal point constant used for output formatting (for mi/gal or k/L)
@@ -971,12 +926,6 @@ static const uint8_t prgmParseCharacterToReg[] PROGMEM = {
 };
 
 #endif // defined(useDebugTerminal)
-static const uint8_t prgmFormatToHHMMSStime[] PROGMEM = {
-	instrLdReg, 0x21,									// move time in seconds into register 1
-	instrDoBCDadjust, 0x12, bcdFormatHHMMSS,			// process register 1 as hhmmss BCD string and store it in register 2
-	instrDone											// exit to caller
-};
-
 #if defined(useChryslerMAPCorrection)
 static const uint8_t prgmPressureChannel[] PROGMEM = {
 	instrCmpIndex, m32AnalogMAPfloorIdx - m32MAPpressureIdx,	// is trip index pointing to a valid pressure element?
@@ -992,14 +941,14 @@ static const uint8_t prgmPressureChannel[] PROGMEM = {
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
 static const uint8_t prgmDragSpeed[] PROGMEM = {		// tDragSpeed - acceleration test maximum vehicle speed (SI/SAE)
-	instrLdRegByte, 0x02, 1,							// load 1 pulse into numerator term
-	instrLdRegVariable, 0x01, m32DragInstantSpeedIdx,	// load instantaneous drag speed measurement into denominator term
+	instrLdRegByte, 0x02, 2,							// load 2 pulses into numerator term
+	instrLdRegVariable, 0x01, m32DragTopSpeedIdx,		// load instantaneous drag speed measurement into denominator term
 	instrTestReg, 0x01,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
 };
 
 static const uint8_t prgmTrapSpeed[] PROGMEM = {		// tTrapSpeed - acceleration test vehicle speed at defined distance (SI/SAE)
-	instrLdRegByte, 0x02, 1,							// load 1 pulse into numerator term
+	instrLdRegByte, 0x02, 2,							// load 2 pulses into numerator term
 	instrLdRegVariable, 0x01, m32DragTrapSpeedIdx,		// load instantaneous trap speed measurement into denominator term
 	instrTestReg, 0x01,									// test speed measurement
 	instrJump, tCalculateSpeed							// go calculate speed
@@ -1046,20 +995,20 @@ static const uint8_t prgmAccelTestTime[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 static const uint8_t * const S64programList[] PROGMEM = {
 // this is the start of the SWEET64 display function list
-	prgmEngineRunTime,							// tEngineRunTime - engine runtime (hhmmss)
-	prgmRangeTime,								// tRangeTime - estimated total runtime from full tank (hhmmss)
-	prgmReserveTime,							// tReserveTime - estimated reserve runtime from full tank (hhmmss)
-	prgmBingoTime,								// tBingoTime - estimated bingo fuel runtime from full tank (hhmmss)
-	prgmTimeToEmpty,							// tTimeToEmpty - estimated remaining engine runtime (hhmmss)
-	prgmReserveTimeToEmpty,						// tReserveTimeToEmpty - estimated remaining reserve engine runtime (hhmmss)
-	prgmBingoTimeToEmpty,						// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (hhmmss)
-	prgmMotionTime,								// tMotionTime - time vehicle in motion (hhmmss)
+	prgmEngineRunTime,							// tEngineRunTime - engine runtime (H9mmSS)
+	prgmRangeTime,								// tRangeTime - estimated total runtime from full tank (H9mmSS)
+	prgmReserveTime,							// tReserveTime - estimated reserve runtime from full tank (H9mmSS)
+	prgmBingoTime,								// tBingoTime - estimated bingo fuel runtime from full tank (H9mmSS)
+	prgmTimeToEmpty,							// tTimeToEmpty - estimated remaining engine runtime (H9mmSS)
+	prgmReserveTimeToEmpty,						// tReserveTimeToEmpty - estimated remaining reserve engine runtime (H9mmSS)
+	prgmBingoTimeToEmpty,						// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (H9mmSS)
+	prgmMotionTime,								// tMotionTime - time vehicle in motion (H9mmSS)
 	prgmInjectorOpenTime,						// tInjectorOpenTime - fuel used (milliseconds)
 	prgmInjectorTotalTime,						// tInjectorTotalTime - engine run time (milliseconds)
 	prgmVSStotalTime,							// tVSStotalTime - time vehicle in motion (milliseconds)
 	prgmEngineSpeed,							// tEngineSpeed - engine speed (1/m)
 	prgmInjectorPulseCount,						// tInjectorPulseCount - fuel injector pulse count
-	prgmVSSpulseCount,							// tVSSpulseCount - VSS pulse count
+	prgmVSSpulseEdgeCount,						// tVSSpulseEdgeCount - VSS pulse edge count
 	prgmDistance,								// tDistance - vehicle distance traveled (SI/SAE)
 	prgmSpeed,									// tSpeed - vehicle speed (SI/SAE)
 	prgmFuelUsed,								// tFuelUsed - fuel quantity used (SI/SAE)
@@ -1126,13 +1075,9 @@ static const uint8_t * const S64programList[] PROGMEM = {
 	prgmCalculateFuelDistance,					// tCalculateFuelDistance
 	prgmCalculateFuelTime,						// tCalculateFuelTime
 	prgmCalculateSpeed,							// tCalculateSpeed
-	prgmFormatToHHMMSStime,						// tFormatToHHMMSStime
-	prgmFormatToH9MMSStime,						// tFormatToH9MMSStime
 	prgmFormatToNumber,							// tFormatToNumber
-	prgmRoundOffNumber,							// tRoundOffNumber
 	prgmLoadTrip,								// tLoadTrip
 	prgmSaveTrip,								// tSaveTrip
-	prgmReadTicksToSeconds,						// tReadTicksToSeconds
 #if defined(useBarFuelEconVsTime)
 	prgmFEvTgetDistance,						// tFEvTgetDistance
 	prgmFEvTgetConsumedFuel,					// tFEvTgetConsumedFuel
@@ -1156,12 +1101,13 @@ static const uint8_t * const S64programList[] PROGMEM = {
 //
 // the below calculation formats are arranged with this in mind
 //
-#define nextAllowedValue 0 // S64programList
-static const uint8_t calcFormatTimeHHmmSSIdx =			nextAllowedValue;						// time in HHmmSS format
-static const uint8_t calcFormatTimeInMillisecondsIdx =	calcFormatTimeHHmmSSIdx + 1;			// time in milliseconds
+#define nextAllowedValue 0 // calcFormatList
+static const uint8_t calcFormatTimeH9mmSSIdx =			nextAllowedValue;						// time in H9mmSS format
+static const uint8_t calcFormatTimeInMillisecondsIdx =	calcFormatTimeH9mmSSIdx + 1;			// time in milliseconds
 static const uint8_t calcFormatEngineSpeedIdx =			calcFormatTimeInMillisecondsIdx + 1;	// engine speed
 static const uint8_t calcFormatPulseCountIdx =			calcFormatEngineSpeedIdx + 1;			// pulse count
-#define nextAllowedValue calcFormatPulseCountIdx + 1
+static const uint8_t calcFormatPulseEdgeCountIdx =		calcFormatPulseCountIdx + 1;			// pulse edge count
+#define nextAllowedValue calcFormatPulseEdgeCountIdx + 1
 #if defined(useDragRaceFunction)
 static const uint8_t calcFormatTimeInSecondsIdx =		nextAllowedValue;						// time in seconds
 #define nextAllowedValue calcFormatTimeInSecondsIdx + 1
@@ -1182,7 +1128,7 @@ static const uint8_t calcFormatMaxValNonConversion =	nextAllowedValue;
 
 static const uint8_t calcFormatFuelQuantityIdx =		nextAllowedValue;						// fuel quantity (SAE/SI)
 static const uint8_t calcFormatFuelRateIdx =			calcFormatFuelQuantityIdx + 2;			// fuel rate (SAE/SI)
-static const uint8_t calcFormatDistanceIdx =			calcFormatFuelRateIdx + 2;				// distance travelled (SAE/SI)
+static const uint8_t calcFormatDistanceIdx =			calcFormatFuelRateIdx + 2;				// distance traveled (SAE/SI)
 static const uint8_t calcFormatSpeedIdx =				calcFormatDistanceIdx + 2;				// speed (SAE/SI)
 #define nextAllowedValue calcFormatSpeedIdx + 2
 #if defined(useFuelCost)
@@ -1191,7 +1137,7 @@ static const uint8_t calcFormatDistancePerFuelCostIdx =	calcFormatFuelCostPerDis
 #define nextAllowedValue calcFormatDistancePerFuelCostIdx + 2
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
-static const uint8_t calcFormatPressureIdx =			nextAllowedValue;						// absolute pressure (SI/SAE)
+static const uint8_t calcFormatPressureIdx =			nextAllowedValue;						// pressure (SI/SAE)
 #define nextAllowedValue calcFormatPressureIdx + 2
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
@@ -1209,140 +1155,143 @@ static const uint8_t calcFormatFuelEconomyIdx =			nextAllowedValue;						// fuel
 static const uint8_t calcFormatListCount =				nextAllowedValue;
 
 #if defined(useDebugTerminal) || defined(useJSONoutput)
-static const char calcFormatLabels[] PROGMEM = {
-	"hhmmss" tcEOS					// time in HHmmSS format
-	"ms" tcEOS						// time in milliseconds
-	"rev/min" tcEOS					// engine speed
-	"pulses" tcEOS					// pulse count
+static const char calcFormatLabels[] PROGMEM = { // calcFormatList
+	"H9mmSS" tcEOS					// calcFormatTimeH9mmSSIdx - time in H9mmSS format
+	"ms" tcEOS						// calcFormatTimeInMillisecondsIdx - time in milliseconds
+	"rev/min" tcEOS					// calcFormatEngineSpeedIdx - engine speed
+	"pulses" tcEOS					// calcFormatPulseCountIdx - pulse count
+	"pulse edges" tcEOS				// calcFormatPulseEdgeCountIdx - pulse edge count
 #if defined(useDragRaceFunction)
-	"sec" tcEOS						// time in seconds
+	"sec" tcEOS						// calcFormatTimeInSecondsIdx - time in seconds
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
-	"V(dc)" tcEOS					// voltage
+	"V(dc)" tcEOS					// calcFormatAnalogDisplayIdx - voltage
 #endif // defined(useAnalogRead)
 #if defined(useFuelCost)
-	"cost" tcEOS					// fuel cost
-	"cost/hour" tcEOS				// fuel rate cost
+	"cost" tcEOS					// calcFormatFuelCostIdx - fuel cost
+	"cost/hour" tcEOS				// calcFormatFuelRateCostIdx - fuel rate cost
 #endif // defined(useFuelCost)
 
-	"gallon" tcEOS					// SAE fuel quantity
-	"liter" tcEOS					// SI fuel quantity
-	"gallon/hour" tcEOS				// SAE fuel rate
-	"liter/hour" tcEOS				// SI fuel rate
-	"mile" tcEOS					// SAE distance travelled
-	"km" tcEOS						// SI distance travelled
-	"MPH" tcEOS						// SAE speed
-	"kPH" tcEOS						// SI speed
+	"gallon" tcEOS					// calcFormatFuelQuantityIdx - gallons
+	"liter" tcEOS					// calcFormatFuelQuantityIdx - liters
+	"gallon/hour" tcEOS				// calcFormatFuelRateIdx - gallons per hour
+	"liter/hour" tcEOS				// calcFormatFuelRateIdx - liters per hour
+	"mile" tcEOS					// calcFormatDistanceIdx - miles traveled
+	"km" tcEOS						// calcFormatDistanceIdx - kilometers traveled
+	"MPH" tcEOS						// calcFormatSpeedIdx - miles per hour
+	"kPH" tcEOS						// calcFormatSpeedIdx - kilometers per hour
 #if defined(useFuelCost)
-	"cost/mile" tcEOS				// SAE fuel cost per unit distance
-	"cost/km" tcEOS					// SI fuel cost per unit distance
-	"mile/cost" tcEOS				// SAE distance per unit fuel cost
-	"km/cost" tcEOS					// SI distance per unit fuel cost
+	"cost/mile" tcEOS				// calcFormatFuelCostPerDistanceIdx - fuel cost per mile
+	"cost/km" tcEOS					// calcFormatFuelCostPerDistanceIdx - fuel cost per kilometer
+	"mile/cost" tcEOS				// calcFormatDistancePerFuelCostIdx - mile per unit fuel cost
+	"km/cost" tcEOS					// calcFormatDistancePerFuelCostIdx - kilometer per unit fuel cost
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
-	"psia" tcEOS					// SAE pressure
-	"kPa" tcEOS						// SI pressure
+	"psia" tcEOS					// calcFormatPressureIdx - psi
+	"kPa" tcEOS						// calcFormatPressureIdx - kPa
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
-	"WHP" tcEOS						// SAE horsepower
-	"kW" tcEOS						// SI horsepower
+	"WHP" tcEOS						// calcFormatEstimatedPowerIdx - HP
+	"kW" tcEOS						// calcFormatEstimatedPowerIdx - kW
 #endif // defined(useDragRaceFunction)
 
-	"MPG" tcEOS						// SAE fuel economy
-	"KPL" tcEOS						// alternate SI fuel economy
-	"gal/100miles" tcEOS			// alternate SAE fuel economy
-	"L/100km" tcEOS					// SI fuel economy
+	"MPG" tcEOS						// calcFormatFuelEconomyIdx - miles per gallon
+	"KPL" tcEOS						// calcFormatFuelEconomyIdx - km per liter
+	"gal/100miles" tcEOS			// calcFormatFuelEconomyIdx - gallons per 100 miles
+	"L/100km" tcEOS					// calcFormatFuelEconomyIdx - liters per 100 km
 };
 
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
-static const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
-	0,				// time in HHmmSS format
-	3,				// time in milliseconds
-	0,				// engine speed
-	0,				// pulse count
+static const uint8_t calcFormatDecimalPlaces[(uint16_t)(calcFormatListCount)] PROGMEM = { // calcFormatList
+	0,				// calcFormatTimeH9mmSSIdx - time in H9mmSS format
+	3,				// calcFormatTimeInMillisecondsIdx - time in milliseconds
+	0,				// calcFormatEngineSpeedIdx - engine speed
+	0,				// calcFormatPulseCountIdx - pulse count
+	0,				// calcFormatPulseEdgeCountIdx - pulse edge count
 #if defined(useDragRaceFunction)
-	1,				// time in seconds
+	1,				// calcFormatTimeInSecondsIdx - time in seconds
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
-	3,				// voltage
+	3,				// calcFormatAnalogDisplayIdx - voltage
 #endif // defined(useAnalogRead)
 #if defined(useFuelCost)
-	2,				// fuel cost
-	2,				// fuel rate cost
+	2,				// calcFormatFuelCostIdx - fuel cost
+	2,				// calcFormatFuelRateCostIdx - fuel rate cost
 #endif // defined(useFuelCost)
 
-	2,				// SAE fuel quantity
-	2,				// SI fuel quantity
-	2,				// SAE fuel rate
-	2,				// SI fuel rate
-	(2 << 4) |	1,	// SAE distance travelled
-	(2 << 4) |	1,	// SI distance travelled
-	(2 << 4) |	1,	// SAE speed
-	(2 << 4) |	1,	// SI speed
+	2,				// calcFormatFuelQuantityIdx - gallons
+	2,				// calcFormatFuelQuantityIdx - liters
+	2,				// calcFormatFuelRateIdx - gallons per hour
+	2,				// calcFormatFuelRateIdx - liters per hour
+	(2 << 4) |	1,	// calcFormatDistanceIdx - miles traveled
+	(2 << 4) |	1,	// calcFormatDistanceIdx - kilometers traveled
+	(2 << 4) |	1,	// calcFormatSpeedIdx - miles per hour
+	(2 << 4) |	1,	// calcFormatSpeedIdx - kilometers per hour
 #if defined(useFuelCost)
-	2,				// SAE fuel cost per unit distance
-	2,				// SI fuel cost per unit distance
-	1,				// SAE distance per unit fuel cost
-	1,				// SI distance per unit fuel cost
+	2,				// calcFormatFuelCostPerDistanceIdx - fuel cost per mile
+	2,				// calcFormatFuelCostPerDistanceIdx - fuel cost per kilometer
+	1,				// calcFormatDistancePerFuelCostIdx - mile per unit fuel cost
+	1,				// calcFormatDistancePerFuelCostIdx - kilometer per unit fuel cost
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
-	2,				// SAE pressure
-	2,				// SI pressure
+	2,				// calcFormatPressureIdx - psi
+	2,				// calcFormatPressureIdx - kPa
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
-	1,				// SAE horsepower
-	1,				// SI horsepower
+	1,				// calcFormatEstimatedPowerIdx - HP
+	1,				// calcFormatEstimatedPowerIdx - kW
 #endif // defined(useDragRaceFunction)
 
-	(2 << 4) |	1,	// SAE fuel economy
-	(2 << 4) |	1,	// alternate SI fuel economy
-	(2 << 4) |	1,	// alternate SAE fuel economy
-	(2 << 4) |	1,	// SI fuel economy
+	(2 << 4) |	1,	// calcFormatFuelEconomyIdx - miles per gallon
+	(2 << 4) |	1,	// calcFormatFuelEconomyIdx - km per liter
+	(2 << 4) |	1,	// calcFormatFuelEconomyIdx - gallons per 100 miles
+	(2 << 4) |	1,	// calcFormatFuelEconomyIdx - liters per 100 km
 };
 
-static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGMEM = { // S64programList
-	's',	// time in HHmmSS format
-	'm',	// time in milliseconds
-	't',	// engine speed
-	'p',	// pulse count
+static const uint8_t calcFormatLabelText[(uint16_t)(calcFormatListCount)] PROGMEM = { // calcFormatList
+	's',	// calcFormatTimeH9mmSSIdx - time in H9mmSS format
+	'm',	// calcFormatTimeInMillisecondsIdx - time in milliseconds
+	't',	// calcFormatEngineSpeedIdx - engine speed
+	'p',	// calcFormatPulseCountIdx - pulse count
+	'e',	// calcFormatPulseEdgeCountIdx - pulse edge count
 #if defined(useDragRaceFunction)
-	's',	// time in seconds
+	's',	// calcFormatTimeInSecondsIdx - time in seconds
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
-	'V',	// voltage
+	'V',	// calcFormatAnalogDisplayIdx - voltage
 #endif // defined(useAnalogRead)
 #if defined(useFuelCost)
-	'$',	// fuel cost
-	'#',	// fuel rate cost
+	'$',	// calcFormatFuelCostIdx - fuel cost
+	'#',	// calcFormatFuelRateCostIdx - fuel rate cost
 #endif // defined(useFuelCost)
 
-	'G',	// SAE fuel quantity
-	'L',	// SI fuel quantity
-	'g',	// SAE fuel rate
-	'l',	// SI fuel rate
-	'm',	// SAE distance travelled
-	'k',	// SI distance travelled
-	'S',	// SAE speed
-	'S',	// SI speed
+	'G',	// calcFormatFuelQuantityIdx - gallons
+	'L',	// calcFormatFuelQuantityIdx - liters
+	'g',	// calcFormatFuelRateIdx - gallons per hour
+	'l',	// calcFormatFuelRateIdx - liters per hour
+	'm',	// calcFormatDistanceIdx - miles traveled
+	'k',	// calcFormatDistanceIdx - kilometers traveled
+	'S',	// calcFormatSpeedIdx - miles per hour
+	'S',	// calcFormatSpeedIdx - kilometers per hour
 #if defined(useFuelCost)
-	'C',	// SAE fuel cost per distance
-	'C',	// SI fuel cost per distance
-	'D',	// SAE distance per fuel cost
-	'D',	// SI distance per fuel cost
+	'C',	// calcFormatFuelCostPerDistanceIdx - fuel cost per mile
+	'C',	// calcFormatFuelCostPerDistanceIdx - fuel cost per kilometer
+	'D',	// calcFormatDistancePerFuelCostIdx - mile per fuel cost
+	'D',	// calcFormatDistancePerFuelCostIdx - kilometer per fuel cost
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
-	'P',	// SAE pressure
-	'P',	// SI pressure
+	'P',	// calcFormatPressureIdx - psi
+	'P',	// calcFormatPressureIdx - kPa
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
-	'H',	// SAE horsepower
-	'W',	// SI horsepower
+	'H',	// calcFormatEstimatedPowerIdx - HP
+	'W',	// calcFormatEstimatedPowerIdx - kW
 #endif // defined(useDragRaceFunction)
 
-	'E',	// SAE fuel economy
-	'E',	// alternate SI fuel economy
-	'E',	// alternate SAE fuel economy
-	'E',	// SI fuel economy
+	'E',	// calcFormatFuelEconomyIdx - miles per gallon
+	'E',	// calcFormatFuelEconomyIdx - km per liter
+	'E',	// calcFormatFuelEconomyIdx - gallons per 100 miles
+	'E',	// calcFormatFuelEconomyIdx - liters per 100 km
 };
 
 static const uint8_t isValidTripIdx =	0b10100000;
@@ -1352,151 +1301,153 @@ static const uint8_t isValidFlag =		0b00100000;
 static const uint8_t isValidCalcObj =	0b11000000;
 
 #if defined(useSpiffyTripLabels)
-static const uint8_t calcFormatLabelCGRAM[(uint16_t)(calcFormatListCount)][16] PROGMEM = { // S64programList
-	// time in HHmmSS format
+static const uint8_t calcFormatLabelCGRAM[(uint16_t)(calcFormatListCount)][16] PROGMEM = { // calcFormatList
+	// calcFormatTimeH9mmSSIdx - time in H9mmSS format
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101},
 
-	// time in milliseconds
+	// calcFormatTimeInMillisecondsIdx - time in milliseconds
 	{0b00010010, 0b00010010, 0b00010010, 0b00011110, 0b00010000, 0b00110000, 0b01000000, 0b01100000
 	,0b00001110, 0b00010000, 0b00001100, 0b00000010, 0b00011100, 0b00000000, 0b00000000, 0b00000000},
 
-	// engine speed
+	// calcFormatEngineSpeedIdx - engine speed
 	{0b00001100, 0b00010000, 0b00010001, 0b00010010, 0b00000100, 0b00001000, 0b00000000, 0b00000000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011011, 0b00010101, 0b00010101},
 
-	// pulse count
+	// calcFormatPulseCountIdx - pulse count
+	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
+	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001000, 0b00011100, 0b00001000, 0b00001000},
+
+	// calcFormatPulseEdgeCountIdx - pulse edge count
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001000, 0b00011100, 0b00001000, 0b00001000},
 #if defined(useDragRaceFunction)
 
-	// time in seconds
+	// calcFormatTimeInSecondsIdx - time in seconds
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000100, 0b00000011
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00010101, 0b00010110, 0b00010101},
 #endif // defined(useDragRaceFunction)
 #if defined(useAnalogRead)
 
-	// voltage
+	// calcFormatAnalogDisplayIdx - voltage
 	{0b00010001, 0b00010001, 0b00010001, 0b00001010, 0b00000100, 0b00000000, 0b00000000, 0b00000000
 	,0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00010001, 0b00011010, 0b00011010, 0b00010001},
 #endif // defined(useAnalogRead)
 #if defined(useFuelCost)
 
-	// fuel cost
+	// calcFormatFuelCostIdx - fuel cost
 	{0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100
 	,0b00000010, 0b00000101, 0b00000100, 0b00001110, 0b00000100, 0b00000100, 0b00000100, 0b00000100},
 
-	// fuel rate cost
+	// calcFormatFuelRateCostIdx - fuel rate cost
 	{0b00001100, 0b00010000, 0b00010000, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100},
 #endif // defined(useFuelCost)
 
-	// gallons
+	// calcFormatFuelQuantityIdx - gallons
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000011, 0b00000100, 0b00000101, 0b00000011
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000001, 0b00000001, 0b00011001, 0b00011101},
 
-	// liters
+	// calcFormatFuelQuantityIdx - liters
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000100, 0b00000100, 0b00000100, 0b00000111
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000},
 
-	// gallons per hour
+	// calcFormatFuelRateIdx - gallons per hour
 	{0b00001100, 0b00010000, 0b00010100, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100},
 
-	// liters per hour
+	// calcFormatFuelRateIdx - liters per hour
 	{0b00010000, 0b00010000, 0b00010000, 0b00011100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100},
 
-	// miles
+	// calcFormatDistanceIdx - miles traveled
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00010001, 0b00011011, 0b00010101, 0b00010101
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00000000, 0b00010000, 0b00010000},
 
-	// kilometers
+	// calcFormatDistanceIdx - kilometers traveled
 	{0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000100, 0b00000101, 0b00000110, 0b00000101
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00001010, 0b00010101, 0b00010101},
 
-	// miles per hour
+	// calcFormatSpeedIdx - miles per hour
 	{0b00011011, 0b00010101, 0b00010101, 0b00000000, 0b00000110, 0b00000101, 0b00000110, 0b00000100
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010100, 0b00011100, 0b00010100, 0b00010100},
 
-	// kilometers per hour
+	// calcFormatSpeedIdx - kilometers per hour
 	{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00011100, 0b00010100},
 #if defined(useFuelCost)
 
-	// fuel cost per mile
+	// calcFormatFuelCostPerDistanceIdx - fuel cost per mile
 	{0b00001100, 0b00010000, 0b00010000, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010001, 0b00011011, 0b00010101, 0b00010101},
 
-	// fuel cost per kilometer
+	// calcFormatFuelCostPerDistanceIdx - fuel cost per kilometer
 	{0b00001100, 0b00010000, 0b00010000, 0b00001100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010100, 0b00011000, 0b00010100},
 
-	// mile per unit fuel cost
+	// calcFormatDistancePerFuelCostIdx - mile per unit fuel cost
 	{0b00011011, 0b00010101, 0b00010101, 0b00000000, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100},
 
-	// kilometer per unit fuel cost
+	// calcFormatDistancePerFuelCostIdx - kilometer per unit fuel cost
 	{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010000, 0b00001100},
 #endif // defined(useFuelCost)
 #if defined(useChryslerMAPCorrection)
 
-	// psi
+	// calcFormatPressureIdx - psi
 	{0b00001110, 0b00001001, 0b00001001, 0b00001110, 0b00001000, 0b00001000, 0b00001000, 0b00000000
 	,0b00001001, 0b00010101, 0b00010001, 0b00001001, 0b00000101, 0b00010101, 0b00001001, 0b00000000},
 
-	// kPa
+	// calcFormatPressureIdx - kPa
 	{0b00001000, 0b00001000, 0b00001001, 0b00001010, 0b00001100, 0b00001010, 0b00001001, 0b00000000
 	,0b00011000, 0b00010100, 0b00010100, 0b00011000, 0b00010010, 0b00010101, 0b00010011, 0b00000000},
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useDragRaceFunction)
 
-	// HP
+	// calcFormatEstimatedPowerIdx - HP
 	{0b00001001, 0b00001001, 0b00001001, 0b00001111, 0b00001001, 0b00001001, 0b00001001, 0b00000000
 	,0b00100000, 0b01000000, 0b01100000, 0b00011000, 0b00010100, 0b00011000, 0b00010000, 0b00010000},
 
-	// kW
+	// calcFormatEstimatedPowerIdx - kW
 	{0b00100000, 0b01000000, 0b01110000, 0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000000
 	,0b00010001, 0b00010001, 0b00010101, 0b00010101, 0b00010101, 0b00001010, 0b00001010, 0b00000000},
 #endif // defined(useDragRaceFunction)
 
-	// miles per gallon
+	// calcFormatFuelEconomyIdx - miles per gallon
 	{0b00011011, 0b00010101, 0b00010101, 0b00000000, 0b00000110, 0b00000101, 0b00000110, 0b00000100
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00001100, 0b00010000, 0b00010100, 0b00001100},
 
-	// km per liter
+	// calcFormatFuelEconomyIdx - km per liter
 	{0b00010000, 0b00010100, 0b00011000, 0b00010100, 0b00000001, 0b00000010, 0b00000100, 0b00001000
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00010000, 0b00010000, 0b00010000, 0b00011100},
 
-	// gallons per 100 miles
+	// calcFormatFuelEconomyIdx - gallons per 100 miles
 	{0b00001100, 0b00010000, 0b00010100, 0b00001101, 0b00000010, 0b00000101, 0b00001001, 0b00000001
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011111, 0b00010101, 0b00011111},
 
-	// liters per 100 km
+	// calcFormatFuelEconomyIdx - liters per 100 km
 	{0b00010000, 0b00010000, 0b00011001, 0b00000010, 0b00000100, 0b00001001, 0b00000001, 0b00000001
 	,0b00100000, 0b01000000, 0b01100000, 0b00000000, 0b00000000, 0b00011111, 0b00010101, 0b00011111},
 };
 
 #endif // defined(useSpiffyTripLabels)
 
-// high bit set means the function does not depend on a trip variable, therefore does not require a trip label
-//
 static const uint8_t calcFormatList[(uint16_t)(dfMaxValDisplayCount)] PROGMEM = { // S64programList
-	calcFormatTimeHHmmSSIdx,					// tEngineRunTime - engine runtime (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tRangeTime - estimated total runtime from full tank (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tReserveTime - estimated reserve runtime from full tank (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tBingoTime - estimated bingo fuel runtime from full tank (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tTimeToEmpty - estimated remaining engine runtime (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tReserveTimeToEmpty - estimated remaining reserve engine runtime (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (hhmmss)
-	calcFormatTimeHHmmSSIdx,					// tMotionTime - time vehicle in motion (hhmmss)
+	calcFormatTimeH9mmSSIdx,					// tEngineRunTime - engine runtime (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tRangeTime - estimated total runtime from full tank (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tReserveTime - estimated reserve runtime from full tank (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tBingoTime - estimated bingo fuel runtime from full tank (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tTimeToEmpty - estimated remaining engine runtime (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tReserveTimeToEmpty - estimated remaining reserve engine runtime (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (H9mmSS)
+	calcFormatTimeH9mmSSIdx,					// tMotionTime - time vehicle in motion (H9mmSS)
 	calcFormatTimeInMillisecondsIdx,			// tInjectorOpenTime - fuel used (milliseconds)
 	calcFormatTimeInMillisecondsIdx,			// tInjectorTotalTime - engine run time (milliseconds)
 	calcFormatTimeInMillisecondsIdx,			// tVSStotalTime - time vehicle in motion (milliseconds)
 	calcFormatEngineSpeedIdx,					// tEngineSpeed - engine speed (1/m)
 	calcFormatPulseCountIdx,					// tInjectorPulseCount - fuel injector pulse count
-	calcFormatPulseCountIdx,					// tVSSpulseCount - VSS pulse count
+	calcFormatPulseEdgeCountIdx,				// tVSSpulseEdgeCount - VSS pulse edge count
 	calcFormatDistanceIdx,						// tDistance - vehicle distance traveled (SI/SAE)
 	calcFormatSpeedIdx,							// tSpeed - vehicle speed (SI/SAE)
 	calcFormatFuelQuantityIdx,					// tFuelUsed - fuel quantity used (SI/SAE)

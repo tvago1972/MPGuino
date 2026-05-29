@@ -91,7 +91,7 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 			SWEET64::runPrgm(prgmFetchParameterValue, parameterPtr);
 
 		case nesLoadValue:
-			ull2str(pBuff, 3, tFormatToNumber);
+			ull2str(pBuff, 3, prgmFormatToNumber);
 #if defined(useButtonInput)
 			parameterEdit::findLeft();
 #endif // defined(useButtonInput)
@@ -217,7 +217,7 @@ static uint8_t parameterEdit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 			c = pBuff[(uint16_t)(cursorPos)]; // save existing character
 
-			if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saShowCursor)
+			if (v08(v8Timer0Status0Idx) & t0saShowCursor)
 			{
 
 				if (cursorPos < 10) pBuff[(uint16_t)(cursorPos)] = '_'; // replace character with an underscore

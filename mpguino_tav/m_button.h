@@ -44,6 +44,15 @@ namespace button /* button input support section prototype */
 
 };
 
+// these flags are for use with v8ButtonStatusIdx
+static const uint8_t btnCmdEnableSampling =			0b10000000;
+static const uint8_t btnCmdProcessButton =			0b01000000;
+static const uint8_t btnStatusButtonRead =			0b00100000;
+static const uint8_t btnStatusDetectShortPress =	0b00010000;
+static const uint8_t btnStatusDetectLongPress =		0b00001000;
+
+static const uint8_t btnCmdInjectButton =			(btnCmdProcessButton | btnStatusDetectShortPress | btnStatusDetectLongPress);
+
 namespace cursor /* LCD screen cursor manipulation section prototype */
 {
 
@@ -744,7 +753,7 @@ static const displayData displayParameters[(uint16_t)(displayCountTotal)] PROGME
 // this is the end of the display entry group handled as menu
 
 #if defined(useSimulatedFIandVSS)
-	{signalSimDisplayIdx,			1,					4,								0,								signalSim::displayHandler,			bpListMiscViewer},
+	{signalSimDisplayIdx,			1,					5,								0,								signalSim::displayHandler,			bpListMiscViewer},
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useChryslerMAPCorrection)
 	{pressureDisplayIdx,			1,					1,								0,								pressureCorrect::displayHandler,	bpListMiscViewer},

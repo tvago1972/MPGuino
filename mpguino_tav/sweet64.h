@@ -17,7 +17,6 @@ static uint32_t iSqrt(uint32_t input);
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
-	static uint32_t doCalculate(uint8_t tripIdx, uint8_t calcIdx);
 	static uint32_t runPrgm(const uint8_t * sched, uint8_t tripIdx);
 	static void fetchInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t * prgmReg8);
 	static void executeInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
@@ -297,7 +296,7 @@ uint64_t matrix_c[3];
 static const uint8_t instrTestReg =					nextAllowedValue;						// tests 64-bit register for zero condition or high bit set
 static const uint8_t instrTestIndex =				instrTestReg + 1;						// tests primary index for zero condition or high bit set
 static const uint8_t instrCmpXtoY =					instrTestIndex + 1;						// compares 64-bit register Y from 64-bit register X
-static const uint8_t instrCmpIndex =				instrCmpXtoY + 1;					// compares primary index from operand
+static const uint8_t instrCmpIndex =				instrCmpXtoY + 1;						// compares primary index from operand
 
 static const uint8_t instrBranchIfVclear =			instrCmpIndex + 1;						// branches if result[0..63] is not all 1s
 static const uint8_t instrBranchIfVset =			instrBranchIfVclear + 1;				// branches if result[0..63] is all 1s
@@ -375,7 +374,7 @@ static const uint8_t instrMul2byEEPROM =			instrMul2byRdOnly + 1; 					// multip
 static const uint8_t instrMul2byVariable =			instrMul2byEEPROM + 1;					// multiply 64-bit register 2 by program variable register value
 static const uint8_t instrMul2byTripVarIndexed =	instrMul2byVariable + 1;				// multiply 64-bit register 2 by indexed trip specified read-in register
 static const uint8_t instrDiv2by1 =					instrMul2byTripVarIndexed + 1;			// divide 64-bit register 2 by contents of 64-bit register 1
-static const uint8_t instrDiv2byRdOnly =				instrDiv2by1 + 1;						// divide 64-bit register 2 by read-only value
+static const uint8_t instrDiv2byRdOnly =			instrDiv2by1 + 1;						// divide 64-bit register 2 by read-only value
 static const uint8_t instrDiv2byEEPROM =			instrDiv2byRdOnly + 1;					// divide 64-bit register 2 by EEPROM parameter value
 static const uint8_t instrDiv2byVariable =			instrDiv2byEEPROM + 1;					// divide 64-bit register 2 by program variable register value
 static const uint8_t instrDiv2byTripVarIndexed =	instrDiv2byVariable + 1;				// divide 64-bit register 2 by indexed trip specified read-in register
@@ -700,11 +699,17 @@ static const uint8_t idxNumerMass =					idxOneBillion;					// numerator to conve
 
 static const uint8_t idxCycles0PerSecond =			idxOneBillion + 1;				// timer0 clock cycles per second
 static const uint8_t idxCycles0PerTick =			idxCycles0PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-static const uint8_t idxTicksPerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
-static const uint8_t idxNumerDistance =				idxTicksPerSecond + 1;			// numerator to convert miles to kilometers
+static const uint8_t idxTicks0PerSecond =			idxCycles0PerTick + 1;			// timer0 clock ticks per second
+static const uint8_t idxNumerDistance =				idxTicks0PerSecond + 1;			// numerator to convert miles to kilometers
 static const uint8_t idxNumerVolume =				idxNumerDistance + 1;			// numerator to convert US gallons to liters
 static const uint8_t idxSecondsPerHour =			idxNumerVolume + 1;				// number of seconds in an hour
 #define nextAllowedValue idxSecondsPerHour + 1
+#if defined(useTimer1Interrupt)
+static const uint8_t idxCycles1PerSecond =			nextAllowedValue;				// timer1 clock cycles per second
+static const uint8_t idxCycles1PerTick =			idxCycles1PerSecond + 1;		// known as the "N" in the (processor speed)/(N * prescaler) for timer1 phase correct PWM
+static const uint8_t idxTicks1PerSecond =			idxCycles1PerTick + 1;			// timer1 clock ticks per second
+#define nextAllowedValue idxTicks1PerSecond + 1
+#endif // defined(useTimer1Interrupt)
 #if defined(useClockSupport)
 static const uint8_t idxSecondsPerDay =				nextAllowedValue;				// number of seconds in a day
 #define nextAllowedValue idxSecondsPerDay + 1
@@ -800,10 +805,15 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 	"idxCycles0PerSecond" tcEOS
 	"idxCycles0PerTick" tcEOS
-	"idxTicksPerSecond" tcEOS
+	"idxTicks0PerSecond" tcEOS
 	"idxNumerDistance" tcEOS
 	"idxNumerVolume" tcEOS
 	"idxSecondsPerHour" tcEOS
+#if defined(useTimer1Interrupt)
+	"idxCycles1PerSecond" tcEOS
+	"idxCycles1PerTick" tcEOS
+	"idxTicks1PerSecond" tcEOS
+#endif // defined(useTimer1Interrupt)
 #if defined(useClockSupport)
 	"idxSecondsPerDay" tcEOS
 #endif // defined(useClockSupport)
@@ -837,7 +847,9 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 static const char terminalBCDformatNames[] PROGMEM = {
 	"bcdFormat10digit" tcEOS
+#if defined(useClockSupport)
 	"bcdFormatHHMMSS" tcEOS
+#endif // defined(useClockSupport)
 	"bcdFormatH9MMSS" tcEOS
 	"bcdFormatOverflow" tcEOS
 };
@@ -892,10 +904,15 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 
 	t0CyclesPerSecond,						// idxCycles0PerSecond - timer0 clock cycles per second
 	256ul,									// idxCycles0PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer0 fast PWM mode
-	t0TicksPerSecond,						// idxTicksPerSecond - timer0 clock ticks per second
+	t0TicksPerSecond,						// idxTicks0PerSecond - timer0 clock ticks per second
 	1609344ul,								// idxNumerDistance - numerator to convert miles to kilometers
 	3785411784ul,							// idxNumerVolume - numerator to convert US gallons to liters
 	3600ul,									// idxSecondsPerHour - seconds per hour
+#if defined(useTimer1Interrupt)
+	t1CyclesPerSecond,						// idxCycles1PerSecond - timer1 clock cycles per second
+	510ul,									// idxCycles1PerTick - known as the "N" in the (processor speed)/(N * prescaler) for timer1 phase correct PWM
+	t1TicksPerSecond,						// idxTicks1PerSecond - timer1 clock ticks per second
+#endif // defined(useTimer1Interrupt)
 #if defined(useClockSupport)
 	86400ul,								// idxSecondsPerDay - number of seconds in a day
 #endif // defined(useClockSupport)
@@ -929,8 +946,12 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 
 #define nextAllowedValue 0
 static const uint8_t bcdFormat10digit =		nextAllowedValue;
-static const uint8_t bcdFormatHHMMSS =		bcdFormat10digit + 1;
-static const uint8_t bcdFormatH9MMSS =		bcdFormatHHMMSS + 1;
+#define nextAllowedValue bcdFormat10digit + 1
+#if defined(useClockSupport)
+static const uint8_t bcdFormatHHMMSS =		nextAllowedValue;
+#define nextAllowedValue bcdFormatHHMMSS + 1
+#endif // defined(useClockSupport)
+static const uint8_t bcdFormatH9MMSS =		nextAllowedValue;
 static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
 
 const uint8_t s64BCDformatList[] PROGMEM = {
@@ -944,6 +965,7 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	100,		// 100000s and 1000000s
 	100,		// 10000000s and 100000000s
 
+#if defined(useClockSupport)
 	// hhmmss number format
 	0x07,		// total entry length
 	'0',		// leading zero character
@@ -953,6 +975,7 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	60,			// minutes
 	24,			// hours
 
+#endif // defined(useClockSupport)
 	// h9mmss number format
 	0x07,		// total entry length
 	'0',		// leading zero character

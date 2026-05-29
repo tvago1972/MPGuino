@@ -24,7 +24,7 @@ static const uint8_t TWI_REPEAT_START =		0;
 static const uint8_t TWI_STOP =				1;
 
 static const uint16_t twiFrequency =		100L;
-static const uint8_t twiDataBufferSize =	16;
+static const uint8_t twiDataBufferSize =	32;
 
 static uint8_t twiDataBuffer[twiDataBufferSize];
 

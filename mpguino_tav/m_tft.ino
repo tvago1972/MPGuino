@@ -120,8 +120,8 @@ static void ILI9341::writeDataWord(uint16_t wrd)
 	dataMode();
 	assertCS();
 
-	spi::transfer(W->u8[1]);
-	spi::transfer(W->u8[0]);
+	spi::transfer(W->u08[1]);
+	spi::transfer(W->u08[0]);
 
 	releaseCS();
 

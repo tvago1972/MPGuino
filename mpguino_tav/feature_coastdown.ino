@@ -87,14 +87,14 @@ void coastdown::goDisplay(void)
 	uint8_t oldSREG;
 	uint8_t i;
 
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestFinished) // coastdown test has finished - let's find out why
+	if (v08(v8CoastdownStatusIdx) & cdTestFinished) // coastdown test has finished - let's find out why
 	{
 
 		oldSREG = SREG; // save interrupt flag status
 		cli(); // disable interrupts
 
-		i = volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)]; // save coastdown flag state
-		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestClearFlags);
+		i = v08(v8CoastdownStatusIdx); // save coastdown flag state
+		v08(v8CoastdownStatusIdx) &= ~(cdTestClearFlags);
 
 		SREG = oldSREG; // restore state of interrupt flag
 
@@ -116,18 +116,18 @@ void coastdown::goDisplay(void)
 	else
 	{
 
-		if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdSignalStateChange)
+		if (v08(v8CoastdownStatusIdx) & cdSignalStateChange)
 		{
 
 			oldSREG = SREG; // save interrupt flag status
 			cli(); // disable interrupts
 
-			volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdSignalStateChange);
+			v08(v8CoastdownStatusIdx) &= ~(cdSignalStateChange);
 			i = coastdownState; // fetch current coastdown state
 
 			SREG = oldSREG; // restore state of interrupt flag
 
-			msgPtr = findStr(coastdownMsgs, i); // get appropriate coastdown test message pointer
+			msgPtr = findStr(coastdownMsgs, i - v32CoastdownMeasurement1Idx); // get appropriate coastdown test message pointer
 
 		}
 
@@ -135,7 +135,7 @@ void coastdown::goDisplay(void)
 
 	if (msgPtr) text::statusOut(m8DevLCDidx, msgPtr);
 
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestActive) // coastdown test is in progress - display changes accordingly
+	if (v08(v8CoastdownStatusIdx) & cdTestActive) // coastdown test is in progress - display changes accordingly
 	{
 
 		coastdownCharIdx &= 0x07;
@@ -154,7 +154,7 @@ void coastdown::goDisplay(void)
 		i = displayCursor[(uint16_t)(coastdownIdx)] + pCoefficientDidx;
 
 		SWEET64::runPrgm(prgmFetchParameterValue, i);
-		ull2str(nBuff, 0, tFormatToNumber);
+		ull2str(nBuff, 0, prgmFormatToNumber);
 
 		text::stringOut(m8DevLCDidx, parmLabels, i); // print parameter name at top left
 		text::numberOut(m8DevLCDidx, 0);
@@ -173,18 +173,18 @@ void coastdown::goTrigger(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts
 
-	if (volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] & cdTestInProgress) // signal that coastdown test is cancelled
+	if (v08(v8CoastdownStatusIdx) & cdTestInProgress) // signal that coastdown test is cancelled
 	{
 
-		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
-		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= cdTestCanceled | cdTestFinished | cdSignalStateChange; // signal that coastdown test is cancelled
+		v08(v8CoastdownStatusIdx) &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+		v08(v8CoastdownStatusIdx) |= cdTestCanceled | cdTestFinished | cdSignalStateChange; // signal that coastdown test is cancelled
 
 	}
 	else
 	{
 
-		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
-		volatile8Variables[(uint16_t)(v8CoastdownStatusIdx - v8VariableStartIdx)] |= cdTestTriggered; // set coastdown test flags in v8CoastdownStatusIdx register
+		v08(v8CoastdownStatusIdx) &= ~(cdTestClearFlags); // signal that coastdown test is no longer active
+		v08(v8CoastdownStatusIdx) |= cdTestTriggered; // set coastdown test flags in v8CoastdownStatusIdx register
 
 	}
 

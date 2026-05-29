@@ -120,10 +120,7 @@ static const uint8_t lcdContrast =			0; // not used
 #endif // defined(__AVR_ATmega328P__)
 #endif // defined(usePort4BitLCD)
 #if defined(useTWI4BitLCD)
-static volatile uint8_t portLCD; // LCD port register expander byte
 #if defined(useAdafruitRGBLCDdisplay)
-static volatile uint8_t portSwitches; // contains two out of the three LCD backlighting LED pins
-
 static const uint8_t lcdDirection =			0b01000000; // Legacy and Mega2560 Arduino LCDs have their pin R/W (5) tied directly to ground, so they don't need this assignment
 static const uint8_t lcdRegisterSelect =	0b10000000; // GPIO B
 static const uint8_t lcdEnable =			0b00100000; // GPIO B
@@ -191,16 +188,29 @@ static const uint8_t lcdSetCGRAMaddress =			0b01000000;
 
 static const uint8_t lcdSetDDRAMaddress =			0b10000000;
 
-// these flags tell LCD::writeData whether to output the passed in character, and how to handle the character if it is output
-static const uint8_t lcdSendByte =					0b00001000;
+// these flags tell LCD::writeByte whether to output the passed in character, and how to handle the character if it is output
+static const uint8_t lcdTWIbufferLoop =				0b00100000;
+static const uint8_t lcdOutputHighNybble =			0b00010000;
+static const uint8_t lcdOutputLowNybble =			0b00001000;
 static const uint8_t lcdDataByte =					0b00000100;
 
-// these flags tell LCD::writeData what kind of delay is associated with the character
+static const uint8_t lcdOutputByte =				(lcdOutputHighNybble | lcdOutputLowNybble);
+
+// these flags tell LCD::writeByte what kind of delay is associated with the character
 static const uint8_t lcdDelay0015ms =				0x03;
 static const uint8_t lcdDelay4100us =				0x02;
 static const uint8_t lcdDelay0100us =				0x01;
 static const uint8_t lcdDelay0040us =				0x00;
-static const uint8_t lcdDelayFlags =				lcdDataByte | 0x03;
+static const uint8_t lcdDelayFlags =				0x03;
+
+static const uint8_t lcdOutputCommandByte =			(lcdOutputByte);
+static const uint8_t lcdOutputDataByte =			(lcdTWIbufferLoop | lcdOutputByte | lcdDataByte | lcdDelay0040us); // allow this byte to fill TWI buffer as required
+
+// these bits filter out the 4-bit component for port writing
+static const uint8_t lcdOutputMask73 =				0b10001000;
+static const uint8_t lcdOutputMask62 =				0b01000100;
+static const uint8_t lcdOutputMask51 =				0b00100010;
+static const uint8_t lcdOutputMask40 =				0b00010001;
 
 static uint8_t LCDgotoXYaddress;
 

@@ -7,9 +7,17 @@ static const uint8_t prgmSetClock[] PROGMEM = {
 	instrAddVariableToX, 0x02, m8MinuteIdx,				// add user-defined minutes value to time value
 	instrMul2byByte, 60,								// multply time value by 60 (seconds per minute)
 	instrAddVariableToX, 0x02, m8SecondIdx,				// add user-defined seconds value to time value
-	instrMul2byRdOnly, idxTicksPerSecond,				// convert time value from seconds to cycles
+	instrMul2byRdOnly, idxTicks0PerSecond,				// convert time value from seconds to cycles
 	instrStRegVariable, 0x02, v32ClockCycleIdx,			// write software clock
 	instrDone
+};
+
+static const uint8_t prgmOutputClockTime[] PROGMEM = {
+	instrLdRegVariable, 0x02, v32ClockCycleIdx,
+	instrDiv2byRdOnly, idxTicks0PerSecond,
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatHHMMSS,			// process register 1 as hhmmss BCD string and store it in register 2
+	instrDone											// exit to caller
 };
 
 #if defined(useClockDisplay)
@@ -20,10 +28,10 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-			ull2str(csBuff, v32ClockCycleIdx, tReadTicksToSeconds);
+			ull2str(csBuff, 0, prgmOutputClockTime);
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saShowCursor), cursorPos, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (v08(v8Timer0Status0Idx) & t0saShowCursor), cursorPos, 0, 0);
 
 		default:
 			break;
@@ -76,7 +84,7 @@ static void clockSet::set(void)
 	csBuff[5] = '0';
 
 #if defined(useSoftwareClock)
-	v = m8SecondIdx - m8VariableStartIdx;
+	v = m8SecondIdx;
 
 	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmSetClock
 	{
@@ -85,7 +93,7 @@ static void clockSet::set(void)
 		b *= 10;
 		b += csBuff[(uint16_t)(x + 1)] - '0';
 
-		mainProgram8Variables[(uint16_t)(v++)] = b;
+		m08(v++) = b;
 
 	}
 
@@ -93,7 +101,7 @@ static void clockSet::set(void)
 
 #endif // defined(useSoftwareClock)
 #if defined(useDS1307clock)
-	v = v8RTCsecondIdx - v8VariableStartIdx;
+	v = v8RTCsecondIdx;
 
 	for (uint8_t x = 4; x < 6; x -= 2) // convert time string in csBuff into time value usable by prgmSetClock
 	{
@@ -105,7 +113,7 @@ static void clockSet::set(void)
 		oldSREG = SREG; // save interrupt flag status
 		cli(); // disable interrupts
 
-		volatile8Variables[(uint16_t)(v++)] = b;
+		v08(v++) = b;
 
 		SREG = oldSREG; // restore interrupt flag status
 
@@ -113,13 +121,13 @@ static void clockSet::set(void)
 
 	TWImain::open(TWIaddressRTC, TW_WRITE); // open TWI as master transmitter
 	TWImain::writeByte(0); // write out RTC seconds address
-	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTCsecondIdx - v8VariableStartIdx)]); // write out RTC seconds value
-	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTCminuteIdx - v8VariableStartIdx)]); // write out RTC minutes value
-	TWImain::writeByte(volatile8Variables[(uint16_t)(v8RTChourIdx - v8VariableStartIdx)]); // write out RTC hours value
+	TWImain::writeByte(v08(v8RTCsecondIdx)); // write out RTC seconds value
+	TWImain::writeByte(v08(v8RTCminuteIdx)); // write out RTC minutes value
+	TWImain::writeByte(v08(v8RTChourIdx)); // write out RTC hours value
 	TWImain::transmit(TWI_STOP); // go write out register contents
 
 	// tell timer0 to read RTC
-	heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cReadRTC);
+	heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cReadRTC);
 
 #endif // defined(useDS1307clock)
 	cursor::screenLevelEntry(PSTR("Time Set"), clockShowDisplayIdx);
@@ -148,7 +156,7 @@ static void clockSet::setFromRTC(void)
 		oldSREG = SREG; // save interrupt flag status
 		cli(); // disable interrupts
 
-		b = volatile8Variables[(uint16_t)(x + v8RTCsecondIdx - v8VariableStartIdx)]; // fetch a BCD value of time
+		b = v08(x + v8RTCsecondIdx); // fetch a BCD value of time
 
 		SREG = oldSREG; // restore interrupt flag status
 
@@ -158,7 +166,7 @@ static void clockSet::setFromRTC(void)
 		b *= 5; // multiply by 5
 		b >>= 2; // divide again by 4 (to convert from BCD to hex, accomplishes (high digit) * 10 / 16)
 
-		mainProgram8Variables[(uint16_t)(x + m8SecondIdx - m8VariableStartIdx)] = b + c; // store natural value of time
+		m08(x + m8SecondIdx) = b + c; // store natural value of time
 
 	}
 
@@ -186,7 +194,7 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 			text::statusOut(m8DevLCDidx, PSTR("Clock"));
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, v32ClockCycleIdx, tReadTicksToSeconds), (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b01010101), 4, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, 0, prgmOutputClockTime), (v08(v8HeartbeatBitmaskIdx) & 0b01010101), 4, 0, 0);
 			break;
 
 		default:
@@ -357,6 +365,15 @@ static void statusBar::writeStatusBarElement(uint8_t chr, uint8_t val)
 #if defined(useBigDigitDisplay)
 /* Big Digit Output support section */
 
+#if defined(useBigTTE)
+static const uint8_t prgmOutputTTE[] PROGMEM = {
+	instrCall, tTimeToEmpty,							// fetch estimated remaining engine runtime in seconds
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as h9mmss BCD string and store it in register 2
+	instrDone											// exit to caller
+};
+
+#endif // defined(useBigTTE)
 static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -417,7 +434,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
 				case bigTTEdisplayIdx:
-					outputTime(0, ull2str(nBuff, tripIdx, tTimeToEmpty), (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b10001000), 4, cursorPos, PSTR("TTE "));
+					outputTime(0, ull2str(nBuff, tripIdx, prgmOutputTTE), (v08(v8HeartbeatBitmaskIdx) & 0b10001000), 4, cursorPos, PSTR("TTE "));
 					break;
 
 #endif // defined(useBigTTE)

@@ -30,15 +30,17 @@ static const uint8_t prgmInitEEPROM[] PROGMEM = {
 static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 	instrLdRegRdOnly, 0x02, idxCycles0PerSecond,		// load timer0 cycles per second term
 	instrMul2byRdOnly, idxSecondsPerHour,				// term is now timer0 cycles per hour
-	instrMul2byRdOnly, idxDecimalPoint,					// term is now (timer0 cycles * decimal format) per hour
-	instrDiv2byEEPROM, pPulsesPerDistanceIdx,			// term is now (timer0 cycles * unit distance * decimal format) / (pulse * hour)
+	instrMul2byRdOnly, idxDecimalPoint,					// term is now (timer0 cycle * decimal format) per hour
+	instrDiv2byEEPROM, pPulseEdgePerDistanceIdx,		// term is now (timer0 cycle * unit distance * decimal format) / (pulse edge * hour)
 	instrStRegVariable, 0x02, m32SpeedFactorIdx,		// save speed factor
 
+	instrMul2byByte, 2,									// term is now (timer0 cycle * unit distance * decimal format) / (pulse * hour)
 	instrDiv2byEEPROM, pMinGoodSpeedidx,				// divide speed factor by (unit distance * decimal format) / (hour)
 	instrStRegVariable, 0x02, v32MaximumVSSperiodIdx,	// store maximum good VSS period of timer0 cycles / VSS pulse
 	instrDiv2byRdOnly, idxCycles0PerTick,				// perform conversion, term is now in timer0 ticks
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegVariable, 0x02, v16DetectVehicleStopIdx,	// store minimum good vehicle speed of timer0 ticks / VSS pulse
+	instrDiv2byByte, 2,									// term is now in (timer0 tick) / (pulse edge)
+	instrStRegVariable, 0x02, v16DetectVehicleStopIdx,	// store minimum good vehicle speed of timer0 ticks / VSS pulse edge
 
 	instrLdRegEEPROM, 0x02, pMinGoodRPMidx,				// load minimum good engine speed value in (crank revolutions) / (minute)
 	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by the number of (injector fire event) / (2)(crank revolutions)
@@ -55,30 +57,30 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 	instrLdRegEEPROM, 0x02, pInjectorSettleTimeIdx,		// fetch injector settle time in microseconds
 	instrMul2byRdOnly, idxCycles0PerSecond,				// multiply by timer0 cycles / second term
 	instrDiv2byRdOnly, idxMicroSecondsPerSecond,		// divide by microseconds per seconds value
-	instrStRegVariable, 0x02, v32InjectorOpenDelayIdx,	// store injector settle time value in cycles
+	instrStRegVariable, 0x02, v32InjectorOpenDelayIdx,	// store injector settle time value in timer0 cycles
 	instrLdReg, 0x23,									// save injector settle time value in register 3
 	instrLdRegVariable, 0x02, v32MaximumEnginePeriodIdx,	// load maximum good engine period value in timer0 cycles / fire event
 	instrSubYfromX, 0x32,								// subtract injector settle time from maximum good engine period
 	instrStRegVariable, 0x02, v32InjectorValidMaxWidthIdx,	// store maximum valid fuel injector pulse width in timer0 cycles
 
 	instrLdRegEEPROM, 0x02, pIdleTimeoutIdx,			// load idle timeout value in seconds
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v16VehicleStopTimeoutIdx,	// store idle timeout value in timer0 ticks
 
 	instrLdRegEEPROM, 0x02, pEOCtimeoutIdx,				// load EOC timeout value in seconds
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v16EngineOffTimeoutIdx,	// store EOC timeout value in timer0 ticks
 
 	instrLdRegEEPROM, 0x02, pButtonTimeoutIdx,			// load button press timeout stored parameter
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v16InputTimeoutIdx,		// store button press timeout timer ticks value
 
 	instrLdRegEEPROM, 0x02, pParkTimeoutIdx,			// load parking timeout stored parameter
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v16ParkTimeoutIdx,		// store parking timeout timer ticks value
 
 	instrLdRegEEPROM, 0x02, pActivityTimeoutIdx,		// load activity timeout stored parameter
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v16ActivityTimeoutIdx,	// store activity timeout timer ticks value
 
 	instrLdRegEEPROM, 0x02, pVSSpauseIdx,				// load stored parameter VSS debounce timeout value
@@ -129,20 +131,22 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 #endif	// defined(useChryslerMAPCorrection)
 #if defined(useBarFuelEconVsTime)
 	instrLdRegEEPROM, 0x02, pFEvsTimeIdx,				// load fuel econ vs time period stored parameter
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
-	instrStRegVariable, 0x02, v32FEvsTimePeriodTimeoutIdx,	// store fuel econ vs time period timer ticks value
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
+	instrStRegVariable, 0x02, v32FEvsTimePeriodTickIdx,	// store fuel econ vs time period timer ticks value
+	instrLdRegByte, 0x02, 0,
+	instrStRegVariable, 0x02, v8FEvTimeTripIdx,			// reset fuel econ vs time period current trip value
+	instrStRegVariable, 0x02, v32FEvsTimePeriodCountIdx,	// reset fuel econ vs time period timer countdown
 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useDragRaceFunction)
-	instrLdRegVariable, 0x02, m32SpeedFactorIdx,		// load speed factor in (timer0 cycles * unit distance * decimal format) / (pulse * hour)
-	instrMul2byByte, 2,									// term is now (2 * timer0 cycles * unit distance * decimal format) / (pulse * hour)
+	instrLdRegVariable, 0x02, m32SpeedFactorIdx,		// load speed factor in (2 * timer0 cycle * unit distance * decimal format) / (pulse * hour)
 	instrDiv2byEEPROM, pDragSpeedIdx,					// divide speed factor by (unit distance * decimal format) / (hour)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVariable, 0x02, v32AccelHalfPeriodIdx,	// term is now (2 * timer0 cycles) / (pulse)
 	instrDiv2byByte, 2,									// term is now (timer0 cycles) / (pulse)
 	instrStRegVariable, 0x02, v32AccelFullPeriodIdx,	// save result to accel test full-speed period tripwire variable
 
-	instrLdRegEEPROM, 0x02, pPulsesPerDistanceIdx,		// fetch drag function distance parameter value in VSS pulses
+	instrLdRegEEPROM, 0x02, pPulseEdgePerDistanceIdx,	// fetch drag function distance parameter value in VSS pulse edges
 	instrMul2byEEPROM, pDragDistanceIdx,				// multiply by drag function distance parameter value in unit distance
 	instrDiv2byRdOnly, idxDecimalPoint,					// get rid of decimal formatting factor
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
@@ -151,7 +155,7 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
 	instrLdRegEEPROM, 0x02, pCoastdownSamplePeriodIdx,	// coastdown timer ticks value
-	instrMul2byRdOnly, idxTicksPerSecond,				// multiply by timer0 ticks / second term
+	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v32CoastdownPeriodIdx,	// store coastdown timeout timer ticks value
 
 #endif	// defined(useCoastDownCalculator)
@@ -161,16 +165,16 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 static const uint8_t prgmInitMPGuinoSoftware[] PROGMEM = {
 #if defined(useBarFuelEconVsSpeed)
 	instrLdRegEEPROM, 0x02, pBarLowSpeedCutoffIdx,		// obtain low-speed cutoff parameter in (distance)(* 1000) / (hour)
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulses)(* 1000) / (hour)
-	instrDiv2byRdOnly, idxSecondsPerHour,				// term is now (VSS pulses)(* 1000) / (second)
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// term is now (VSS pulse edges)(* 1000) / (hour)
+	instrDiv2byRdOnly, idxSecondsPerHour,				// term is now (VSS pulse edges)(* 1000) / (second)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegVariable, 0x02, m32FEvsSpeedMinThresholdIdx,	// store minimum threshold speed in (VSS pulses)(* 1000) / (second)
+	instrStRegVariable, 0x02, m32FEvsSpeedMinThresholdIdx,	// store minimum threshold speed in (VSS pulse edges)(* 1000) / (second)
 
 	instrLdRegEEPROM, 0x02, pBarSpeedQuantumIdx,		// fetch speed quantum parameter in (distance)(* 1000) / hour
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,			// term is now (VSS pulses)(* 1000) / (hour)
-	instrDiv2byRdOnly, idxSecondsPerHour,				// term is now (VSS pulses)(* 1000) / (second)
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// term is now (VSS pulse edges)(* 1000) / (hour)
+	instrDiv2byRdOnly, idxSecondsPerHour,				// term is now (VSS pulse edges)(* 1000) / (second)
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
-	instrStRegVariable, 0x02, m32FEvsSpeedQuantumIdx,	// store speed quantum in (VSS pulses)(* 1000) / (second)
+	instrStRegVariable, 0x02, m32FEvsSpeedQuantumIdx,	// store speed quantum in (VSS pulse edges)(* 1000) / (second)
 
 #endif // defined(useBarFuelEconVsSpeed)
 	instrLdRegEEPROM, 0x02, pMicroSecondsPerGallonIdx,	// fetch injector cycle time in microseconds per US gallon
@@ -206,6 +210,25 @@ static const uint8_t prgmInitMPGuinoSoftware[] PROGMEM = {
 	instrAdjustQuotient,								// bump up quotient by adjustment term (0 if remainder/divisor < 0.5, 1 if remainder/divisor >= 0.5)
 	instrStRegVariable, 0x02, m64BingoTankSizeIdx,		// save bingo tank size in cycle0s
 
+#if defined(useSimulatedFIandVSS)
+	instrLdRegEEPROM, 0x02, pPeakHoldSimActiveIdx,		// fetch peak/hold simulated injector initial on-time in microseconds
+	instrMul2byRdOnly, idxTicks1PerSecond,				// multiply by timer1 ticks / second term
+	instrDiv2byRdOnly, idxMicroSecondsPerSecond,		// divide by microseconds per seconds value
+	instrStRegVariable, 0x02, v16SignalSimPeakActiveIdx,	// store peak/hold simulated injector initial on-time value in timer1 ticks
+
+	instrLdRegEEPROM, 0x02, pPeakHoldSimPeriodIdx,		// fetch peak/hold simulated injector initial period in microseconds
+	instrMul2byRdOnly, idxTicks1PerSecond,				// multiply by timer1 ticks / second term
+	instrDiv2byRdOnly, idxMicroSecondsPerSecond,		// divide by microseconds per seconds value
+	instrStRegVariable, 0x02, v16SignalSimPeakPeriodIdx,	// store peak/hold simulated injector initial period value in timer1 ticks
+
+	instrSubVariableFromX, 0x02, v16SignalSimPeakActiveIdx,	// perform subtraction to determine when initial simulated peak signal should terminate
+	instrBranchIfLT, 3,									// if on-time value is less than initial period value, skip ahead
+	instrLdRegByte, 0x02, 0,							// zero out value when initial simulated peak signal should terminate
+
+//simCont:
+	instrStRegVariable, 0x02, v16SignalSimPeakActiveIdx,	// store peak/hold simulated injector initial on-time value in timer1 ticks
+
+#endif // defined(useSimulatedFIandVSS)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
 	instrLdRegByte, 0x02, 0,
 	instrStRegVariable, 0x02, m32CPUworkingMainLoopIdx,	// initialize the cpu utilization stopwatch timer values
@@ -236,8 +259,82 @@ static const uint8_t prgmInitMPGuinoSoftware[] PROGMEM = {
 	instrStRegVariable, 0x02, m32DbgWorkingS64processIdx,
 	instrStRegVariable, 0x02, m32DbgSampledS64processIdx,
 
-	instrStRegVariable, 0x02, v32WorkingInterruptProcessIdx,
+	instrStRegVariable, 0x02, v32WorkingTimer0Idx,
+#if defined(useTimer1Interrupt)
+	instrStRegVariable, 0x02, v32WorkingTimer1Idx,
+#endif // defined(useTimer1Interrupt)
+	instrStRegVariable, 0x02, v32WorkingInjectorOpenIdx,
+	instrStRegVariable, 0x02, v32WorkingInjectorCloseIdx,
+	instrStRegVariable, 0x02, v32WorkingVSSpulseIdx,
+#if defined(useAnalogRead)
+	instrStRegVariable, 0x02, v32WorkingAnalogIdx,
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+	instrStRegVariable, 0x02, v32WorkingTwoWireIdx,
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+	instrStRegVariable, 0x02, v32WorkingSerial0Idx,
+#if defined(useSerial0PortInput)
+	instrStRegVariable, 0x02, v32WorkingSerial0InputIdx,
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+	instrStRegVariable, 0x02, v32WorkingSerial1Idx,
+#if defined(useSerial1PortInput)
+	instrStRegVariable, 0x02, v32WorkingSerial1InputIdx,
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+	instrStRegVariable, 0x02, v32WorkingSerial2Idx,
+#if defined(useSerial2PortInput)
+	instrStRegVariable, 0x02, v32WorkingSerial2InputIdx,
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+	instrStRegVariable, 0x02, v32WorkingSerial3Idx,
+#if defined(useSerial3PortInput)
+	instrStRegVariable, 0x02, v32WorkingSerial3InputIdx,
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
+
 	instrStRegVariable, 0x02, m32DbgSampledInterruptProcessIdx,
+	instrStRegVariable, 0x02, m32DbgSampledTimer0Idx,
+#if defined(useTimer1Interrupt)
+	instrStRegVariable, 0x02, m32DbgSampledTimer1Idx,
+#endif // defined(useTimer1Interrupt)
+	instrStRegVariable, 0x02, m32DbgSampledInjectorOpenIdx,
+	instrStRegVariable, 0x02, m32DbgSampledInjectorCloseIdx,
+	instrStRegVariable, 0x02, m32DbgSampledVSSpulseIdx,
+#if defined(useAnalogRead)
+	instrStRegVariable, 0x02, m32DbgSampledAnalogIdx,
+#endif // defined(useAnalogRead)
+#if defined(useTWIsupport)
+	instrStRegVariable, 0x02, m32DbgSampledTwoWireIdx,
+#endif // defined(useTWIsupport)
+#if defined(useSerial0Port)
+	instrStRegVariable, 0x02, m32DbgSampledSerial0Idx,
+#if defined(useSerial0PortInput)
+	instrStRegVariable, 0x02, m32DbgSampledSerial0InputIdx,
+#endif // defined(useSerial0PortInput)
+#endif // defined(useSerial0Port)
+#if defined(useSerial1Port)
+	instrStRegVariable, 0x02, m32DbgSampledSerial1Idx,
+#if defined(useSerial1PortInput)
+	instrStRegVariable, 0x02, m32DbgSampledSerial1InputIdx,
+#endif // defined(useSerial1PortInput)
+#endif // defined(useSerial1Port)
+#if defined(useSerial2Port)
+	instrStRegVariable, 0x02, m32DbgSampledSerial2Idx,
+#if defined(useSerial2PortInput)
+	instrStRegVariable, 0x02, m32DbgSampledSerial2InputIdx,
+#endif // defined(useSerial2PortInput)
+#endif // defined(useSerial2Port)
+#if defined(useSerial3Port)
+	instrStRegVariable, 0x02, m32DbgSampledSerial3Idx,
+#if defined(useSerial3PortInput)
+	instrStRegVariable, 0x02, m32DbgSampledSerial3InputIdx,
+#endif // defined(useSerial3PortInput)
+#endif // defined(useSerial3Port)
 
 	instrStRegVariable, 0x02, m32DebugAccS64multIdx,
 	instrStRegVariable, 0x02, m32DebugCountS64multIdx,
@@ -261,12 +358,12 @@ static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
 	instrAdjustQuotient,
 	instrStRegEEPROM, 0x02, pMinGoodSpeedidx,
 
-	instrLdRegRdOnlyMetric, 0x12, idxDenomDistance,		// convert pulses per distance value in (count) / (distance)
+	instrLdRegRdOnlyMetric, 0x12, idxDenomDistance,		// convert pulse edges per distance value in (count) / (distance)
 	instrLdRegRdOnlyMetric, 0x21, idxNumerDistance,
-	instrMul2byEEPROM, pPulsesPerDistanceIdx,
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,
 	instrDiv2by1,
 	instrAdjustQuotient,
-	instrStRegEEPROM, 0x02, pPulsesPerDistanceIdx,
+	instrStRegEEPROM, 0x02, pPulseEdgePerDistanceIdx,
 
 	instrLdRegRdOnlyMetric, 0x12, idxNumerVolume,		// convert total tank size value in (volume)
 	instrLdRegRdOnlyMetric, 0x21, idxDenomVolume,
@@ -536,45 +633,15 @@ static void EEPROM::initGuinoHardware(void)
 	lastPINxState = PINC;
 
 #endif // defined(__AVR_ATmega328P__)
-#if defined(useAnalogRead)
-#if defined(__AVR_ATmega32U4__)
-	PRR0 &= ~(1 << PRADC); // turn on ADC module
-#endif // defined(__AVR_ATmega32U4__)
-#if defined(__AVR_ATmega2560__)
-	PRR0 &= ~(1 << PRADC); // turn on ADC module
-#endif // defined(__AVR_ATmega2560__)
-#if defined(__AVR_ATmega328P__)
-	PRR &= ~(1 << PRADC); // turn on ADC module
-#endif // defined(__AVR_ATmega328P__)
-
-	// disable ADC free-running mode
-	ADCSRA &= ~(1 << ADATE); // the AVR hardware just ignores this bit, and always goes to free running mode
-
-	// enable ADC
-	ADCSRA |= (1 << ADEN);
-
-	// set ADMUX[5] bit to 0
-	ADCSRB = 0;
-
-	// set ADC timer frequency to 1/128 of system timer
-	ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0));
-
-	volatile8Variables[(uint16_t)(v8AnalogStatusIdx - v8VariableStartIdx)] = asHardwareReady;
-
-#endif // defined(useAnalogRead)
 	SWEET64::runPrgm(prgmInitMPGuinoHardware, 0); // calculate multiple MPGuino system values for use within timer0, fuel injector, and VSS interrupts
 
 #if defined(useDragRaceFunction)
-	volatile8Variables[(uint16_t)(accelTestClearFlags - v8VariableStartIdx)] &= ~(accelTestClearFlags);
+	v08(v8AccelerationFlagsIdx) &= ~(accelTestClearFlags);
 
 	lastAccelTestStatus = 0;
 	accelTestStatus = 0;
 
 #endif // defined(useDragRaceFunction)
-#if defined(useBarFuelEconVsTime)
-	volatile8Variables[(uint16_t)(v8Timer0CommandIdx - v8VariableStartIdx)] |= (t0cResetFEvTime); // reset fuel economy vs time bargraph mechanism
-
-#endif // defined(useBarFuelEconVsTime)
 	SREG = oldSREG; // restore interrupt flag status
 
 }
@@ -582,6 +649,10 @@ static void EEPROM::initGuinoHardware(void)
 static void EEPROM::initGuinoSoftware(void)
 {
 
+#if defined(useJSONoutput)
+	uint8_t oldSREG;
+
+#endif // defined(useJSONoutput)
 	setMetricDisplayMode();
 
 	SWEET64::runPrgm(prgmInitMPGuinoSoftware, 0); // calculate multiple MPGuino system values for use within code
@@ -590,15 +661,25 @@ static void EEPROM::initGuinoSoftware(void)
 	tripSupport::resetWindowFilter();
 
 #endif // defined(useWindowTripFilter)
+#if defined(useJSONoutput)
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	if (readByte(pJSONoutputIdx)) v08(v8Timer0CommandIdx) |= (t0cEnableJSONoutput);
+	else v08(v8Timer0CommandIdx) &= ~(t0cEnableJSONoutput);
+
+	SREG = oldSREG; // restore interrupt flag status
+
+#endif // defined(useJSONoutput)
 }
 
 static void EEPROM::setMetricDisplayMode(void)
 {
 
-	if (readByte(pMetricModeIdx)) mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] |= (mmFuelEconOutputFlags);
-	else mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] &= ~(mmFuelEconOutputFlags);
+	if (readByte(pMetricModeIdx)) m08(m8MetricModeFlags) |= (mmFuelEconOutputFlags);
+	else m08(m8MetricModeFlags) &= ~(mmFuelEconOutputFlags);
 
-	if (readByte(pAlternateFEidx)) mainProgram8Variables[(uint16_t)(m8MetricModeFlags - m8VariableStartIdx)] ^= (mmDisplayAlternateFE);
+	if (readByte(pAlternateFEidx)) m08(m8MetricModeFlags) ^= (mmDisplayAlternateFE);
 
 }
 
@@ -609,19 +690,19 @@ static uint8_t EEPROM::onChange(const uint8_t * sched, uint8_t parameterIdx)
 
 	retVal = 0;
 
-	mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] &= ~(ecsEEPROMchangeFlags); // clear all bit flags
+	m08(m8EEPROMchangeStatus) &= ~(ecsEEPROMchangeFlags); // clear all bit flags
 
 	SWEET64::runPrgm(sched, parameterIdx); // perform initial SWEET64 call to store EEPROM parameter
 
 #ifdef useCalculatedFuelFactor
 	// calculate and store microseconds per US gallon factor (this will trigger ecsDoMPGuinoInitSoftware)
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsCalculateFuelParam) SWEET64::runPrgm(prgmCalculateFuelFactor, 0);
+	if (m08(m8EEPROMchangeStatus) & ecsCalculateFuelParam) SWEET64::runPrgm(prgmCalculateFuelFactor, 0);
 
 #endif // useCalculatedFuelFactor
 	// perform conversion between metric mode and SAE mode (this will trigger ecsDoMPGuinoInitSoftware)
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsDoMetricConversion) SWEET64::runPrgm(prgmDoEEPROMmetricConversion, 0);
+	if (m08(m8EEPROMchangeStatus) & ecsDoMetricConversion) SWEET64::runPrgm(prgmDoEEPROMmetricConversion, 0);
 
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsChangeDisplay)
+	if (m08(m8EEPROMchangeStatus) & ecsChangeDisplay)
 	{
 
 		if (parameterIdx == pAlternateFEidx) setMetricDisplayMode(); // ensure alternate FE mode is correctly handled
@@ -654,15 +735,15 @@ static uint8_t EEPROM::onChange(const uint8_t * sched, uint8_t parameterIdx)
 #endif // defined(useLCDoutput)
 	}
 
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsDoMPGuinoInitHardware) initGuinoHardware();
+	if (m08(m8EEPROMchangeStatus) & ecsDoMPGuinoInitHardware) initGuinoHardware();
 
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsDoMPGuinoInitSoftware) initGuinoSoftware();
+	if (m08(m8EEPROMchangeStatus) & ecsDoMPGuinoInitSoftware) initGuinoSoftware();
 
 #if defined(useBarFuelEconVsSpeed)
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsResetBarFEvsSpeed) bgFEvsSsupport::reset();
+	if (m08(m8EEPROMchangeStatus) & ecsResetBarFEvsSpeed) bgFEvsSsupport::reset();
 
 #endif // defined(useBarFuelEconVsSpeed)
-	if (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsEEPROMchangeDetected) retVal = 1; // if the setting has changed
+	if (m08(m8EEPROMchangeStatus) & ecsEEPROMchangeDetected) retVal = 1; // if the setting has changed
 
 	return retVal;
 
@@ -702,7 +783,7 @@ static uint8_t EEPROM::readByte(uint8_t eePtr)
 
 	read64(vee, eePtr);
 
-	return vee->u8[0];
+	return vee->u08[0];
 
 }
 
@@ -715,7 +796,7 @@ static uint16_t EEPROM::readWord(uint8_t eePtr)
 
 	read64(vee, eePtr);
 
-	return vee->ui[0];
+	return vee->u16[0];
 
 }
 
@@ -735,7 +816,7 @@ static void EEPROM::read64(union union_64 * an, uint8_t parameterIdx)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	for (uint16_t x = t; x < u; x++) an->u8[x - t] = eeprom_read_byte((uint8_t *)(x));
+	for (uint16_t x = t; x < u; x++) an->u08[x - t] = eeprom_read_byte((uint8_t *)(x));
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -765,11 +846,11 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 	{
 
 		eByt = eeprom_read_byte((uint8_t *)(x));
-		rByt = an->u8[x - t];
+		rByt = an->u08[x - t];
 		if (eByt != rByt)
 		{
 
-			mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsEEPROMchangeDetected);
+			m08(m8EEPROMchangeStatus) |= (ecsEEPROMchangeDetected);
 			b = 1;
 			eeprom_write_byte((uint8_t *)(x), rByt);
 
@@ -786,36 +867,36 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 		{
 
 			case pfSoftwareInitMPGuino:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMPGuinoInitSoftware);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitSoftware);
 				break;
 
 			case pfHardwareInitMPGuino:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMPGuinoInitHardware);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware);
 				break;
 
 			case pfDoMetricModeConversion:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMetricConversion);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMetricConversion);
 				break;
 
 			case pfChangeDisplay:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsChangeDisplay);
+				m08(m8EEPROMchangeStatus) |= (ecsChangeDisplay);
 				break;
 
 			case pfCalculateFuelParams:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsCalculateFuelParam);
+				m08(m8EEPROMchangeStatus) |= (ecsCalculateFuelParam);
 				break;
 
 #if defined(useBarFuelEconVsSpeed)
 			case pfHWresetAndBFEvSreset:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMPGuinoInitHardware);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware);
 			case pfSWresetAndBFEvSreset:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMPGuinoInitSoftware | ecsResetBarFEvsSpeed);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitSoftware | ecsResetBarFEvsSpeed);
 				break;
 
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useChryslerMAPCorrection)
 			case pfHWresetAndFuelParamCalc:
-				mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] |= (ecsDoMPGuinoInitHardware | ecsCalculateFuelParam);
+				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware | ecsCalculateFuelParam);
 				break;
 
 #endif // defined(useChryslerMAPCorrection)

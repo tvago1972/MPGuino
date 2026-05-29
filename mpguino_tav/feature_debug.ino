@@ -1,55 +1,3 @@
-#if defined(useActivityRecord)
-/* Process activity marking support section */
-
-static void activity::record(uint8_t assertFlags, uint8_t releaseFlags)
-{
-
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	uint32_t thisCycle0;
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-	uint8_t theseFlags;
-
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	thisCycle0 = heart::cycles0(); // record starting time
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-	theseFlags = mainProgram8Variables[(uint16_t)(m8ActivityStatusIdx - m8VariableStartIdx)];
-	theseFlags |= (assertFlags);
-	theseFlags &= ~(releaseFlags);
-	mainProgram8Variables[(uint16_t)(m8ActivityStatusIdx - m8VariableStartIdx)] = theseFlags;
-
-#if defined(useActivityLED)
-	activityLED::output(theseFlags & mainProgram8Variables[(uint16_t)(m8ActivityOutputIdx - m8VariableStartIdx)]);
-
-#endif // defined(useActivityLED)
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	if (releaseFlags & arMainProcess) mainProgram32Variables[(uint16_t)(m32CPUworkingMainProcessIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32CPUworkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arIdleProcess) mainProgram32Variables[(uint16_t)(m32CPUworkingIdleProcessIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32CPUworkingIdleStartIdx - m32VariableStartIdx, thisCycle0);
-#if defined(useDebugCPUreading)
-	if (releaseFlags & arMainDevices) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainDevicesIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arMainActivity) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainActivityIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arMainSample) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainSampleIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arMainOutput) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOutputIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arMainOther) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainOtherIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingMainStartIdx - m32VariableStartIdx, thisCycle0);
-	if (releaseFlags & arSWEET64) mainProgram32Variables[(uint16_t)(m32DbgWorkingS64processIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32DbgWorkingS64StartIdx - m32VariableStartIdx, thisCycle0);
-#endif // defined(useDebugCPUreading)
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-	mainProgram32Variables[(uint16_t)(m32CPUworkingMainLoopIdx - m32VariableStartIdx)] += heart::getCycle0Length(m32CPUworkingLoopStartIdx - m32VariableStartIdx, thisCycle0);
-	mainProgram32Variables[(uint16_t)(m32CPUworkingLoopStartIdx - m32VariableStartIdx)] = thisCycle0;
-
-	if (assertFlags & arMainProcess) mainProgram32Variables[(uint16_t)(m32CPUworkingMainStartIdx - m32VariableStartIdx)] = thisCycle0;
-	if (assertFlags & arIdleProcess) mainProgram32Variables[(uint16_t)(m32CPUworkingIdleStartIdx - m32VariableStartIdx)] = thisCycle0;
-#if defined(useDebugCPUreading)
-	if (assertFlags & arMainDebug) mainProgram32Variables[(uint16_t)(m32DbgWorkingMainStartIdx - m32VariableStartIdx)] = thisCycle0;
-	if (assertFlags & arSWEET64) mainProgram32Variables[(uint16_t)(m32DbgWorkingS64StartIdx - m32VariableStartIdx)] = thisCycle0;
-#endif // defined(useDebugCPUreading)
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-}
-
-#endif // defined(useActivityRecord)
 #if defined(useActivityLED)
 /* Activity status LED support section */
 
@@ -57,38 +5,42 @@ static void activityLED::init(void)
 {
 
 #if defined(__AVR_ATmega32U4__)
-//	DDRB |= (1 << DDB0); // turn on digital output for RX LED
-	DDRC |= (1 << DDC7); // turn on digital output for LED L
-//	DDRD |= (1 << DDD5); // turn on digital output for TX LED
+//	DDRB |= _BV(DDB0); // turn on digital output for RX LED
+	DDRC |= _BV(DDC7); // turn on digital output for LED L
+//	DDRD |= _BV(DDD5); // turn on digital output for TX LED
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-	DDRB |= (1 << DDB7); // turn on digital output for LED L
+	DDRB |= _BV(DDB7); // turn on digital output for LED L
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-	DDRB |= (1 << DDB5); // turn on digital output for LED L
+	DDRB |= _BV(DDB5); // turn on digital output for LED L
 #endif // defined(__AVR_ATmega328P__)
 
-	mainProgram8Variables[(uint16_t)(m8ActivityOutputIdx - m8VariableStartIdx)] = (arMainProcess);
+	m08(m8ActivityStatusIdx) = 0;
+	m08(m8ActivityOutputIdx) = (arMainProcess);
 
-	output(1); // initially turn on status LED
+	output(); // initially turn off status LED
 
 }
 
 static void activityLED::shutdown(void)
 {
 
-	output(0); // turn off status LED
+	m08(m8ActivityStatusIdx) = 0;
+	m08(m8ActivityOutputIdx) = 0;
+
+	output(); // turn off status LED
 
 #if defined(__AVR_ATmega32U4__)
-//	DDRB &= ~(1 << DDB0); // turn off digital output for RX LED
-	DDRC &= ~(1 << DDC7); // turn off digital output for LED L
-//	DDRD &= ~(1 << DDD5); // turn off digital output for TX LED
+//	DDRB &= ~_BV(DDB0); // turn off digital output for RX LED
+	DDRC &= ~_BV(DDC7); // turn off digital output for LED L
+//	DDRD &= ~_BV(DDD5); // turn off digital output for TX LED
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-	DDRB &= ~(1 << DDB7); // turn off digital output for LED L
+	DDRB &= ~_BV(DDB7); // turn off digital output for LED L
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-	DDRB &= ~(1 << DDB5); // turn off digital output for LED L
+	DDRB &= ~_BV(DDB5); // turn off digital output for LED L
 #endif // defined(__AVR_ATmega328P__)
 
 }
@@ -96,43 +48,43 @@ static void activityLED::shutdown(void)
 static void activityLED::assert(uint8_t flag)
 {
 
-	mainProgram8Variables[(uint16_t)(m8ActivityStatusIdx - m8VariableStartIdx)] |= (flag);
-	output(1);
+	m08(m8ActivityStatusIdx) |= (flag);
+	output();
 
 }
 
 static void activityLED::release(uint8_t flag)
 {
 
-	mainProgram8Variables[(uint16_t)(m8ActivityStatusIdx - m8VariableStartIdx)] &= ~(flag);
-	output(1);
+	m08(m8ActivityStatusIdx) &= ~(flag);
+	output();
 
 }
 
 static void activityLED::toggle(uint8_t flag)
 {
 
-	mainProgram8Variables[(uint16_t)(m8ActivityStatusIdx - m8VariableStartIdx)] ^= (flag);
-	output(1);
+	m08(m8ActivityStatusIdx) ^= (flag);
+	output();
 
 }
 
-static void activityLED::output(uint8_t val)
+static void activityLED::output(void)
 {
 
-	if (val)
+	if (m08(m8ActivityStatusIdx) & m08(m8ActivityOutputIdx))
 	{
 
 #if defined(__AVR_ATmega32U4__)
-//		PORTB &= ~(1 << PORTB0); // active low RX
-		PORTC |= (1 << PORTC7); // active high L
-//		PORTD &= ~(1 << PORTD5); // active low TX
+//		PORTB &= ~_BV(PORTB0); // active low RX
+		PORTC |= _BV(PORTC7); // active high L
+//		PORTD &= ~_BV(PORTD5); // active low TX
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		PORTB |= (1 << PORTB7); // active high L
+		PORTB |= _BV(PORTB7); // active high L
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		PORTB |= (1 << PORTB5); // active high L
+		PORTB |= _BV(PORTB5); // active high L
 #endif // defined(__AVR_ATmega328P__)
 
 	}
@@ -140,15 +92,15 @@ static void activityLED::output(uint8_t val)
 	{
 
 #if defined(__AVR_ATmega32U4__)
-//		PORTB |= (1 << PORTB0); // active low RX
-		PORTC &= ~(1 << PORTC7); // active high L
-//		PORTD |= (1 << PORTD5); // active low TX
+//		PORTB |= _BV(PORTB0); // active low RX
+		PORTC &= ~_BV(PORTC7); // active high L
+//		PORTD |= _BV(PORTD5); // active low TX
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		PORTB &= ~(1 << PORTB7); // active high L
+		PORTB &= ~_BV(PORTB7); // active high L
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		PORTB &= ~(1 << PORTB5); // active high L
+		PORTB &= ~_BV(PORTB5); // active high L
 #endif // defined(__AVR_ATmega328P__)
 
 	}
@@ -165,6 +117,14 @@ static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
 	instrMul2byByte, 100,
 	instrMul2byRdOnly, idxDecimalPoint,
 	instrDiv2byVariable, m32CPUsampledMainLoopIdx,
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmOutputOperatingTime[] PROGMEM = {
+	instrLdRegVariable, 0x02, v32SystemCycleIdx,
+	instrDiv2byRdOnly, idxTicks0PerSecond,
+	instrLdReg, 0x21,									// move time in seconds into register 1
+	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
 };
 
@@ -189,7 +149,7 @@ static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(m8DevLCDidx, PSTR(" T"));
 #endif // LCDcharWidth == 20
-			text::stringOut(m8DevLCDidx, ull2str(nBuff, v32SystemCycleIdx, tReadTicksToSeconds)); // output system time (since MPGuino was powered up)
+			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, prgmOutputOperatingTime)); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(m8DevLCDidx, 0, 1);
 #if LCDcharWidth == 20
@@ -246,18 +206,31 @@ static uint8_t signalSim::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			{
 
 				case 0:
-					i = (debugInjectorFlag | debugVSSflag);
+					i = (debugFIsaturatedFlag | debugInjectorFlag | debugVSSflag);
 					break;
 
 				case 1:
 					i = (debugVSSflag);
 					break;
 
+				case 6:
 				case 2:
 					i = 0;
 					break;
 
 				case 3:
+					i = (debugFIsaturatedFlag | debugInjectorFlag);
+					break;
+
+				case 4:
+					i = (debugInjectorFlag | debugVSSflag);
+					break;
+
+				case 5:
+					i = (debugVSSflag);
+					break;
+
+				case 7:
 					i = (debugInjectorFlag);
 					break;
 
@@ -294,64 +267,46 @@ static void signalSim::configurePorts(uint8_t newMode)
 
 	newMode &= (debugEnableFlags);
 
-	// configure VSS pin for either normal operation input or debug output
-	if (newMode & debugVSSflag)
-	{
-
-		mainProgram8Variables[(uint16_t)(m8SignalSimVSSidx - m8VariableStartIdx)] = debugVSSlength - 1;
-		mainProgram8Variables[(uint16_t)(m8SignalSimVSSstate - m8VariableStartIdx)] = 0x40; // start out by ramping up from 0 MPH to 250 MPH
-
-		mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)] = heart::delay0(delay0Tick2000ms, 1);
-
-	}
-	else mainProgram8Variables[(uint16_t)(m8SignalSimVSSdelayFlagIdx - m8VariableStartIdx)] = 0;
-
-	// configure fuel injector pins for either normal operation input or debug output
-	if (newMode & debugInjectorFlag) // configure injector sense pins as outputs
-	{
-
-		mainProgram8Variables[(uint16_t)(m8SignalSimFIPidx - m8VariableStartIdx)] = debugFIPlength - 1;
-		mainProgram8Variables[(uint16_t)(m8SignalSimFIPstate - m8VariableStartIdx)] = 0; // start out by waiting before ramping up from 0 RPM to 12000 RPM
-
-		mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)] = heart::delay0(delay0Tick1333ms, 1);
-
-	}
-	else mainProgram8Variables[(uint16_t)(m8SignalSimFIPdelayFlagIdx - m8VariableStartIdx)] = 0;
-
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
+
+	v08(v8SignalSimModeIdx) &= ~(debugEnableFlags); // disable signal sim normal operation for VSS and fuel injector signals
 
 	// configure VSS pin for either normal operation input or debug output
 	if (newMode & debugVSSflag)
 	{
 
 #if defined(__AVR_ATmega32U4__)
-		DDRB |= (1 << DDB7); // configure VSS sense pin as output
+		DDRB |= _BV(DDB7); // configure VSS sense pin as output
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		DDRK |= (1 << DDK0); // configure VSS sense pin as output
-		DDRA |= (1 << DDA3); // configure VSS sense pin repeater as output
+		DDRK |= _BV(DDK0); // configure VSS sense pin as output
+		DDRA |= _BV(DDA2); // configure VSS sense pin repeater as output
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		DDRC |= (1 << DDC0); // configure VSS sense pin as output
+		DDRC |= _BV(DDC0); // configure VSS sense pin as output
 #endif // defined(__AVR_ATmega328P__)
 
-		volatile16Variables[(uint16_t)(v16SignalSimVSStickLength - v16VariableStartIdx)] = 0;
+		v08(v8SignalSimModeIdx) |= (debugVSSready); // tell timer0 to reset the VSS signal simulator
 
 	}
 	else
 	{
 
 #if defined(__AVR_ATmega32U4__)
-		DDRB &= ~(1 << DDB7); // configure VSS sense pin as input
+		DDRB &= ~_BV(DDB7); // configure VSS sense pin as input
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		DDRK &= ~(1 << DDK0); // configure VSS sense pin as input
-		DDRA &= ~(1 << DDA3); // configure VSS sense pin repeater as input
+		DDRK &= ~_BV(DDK0); // configure VSS sense pin as input
+#if !defined(useArduinoMega2560)
+		DDRA &= ~_BV(DDA2); // configure VSS sense pin repeater as input
+#endif // !defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		DDRC &= ~(1 << DDC0); // configure VSS sense pin as input
+		DDRC &= ~_BV(DDC0); // configure VSS sense pin as input
 #endif // defined(__AVR_ATmega328P__)
+
+		v08(v8SignalSimModeIdx) &= ~(debugVSSready); // tell timer0 to turn off VSS signal simulator
 
 	}
 
@@ -360,44 +315,57 @@ static void signalSim::configurePorts(uint8_t newMode)
 	{
 
 #if defined(__AVR_ATmega32U4__)
-		DDRD |= ((1 << DDD3) | (1 << DDD2)); // configure injector sense pins as output
-		PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin high to simulate vehicle being initially turned on
+		DDRD |= (_BV(DDD3) | _BV(DDD2)); // configure injector sense pins as output
+		PORTD |= (_BV(PORTD3) | _BV(PORTD2)); // drive injector sense pin high to simulate vehicle being initially turned on
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		DDRE |= ((1 << DDE5) | (1 << DDE4)); // configure injector sense pins as output
-		PORTE |= ((1 << PORTE5) | (1 << PORTE4)); // drive injector sense pins high to simulate vehicle being initially turned on
-		DDRA |= ((1 << DDA1) | (1 << DDA0)); // configure injector sense pin repeaters as output
-		PORTA |= ((1 << PORTA1) | (1 << PORTA0)); // drive injector sense pin repeaters high to simulate vehicle being initially turned on
+		DDRE |= (_BV(DDE5) | _BV(DDE4)); // configure injector sense pins as output
+		PORTE |= (_BV(PORTE5) | _BV(PORTE4)); // drive injector sense pins high to simulate vehicle being initially turned on
+#if !defined(useArduinoMega2560)
+		DDRA |= (_BV(DDA1) | _BV(DDA0)); // configure injector sense pin repeaters as output
+		PORTA |= (_BV(PORTA0)); // drive injector sense pin repeater high to simulate vehicle being initially turned on
+		PORTA &= ~(_BV(PORTA1)); // drive injector sense pin repeater reference low
+#endif // !defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		DDRD |= ((1 << DDD3) | (1 << DDD2)); // configure injector sense pins as output
-		PORTD |= ((1 << PORTD3) | (1 << PORTD2)); // drive injector sense pin high to simulate vehicle being initially turned on
+		DDRD |= (_BV(DDD3) | _BV(DDD2)); // configure injector sense pins as output
+		PORTD |= (_BV(PORTD3) | _BV(PORTD2)); // drive injector sense pin high to simulate vehicle being initially turned on
 #endif // defined(__AVR_ATmega328P__)
 
-		volatile16Variables[(uint16_t)(v16SignalSimFIPtickLength - v16VariableStartIdx)] = 0;
-		volatile16Variables[(uint16_t)(v16SignalSimFIPWtickLength - v16VariableStartIdx)] = 0;
+		v08(v8SignalSimModeIdx) |= (debugFIPready); // tell timer0 to reset injector signal simulator
+
+		if (newMode & debugFIsaturatedFlag) v08(v8SignalSimModeIdx) |= (debugFIsaturatedFlag);
 
 	}
 	else // configure injector sense pins as inputs
 	{
 
 #if defined(__AVR_ATmega32U4__)
-		DDRD &= ~((1 << DDD3) | (1 << DDD2)); // configure injector sense pins as input
+		DDRD &= ~(_BV(DDD3) | _BV(DDD2)); // configure injector sense pins as input
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
-		DDRE &= ~((1 << DDE5) | (1 << DDE4)); // configure injector sense pins as input
-		DDRA &= ~((1 << DDA1) | (1 << DDA0)); // configure injector sense pin repeaters as input
+		DDRE &= ~(_BV(DDE5) | _BV(DDE4)); // configure injector sense pins as input
+#if !defined(useArduinoMega2560)
+		DDRA &= ~(_BV(DDA1) | _BV(DDA0)); // configure injector sense pin repeaters as input
+#endif // !defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
-		DDRD &= ~((1 << DDD3) | (1 << DDD2)); // configure injector sense pins as input
+		DDRD &= ~(_BV(DDD3) | _BV(DDD2)); // configure injector sense pins as input
 #endif // defined(__AVR_ATmega328P__)
+
+		v08(v8SignalSimModeIdx) &= ~(debugFIPready); // tell timer0 to turn off injector signal simulator
 
 	}
 
-	if (newMode) volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] |= (t1cEnableDebug);
-	else volatile8Variables[(uint16_t)(v8Timer1CommandIdx - v8VariableStartIdx)] &= ~(t1cEnableDebug);
+	if (newMode & debugOutputFlags)
+	{
 
-	volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)] = newMode;
+		v08(v8Timer1CommandIdx) |= (t1cEnableDebug);
+
+		heart::enableTimer1Interrupt();
+
+	}
+	else v08(v8Timer1CommandIdx) &= ~(t1cEnableDebug);
 
 	SREG = oldSREG; // restore state of interrupt flag
 
@@ -595,7 +563,7 @@ static void terminal::outputConstantExtra(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchConstantValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, tFormatToNumber));
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
 
 }
 
@@ -603,7 +571,7 @@ static void terminal::outputParameterValue(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, tFormatToNumber));
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
 
 #if defined(useDebugTerminalLabels)
 	switch (lineNumber)
@@ -641,7 +609,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(" (orig "));
 		SWEET64::runPrgm(prgmFetchInitialParamValue, lineNumber);
-		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, tFormatToNumber));
+		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(")"));
 
 	}
@@ -655,7 +623,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
 
 		for (uint8_t x = 7; x < 8; x--)
-			if (x < i) text::hexByteOut(m8DevDebugTerminalIdx, ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u8[(uint16_t)(x)]);
+			if (x < i) text::hexByteOut(m8DevDebugTerminalIdx, ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u08[(uint16_t)(x)]);
 			else text::stringOut(m8DevDebugTerminalIdx, PSTR("  "));
 
 		text::charOut(m8DevDebugTerminalIdx, ' ');
@@ -705,7 +673,7 @@ static void terminal::outputVariableExtra(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchVariableValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, tFormatToNumber));
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
 }
 
 static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
@@ -732,7 +700,7 @@ static void terminal::outputTripVarMeasuredExtra(uint8_t lineNumber)
 {
 
 	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, tFormatToNumber));
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
 
 }
 
@@ -779,7 +747,7 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 
 	text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmPtr));
 	text::charOut(m8DevDebugTerminalIdx, ' ');
-	text::hexDWordOut(m8DevDebugTerminalIdx, instrLWord->ul);
+	text::hexDWordOut(m8DevDebugTerminalIdx, instrLWord->u32);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
 	text::hexByteOut(m8DevDebugTerminalIdx, SWEET64processorFlags);
 	text::newLine(m8DevDebugTerminalIdx);
@@ -824,7 +792,7 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 static void terminal::outputSignalSimSetting(uint8_t lineNumber)
 {
 
-	if ((debugEnableFlags & volatile8Variables[(uint16_t)(v8SignalSimModeIdx - v8VariableStartIdx)]) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
+	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
 	else text::charOut(m8DevDebugTerminalIdx, ' ');
 
 }
@@ -924,7 +892,7 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 	uint8_t isValid;
 	uint8_t i;
 
-	iLW->u8[0] = lineNumber; // store instruction to be decoded here
+	iLW->u08[0] = lineNumber; // store instruction to be decoded here
 	prgmPtr = 0;
 
 	SWEET64::fetchInstruction(iLW, prgmPtr, terminalS64reg8); // decode instruction
@@ -936,7 +904,7 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 		i = 1;
 
 		text::charOut(m8DevDebugTerminalIdx, '(');
-		text::hexWordOut(m8DevDebugTerminalIdx, iLW->ui[0]);
+		text::hexWordOut(m8DevDebugTerminalIdx, iLW->u16[0]);
 		text::charOut(m8DevDebugTerminalIdx, ')');
 
 		outputSWEET64byte(lineNumber); // output opcode byte
@@ -1120,7 +1088,7 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 			if (isValid & s64vRegisterOperation) // instruction does something with the 64 bit registers
 			{
 
-				switch (instrLWord->u8[2]) // perform load or store operation, according to ixx
+				switch (instrLWord->u08[2]) // perform load or store operation, according to ixx
 				{
 
 					case i14:	// load rX with const
@@ -1162,7 +1130,7 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 				if ((isValid & s64vRelativeOperand) == 0)
 				{
 
-					switch (instrLWord->u8[0])
+					switch (instrLWord->u08[0])
 					{
 
 						case e29:	// load jump register
@@ -1230,7 +1198,7 @@ static void terminal::outputBluetoothResponse(void)
 	do
 	{
 
-		f = ringBuffer::isBufferNotEmpty(rbIdxBLEfriendIn);
+		f = ringBuffer::testBufferNot(rbIdxBLEfriendIn, bufferIsEmpty);
 
 		if (f)
 		{
@@ -1270,9 +1238,6 @@ static void terminal::mainProcess(void)
 	union union_32 * iLW = (union union_32 *)(&instrLWord);
 	uint8_t loopFlag;
 #endif // defined(useDebugTerminalSWEET64)
-#if defined(useDebugButtonInjection)
-	uint16_t buttonInjPeriod;
-#endif // defined(useDebugButtonInjection)
 	uint8_t i;
 	uint8_t j;
 	uint8_t k;
@@ -1330,7 +1295,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
                 short (l, c, r, u, d)
                  long (L, C, R, U, D)
            S - lists available signal simulator modes
-S:y          - sets signal simulator mode to y
+          yS - sets signal simulator mode to y
            Y - sends the rest of the input string to BLEfriend shield
           ^S - displays supplemental system information
            ? - displays this help
@@ -1375,7 +1340,7 @@ S:y          - sets signal simulator mode to y
 			terminalState = tsUserInput;
 			errIdx = tseIdxLineCancel;
 #if defined(useDebugCPUreading)
-			mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] |= (peekEnableCPUread); // enable supplemental CPU time measurements
+			m08(m8PeekFlags) |= (peekEnableCPUread); // enable supplemental CPU time measurements
 #endif // defined(useDebugCPUreading)
 
 		case tsUserInput:	// get line
@@ -1392,7 +1357,7 @@ S:y          - sets signal simulator mode to y
 
 						case 0x0D:	// enter
 							text::charOut(m8DevDebugTerminalIdx, 0x0D);
-							heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cResetInputTimer); // tell timer0 that some user input was received
+							heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer); // tell timer0 that some user input was received
 							terminalState = tsInitTerminalCmd;
 							break;
 
@@ -1412,7 +1377,7 @@ S:y          - sets signal simulator mode to y
 #endif // defined(useDebugTerminalSWEET64)
 						case 0x13:	// display supplemental system information
 						case 0x20 ... 0x7E:	// unspecified input character
-							if (ringBuffer::isBufferFull(rbIdxTerminal)) terminalState = tsError;
+							if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsFull)) terminalState = tsError;
 							else
 							{
 
@@ -1480,7 +1445,7 @@ S:y          - sets signal simulator mode to y
 				while (i) // either pull a command character, or read in an entire hex or decimal number, or read in a keypress group
 				{
 
-					if (ringBuffer::isBufferEmpty(rbIdxTerminal)) chr = 0x0D;
+					if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsEmpty)) chr = 0x0D;
 					else chr = ringBuffer::pull(rbIdxTerminal);
 
 					j = chr; // save raw input character for button press processing
@@ -1592,22 +1557,30 @@ S:y          - sets signal simulator mode to y
 								if (terminalMode & tmByteReadIn) // if a button group was read in
 								{
 
-#if defined(useTWIbuttons) || defined(useAnalogButtons)
-									heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, t0cEnableButtonSampling, 0);
+									if (terminalByte & longButtonBit)
+									{
 
-#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
-									buttonInjPeriod = delay0Tick100ms;
+										terminalByte &= ~(longButtonBit);
+										m08(m8ButtonFlags) = (btnCmdProcessButton | btnStatusDetectLongPress);
 
-									if (terminalByte & longButtonBit) buttonInjPeriod += delay0Tick1000ms;
+									}
+									else m08(m8ButtonFlags) = (btnCmdProcessButton | btnStatusDetectShortPress);
 
-									mainProgram8Variables[(uint16_t)(m8DevDebugTerminalIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = heart::delay0(buttonInjPeriod, 0);
 									button::inject(terminalByte & buttonMask); // inject the parsed button press value into timer0
 
 									terminalState = tsInjectButtonPress;
 									terminalMode |= (tmInitInput); // signal to go parse another input value
 
 								}
-								else terminalState = i; // no button group was read in, so cancel button injection mode
+								else
+								{
+
+#if defined(useTWIbuttons) || defined(useAnalogButtons)
+									heart::changeBitFlagBits(v8ButtonStatusIdx, 0, btnCmdEnableSampling); // re-enable sensor-based button sampling
+#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
+									terminalState = i; // no button group was read in, so cancel button injection mode
+
+								}
 								break;
 
 #endif // defined(useDebugButtonInjection)
@@ -1726,7 +1699,7 @@ S:y          - sets signal simulator mode to y
 
 							case 'V':   // list available program variables
 #if defined(useDebugCPUreading)
-								mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] &= ~(peekEnableCPUread);
+								m08(m8PeekFlags) &= ~(peekEnableCPUread);
 
 #endif // defined(useDebugCPUreading)
 #if defined(useDebugTerminalLabels)
@@ -1767,6 +1740,9 @@ S:y          - sets signal simulator mode to y
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugButtonInjection)
 								case 'I':   // inject button press
+#if defined(useTWIbuttons) || defined(useAnalogButtons)
+									heart::changeBitFlagBits(v8ButtonStatusIdx, btnCmdEnableSampling, 0); // disable sensor-based button sampling
+#endif // defined(useTWIbuttons) || defined(useAnalogButtons)
 									chr = 'i';
 									terminalMode = (tmInitButton); // shift to reading button press words
 									break;
@@ -1775,12 +1751,6 @@ S:y          - sets signal simulator mode to y
 								case 0x13:	// display supplemental system information
 									outputDecimalSettings();
 
-#if defined(useBluetooth)
-									text::stringOut(m8DevDebugTerminalIdx, PSTR("btInputState = " tcEOS));
-									text::hexByteOut(m8DevDebugTerminalIdx, btInputState);
-									text::newLine(m8DevDebugTerminalIdx);
-
-#endif // defined(useBluetooth)
 #if defined(useBluetoothAdaFruitSPI)
 									outputBluetoothResponse();
 
@@ -2022,15 +1992,31 @@ S:y          - sets signal simulator mode to y
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useSimulatedFIandVSS)
 								case 'S':   // list available signal simulator mode values, with optional mode setting
-									if (terminalMode & tmByteReadIn) signalSim::configurePorts(terminalByte & debugEnableFlags);
+									if (terminalMode & tmByteReadIn)
+									{
 
-									primaryFunc = terminal::outputSignalSimSetting;
-									maxLine = 4;
+										signalSim::configurePorts(terminalByte & debugEnableFlags);
+
 #if defined(useDebugTerminalLabels)
-									labelList = terminalSignalSimHelp;
+										text::stringOut(m8DevDebugTerminalIdx, terminalSignalSimHelp, terminalByte & debugEnableFlags);
+										text::newLine(m8DevDebugTerminalIdx);
+
 #endif // defined(useDebugTerminalLabels)
-									terminalState = tsProcessList;
-									nextTerminalState = tsInitProcessing;
+										terminalState = tsInitProcessing;
+
+									}
+									else
+									{
+
+										primaryFunc = terminal::outputSignalSimSetting;
+										maxLine = 8;
+#if defined(useDebugTerminalLabels)
+										labelList = terminalSignalSimHelp;
+#endif // defined(useDebugTerminalLabels)
+										terminalState = tsProcessList;
+										nextTerminalState = tsInitProcessing;
+
+									}
 
 									break;
 
@@ -2125,17 +2111,17 @@ S:y          - sets signal simulator mode to y
 													terminalByte = v16VariableEndIdx - 1;
 													break;
 
-												case 3:	// select all 32-bit volatile variables
+												case 4:	// select all 32-bit volatile variables
 													terminalSource = v32VariableStartIdx;
 													terminalByte = v32VariableEndIdx - 1;
 													break;
 
-												case 4:	// select all 32-bit main program variables
+												case 5:	// select all 32-bit main program variables
 													terminalSource = m32VariableStartIdx;
 													terminalByte = m32VariableEndIdx - 1;
 													break;
 
-												case 5:	// select all 64-bit main program variables
+												case 7:	// select all 64-bit main program variables
 													terminalSource = m64VariableStartIdx;
 													terminalByte = m64VariableEndIdx - 1;
 													break;
@@ -2187,11 +2173,11 @@ S:y          - sets signal simulator mode to y
 		case tsOutputBLEfriend:
 			i = 0;
 
-			while (ringBuffer::isBufferNotEmpty(rbIdxTerminal))
+			while (ringBuffer::testBufferNot(rbIdxTerminal, bufferIsEmpty))
 			{
 
 				i = ringBuffer::pull(rbIdxTerminal);
-				if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekBLEfriendEcho) text::charOut(m8DevDebugTerminalIdx, i);
+				if (m08(m8PeekFlags) & peekBLEfriendEcho) text::charOut(m8DevDebugTerminalIdx, i);
 				text::charOut(m8DevBLEfriendIdx, i);
 				i = 1;
 
@@ -2200,7 +2186,7 @@ S:y          - sets signal simulator mode to y
 			if (i)
 			{
 
-				if (mainProgram8Variables[(uint16_t)(m8PeekFlags - m8VariableStartIdx)] & peekBLEfriendEcho) text::newLine(m8DevDebugTerminalIdx);
+				if (m08(m8PeekFlags) & peekBLEfriendEcho) text::newLine(m8DevDebugTerminalIdx);
 
 				blefriend::outputBufferWithResponse();
 
@@ -2214,28 +2200,20 @@ S:y          - sets signal simulator mode to y
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugButtonInjection)
 		case tsInjectButtonPress:	// wait for injected buttonpress to be accepted into timer0
-			if ((volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8DevDebugTerminalIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)]) == 0)
-			{
+			if (v08(v8ButtonStatusIdx) & m08(m8ButtonFlags)) break;
 
-				mainProgram8Variables[(uint16_t)(m8DevDebugTerminalIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)] = heart::delay0(delay0Tick100ms, 0);
-				button::inject(buttonsUp); // inject a buttons-up press into timer0
-				terminalState = tsInjectButtonsUp;
-
-			}
+			button::inject(buttonsUp); // inject a buttons-up press into timer0
+			terminalState = tsInjectButtonsUp;
 
 			break;
 
 		case tsInjectButtonsUp:	// wait for injected buttons-up status to be accepted into timer0
-			if ((volatile8Variables[(uint16_t)(v8Timer0DelayIdx - v8VariableStartIdx)] & mainProgram8Variables[(uint16_t)(m8DevDebugTerminalIdx - m8DevStartIdx + m8Delay0FlagStartIdx - m8VariableStartIdx)]) == 0)
-			{
+			if (v08(v8ButtonStatusIdx) & (btnCmdProcessButton | btnStatusDetectShortPress)) break;
 
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
-				heart::changeBitFlagBits(v8Timer0CommandIdx - v8VariableStartIdx, 0, t0cEnableButtonSampling);
-
+			if (nextTerminalState != tsProcessCommand) heart::changeBitFlagBits(v8ButtonStatusIdx, 0, btnCmdEnableSampling);
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
-				terminalState = nextTerminalState;
-
-			}
+			terminalState = nextTerminalState;
 
 			break;
 

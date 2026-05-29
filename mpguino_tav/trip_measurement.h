@@ -4,8 +4,7 @@ namespace tripVar /* trip data collection basic function prototype */
 	static void reset(uint8_t tripIdx);
 	static void transfer(uint8_t srcTripIdx, uint8_t destTripIdx);
 	static void update(uint8_t srcTripIdx, uint8_t destTripIdx);
-	static void update64(uint64_t collectedCycleArray[], uint32_t value, uint8_t destTripIdx);
-	static void update64(uint64_t collectedCycleArray[], uint32_t collectedPulseArray[], uint32_t value, uint8_t destTripIdx);
+	static void update64(uint64_t collectedArray[], uint8_t valueIdx, uint8_t destTripIdx);
 	static void add32(uint32_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
 	static void add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_t destTripIdx);
 #if defined(useEEPROMtripStorage)

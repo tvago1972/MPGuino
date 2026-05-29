@@ -166,6 +166,41 @@ static const uint8_t prgmFindHalfReserveRange[] PROGMEM = {
 	instrJump, tCalculateFuelDistance					// go format it
 };
 
+static const uint8_t prgmMinOfFuelEconomy[] PROGMEM = {	// return the lesser of either fuel economy or 999000
+	instrCall, tFuelEcon,								// find fuel economy value
+	instrLdReg, 0x23,									// move value to register 3 for now
+	instrLdRegRdOnly, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,
+	instrSubYfromX, 0x12,
+	instrCmpXtoY, 0x23,									// compare fuel economy value to the upper bound value 999000
+	instrBranchIfLTorE, 2,								// if 999000 <= fuel economy value, exit to caller
+	instrLdReg, 0x32,									// shift fuel economy value to register 2
+
+//cont:
+	instrDone											// exit to caller
+};
+
+static const uint8_t prgmMaxOfFuelEconomy[] PROGMEM = {	// return the lesser of (the greater of either fuel economy or 40000) or 999000
+	instrCall, tFuelEcon,								// find fuel economy value
+	instrLdReg, 0x23,									// move value to register 3 for now
+	instrLdRegByte, 0x02, 40,							// load register 2 with the lower bound value 40000
+	instrMul2byRdOnly, idxDecimalPoint,
+	instrCmpXtoY, 0x23,									// compare fuel economy value to the value 40000
+	instrBranchIfLTorE, 2,								// if 40000 <= fuel economy value, skip ahead
+	instrLdReg, 0x23,									// shift fuel economy lower bound value to register 3
+
+//cont1:
+	instrLdRegRdOnly, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
+	instrLdRegRdOnly, 0x01, idxDecimalPoint,
+	instrSubYfromX, 0x12,
+	instrCmpXtoY, 0x23,									// compare fuel economy value to the upper bound value 999000
+	instrBranchIfLTorE, 2,								// if 999000 <= fuel economy value, exit to caller
+	instrLdReg, 0x32,									// shift fuel economy value to register 2
+
+//cont2:
+	instrDone											// exit to caller
+};
+
 #if defined(useDragRaceFunction)
 static void doOutputJSONnumber(uint32_t an, uint8_t decimalPlaces, const char * labelStr)
 {
@@ -212,32 +247,10 @@ static void doOutputJSONremainingFuel(void)
 static void doOutputJSON(void) //skybolt added JSON output function
 {
 
-	uint8_t oldSREG;
-	static uint8_t subtitleCount1 = 2;
 #if defined(useDragRaceFunction)
-	static uint8_t subtitleCount2 = 3;
-
 	uint32_t targetSpeed;
 	uint32_t targetDistance;
 #endif // defined(useDragRaceFunction)
-
-	// replaced timerChecker with this because it's a more accurate method to change once every 1.6 seconds
-	if (volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] & t0saJSONchangeSubtitle)
-	{
-
-		oldSREG = SREG; // save interrupt flag status
-		cli(); // disable interrupts to make the next operation atomic
-
-		volatile8Variables[(uint16_t)(v8Timer0Status0Idx - v8VariableStartIdx)] &= ~(t0saJSONchangeSubtitle);
-
-		SREG = oldSREG; // restore interrupt flag status
-
-		if (!(--subtitleCount1)) subtitleCount1 = 2;
-#if defined(useDragRaceFunction)
-		if (!(--subtitleCount2)) subtitleCount2 = 3;
-#endif // defined(useDragRaceFunction)
-
-	}
 
 	JSONsupport::init(m8DevJSONoutputIdx); // begin JSON payload
 
@@ -253,7 +266,7 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	// text::tripFunctionOut(m8DevJSONoutputIdx, instantIdx, tEngineSpeed, 0, (dfOverflow9s | dfOutputLabel)); // rpm to test latency only vs tachometer and LCD vs raspi indicator (expect 2x looptime)
 
 	JSONsupport::openKey(m8DevJSONoutputIdx, JSONsubtitleStr, JSONflagString);
-	switch (subtitleCount1)
+	switch (v08(v8Subtitle1Idx))
 	{
 
 		case 2:
@@ -307,7 +320,7 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	text::stringOut(m8DevJSONoutputIdx, PSTR(" e-reserve"));
 
 	JSONsupport::openKey(m8DevJSONoutputIdx, JSONsubtitleStr, JSONflagString);
-	switch (subtitleCount1)
+	switch (v08(v8Subtitle1Idx))
 	{
 
 		case 2:
@@ -377,7 +390,7 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	targetSpeed = SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx); // accel test speed
 	targetDistance = SWEET64::runPrgm(prgmFetchParameterValue, pDragDistanceIdx); // accel test distance
 
-	switch (subtitleCount2)
+	switch (v08(v8Subtitle2Idx))
 	{
 
 		case 3:
@@ -450,7 +463,7 @@ static void doOutputJSON(void) //skybolt added JSON output function
 	// set scale at 40mpg or instant econ up to 999 mpg. Folks like to watch their mpg meter go to extremes
 	JSONsupport::outputNumber(m8DevJSONoutputIdx, 18000ul, 3);
 	JSONsupport::outputNumber(m8DevJSONoutputIdx, 24000ul, 3);
-	JSONsupport::outputNumber(m8DevJSONoutputIdx, min(max(40000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 999000), 3);
+	JSONsupport::outputNumber(m8DevJSONoutputIdx, prgmMaxOfFuelEconomy, instantIdx, 3);
 
 	JSONsupport::openKey(m8DevJSONoutputIdx, JSONmeasuresStr, JSONflagArray);
 	JSONsupport::outputNumber(m8DevJSONoutputIdx, currentIdx, tFuelEcon); // current fuel economy
@@ -458,7 +471,7 @@ static void doOutputJSON(void) //skybolt added JSON output function
 
 	JSONsupport::openKey(m8DevJSONoutputIdx, JSONmarkersStr, JSONflagArray);
 	// instantaneous fuel economy, do not let scale exceed 999
-	JSONsupport::outputNumber(m8DevJSONoutputIdx, min(999000, SWEET64::doCalculate(instantIdx, tFuelEcon)), 3);
+	JSONsupport::outputNumber(m8DevJSONoutputIdx, prgmMinOfFuelEconomy, instantIdx, 3);
 
 	JSONsupport::closeElement(m8DevJSONoutputIdx);
 

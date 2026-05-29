@@ -2,11 +2,11 @@
 static void doOutputDataLog(void);
 
 static const uint16_t dataLogTripCalcFormats[] PROGMEM = {
-	((instantIdx << 8) |		tFuelEcon),				// average fuel economy  for the past loop
-	((instantIdx << 8) |		tSpeed),				// average vehicle speed for the past loop
-	((instantIdx << 8) |		tInjectorOpenTime),		// fuel injector raw open time for the past loop
-	((instantIdx << 8) |		tInjectorPulseCount),	// fuel injector pulse count for the past loop
-	((instantIdx << 8) |		tVSSpulseCount),		// vss pulse count for the past loop
+	(instantIdx << 8) |		(tFuelEcon),				// average fuel economy  for the past loop
+	(instantIdx << 8) |		(tSpeed),					// average vehicle speed for the past loop
+	(instantIdx << 8) |		(tInjectorOpenTime),		// fuel injector raw open time for the past loop
+	(instantIdx << 8) |		(tInjectorPulseCount),		// fuel injector pulse count for the past loop
+	(instantIdx << 8) |		(tVSSpulseEdgeCount),		// vss pulse edge count for the past loop
 };
 
 static const uint8_t dLIcount = (sizeof(dataLogTripCalcFormats) / sizeof(uint16_t));

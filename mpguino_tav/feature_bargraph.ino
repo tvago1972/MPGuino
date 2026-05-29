@@ -7,7 +7,7 @@ static void bgFEvsSsupport::reset(void)
 
 	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
 
-	mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] = 255;
+	m08(m8FEvSpeedTripIdx) = 255;
 
 }
 
@@ -24,7 +24,7 @@ static uint8_t bgFEvsTsupport::getFEvTimeIdx(void)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	retVal = volatile8Variables[(uint16_t)(v8FEvTimeTripIdx - v8VariableStartIdx)];
+	retVal = v08(v8FEvTimeTripIdx);
 
 	SREG = oldSREG; // restore interrupt flag status
 
@@ -126,8 +126,8 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case barFEvSdisplayIdx:
 			labelList = barFEvSfuncNames;
 
-			if (mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] < tripSlotCount)
-				i = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)] - FEvsSpeedIdx + 1;
+			if (m08(m8FEvSpeedTripIdx) < tripSlotCount)
+				i = m08(m8FEvSpeedTripIdx) - FEvsSpeedIdx + 1;
 			else i = 0;
 
 			graphCursorPos = i - 1;
@@ -138,9 +138,9 @@ static uint8_t barGraphSupport::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			if (i)
 			{
 
-				line0TripIdx = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)];
+				line0TripIdx = m08(m8FEvSpeedTripIdx);
 
-				if (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b11110001)
+				if (v08(v8HeartbeatBitmaskIdx) & 0b11110001)
 				{
 
 					line1CalcIdx = tSpeed;
@@ -252,7 +252,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++) // this is for calculating the mean of the dataset
 	{
 
-		byt = mainProgram8Variables[(uint16_t)(x + m8BarGraphIdx - m8VariableStartIdx)];
+		byt = m08(x + m8BarGraphIdx);
 
 		switch (byt)
 		{
@@ -315,8 +315,8 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	for (uint8_t x = 0; x < bgDataSize; x++)
 	{
 
-		byt = mainProgram8Variables[(uint16_t)(x + m8BarGraphIdx - m8VariableStartIdx)];
-		blinkFlag = ((x == cursorPos) && (volatile8Variables[(uint16_t)(v8HeartbeatBitmaskIdx - v8VariableStartIdx)] & 0b10001000));
+		byt = m08(x + m8BarGraphIdx);
+		blinkFlag = ((x == cursorPos) && (v08(v8HeartbeatBitmaskIdx) & 0b10001000));
 
 		switch (byt)
 		{

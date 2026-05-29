@@ -92,13 +92,13 @@ static void tripVar::update(uint8_t srcTripIdx, uint8_t destTripIdx)
 
 }
 
-static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t value, uint8_t destTripIdx)
+static void tripVar::update64(uint64_t collectedArray[], uint8_t valueIdx, uint8_t destTripIdx)
 {
 
 #if defined(useAssemblyLanguage)
 	union union_64 * an;
 
-	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
+	an = (union union_64 *)(&collectedArray[(uint16_t)(destTripIdx)]);
 
 	uint8_t x;
 
@@ -129,60 +129,12 @@ static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t value, ui
 		"	brne l_add64a%=			\n"
 
 		: "+e" (an), "+r" (x)
-		: "r" (value)
+		: "r" (v32(valueIdx))
 
 	);
 #else // defined(useAssemblyLanguage)
-	collectedCycleArray[(uint16_t)(destTripIdx)] += value;
+	collectedArray[(uint16_t)(destTripIdx)] += v32(valueIdx);
 #endif // defined(useAssemblyLanguage)
-
-}
-
-static void tripVar::update64(uint64_t collectedCycleArray[], uint32_t collectedPulseArray[], uint32_t value, uint8_t destTripIdx)
-{
-
-#if defined(useAssemblyLanguage)
-	union union_64 * an;
-
-	an = (union union_64 *)(&collectedCycleArray[(uint16_t)(destTripIdx)]);
-
-	uint8_t x;
-
-	asm volatile(
-		"	ld	__tmp_reg__, %a0	\n"		// 0
-		"   add __tmp_reg__, %A2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 1
-		"   adc __tmp_reg__, %B2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 2
-		"   adc __tmp_reg__, %C2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ld	__tmp_reg__, %a0	\n"		// 3
-		"   adc __tmp_reg__, %D2    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-
-		"	ldi	%A1, 4				\n"		// initialize counter
-
-		"l_add64a%=:				\n"
-		"	ld	__tmp_reg__, %a0	\n"		// 4
-		"   adc __tmp_reg__, __zero_reg__    \n"
-		"	st	%a0+, __tmp_reg__	\n"
-		"	dec	%A1					\n"
-		"	brne l_add64a%=			\n"
-
-		: "+e" (an), "+r" (x)
-		: "r" (value)
-
-	);
-#else // defined(useAssemblyLanguage)
-	update64(collectedCycleArray, value, destTripIdx);
-#endif // defined(useAssemblyLanguage)
-
-	collectedPulseArray[(uint16_t)(destTripIdx)]++;
 
 }
 
@@ -237,12 +189,12 @@ static void tripVar::add64(uint64_t collectedArray[], uint8_t srcTripIdx, uint8_
 	for (x = 0; x < 8; x++)
 	{
 
-		n->u8[0] = c;
-		n->u8[1] = 0;
-		enn += an->u8[(uint16_t)(x)];
-		enn += ann->u8[(uint16_t)(x)];
-		an->u8[(uint16_t)(x)] = n->u8[0];
-		c = n->u8[1];
+		n->u08[0] = c;
+		n->u08[1] = 0;
+		enn += an->u08[(uint16_t)(x)];
+		enn += ann->u08[(uint16_t)(x)];
+		an->u08[(uint16_t)(x)] = n->u08[0];
+		c = n->u08[1];
 
 	}
 #endif // defined(useAssemblyLanguage)
@@ -308,7 +260,7 @@ static void tripSupport::init(void)
 	for (uint8_t x = 0; x < tripSlotCount; x++) tripVar::reset(x);
 
 #if defined(useWindowTripFilter)
-	mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
+	m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
 
 #endif // defined(useWindowTripFilter)
 }
@@ -337,10 +289,10 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 #endif // defined(trackIdleEOCdata)
 #if defined(useWindowTripFilter)
 		case 0x7D:		// replace generic window trip index with current window trip index
-			i = mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] + windowTripFilterIdx - 1;
+			i = m08(m8CurrentWindowTripIdx) + windowTripFilterIdx - 1;
 
-			if ((--mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)]) == 0)
-				mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
+			if ((--m08(m8CurrentWindowTripIdx)) == 0)
+				m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
 
 			break;
 
@@ -354,7 +306,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 #if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
 			SWEET64::runPrgm(prgmFEvsSpeed, instantIdx);
-			i = mainProgram8Variables[(uint16_t)(m8FEvSpeedTripIdx - m8VariableStartIdx)];
+			i = m08(m8FEvSpeedTripIdx);
 			break;
 
 #endif // defined(useBarFuelEconVsSpeed)
@@ -575,12 +527,12 @@ static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 {
 
-	mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] &= ~(ecsEEPROMchangeDetected);
+	m08(m8EEPROMchangeStatus) &= ~(ecsEEPROMchangeDetected);
 
 	if (tripSlot) SWEET64::runPrgm(prgmSaveTankToEEPROM, 0);
 	else SWEET64::runPrgm(prgmSaveCurrentToEEPROM, 0);
 
-	return (mainProgram8Variables[(uint16_t)(m8EEPROMchangeStatus - m8VariableStartIdx)] & ecsEEPROMchangeDetected);
+	return (m08(m8EEPROMchangeStatus) & ecsEEPROMchangeDetected);
 
 }
 
@@ -615,7 +567,7 @@ static void tripSupport::outputResetStatus(uint8_t tripSlot)
 static void tripSupport::resetWindowFilter(void)
 {
 
-	mainProgram8Variables[(uint16_t)(m8CurrentWindowTripIdx - m8VariableStartIdx)] = windowTripFilterSize;
+	m08(m8CurrentWindowTripIdx) = windowTripFilterSize;
 
 	for (uint8_t x = 0; x < windowTripFilterSize; x++) tripVar::reset(windowTripFilterIdx + x);
 

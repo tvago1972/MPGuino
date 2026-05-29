@@ -1,8 +1,13 @@
-#if defined(useActivityRecord)
-namespace activity /* Process activity marking support section prototype */
+#if defined(useActivityLED)
+namespace activityLED /* Activity status LED support section prototype */
 {
 
-	static void record(uint8_t assertFlag, uint8_t releaseFlag);
+	static void init(void);
+	static void shutdown(void);
+	static void assert(uint8_t flag);
+	static void release(uint8_t flag);
+	static void toggle(uint8_t flag);
+	static void output(void);
 
 };
 
@@ -15,22 +20,6 @@ static const uint8_t arMainSample =			0b00001000;
 static const uint8_t arMainOutput =			0b00000100;
 static const uint8_t arMainOther =			0b00000010;
 static const uint8_t arSWEET64 =			0b00000001;
-
-static const uint8_t arMainDebug =			(arMainDevices | arMainActivity | arMainSample | arMainOutput | arMainOther);
-
-#endif // defined(useActivityRecord)
-#if defined(useActivityLED)
-namespace activityLED /* Activity status LED support section prototype */
-{
-
-	static void init(void);
-	static void shutdown(void);
-	static void assert(uint8_t flag);
-	static void release(uint8_t flag);
-	static void toggle(uint8_t flag);
-	static void output(uint8_t val);
-
-};
 
 #endif // defined(useActivityLED)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
@@ -64,38 +53,51 @@ namespace signalSim /* VSS / fuel injector on-board simulator support section pr
 }
 
 // bit flags for use with v8SignalSimModeIdx
-static const uint8_t debugVSSflag =				0b00000010;
-static const uint8_t debugInjectorFlag =		0b00000001;
 static const uint8_t debugFIPready =			0b10000000;
 static const uint8_t debugVSSready =			0b01000000;
 static const uint8_t debugFIPfiring =			0b00100000;
+static const uint8_t debugFIPpeak =				0b00010000;
+static const uint8_t debugFIPhold =				0b00001000;
+static const uint8_t debugFIsaturatedFlag =		0b00000100;
+static const uint8_t debugVSSflag =				0b00000010;
+static const uint8_t debugInjectorFlag =		0b00000001;
 
-static const uint8_t debugEnableFlags =			(debugVSSflag | debugInjectorFlag);
+static const uint8_t debugEnableFlags =			(debugFIsaturatedFlag | debugVSSflag | debugInjectorFlag);
+static const uint8_t debugPeakHoldFlags =		(debugFIPpeak | debugFIPhold);
+static const uint8_t debugOutputFlags =			(debugVSSflag | debugInjectorFlag);
 static const uint8_t debugVSreadyFlags =		(debugVSSready | debugVSSflag);
 static const uint8_t debugFIreadyFlags =		(debugFIPready | debugInjectorFlag);
 
 #if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
-	(instantIdx << 8 ) |		(tInjectorTotalTime), 		// Debug
-	(instantIdx << 8 ) |		(tVSStotalTime),
-	(instantIdx << 8 ) |		(tInjectorPulseCount),
-	(instantIdx << 8 ) |		(tVSSpulseCount),
+	(instantIdx << 8) |		(tInjectorTotalTime), 		// Debug
+	(instantIdx << 8) |		(tVSStotalTime),
+	(instantIdx << 8) |		(tInjectorPulseCount),
+	(instantIdx << 8) |		(tVSSpulseEdgeCount),
 };
 
 static const char debugScreenFuncNames[] PROGMEM = {
-	"FI ON   VSS ON" tcEOS
+	"FI SAT  VSS ON" tcEOS
 	"FI OFF  VSS ON" tcEOS
 	"FI OFF  VSS OFF" tcEOS
-	"FI ON   VSS OFF" tcEOS
+	"FI SAT  VSS OFF" tcEOS
+	"FI PH   VSS ON" tcEOS
+	"FI OFF  VSS ON" tcEOS
+	"FI OFF  VSS OFF" tcEOS
+	"FI PH   VSS OFF" tcEOS
 };
 
 #endif // defined(useButtonInput)
 #if defined(useDebugTerminalLabels)
 static const char terminalSignalSimHelp[] PROGMEM = {
 	"signal simulation off" tcEOS
-	"fuel injector signal simulation only" tcEOS
+	"peak/hold fuel injector signal simulation only" tcEOS
 	"VSS signal simulation only" tcEOS
-	"fuel injection and VSS signal simulation" tcEOS
+	"peak/hold fuel injection and VSS signal simulation" tcEOS
+	"signal simulation off" tcEOS
+	"saturated fuel injector signal simulation only" tcEOS
+	"VSS signal simulation only" tcEOS
+	"saturated fuel injection and VSS signal simulation" tcEOS
 };
 
 #endif // defined(useDebugTerminalLabels)
@@ -183,32 +185,58 @@ static const uint16_t debugFIPvalues[] PROGMEM = {
 };
 
 static const uint16_t debugFIPWvalues[] PROGMEM = {
-	22,
-	22,
-	23,
-	23,
-	23,
-	24,
-	24,
-	24,
-	25,
-	26,
-	26,
-	27,
-	28,
-	29,
-	30,
-	32,
-	34,
-	36,
-	39,
-	44,
-	51,
-	63,
-	86,
-	156,
-	365,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	48,
+	49,
+	53,
+	58,
+	64,
+	73,
+	87,
+	111,
+	157,
+	296,
+	715,
 	0,
+//	22,
+//	22,
+//	23,
+//	23,
+//	23,
+//	24,
+//	24,
+//	24,
+//	25,
+//	26,
+//	26,
+//	27,
+//	28,
+//	29,
+//	30,
+//	32,
+//	34,
+//	36,
+//	39,
+//	44,
+//	51,
+//	63,
+//	86,
+//	156,
+//	365,
+//	0,
 };
 
 static const uint8_t debugVSSlength = ( sizeof(debugVSSvalues) / sizeof(uint16_t) );
@@ -453,7 +481,7 @@ static const char terminalHelp[] PROGMEM = {
 #endif // defined(useDebugButtonInjection)
 #if defined(useSimulatedFIandVSS)
 	"           S - lists available signal simulator modes" tcEOSCR
-	"S:y          - sets signal simulator mode to y" tcEOSCR
+	"          yS - sets signal simulator mode to y" tcEOSCR
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
 	"           Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
