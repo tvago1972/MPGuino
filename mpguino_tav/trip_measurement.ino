@@ -305,7 +305,7 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
-			SWEET64::runPrgm(prgmFEvsSpeed, instantIdx);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmFEvsSpeed), instantIdx);
 			i = m08(m8FEvSpeedTripIdx);
 			break;
 
@@ -425,7 +425,7 @@ static uint8_t tripSave::menuHandler(uint8_t cmd, uint8_t cursorPos)
 
 				case tsfZeroPartialIdx:
 					SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), 0); // initialize 64-bit number to zero
-					EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx);
+					EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), numberEditObj.parameterIdx);
 					text::statusOut(m8DevLCDidx, PSTR("PartialFuel RST"));
 					break;
 
@@ -517,8 +517,8 @@ static uint8_t tripSave::doReadTrip(uint8_t tripSlot)
 
 	retVal = 0;
 
-	if (tripSlot) retVal += SWEET64::runPrgm(prgmLoadTankFromEEPROM, 0);
-	else retVal += SWEET64::runPrgm(prgmLoadCurrentFromEEPROM, 0);
+	if (tripSlot) retVal += SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadTankFromEEPROM), 0);
+	else retVal += SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadCurrentFromEEPROM), 0);
 
 	return retVal;
 
@@ -529,8 +529,8 @@ static uint8_t tripSave::doWriteTrip(uint8_t tripSlot)
 
 	m08(m8EEPROMchangeStatus) &= ~(ecsEEPROMchangeDetected);
 
-	if (tripSlot) SWEET64::runPrgm(prgmSaveTankToEEPROM, 0);
-	else SWEET64::runPrgm(prgmSaveCurrentToEEPROM, 0);
+	if (tripSlot) SWEET64::runPrgm(S64_PRGM_PTR(prgmSaveTankToEEPROM), 0);
+	else SWEET64::runPrgm(S64_PRGM_PTR(prgmSaveCurrentToEEPROM), 0);
 
 	return (m08(m8EEPROMchangeStatus) & ecsEEPROMchangeDetected);
 

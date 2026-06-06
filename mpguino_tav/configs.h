@@ -188,7 +188,6 @@
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
 //#define useFuelParamCalculator true			// (inw) Ability to calculate microseconds per gallon and fuel injector delay stored parameters
 //#define useRealTimeClockModule true			// (inw) Ability to read and display Realtime Clock data from an SPI RTC module
-//#define useNewS64ProgramList true				// (inw) Correct mega2560-specific SWEET64 pointer access issue
 
 // other program measurement and debugging tools
 //
@@ -535,6 +534,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useJSONserialUSB
 #undef useJSONserialBufferedOutput
 #endif // defined(useJSONoutput)
+
+#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__)
+#undef useDebugTerminal
+#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__)
 
 #if defined(useDebugTerminal)
 #if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1

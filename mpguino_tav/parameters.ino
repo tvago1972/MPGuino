@@ -551,7 +551,7 @@ static uint8_t EEPROM::powerUpCheck(void)
 
 	uint8_t b;
 
-	b = SWEET64::runPrgm(prgmInitEEPROM, 0); // perform EEPROM initialization if required, and cause MPGuino initialization when done
+	b = SWEET64::runPrgm(S64_PRGM_PTR(prgmInitEEPROM), 0); // perform EEPROM initialization if required, and cause MPGuino initialization when done
 
 #if defined(useScreenEditor)
 	if (b)
@@ -633,7 +633,7 @@ static void EEPROM::initGuinoHardware(void)
 	lastPINxState = PINC;
 
 #endif // defined(__AVR_ATmega328P__)
-	SWEET64::runPrgm(prgmInitMPGuinoHardware, 0); // calculate multiple MPGuino system values for use within timer0, fuel injector, and VSS interrupts
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmInitMPGuinoHardware), 0); // calculate multiple MPGuino system values for use within timer0, fuel injector, and VSS interrupts
 
 #if defined(useDragRaceFunction)
 	v08(v8AccelerationFlagsIdx) &= ~(accelTestClearFlags);
@@ -655,7 +655,7 @@ static void EEPROM::initGuinoSoftware(void)
 #endif // defined(useJSONoutput)
 	setMetricDisplayMode();
 
-	SWEET64::runPrgm(prgmInitMPGuinoSoftware, 0); // calculate multiple MPGuino system values for use within code
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmInitMPGuinoSoftware), 0); // calculate multiple MPGuino system values for use within code
 
 #if defined(useWindowTripFilter)
 	tripSupport::resetWindowFilter();
@@ -696,11 +696,11 @@ static uint8_t EEPROM::onChange(s64prgm_ptr_t sched, uint8_t parameterIdx)
 
 #ifdef useCalculatedFuelFactor
 	// calculate and store microseconds per US gallon factor (this will trigger ecsDoMPGuinoInitSoftware)
-	if (m08(m8EEPROMchangeStatus) & ecsCalculateFuelParam) SWEET64::runPrgm(prgmCalculateFuelFactor, 0);
+	if (m08(m8EEPROMchangeStatus) & ecsCalculateFuelParam) SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateFuelFactor), 0);
 
 #endif // useCalculatedFuelFactor
 	// perform conversion between metric mode and SAE mode (this will trigger ecsDoMPGuinoInitSoftware)
-	if (m08(m8EEPROMchangeStatus) & ecsDoMetricConversion) SWEET64::runPrgm(prgmDoEEPROMmetricConversion, 0);
+	if (m08(m8EEPROMchangeStatus) & ecsDoMetricConversion) SWEET64::runPrgm(S64_PRGM_PTR(prgmDoEEPROMmetricConversion), 0);
 
 	if (m08(m8EEPROMchangeStatus) & ecsChangeDisplay)
 	{

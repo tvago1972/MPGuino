@@ -17,6 +17,8 @@ static uint32_t iSqrt(uint32_t input);
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
+	static uint8_t readProgramByte(s64prgm_ptr_t &prgmPtr);
+	static s64prgm_ptr_t getProgramPointer(uint8_t prgmIdx);
 	static uint32_t runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx);
 	static void fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t * prgmReg8);
 	static void executeInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);

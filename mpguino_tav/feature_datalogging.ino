@@ -387,8 +387,8 @@ static void doOutputJSON(void) //skybolt added JSON output function
 
 	JSONsupport::openKey(m8DevJSONoutputIdx, JSONsubtitleStr, JSONflagString);
 #if defined(useDragRaceFunction)
-	targetSpeed = SWEET64::runPrgm(prgmFetchParameterValue, pDragSpeedIdx); // accel test speed
-	targetDistance = SWEET64::runPrgm(prgmFetchParameterValue, pDragDistanceIdx); // accel test distance
+	targetSpeed = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), pDragSpeedIdx); // accel test speed
+	targetDistance = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), pDragDistanceIdx); // accel test distance
 
 	switch (v08(v8Subtitle2Idx))
 	{

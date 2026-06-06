@@ -606,7 +606,7 @@ int main(void)
 
 			SREG = oldSREG; // restore interrupt flag status
 
-			SWEET64::runPrgm(prgmCalculateMAPpressure, 0);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateMAPpressure), 0);
 
 		}
 
@@ -622,7 +622,7 @@ int main(void)
 
 			SREG = oldSREG; // restore interrupt flag status
 
-			SWEET64::runPrgm(prgmCalculateBaroPressure, 0);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateBaroPressure), 0);
 
 		}
 
@@ -1133,7 +1133,7 @@ int main(void)
 						break;
 
 					case (accelTestFinished):
-						SWEET64::runPrgm(prgmTransferAccelTestTrips, 0);
+						SWEET64::runPrgm(S64_PRGM_PTR(prgmTransferAccelTestTrips), 0);
 						accelTestState = atsFinished;
 						break;
 

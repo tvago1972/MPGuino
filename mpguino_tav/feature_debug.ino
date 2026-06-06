@@ -149,7 +149,7 @@ static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(m8DevLCDidx, PSTR(" T"));
 #endif // LCDcharWidth == 20
-			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, prgmOutputOperatingTime)); // output system time (since MPGuino was powered up)
+			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputOperatingTime))); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(m8DevLCDidx, 0, 1);
 #if LCDcharWidth == 20
@@ -157,7 +157,7 @@ static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(m8DevLCDidx, PSTR("FREE RAM: "));
 #endif // LCDcharWidth == 20
-			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmOutputAvailableRAM), 0);
 			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, (LCDcharWidth / 2) - 2, 0));
 			break;
 
@@ -172,7 +172,7 @@ static void systemInfo::showCPUload(void)
 {
 
 	text::stringOut(m8DevLCDidx, PSTR("C%"));
-	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFindCPUutilPercent), 0);
 	text::stringOut(m8DevLCDidx, ull2str(nBuff, 2, 6, 0));
 
 }
@@ -538,7 +538,7 @@ static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 static void terminal::outputConstantValue(uint8_t lineNumber)
 {
 
-	text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchConstantValue, lineNumber));
+	text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchConstantValue), lineNumber));
 
 #if defined(useDebugTerminalLabels)
 	switch (lineNumber)
@@ -562,16 +562,16 @@ static void terminal::outputConstantValue(uint8_t lineNumber)
 static void terminal::outputConstantExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchConstantValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchConstantValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 }
 
 static void terminal::outputParameterValue(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 #if defined(useDebugTerminalLabels)
 	switch (lineNumber)
@@ -608,8 +608,8 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 	{
 
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(" (orig "));
-		SWEET64::runPrgm(prgmFetchInitialParamValue, lineNumber);
-		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchInitialParamValue), lineNumber);
+		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(")"));
 
 	}
@@ -620,7 +620,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		i >>= 3;
 
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), lineNumber);
 
 		for (uint8_t x = 7; x < 8; x--)
 			if (x < i) text::hexByteOut(m8DevDebugTerminalIdx, ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u08[(uint16_t)(x)]);
@@ -641,22 +641,22 @@ static void terminal::outputVariableValue(uint8_t lineNumber)
 		case (v8VariableStartIdx) ... (v8VariableEndIdx - 1):
 		case (m8VariableStartIdx) ... (m8VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 14);
-			text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (v16VariableStartIdx) ... (v16VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 12);
-			text::hexWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (v32VariableStartIdx) ... (v32VariableEndIdx - 1):
 		case (m32VariableStartIdx) ... (m32VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 8);
-			text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (m64VariableStartIdx) ... (m64VariableEndIdx - 1):
-			SWEET64::runPrgm(prgmFetchVariableValue, lineNumber);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber);
 			text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 			break;
 
@@ -672,8 +672,8 @@ static void terminal::outputVariableValue(uint8_t lineNumber)
 static void terminal::outputVariableExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchVariableValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 }
 
 static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
@@ -683,13 +683,13 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 	{
 
 		text::charOut(m8DevDebugTerminalIdx, ' ', 8);
-		text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber));
+		text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber));
 
 	}
 	else
 	{
 
-		SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber);
 		text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 
 	}
@@ -699,15 +699,15 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 static void terminal::outputTripVarMeasuredExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 }
 
 static void terminal::outputDecimalValue(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmUpdateDecimalValue, lineNumber);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmUpdateDecimalValue), lineNumber);
 	text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 
 }
@@ -715,7 +715,7 @@ static void terminal::outputDecimalValue(uint8_t lineNumber)
 static void terminal::outputDecimalExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchDecimalValue, lineNumber);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchDecimalValue), lineNumber);
 	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, decPlace, decWindow, decMode));
 
 }
@@ -726,7 +726,7 @@ static void terminal::processMath(uint8_t cmd)
 	if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 	if (terminalMode & tmSourceReadIn) decPlace = terminalSource; // if decimal count specified, save it
 	// save terminal register contents for later
-	if ((terminalMode & tmByteReadIn) || (cmd == '_')) SWEET64::runPrgm(prgmPerformMathOperation, cmd);
+	if ((terminalMode & tmByteReadIn) || (cmd == '_')) SWEET64::runPrgm(S64_PRGM_PTR(prgmPerformMathOperation), cmd);
 
 }
 
@@ -839,7 +839,7 @@ static void terminal::outputSWEET64registerExtra(uint8_t lineNumber)
 	else
 	{
 
-		SWEET64::runPrgm(prgmLoadByteValue, terminalS64reg8[(uint16_t)(lineNumber - s64reg64count)]);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadByteValue), terminalS64reg8[(uint16_t)(lineNumber - s64reg64count)]);
 		i = 0;
 
 	}
@@ -899,7 +899,7 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 
 	uint32_t instrLWord;
 	union union_32 * iLW = (union union_32 *)(&instrLWord);
-	const uint8_t * prgmPtr;
+	s64prgm_ptr_t prgmPtr;
 	uint8_t isValid;
 	uint8_t i;
 
@@ -1504,7 +1504,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case '0' ... '9':
 									chr -= 48;
 									terminalMode |= (tmByteReadIn);
-									terminalByte = SWEET64::runPrgm(prgmParseHexDigit, chr);
+									terminalByte = SWEET64::runPrgm(S64_PRGM_PTR(prgmParseHexDigit), chr);
 									break;
 
 								default:
@@ -1530,7 +1530,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case '0' ... '9':
 									chr -= 48;
 									terminalMode |= (tmByteReadIn);
-									terminalByte = SWEET64::runPrgm(prgmParseDecimalDigit, chr);
+									terminalByte = SWEET64::runPrgm(S64_PRGM_PTR(prgmParseDecimalDigit), chr);
 									break;
 
 								default:
@@ -1620,7 +1620,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								if (terminalMode & tmByteReadIn) // if a parameter value was read in
 								{
 
-									EEPROM::onChange(prgmTerminalWriteParameterValue, terminalAddress++);
+									EEPROM::onChange(S64_PRGM_PTR(prgmTerminalWriteParameterValue), terminalAddress++);
 
 									if (terminalAddress < maxLine)
 									{
@@ -1667,7 +1667,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 							case '=':	// output last result
 								processMath(terminalCmd);
 
-								SWEET64::runPrgm(prgmFetchResultValue, 0);
+								SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchResultValue), 0);
 								outputDecimalSettings();
 								text::charOut(m8DevDebugTerminalIdx, '=');
 								text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, decPlace, decWindow, decMode));
@@ -1909,8 +1909,8 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 										else
 										{
 
-											SWEET64::runPrgm(prgmLoadTrip, terminalByte); // this allows direct loading/saving of trips to EEPROM
-											SWEET64::runPrgm(prgmSaveTrip, terminalTarget);
+											SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadTrip), terminalByte); // this allows direct loading/saving of trips to EEPROM
+											SWEET64::runPrgm(S64_PRGM_PTR(prgmSaveTrip), terminalTarget);
 
 											terminalState = tsInitProcessing;
 
@@ -1967,7 +1967,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									if (terminalMode & tmTargetReadIn)
 									{
 
-										terminalExecSched = (const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(terminalTarget)]));
+										terminalExecSched = SWEET64::getProgramPointer(terminalTarget);
 
 										if (terminalListSched == 0) terminalListSched = terminalExecSched;
 										if (terminalMode & tmSourceReadIn) terminalS64reg8[(uint16_t)(si64reg8trip)] = terminalSource;
@@ -1986,7 +1986,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 
 								case 0x0C:	// list 20 lines of SWEET64 pseudo-code
-									if (terminalMode & tmByteReadIn) terminalListSched = (const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(terminalByte)]));
+									if (terminalMode & tmByteReadIn) terminalListSched = SWEET64::getProgramPointer(terminalByte);
 
 									maxLine = 20;
 
@@ -2090,7 +2090,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 								case 'T':   // list available trip variable measurements, with optional trip variable value storage
 									maxLine = rvMeasuredCount;
-									prgmPtr = prgmWriteTripMeasurementValue;
+									prgmPtr = S64_PRGM_PTR(prgmWriteTripMeasurementValue);
 									break;
 
 								case 'V':   // list available program variables, with optional program variable value storage
@@ -2147,7 +2147,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									}
 
 									maxLine = programVariableMaxIdx;
-									prgmPtr = prgmWriteVariableValue;
+									prgmPtr = S64_PRGM_PTR(prgmWriteVariableValue);
 									break;
 
 								case 'X':	// enter hexadecimal entry mode (if not caught by number parser above, it's a syntax error)

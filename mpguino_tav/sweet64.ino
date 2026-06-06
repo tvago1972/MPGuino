@@ -10,6 +10,37 @@
 
 */
 
+static uint8_t SWEET64::readProgramByte(s64prgm_ptr_t &prgmPtr)
+{
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return pgm_read_byte_far(prgmPtr++);
+#else
+	return pgm_read_byte(prgmPtr++);
+#endif
+
+}
+
+static s64prgm_ptr_t SWEET64::getProgramPointer(uint8_t prgmIdx)
+{
+
+	if (prgmIdx >= dfMaxValTotalCount) return 0;
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	switch (prgmIdx)
+	{
+#define S64_PROGRAM_CASE(idx, prgm) case idx: return (s64prgm_ptr_t)pgm_get_far_address(prgm);
+		S64_PROGRAM_ENTRIES(S64_PROGRAM_CASE)
+#undef S64_PROGRAM_CASE
+		default:
+			return 0;
+	}
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return (s64prgm_ptr_t)(pgm_read_word(&S64programList[(uint16_t)(prgmIdx)]));
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+}
+
 static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
 {
 
@@ -60,7 +91,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 	uint8_t isValid;
 	uint8_t reg;
 
-	if (prgmPtr) instrLWord->u08[0] = pgm_read_byte(prgmPtr++); // read opcode byte
+	if (prgmPtr) instrLWord->u08[0] = readProgramByte(prgmPtr); // read opcode byte
 
 	if (instrLWord->u08[0] < maxValidSWEET64instr) // if opcode byte is valid
 	{
@@ -85,7 +116,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				if (prgmPtr)
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if (((reg & 0x70) || (reg & 0x07)) && ((reg & 0x88) == 0)) s64operands[(uint16_t)(s64oprRegXY)] = reg; // ensure valid 64-bit register reference
 					else isValid = 0;
@@ -107,7 +138,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				if (prgmPtr)
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if (((reg & 0x70) || (reg & 0x07)) && ((reg & 0x88) == 0)) // ensure valid 64-bit register reference
 					{
@@ -131,7 +162,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				if (prgmPtr)
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if ((reg & 0x07) && ((reg & 0xF8) == 0)) // ensure valid 64-bit register reference
 					{
@@ -151,7 +182,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				if (prgmPtr)
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if ((reg & 0x77) && ((reg & 0x88) == 0)) // ensure valid 64-bit register reference
 					{
@@ -196,7 +227,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				case p01:	// load primary operand from program
 					isValid |= (s64vReadInOperandByte);
 
-					if (prgmPtr) s64operands[(uint16_t)(s64oprPrimary)] += pgm_read_byte(prgmPtr++);
+					if (prgmPtr) s64operands[(uint16_t)(s64oprPrimary)] += readProgramByte(prgmPtr);
 					break;
 
 				case p02:	// load primary operand from index
@@ -224,7 +255,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 
 				case s01:	// fetch secondary operand from program
 					isValid |= (s64vReadInExtraByte);
-					if (prgmPtr) s64operands[(uint16_t)(s64oprExtra)] += pgm_read_byte(prgmPtr++);
+					if (prgmPtr) s64operands[(uint16_t)(s64oprExtra)] += readProgramByte(prgmPtr);
 					break;
 
 				case s02:	// fetch secondary operand from index
@@ -906,7 +937,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64prgm_ptr
 					prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
 					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15) isValid = 0;
 				case e28:	// jump
-					prgmPtr = (const uint8_t *)pgm_read_word(&S64programList[(uint16_t)(extra)]);
+					prgmPtr = getProgramPointer(extra);
 					break;
 
 				case e29:	// load jump register

@@ -27,11 +27,13 @@ namespace heart /* core MPGuino system support section prototype */
 
 };
 
-//#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
-//typedef uint_farptr_t s64prgm_ptr_t;
-//#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+typedef uint_farptr_t s64prgm_ptr_t;
+#define S64_PRGM_PTR(prgm) ((s64prgm_ptr_t)pgm_get_far_address(prgm))
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
 typedef const uint8_t * s64prgm_ptr_t;
-//#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+#define S64_PRGM_PTR(prgm) (prgm)
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
 
 typedef struct
 {

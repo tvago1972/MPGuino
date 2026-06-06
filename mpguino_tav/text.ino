@@ -493,7 +493,7 @@ static uint32_t str2ull(char * strBuffer)
 			if (f)
 			{
 
-				SWEET64::runPrgm(prgmMultiplyBy100, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 100 + n
+				SWEET64::runPrgm(S64_PRGM_PTR(prgmMultiplyBy100), n); // call SWEET64 routine to perform (accumulated 64-bit number) * 100 + n
 				n = 0;
 
 			}
@@ -503,7 +503,7 @@ static uint32_t str2ull(char * strBuffer)
 
 	}
 
-	if (f == 0) SWEET64::runPrgm(prgmMultiplyBy10, n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
+	if (f == 0) SWEET64::runPrgm(S64_PRGM_PTR(prgmMultiplyBy10), n); // call SWEET64 routine to perform (accumulated 64-bit number) * 10 + n
 
 	return ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u32[0];
 
@@ -562,7 +562,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, s64prgm_ptr_t prg
 	else
 	{
 
-		if (prgmPtr == prgmRoundOffNumber) flg = 1;
+		if (prgmPtr == S64_PRGM_PTR(prgmRoundOffNumber)) flg = 1;
 		else flg = 0;
 
 		if (flg) decPos = 11 - decimalPlaces; // if inserting decimal point, compute decimal position
@@ -647,7 +647,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 
 	f = ((decimalFlag & dfIgnoreDecimalPoint) ? 0 : 1); // shrink window if decimal point is considered
 
-	SWEET64::runPrgm(prgmAutoRangeNumber, windowLength - f); // fetch supportable decimal digit count for window
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmAutoRangeNumber), windowLength - f); // fetch supportable decimal digit count for window
 	d = tmpPtr3->u08[0];
 	f = 0; // initially signal no overflow occurred
 
@@ -660,7 +660,7 @@ static char * ull2str(char * strBuffer, uint8_t decimalPlaces, uint8_t windowLen
 	}
 
 	// perform rounding of number to nearest decimal place, then format for ASCII output and insert a decimal point
-	if (f == 0) ull2str(strBuffer, decimalPlaces, prgmRoundOffNumber);
+	if (f == 0) ull2str(strBuffer, decimalPlaces, S64_PRGM_PTR(prgmRoundOffNumber));
 
 	if ((strBuffer[2] == '-') || (f)) f = 1; // if number overflowed
 	else
