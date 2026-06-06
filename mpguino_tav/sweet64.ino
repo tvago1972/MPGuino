@@ -10,7 +10,7 @@
 
 */
 
-static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
+static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
 {
 
 	uint32_t instrLWord;
@@ -35,9 +35,9 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 		fetchInstruction(iLW, sched, s64reg8); // decode instruction
 
 		if (s64reg8[(uint16_t)(si64reg8valid)]) executeInstruction(iLW, sched, s64stack, s64reg, s64reg8); // execute instruction
-#if defined(useDebugTerminal)
+#if defined(useDebugTerminalSWEET64)
 		else terminal::dumpSWEET64information(iLW, sched, s64stack, s64reg, s64reg8); // invalid instruction encountered, output relevant information
-#endif // defined(useDebugTerminal)
+#endif // defined(useDebugTerminalSWEET64)
 
 	}
 	while (s64reg8[(uint16_t)(si64reg8valid)]);
@@ -54,7 +54,7 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 }
 
-static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t * prgmReg8)
+static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t * prgmReg8)
 {
 
 	uint8_t isValid;
@@ -250,7 +250,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 
 }
 
-static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+static void SWEET64::executeInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
 {
 
 	uint8_t oldSREG;
@@ -831,13 +831,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 			}
 
-			if (branchFlag)
-			{
-
-				if (extra < 128) prgmPtr += extra;
-				else prgmPtr -= (256 - extra);
-
-			}
+			if (branchFlag) addProgramOffset(prgmPtr, extra);
 
 		}
 		else // instruction is not a conditional branching instruction
@@ -956,6 +950,14 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 	prgmReg8[(uint16_t)(si64reg8valid)] = isValid;
 	prgmReg8[(uint16_t)(si64reg8flags)] = SWEET64processorFlags;
+
+}
+
+static void SWEET64::addProgramOffset(s64prgm_ptr_t &prgmPtr, uint8_t offset)
+{
+
+	if (offset < 128) prgmPtr += offset;
+	else prgmPtr -= (256 - offset);
 
 }
 

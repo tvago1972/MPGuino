@@ -541,7 +541,7 @@ static void storeDigit(uint8_t value, char * strBuffer, uint8_t &strPos, uint8_t
 //
 // if called with decimalFlag != 0, also inserts the decimal point in the string specified by the value in decimalPlaces
 //
-static char * ull2str(char * strBuffer, uint8_t decimalPlaces, const uint8_t * prgmPtr)
+static char * ull2str(char * strBuffer, uint8_t decimalPlaces, s64prgm_ptr_t prgmPtr)
 {
 
 	union union_64 * tmpPtr2 = (union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]);

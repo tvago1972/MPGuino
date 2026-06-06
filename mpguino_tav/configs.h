@@ -18,7 +18,7 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
+#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
 //#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
@@ -74,7 +74,7 @@
 //#define useBluetoothSerialPort1 true		// select Bluetooth output on serial port channel 1 (ATmega2560 board, Atmega32U4 board excluding TinkerKit! LCD module)
 //#define useBluetoothSerialPort2 true		// select Bluetooth output on serial port channel 2 (ATmega2560 board)
 //#define useBluetoothSerialPort3 true		// select Bluetooth output on serial port channel 3 (ATmega2560 board)
-#define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
+//#define useBluetoothAdaFruitSPI true		// select Bluetooth output on SPI using AdaFruit Bluefruit LE Shield
 //
 // Bluetooth serial output settings - if the corresponding serial output port is not selected, these will be ignored
 //
@@ -92,6 +92,7 @@
 //#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading
 //#define useDebugTerminalSWEET64 true		// support for listing and tracing indexed SWEET64-defined functions
+//#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //
@@ -150,7 +151,7 @@
 #define useAlternatorVoltage true			// Ability to display alternator voltage and optional secondary sensor (via meelis11)
 //#define useChryslerMAPCorrection true		// Ability to perform on-the-fly fuel injector data correction for late-model Chrysler vehicles
 //#define useChryslerBaroSensor true			// Ability to use a separate MAP sensor wired to MPGuino to read barometric pressure, for even more accurate correction
-#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
+//#define useOutputPins true					// Generate analog 0-5VDC output voltage on expansion pins to drive LEDs or feed signal to external gauges
 #define useCPUreading true					// Show CPU loading and available RAM usage
 //#define useSoftwareClock true				// Shows 24 hour clock driven off of timer0, and provides a means to set it
 #define useDS1307clock true					// Shows 24 hour clock driven off a DS1307-based RTC module via TWI, and provides a means to set it
@@ -187,6 +188,7 @@
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
 //#define useFuelParamCalculator true			// (inw) Ability to calculate microseconds per gallon and fuel injector delay stored parameters
 //#define useRealTimeClockModule true			// (inw) Ability to read and display Realtime Clock data from an SPI RTC module
+//#define useNewS64ProgramList true				// (inw) Correct mega2560-specific SWEET64 pointer access issue
 
 // other program measurement and debugging tools
 //
@@ -542,6 +544,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #define useDebugTerminalHelp true
 #define useDebugTerminalLabels true
 #define useDebugTerminalSWEET64 true
+#define useSWEET64RAMprograms true
 #define useIsqrt true
 #define usePressure true
 #define useBuffering true
@@ -558,6 +561,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useDebugTerminalHelp
 #undef useDebugTerminalLabels
 #undef useDebugTerminalSWEET64
+#undef useSWEET64RAMprograms
 #undef useDebugCPUreading
 #endif // defined(useDebugTerminal)
 
@@ -1110,3 +1114,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(usePartialRefuel) || defined(useSavedTrips)
 #define useEnhancedTripReset true
 #endif // defined(usePartialRefuel) || defined(useSavedTrips)
+
+#if defined(useSWEET64RAMprograms) && !defined(useDebugTerminalSWEET64)
+#error *** useSWEET64RAMprograms requires useDebugTerminalSWEET64!!! ***
+#endif // defined(useSWEET64RAMprograms) && !defined(useDebugTerminalSWEET64)

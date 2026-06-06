@@ -17,9 +17,10 @@ static uint32_t iSqrt(uint32_t input);
 namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
-	static uint32_t runPrgm(const uint8_t * sched, uint8_t tripIdx);
-	static void fetchInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t * prgmReg8);
-	static void executeInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+	static uint32_t runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx);
+	static void fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t * prgmReg8);
+	static void executeInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+	static void addProgramOffset(s64prgm_ptr_t &prgmPtr, uint8_t offset);
 	static void copy64(union union_64 * an, union union_64 * ann);
 	static void swap64(union union_64 * an, union union_64 * ann);
 	static void shr64(union union_64 * an);
@@ -196,7 +197,7 @@ static const uint8_t s64reg64count =	nextAllowedValue;
 
 static uint64_t s64reg[(uint16_t)(s64reg64count)];
 
-static const uint8_t * s64stack[16];
+static s64prgm_ptr_t s64stack[16];
 
 #define nextAllowedValue 0
 static const uint8_t s64oprRegXY =			nextAllowedValue;
@@ -449,7 +450,6 @@ static const char opCodeList[] PROGMEM = {
 	"LdReg" tcEOS
 	"LdRegByteFromIndex" tcEOS
 	"LdRegByte" tcEOS
-	"LdRegByteFromY" tcEOS
 	"LdRegTripVar" tcEOS
 	"LdRegTripVarIndexed" tcEOS
 	"LdRegTripVarOffset" tcEOS

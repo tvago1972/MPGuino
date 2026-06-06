@@ -455,7 +455,7 @@ Logging Output / Debug Monitor I/O
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/eeprom.h>
+#include <avr/EEPROM.h>
 #include <avr/sleep.h>
 
 static const char titleMPGuino[] PROGMEM = {
@@ -463,7 +463,7 @@ static const char titleMPGuino[] PROGMEM = {
 };
 
 static const char dateMPGuino[] PROGMEM = {
-	"2023-AUG-14" tcEOSCR
+	"2026-06-02" tcEOSCR
 };
 
 int main(void);

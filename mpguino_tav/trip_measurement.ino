@@ -577,7 +577,7 @@ static void tripSupport::resetWindowFilter(void)
 #if defined(useChryslerMAPCorrection)
 /* Chrysler returnless fuel pressure correction display section */
 
-static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
+const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 	instrLdRegVariable, 0x02, v16AnalogMAPchannelIdx,	// load analog channel ADC step value
 	instrSubVariableFromX, 0x02, m32AnalogMAPfloorIdx,	// is reading below MAP sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue
@@ -592,7 +592,7 @@ static const uint8_t prgmCalculateMAPpressure[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-static const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
+const uint8_t prgmCalculateBaroPressure[] PROGMEM = {
 	instrLdRegVariable, 0x02, v16AnalogBaroChannelIdx,	// load analog channel ADC step value
 	instrSubVariableFromX, 0x02, m32AnalogBaroFloorIdx,	// is reading below barometric sensor voltage floor?
 	instrBranchIfLT, 3,									// if not, continue

@@ -683,7 +683,7 @@ static void EEPROM::setMetricDisplayMode(void)
 
 }
 
-static uint8_t EEPROM::onChange(const uint8_t * sched, uint8_t parameterIdx)
+static uint8_t EEPROM::onChange(s64prgm_ptr_t sched, uint8_t parameterIdx)
 {
 
 	uint8_t retVal;

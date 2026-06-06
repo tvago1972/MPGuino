@@ -742,10 +742,32 @@ static void terminal::outputDecimalSettings(void)
 
 }
 
-static void terminal::dumpSWEET64information(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+#if defined(useSimulatedFIandVSS)
+static void terminal::outputSignalSimSetting(uint8_t lineNumber)
 {
 
+	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
+	else text::charOut(m8DevDebugTerminalIdx, ' ');
+
+}
+
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useDebugTerminalSWEET64)
+static void terminal::outputSWEET64programCounter(s64prgm_ptr_t prgmPtr)
+{
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	text::hexDWordOut(m8DevDebugTerminalIdx, (uint32_t)prgmPtr);
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
 	text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmPtr));
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+}
+
+static void terminal::dumpSWEET64information(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+{
+
+	outputSWEET64programCounter(prgmPtr);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
 	text::hexDWordOut(m8DevDebugTerminalIdx, instrLWord->u32);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
@@ -758,7 +780,7 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 		text::charOut(m8DevDebugTerminalIdx, 9);
 		text::hexByteOut(m8DevDebugTerminalIdx, x);
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmStack[(uint16_t)(x)]));
+		outputSWEET64programCounter(prgmStack[(uint16_t)(x)]);
 
 		if (x < s64reg64count)
 		{
@@ -788,17 +810,6 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 
 }
 
-#if defined(useSimulatedFIandVSS)
-static void terminal::outputSignalSimSetting(uint8_t lineNumber)
-{
-
-	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
-	else text::charOut(m8DevDebugTerminalIdx, ' ');
-
-}
-
-#endif // defined(useSimulatedFIandVSS)
-#if defined(useDebugTerminalSWEET64)
 static void terminal::outputSWEET64registerContents(uint8_t lineNumber)
 {
 
@@ -939,9 +950,9 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 }
 
 #if defined(useDebugTerminalLabels)
-static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t operandIdx, uint8_t labelIdx)
+static void terminal::outputSWEET64prgmOperand(s64prgm_ptr_t prgmPtr, uint8_t flag, uint8_t operandIdx, uint8_t labelIdx)
 #else // defined(useDebugTerminalLabels)
-static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t operandIdx)
+static void terminal::outputSWEET64prgmOperand(s64prgm_ptr_t prgmPtr, uint8_t flag, uint8_t operandIdx)
 #endif // defined(useDebugTerminalLabels)
 {
 
@@ -1024,10 +1035,9 @@ static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t 
 			break;
 
 		case (s64vReadInExtraByte | s64vRelativeOperand):
-			if (byt < 127) prgmPtr += byt;
-			else prgmPtr -= (256 - byt);
+			SWEET64::addProgramOffset(prgmPtr, byt);
 			text::stringOut(m8DevDebugTerminalIdx, PSTR(" $"));
-			text::hexWordOut(m8DevDebugTerminalIdx, prgmPtr);
+			outputSWEET64programCounter(prgmPtr);
 			break;
 
 		case (s64vExtraJump):
@@ -1041,10 +1051,10 @@ static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t 
 
 }
 
-static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t traceFlag)
+static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t traceFlag)
 {
 
-	const uint8_t * oldSched;
+	s64prgm_ptr_t oldSched;
 	uint8_t isValid;
 	uint8_t opCode;
 	uint8_t reg;
@@ -1063,7 +1073,7 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 	{
 
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(oldSched));
+		outputSWEET64programCounter(oldSched);
 		text::charOut(m8DevDebugTerminalIdx, '-');
 
 		for (uint8_t x = 0; x < 5; x++)

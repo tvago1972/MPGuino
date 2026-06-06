@@ -555,3 +555,10 @@ static const char prStatusMessages[] PROGMEM = {
 
 #endif // defined(usePartialRefuel)
 #endif // defined(useEnhancedTripReset)
+
+#if defined(useChryslerMAPCorrection)
+extern const uint8_t prgmCalculateMAPpressure[] PROGMEM;
+#if defined(useChryslerBaroSensor)
+extern const uint8_t prgmCalculateBaroPressure[] PROGMEM;
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)

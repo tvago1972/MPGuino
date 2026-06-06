@@ -259,22 +259,23 @@ namespace terminal /* debug terminal section prototype */
 	static void outputTripVarMeasuredExtra(uint8_t lineNumber);
 	static void outputDecimalValue(uint8_t lineNumber);
 	static void outputDecimalExtra(uint8_t lineNumber);
-	static void dumpSWEET64information(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
 #if defined(useSimulatedFIandVSS)
 	static void outputSignalSimSetting(uint8_t lineNumber);
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useDebugTerminalSWEET64)
+	static void outputSWEET64programCounter(s64prgm_ptr_t prgmPtr);
+	static void dumpSWEET64information(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
 	static void outputSWEET64registerContents(uint8_t lineNumber);
 	static void outputSWEET64registerExtra(uint8_t lineNumber);
 	static void outputSWEET64byte(uint8_t byt);
 	static void outputSWEET64operand(uint8_t flag, uint8_t &byt);
 	static void outputSWEET64opcode(uint8_t lineNumber);
 #if defined(useDebugTerminalLabels)
-	static void outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t byt, uint8_t labelIdx);
+	static void outputSWEET64prgmOperand(s64prgm_ptr_t prgmPtr, uint8_t flag, uint8_t byt, uint8_t labelIdx);
 #else // defined(useDebugTerminalLabels)
-	static void outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t byt);
+	static void outputSWEET64prgmOperand(s64prgm_ptr_t prgmPtr, uint8_t flag, uint8_t byt);
 #endif // defined(useDebugTerminalLabels)
-	static void outputSWEET64prgmLine(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t traceFlag);
+	static void outputSWEET64prgmLine(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t traceFlag);
 #endif // defined(useDebugTerminalSWEET64)
 	static void processMath(uint8_t cmd);
 	static void outputDecimalSettings(void);
@@ -493,10 +494,10 @@ static const char terminalHelp[] PROGMEM = {
 
 #endif // defined(useDebugTerminalHelp)
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t * terminalListSched;
-static const uint8_t * terminalExecSched;
+static s64prgm_ptr_t terminalListSched;
+static s64prgm_ptr_t terminalExecSched;
 
-static const uint8_t * terminalStack[16];
+static s64prgm_ptr_t terminalStack[16];
 
 static uint8_t terminalS64reg8[(uint16_t)(si64reg8count)];
 
@@ -529,7 +530,7 @@ static uint8_t decMode;
 static const char * labelList;
 static uint8_t labelListOffset;
 #endif // defined(useDebugTerminalLabels)
-static const uint8_t * prgmPtr;
+static s64prgm_ptr_t prgmPtr;
 static void (* primaryFunc)(uint8_t);
 static void (* extraFunc)(uint8_t);
 
