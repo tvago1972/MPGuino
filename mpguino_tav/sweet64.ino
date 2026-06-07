@@ -10,14 +10,78 @@
 
 */
 
-static uint8_t SWEET64::readProgramByte(s64prgm_ptr_t &prgmPtr)
+static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
 {
 
-#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
-	return pgm_read_byte_far(prgmPtr++);
-#else
-	return pgm_read_byte(prgmPtr++);
+	s64pc_t prgmPtr;
+	
+	prgmPtr.ptr = ptr;
+#if defined(useSWEET64RAMprograms)
+	prgmPtr.ram_ptr = 0;
+	prgmPtr.source = s64srcProgmem;
+#endif // defined(useSWEET64RAMprograms)
+
+	return prgmPtr;
+
+}
+
+#if defined(useSWEET64RAMprograms)
+static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
+{
+
+	s64pc_t prgmPtr;
+	
+	prgmPtr.ptr = 0;
+	prgmPtr.ram_ptr = ptr;
+	prgmPtr.source = s64srcRAM;
+
+	return prgmPtr;
+
+}
+
+#endif // defined(useSWEET64RAMprograms)
+static uint8_t SWEET64::isProgramValid(s64pc_t prgmPtr)
+{
+
+#if defined(useSWEET64RAMprograms)
+	switch (prgmPtr.source)
+	{
+
+		case s64srcProgmem:
+			return (prgmPtr.ptr != 0);
+
+		case s64srcRAM:
+			return (prgmPtr.ram_ptr != 0);
+
+		default:
+			return 0;
+
+	}
+#else // defined(useSWEET64RAMprograms)
+	return prgmPtr.ptr;
+#endif // defined(useSWEET64RAMprograms)
+
+}
+
+static uint8_t SWEET64::readProgramByte(s64pc_t &prgmPtr)
+{
+
+#if defined(useSWEET64RAMprograms)
+    if (prgmPtr.source == s64srcRAM) return *(prgmPtr.ram_ptr++);
+    else
 #endif
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return pgm_read_byte_far(prgmPtr.ptr++);
+#else
+	return pgm_read_byte(prgmPtr.ptr++);
+#endif
+
+}
+
+static s64pc_t SWEET64::getProgramPC(uint8_t prgmIdx)
+{
+
+	return makeProgmemProgram(getProgramPointer(prgmIdx));
 
 }
 
@@ -42,6 +106,13 @@ static s64prgm_ptr_t SWEET64::getProgramPointer(uint8_t prgmIdx)
 }
 
 static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
+{
+
+	return runPrgm(makeProgmemProgram(sched), tripIdx);
+
+}
+
+static uint32_t SWEET64::runPrgm(s64pc_t sched, uint8_t tripIdx)
 {
 
 	uint32_t instrLWord;
@@ -85,13 +156,13 @@ static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
 
 }
 
-static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, uint8_t * prgmReg8)
+static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, uint8_t * prgmReg8)
 {
 
 	uint8_t isValid;
 	uint8_t reg;
 
-	if (prgmPtr) instrLWord->u08[0] = readProgramByte(prgmPtr); // read opcode byte
+	if (isProgramValid(prgmPtr)) instrLWord->u08[0] = readProgramByte(prgmPtr); // read opcode byte
 
 	if (instrLWord->u08[0] < maxValidSWEET64instr) // if opcode byte is valid
 	{
@@ -113,7 +184,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 			case r01:	// fetch rX and rY from program
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
 					reg = readProgramByte(prgmPtr);
@@ -135,7 +206,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 			case r04:	// fetch rP and rS from program
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
 					reg = readProgramByte(prgmPtr);
@@ -159,7 +230,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 			case r06:	// fetch rP from program, set rS = r5, and rX to r5
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
 					reg = readProgramByte(prgmPtr);
@@ -179,7 +250,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 			case r07:	// fetch rX and rY from program, shift rY to rX if in metric mode, or throw rY away if in SAE mode
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
 					reg = readProgramByte(prgmPtr);
@@ -227,7 +298,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 				case p01:	// load primary operand from program
 					isValid |= (s64vReadInOperandByte);
 
-					if (prgmPtr) s64operands[(uint16_t)(s64oprPrimary)] += readProgramByte(prgmPtr);
+					if (isProgramValid(prgmPtr)) s64operands[(uint16_t)(s64oprPrimary)] += readProgramByte(prgmPtr);
 					break;
 
 				case p02:	// load primary operand from index
@@ -255,7 +326,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 
 				case s01:	// fetch secondary operand from program
 					isValid |= (s64vReadInExtraByte);
-					if (prgmPtr) s64operands[(uint16_t)(s64oprExtra)] += readProgramByte(prgmPtr);
+					if (isProgramValid(prgmPtr)) s64operands[(uint16_t)(s64oprExtra)] += readProgramByte(prgmPtr);
 					break;
 
 				case s02:	// fetch secondary operand from index
@@ -281,7 +352,7 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64prgm_ptr_t
 
 }
 
-static void SWEET64::executeInstruction(union union_32 * instrLWord, s64prgm_ptr_t &prgmPtr, s64prgm_ptr_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
 {
 
 	uint8_t oldSREG;
@@ -937,7 +1008,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64prgm_ptr
 					prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
 					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15) isValid = 0;
 				case e28:	// jump
-					prgmPtr = getProgramPointer(extra);
+					prgmPtr = getProgramPC(extra);
 					break;
 
 				case e29:	// load jump register
@@ -984,11 +1055,22 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64prgm_ptr
 
 }
 
-static void SWEET64::addProgramOffset(s64prgm_ptr_t &prgmPtr, uint8_t offset)
+static void SWEET64::addProgramOffset(s64pc_t &prgmPtr, uint8_t offset)
 {
 
-	if (offset < 128) prgmPtr += offset;
-	else prgmPtr -= (256 - offset);
+
+#if defined(useSWEET64RAMprograms)
+    if (prgmPtr.source == s64srcRAM)
+	{
+
+		if (offset < 128) prgmPtr.ram_ptr += offset;
+		else prgmPtr.ram_ptr -= (256 - offset);
+
+	}
+    else
+#endif
+	if (offset < 128) prgmPtr.ptr += offset;
+	else prgmPtr.ptr -= (256 - offset);
 
 }
 
