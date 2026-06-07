@@ -92,7 +92,7 @@
 //#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading
 //#define useDebugTerminalSWEET64 true		// support for listing and tracing indexed SWEET64-defined functions
-//#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
+#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //

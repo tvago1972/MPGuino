@@ -19,7 +19,20 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 
 	static s64pc_t makeProgmemProgram(s64prgm_ptr_t ptr);
 #if defined(useSWEET64RAMprograms)
+	static uint8_t readProgramRAM(uint8_t addr);
+	static void writeProgramRAM(uint8_t addr, uint8_t value);
+	static void fillProgramRAM(uint8_t value);
+	static uint16_t getProgramRAMsize(void);
+	static uint8_t * getProgramRAMaddress(uint8_t addr);
+	static uint8_t getProgramRAMoffset(uint8_t * ptr);
 	static s64pc_t makeRAMprogram(uint8_t * ptr);
+	static s64pc_t makeRAMprogram(uint8_t addr);
+	static void enableProgramRAMoverride(uint8_t prgmIdx, uint8_t ramAddr);
+	static void disableProgramRAMoverride(void);
+	static uint8_t isProgramRAMoverrideEnabled(void);
+	static uint8_t getProgramRAMoverrideIndex(void);
+	static uint8_t getProgramRAMoverrideAddress(void);
+	static uint16_t getProgramLength(uint8_t prgmIdx);
 #endif // defined(useSWEET64RAMprograms)
 	static uint8_t isProgramValid(s64pc_t prgmPtr);
 	static uint8_t readProgramByte(s64pc_t &prgmPtr);

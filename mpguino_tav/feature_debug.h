@@ -270,6 +270,14 @@ namespace terminal /* debug terminal section prototype */
 	static void outputSWEET64byte(uint8_t byt);
 	static void outputSWEET64operand(uint8_t flag, uint8_t &byt);
 	static void outputSWEET64opcode(uint8_t lineNumber);
+#if defined(useSWEET64RAMprograms)
+	static void outputSWEET64programRAMline(uint8_t lineNumber);
+	static void outputSWEET64programRAMoverride(void);
+	static uint8_t chrEqualIgnoreCase(uint8_t inputChar, uint8_t storedChar);
+	static uint8_t matchSWEET64opcodeAlias(char * token, const char * opCodePtr);
+	static uint8_t findSWEET64opcode(char * token);
+	static uint8_t assembleSWEET64programRAMline(void);
+#endif // defined(useSWEET64RAMprograms)
 #if defined(useDebugTerminalLabels)
 	static void outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, uint8_t byt, uint8_t labelIdx);
 #else // defined(useDebugTerminalLabels)
@@ -311,6 +319,12 @@ static const uint8_t tsInjectButtonsUp =		tsInjectButtonPress + 1;
 static const uint8_t tsOutputSWEET64line =		nextAllowedValue;
 static const uint8_t tsTraceSWEET64line =		tsOutputSWEET64line + 1;
 #define nextAllowedValue tsTraceSWEET64line + 1;
+#if defined(useSWEET64RAMprograms)
+static const uint8_t tsOutputSWEET64RAMline =	nextAllowedValue;
+static const uint8_t tsInitSWEET64assembler =	tsOutputSWEET64RAMline + 1;
+static const uint8_t tsSWEET64assemblerInput =	tsInitSWEET64assembler + 1;
+#define nextAllowedValue tsSWEET64assemblerInput + 1;
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useBluetoothAdaFruitSPI)
 static const uint8_t tsOutputBLEfriend =		nextAllowedValue;
@@ -424,6 +438,18 @@ static const char terminalHelp[] PROGMEM = {
 	"                   [y] - decimal digit count (optional)" tcEOSCR
 	"                   [x] - decimal processing flag (optional)" tcCR tcEOSCR
 	"x^E:y           - store one or more y values, starting at SWEET64 register x" tcCR tcEOSCR
+#if defined(useSWEET64RAMprograms)
+	"       [x]!    - assemble SWEET64 into program RAM, starting at x" tcEOSCR
+	"       [y].[x]M - dump SWEET64 program RAM, optionally between [y] and [x]" tcEOSCR
+	"xM:y [y] [y]... - store one or more bytes, starting at SWEET64 program RAM x" tcEOSCR
+	"       [x]<M    - fill SWEET64 program RAM with x, default 00" tcEOSCR
+	"       x<yM    - copy SWEET64 program y to program RAM, starting at x" tcEOSCR
+	"       x<^L    - list SWEET64 program RAM as pseudo-code, starting at x" tcEOSCR
+	"       x.y^T   - trace SWEET64 function x, optionally for y lines" tcEOSCR
+	"       z<y^T   - trace SWEET64 program RAM at z, optionally for y lines" tcCR tcEOSCR
+	"       x<y^O   - substitute program RAM at x for SWEET64 function y" tcEOSCR
+	"       ^O      - disable SWEET64 program RAM substitution" tcCR tcEOSCR
+#endif // defined(useSWEET64RAMprograms)
 
 #endif // defined(useDebugTerminalSWEET64)
 	"    [y].[x]O - list program constants, optionally between [y] and [x]" tcEOSCR
@@ -502,6 +528,12 @@ static s64pc_t terminalStack[16];
 static uint8_t terminalS64reg8[(uint16_t)(si64reg8count)];
 
 static uint64_t terminalS64reg64[(uint16_t)(s64reg64count)];
+
+#if defined(useSWEET64RAMprograms)
+static uint8_t s64programRAMdumpEnd;
+static uint8_t s64programRAMassemblerAddr;
+static char s64programRAMassemblerToken[24];
+#endif // defined(useSWEET64RAMprograms)
 
 static const char prgmLoadByteValue[] PROGMEM = {
 	instrLdRegByteFromIndex, 0x02,						// load byte value

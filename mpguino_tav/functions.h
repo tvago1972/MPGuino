@@ -1166,6 +1166,18 @@ static s64prgm_ptr_t const S64programList[] PROGMEM = {
 
 #endif // !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
 
+#if defined(useSWEET64RAMprograms) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+
+#define S64_PROGRAM_LENGTH_TABLE_ENTRY(idx, prgm) sizeof(prgm),
+
+static const uint16_t S64programLengthList[] PROGMEM = {
+	S64_PROGRAM_ENTRIES(S64_PROGRAM_LENGTH_TABLE_ENTRY)
+};
+
+#undef S64_PROGRAM_LENGTH_TABLE_ENTRY
+
+#endif // defined(useSWEET64RAMprograms) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+
 // trip functions are grouped into three categories, in order
 //
 //    functions that return results that do not require conversion between SI and SAE formats

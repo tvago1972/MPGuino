@@ -757,7 +757,7 @@ static void terminal::outputSWEET64programCounter(s64pc_t prgmPtr)
 {
 
 #if defined(useSWEET64RAMprograms)
-	if (prgmPtr.source == s64srcRAM) text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmPtr.ram_ptr));
+	if (prgmPtr.source == s64srcRAM) text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoffset(prgmPtr.ram_ptr));
     else
 #endif
 #if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
@@ -864,6 +864,154 @@ static void terminal::outputSWEET64byte(uint8_t byt)
 
 }
 
+#if defined(useSWEET64RAMprograms)
+static void terminal::outputSWEET64programRAMline(uint8_t lineNumber)
+{
+
+	text::hexByteOut(m8DevDebugTerminalIdx, lineNumber);
+	text::charOut(m8DevDebugTerminalIdx, 'R');
+	text::charOut(m8DevDebugTerminalIdx, ':');
+
+	uint16_t byteCount = ((uint8_t)(s64programRAMdumpEnd - lineNumber)) + 1;
+	if (byteCount > 8) byteCount = 8;
+
+	for (uint8_t x = 0; x < byteCount; x++)
+	{
+
+		text::charOut(m8DevDebugTerminalIdx, ' ');
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::readProgramRAM((uint8_t)(lineNumber + x)));
+
+	}
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static void terminal::outputSWEET64programRAMoverride(void)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("S64 RAM override="));
+
+	if (SWEET64::isProgramRAMoverrideEnabled())
+	{
+
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoverrideIndex());
+		text::stringOut(m8DevDebugTerminalIdx, PSTR("<-"));
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoverrideAddress());
+
+	}
+	else text::stringOut(m8DevDebugTerminalIdx, PSTR("off"));
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static uint8_t terminal::chrEqualIgnoreCase(uint8_t inputChar, uint8_t storedChar)
+{
+
+	uint8_t diff = inputChar ^ storedChar;
+
+	if (diff == 0) return 1;
+	if (diff != 0x20) return 0;
+
+	inputChar |= 0x20;
+	return ((inputChar >= 'a') && (inputChar <= 'z'));
+
+}
+
+static uint8_t terminal::matchSWEET64opcodeAlias(char * token, const char * opCodePtr)
+{
+
+	uint8_t tokenIdx = 0;
+	uint8_t storedChar;
+	uint8_t inputChar;
+	uint8_t sawAliasChar = 0;
+
+	for (;;)
+	{
+
+		storedChar = pgm_read_byte(opCodePtr++);
+		inputChar = token[(uint16_t)(tokenIdx)];
+
+		if ((storedChar == '/') || (storedChar == 0))
+		{
+
+			if ((inputChar == 0) && (sawAliasChar)) return 1;
+			if (storedChar == 0) return 0;
+
+			tokenIdx = 0;
+			sawAliasChar = 0;
+			continue;
+
+		}
+
+		sawAliasChar = 1;
+
+		if ((inputChar == 0) || (chrEqualIgnoreCase(inputChar, storedChar) == 0))
+		{
+
+			while ((storedChar != '/') && (storedChar != 0)) storedChar = pgm_read_byte(opCodePtr++);
+			if (storedChar == 0) return 0;
+
+			tokenIdx = 0;
+			sawAliasChar = 0;
+			continue;
+
+		}
+
+		tokenIdx++;
+
+	}
+
+}
+
+static uint8_t terminal::findSWEET64opcode(char * token)
+{
+
+	for (uint8_t x = 0; x < maxValidSWEET64instr; x++)
+		if (matchSWEET64opcodeAlias(token, findStr(opCodeList, x))) return x;
+
+	return maxValidSWEET64instr;
+
+}
+
+static uint8_t terminal::assembleSWEET64programRAMline(void)
+{
+
+	uint8_t tokenIdx = 0;
+	uint8_t chr;
+	uint8_t opCode;
+
+	while (ringBuffer::testBufferNot(rbIdxTerminal, bufferIsEmpty))
+	{
+
+		chr = ringBuffer::pull(rbIdxTerminal);
+
+		if (chr == ' ')
+		{
+
+			if (tokenIdx) break;
+			else continue;
+
+		}
+
+		if (tokenIdx >= (sizeof(s64programRAMassemblerToken) - 1)) return 0;
+		s64programRAMassemblerToken[(uint16_t)(tokenIdx++)] = chr;
+
+	}
+
+	if (tokenIdx == 0) return 0;
+	s64programRAMassemblerToken[(uint16_t)(tokenIdx)] = 0;
+
+	opCode = findSWEET64opcode(s64programRAMassemblerToken);
+	if (opCode >= maxValidSWEET64instr) return 0;
+
+	SWEET64::writeProgramRAM(s64programRAMassemblerAddr++, opCode);
+	return 1;
+
+}
+
+#endif // defined(useSWEET64RAMprograms)
 static void terminal::outputSWEET64operand(uint8_t flag, uint8_t &byt)
 {
 
@@ -1401,6 +1549,9 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #endif // defined(useDebugTerminalLabels)
 						case 0x09:	// list SWEET64 opcodes and their operands
 						case 0x0C:	// list 20 lines of SWEET64 pseudo-code
+#if defined(useSWEET64RAMprograms)
+						case 0x0F:	// enable/disable SWEET64 program RAM override
+#endif // defined(useSWEET64RAMprograms)
 						case 0x14:	// trace 1 or more lines of SWEET64 pseudo-code
 #endif // defined(useDebugTerminalSWEET64)
 						case 0x13:	// display supplemental system information
@@ -1634,6 +1785,27 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								break;
 
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useSWEET64RAMprograms)
+							case 'm':	// enter a SWEET64 program RAM byte
+								if (terminalMode & tmByteReadIn) // if a byte value was read in
+								{
+
+									SWEET64::writeProgramRAM(terminalAddress++, terminalByte);
+
+									if (terminalAddress)
+									{
+
+										terminalMode &= ~(tmInputMask); // clear input mode processing bits
+										terminalMode |= (tmHexInput | tmInitInput); // shift to reading a new hexadecimal byte
+
+									}
+									else terminalState = i; // if byte address wrapped, reset command
+
+								}
+								else terminalState = i; // no byte value was read in, so cancel program RAM byte entry mode
+								break;
+
+#endif // defined(useSWEET64RAMprograms)
 							case 'p':   // enter a stored parameter value
 								if (terminalMode & tmByteReadIn) // if a parameter value was read in
 								{
@@ -1707,6 +1879,84 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								nextTerminalState = i;
 								break;
 
+#if defined(useSWEET64RAMprograms)
+							case 'M':	// list SWEET64 program RAM bytes
+								if ((terminalMode & tmTargetReadIn) && (terminalMode & tmByteReadIn))
+								{
+
+									uint16_t prgmLength = SWEET64::getProgramLength(terminalByte);
+
+									if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+									else if ((prgmLength == 0) || (prgmLength > SWEET64::getProgramRAMsize())) errIdx = tseIdxBadSWEET64addr;
+									else if (prgmLength > (SWEET64::getProgramRAMsize() - terminalTarget)) errIdx = tseIdxTargetVal;
+									else
+									{
+
+										s64pc_t src = SWEET64::makeProgmemProgram(SWEET64::getProgramPointer(terminalByte));
+										uint8_t dst = terminalTarget;
+
+										while (prgmLength--) SWEET64::writeProgramRAM(dst++, SWEET64::readProgramByte(src));
+
+										terminalState = i;
+
+									}
+
+									break;
+
+								}
+								else if (terminalMode & tmTargetReadIn)
+								{
+
+									if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+									else
+									{
+
+										SWEET64::fillProgramRAM(terminalTarget);
+
+										terminalState = i;
+
+									}
+
+									break;
+
+								}
+								else if (terminalMode & tmSourceReadIn)
+								{
+
+									terminalLine = terminalSource;
+									if (terminalMode & tmByteReadIn) s64programRAMdumpEnd = terminalByte;
+									else s64programRAMdumpEnd = 255;
+
+									maxLine = (((uint8_t)(s64programRAMdumpEnd - terminalSource)) >> 3) + 1;
+
+								}
+								else
+								{
+
+									if (terminalMode & tmByteReadIn)
+									{
+
+										terminalLine = terminalByte;
+										s64programRAMdumpEnd = terminalByte;
+										maxLine = 1;
+
+									}
+									else
+									{
+
+										terminalLine = 0;
+										s64programRAMdumpEnd = 255;
+										maxLine = 32;
+
+									}
+
+								}
+
+								terminalState = tsOutputSWEET64RAMline;
+								nextTerminalState = i;
+								break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 							case 'P':   // list available stored parameters
 								primaryFunc = terminal::outputParameterValue;
@@ -1779,6 +2029,10 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case 0x13:	// display supplemental system information
 									outputDecimalSettings();
 
+#if defined(useSWEET64RAMprograms)
+									outputSWEET64programRAMoverride();
+
+#endif // defined(useSWEET64RAMprograms)
 #if defined(useBluetoothAdaFruitSPI)
 									outputBluetoothResponse();
 
@@ -1834,9 +2088,16 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #if defined(useDebugTerminalSWEET64)
 											case 0x25:	// enter a SWEET64 register value
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useSWEET64RAMprograms)
+											case 'm':	// enter a SWEET64 program RAM byte
+#endif // defined(useSWEET64RAMprograms)
 											case 's':	// enter a bitflag register value
 												terminalMode |= (tmInitHex); // shift to hexadecimal input
+#if defined(useSWEET64RAMprograms)
+												if ((chr != 'm') && (terminalAddress >= maxLine)) errIdx = tseIdxAddressVal;
+#else // defined(useSWEET64RAMprograms)
 												if (terminalAddress >= maxLine) errIdx = tseIdxAddressVal;
+#endif // defined(useSWEET64RAMprograms)
 												break;
 
 											default:	// unsupported storage command
@@ -1981,14 +2242,80 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									terminalState = tsInitListReadOnly; // this command could print a lot of different lines, so handle this command one iteration at a time
 									break;
 
+#if defined(useSWEET64RAMprograms)
+								case '!':	// enter SWEET64 program RAM assembler
+									if (terminalMode & (tmSourceReadIn | tmTargetReadIn)) errIdx = tseIdxSyntax;
+									else
+									{
+
+										if (terminalMode & tmByteReadIn) s64programRAMassemblerAddr = terminalByte;
+										else s64programRAMassemblerAddr = 0;
+
+										terminalState = tsInitSWEET64assembler;
+
+									}
+
+									break;
+
+								case 0x0F:	// enable/disable SWEET64 program RAM override
+									if ((terminalMode & tmTargetReadIn) && (terminalMode & tmByteReadIn))
+									{
+
+										uint16_t prgmLength = SWEET64::getProgramLength(terminalByte);
+
+										if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+										else if ((prgmLength == 0) || (prgmLength > SWEET64::getProgramRAMsize())) errIdx = tseIdxBadSWEET64addr;
+										else if (prgmLength > (SWEET64::getProgramRAMsize() - terminalTarget)) errIdx = tseIdxTargetVal;
+										else
+										{
+
+											SWEET64::enableProgramRAMoverride(terminalByte, terminalTarget);
+											terminalState = tsInitProcessing;
+
+										}
+
+									}
+									else if (terminalMode & tmReadInMask) errIdx = tseIdxSyntax;
+									else
+									{
+
+										SWEET64::disableProgramRAMoverride();
+										terminalState = tsInitProcessing;
+
+									}
+
+									break;
+
+#endif // defined(useSWEET64RAMprograms)
 								case 0x14:	// trace 1 or more lines of SWEET64 pseudo-code
 									if (terminalMode & tmTargetReadIn)
 									{
 
-										terminalExecSched = SWEET64::getProgramPC(terminalTarget);
+										if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+										else
+										{
+
+#if defined(useSWEET64RAMprograms)
+											terminalExecSched = SWEET64::makeRAMprogram(terminalTarget);
+#else // defined(useSWEET64RAMprograms)
+											terminalExecSched = SWEET64::getProgramPC(terminalTarget);
+#endif // defined(useSWEET64RAMprograms)
+
+											if (!SWEET64::isProgramValid(terminalListSched)) terminalListSched = terminalExecSched;
+
+											terminalS64reg8[(uint16_t)(si64reg8flags)] = SWEET64traceFlagGroup; // initialize terminal SWEET64 flags
+											terminalS64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize terminal SWEET64 stack pointer
+											terminalS64reg8[(uint16_t)(si64reg8jump)] = 0; // initialize terminal SWEET64 jump register
+
+										}
+
+									}
+									else if (terminalMode & tmSourceReadIn)
+									{
+
+										terminalExecSched = SWEET64::getProgramPC(terminalSource);
 
 										if (!SWEET64::isProgramValid(terminalListSched)) terminalListSched = terminalExecSched;
-										if (terminalMode & tmSourceReadIn) terminalS64reg8[(uint16_t)(si64reg8trip)] = terminalSource;
 
 										terminalS64reg8[(uint16_t)(si64reg8flags)] = SWEET64traceFlagGroup; // initialize terminal SWEET64 flags
 										terminalS64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize terminal SWEET64 stack pointer
@@ -2004,6 +2331,10 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 
 								case 0x0C:	// list 20 lines of SWEET64 pseudo-code
+#if defined(useSWEET64RAMprograms)
+									if (terminalMode & tmTargetReadIn) terminalListSched = SWEET64::makeRAMprogram(terminalTarget);
+									else
+#endif // defined(useSWEET64RAMprograms)
 									if (terminalMode & tmByteReadIn) terminalListSched = SWEET64::getProgramPC(terminalByte);
 
 									maxLine = 20;
@@ -2017,6 +2348,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									maxLine = s64reg64count + si64reg8count;
 									break;
 
+#if defined(useSWEET64RAMprograms)
+								case 'M':	// access SWEET64 program RAM
+									break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useSimulatedFIandVSS)
 								case 'S':   // list available signal simulator mode values, with optional mode setting
@@ -2288,6 +2624,97 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 			break;
 
+#if defined(useSWEET64RAMprograms)
+		case tsOutputSWEET64RAMline:	// output SWEET64 program RAM bytes
+			outputSWEET64programRAMline(terminalLine);
+			terminalLine += 8;
+
+			if ((--maxLine) == 0) terminalState = nextTerminalState;
+
+			break;
+
+		case tsInitSWEET64assembler:	// initialize SWEET64 program RAM assembler input
+			text::newLine(m8DevDebugTerminalIdx);
+			text::hexByteOut(m8DevDebugTerminalIdx, s64programRAMassemblerAddr);
+			text::stringOut(m8DevDebugTerminalIdx, PSTR("!:"));
+			ringBuffer::empty(rbIdxTerminal);
+			terminalState = tsSWEET64assemblerInput;
+			errIdx = tseIdxLineCancel;
+			break;
+
+		case tsSWEET64assemblerInput:	// get SWEET64 program RAM assembler line
+			do
+			{
+
+				i = text::chrIn(m8DevDebugTerminalIdx);
+
+				if (i)
+				{
+
+					switch (i)
+					{
+
+						case 0x0D:	// enter
+							text::charOut(m8DevDebugTerminalIdx, 0x0D);
+							heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
+
+							if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsEmpty)) terminalState = tsInitInput;
+							else
+							{
+
+								uint8_t assembledAddr = s64programRAMassemblerAddr;
+
+								if (assembleSWEET64programRAMline())
+								{
+
+									s64pc_t assembledLine = SWEET64::makeRAMprogram(assembledAddr);
+
+									outputSWEET64prgmLine(iLW, assembledLine, 1);
+									terminalState = tsInitSWEET64assembler;
+
+								}
+								else
+								{
+
+									ringBuffer::empty(rbIdxTerminal);
+									errIdx = tseIdxSyntax;
+									terminalState = tsError;
+
+								}
+
+							}
+
+							break;
+
+						case 0x03:	// cancel line input
+						case 0x18:	// cancel line input
+							terminalState = tsInitInput;
+							break;
+
+						case 0x20 ... 0x7E:
+							if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsFull)) terminalState = tsError;
+							else
+							{
+
+								ringBuffer::push(rbIdxTerminal, i);
+								text::charOut(m8DevDebugTerminalIdx, i);
+
+							}
+							break;
+
+						default:
+							break;
+
+					}
+
+				}
+
+			}
+			while ((i) && (terminalState == tsSWEET64assemblerInput));
+
+			break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 		case tsInitListDecimal:
 			if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it

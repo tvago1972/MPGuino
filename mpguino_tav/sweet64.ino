@@ -10,6 +10,14 @@
 
 */
 
+#if defined(useSWEET64RAMprograms)
+static uint8_t s64programRAM[256];
+static uint8_t s64programRAMoverrideIdx;
+static uint8_t s64programRAMoverrideAddr;
+static uint8_t s64programRAMoverrideFlags;
+static const uint8_t s64programRAMoverrideEnabled = 0x01;
+#endif // defined(useSWEET64RAMprograms)
+
 static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
 {
 
@@ -36,6 +44,92 @@ static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
 	prgmPtr.source = s64srcRAM;
 
 	return prgmPtr;
+
+}
+
+static uint8_t SWEET64::readProgramRAM(uint8_t addr)
+{
+
+	return s64programRAM[(uint16_t)(addr)];
+
+}
+
+static void SWEET64::writeProgramRAM(uint8_t addr, uint8_t value)
+{
+
+	s64programRAM[(uint16_t)(addr)] = value;
+
+}
+
+static void SWEET64::fillProgramRAM(uint8_t value)
+{
+
+	for (uint16_t x = 0; x < sizeof(s64programRAM); x++) s64programRAM[x] = value;
+
+}
+
+static uint16_t SWEET64::getProgramRAMsize(void)
+{
+
+	return sizeof(s64programRAM);
+
+}
+
+static uint8_t * SWEET64::getProgramRAMaddress(uint8_t addr)
+{
+
+	return &s64programRAM[(uint16_t)(addr)];
+
+}
+
+static uint8_t SWEET64::getProgramRAMoffset(uint8_t * ptr)
+{
+
+	return (uint8_t)(ptr - s64programRAM);
+
+}
+
+static s64pc_t SWEET64::makeRAMprogram(uint8_t addr)
+{
+
+	return makeRAMprogram(getProgramRAMaddress(addr));
+
+}
+
+static void SWEET64::enableProgramRAMoverride(uint8_t prgmIdx, uint8_t ramAddr)
+{
+
+	s64programRAMoverrideIdx = prgmIdx;
+	s64programRAMoverrideAddr = ramAddr;
+	s64programRAMoverrideFlags |= s64programRAMoverrideEnabled;
+
+}
+
+static void SWEET64::disableProgramRAMoverride(void)
+{
+
+	s64programRAMoverrideFlags &= ~(s64programRAMoverrideEnabled);
+
+}
+
+static uint8_t SWEET64::isProgramRAMoverrideEnabled(void)
+{
+
+	return (s64programRAMoverrideFlags & s64programRAMoverrideEnabled);
+
+}
+
+static uint8_t SWEET64::getProgramRAMoverrideIndex(void)
+{
+
+	return s64programRAMoverrideIdx;
+
+}
+
+static uint8_t SWEET64::getProgramRAMoverrideAddress(void)
+{
+
+	return s64programRAMoverrideAddr;
 
 }
 
@@ -81,6 +175,10 @@ static uint8_t SWEET64::readProgramByte(s64pc_t &prgmPtr)
 static s64pc_t SWEET64::getProgramPC(uint8_t prgmIdx)
 {
 
+#if defined(useSWEET64RAMprograms)
+	if ((s64programRAMoverrideFlags & s64programRAMoverrideEnabled) && (prgmIdx == s64programRAMoverrideIdx)) return makeRAMprogram(s64programRAMoverrideAddr);
+#endif // defined(useSWEET64RAMprograms)
+
 	return makeProgmemProgram(getProgramPointer(prgmIdx));
 
 }
@@ -105,6 +203,28 @@ static s64prgm_ptr_t SWEET64::getProgramPointer(uint8_t prgmIdx)
 
 }
 
+#if defined(useSWEET64RAMprograms)
+static uint16_t SWEET64::getProgramLength(uint8_t prgmIdx)
+{
+
+	if (prgmIdx >= dfMaxValTotalCount) return 0;
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	switch (prgmIdx)
+	{
+#define S64_PROGRAM_LENGTH_CASE(idx, prgm) case idx: return sizeof(prgm);
+		S64_PROGRAM_ENTRIES(S64_PROGRAM_LENGTH_CASE)
+#undef S64_PROGRAM_LENGTH_CASE
+		default:
+			return 0;
+	}
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return pgm_read_word(&S64programLengthList[(uint16_t)(prgmIdx)]);
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+}
+
+#endif // defined(useSWEET64RAMprograms)
 static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
 {
 
