@@ -1,4 +1,4 @@
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 #include <compat/twi.h>
 namespace TWI /* Two-Wire Interface support prototype */
 {
@@ -42,7 +42,7 @@ static const uint8_t twiInterruptInUse =		0b00000100;
 
 static const uint8_t twiInUse =					(twiOpen | twiRemainOpen);
 
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useMCP23017portExpander)
 namespace MCP23017portExpanderSupport
 {

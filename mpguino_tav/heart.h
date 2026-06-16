@@ -383,11 +383,11 @@ static const uint8_t v8AnalogCommandIdx =				nextAllowedValue;						// analog co
 static const uint8_t v8AnalogStatusIdx =				v8AnalogCommandIdx + 1;					// analog status flags
 #define nextAllowedValue v8AnalogStatusIdx + 1
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 static const uint8_t v8TWIstatusIdx =					nextAllowedValue;						// TWI status flags
 static const uint8_t v8TWIerrorIdx =					v8TWIstatusIdx + 1;						// TWI error flags
 #define nextAllowedValue v8TWIerrorIdx + 1
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useTimer1Interrupt)
 static const uint8_t v8Timer1CommandIdx =				nextAllowedValue;						// timer1 command flags
 #define nextAllowedValue v8Timer1CommandIdx + 1
@@ -674,10 +674,10 @@ static const uint8_t v32WorkingVSSpulseIdx =			v32WorkingInjectorCloseIdx + 1;		
 static const uint8_t v32WorkingAnalogIdx =				nextAllowedValue;						// analog read interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingAnalogIdx + 1
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 static const uint8_t v32WorkingTwoWireIdx =				nextAllowedValue;						// two-wire interface interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingTwoWireIdx + 1
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 static const uint8_t v32WorkingSerial0Idx =				nextAllowedValue;						// UART0 output interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingSerial0Idx + 1
@@ -828,10 +828,10 @@ static const uint8_t m32DbgSampledVSSpulseIdx =			m32DbgSampledInjectorCloseIdx 
 static const uint8_t m32DbgSampledAnalogIdx =			nextAllowedValue;
 #define nextAllowedValue m32DbgSampledAnalogIdx + 1
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 static const uint8_t m32DbgSampledTwoWireIdx =			nextAllowedValue;
 #define nextAllowedValue m32DbgSampledTwoWireIdx + 1
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 static const uint8_t m32DbgSampledSerial0Idx =			nextAllowedValue;
 #define nextAllowedValue m32DbgSampledSerial0Idx + 1
@@ -946,10 +946,10 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v8AnalogCommandIdx" tcEOS
 	"v8AnalogStatusIdx" tcEOS
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	"v8TWIstatusIdx" tcEOS
 	"v8TWIerrorIdx" tcEOS
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useTimer1Interrupt)
 	"v8Timer1CommandIdx" tcEOS
 #if defined(useSimulatedFIandVSS)
@@ -1190,9 +1190,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useAnalogRead)
 	"v32WorkingAnalogIdx" tcEOS					// analog read interrupt handler
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	"v32WorkingTwoWireIdx" tcEOS				// two-wire interface interrupt handler
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 	"v32WorkingSerial0Idx" tcEOS				// UART0 output interrupt handler
 #if defined(useSerial0PortInput)
@@ -1305,9 +1305,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useAnalogRead)
 	"m32DbgSampledAnalogIdx" tcEOS
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	"m32DbgSampledTwoWireIdx" tcEOS
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 	"m32DbgSampledSerial0Idx" tcEOS
 #if defined(useSerial0PortInput)
@@ -1375,7 +1375,7 @@ static volatile uint8_t lastPINxState;
 static const uint8_t t0cResetTimer =				0b10000000;
 static const uint8_t t0cResetInputActivityTimer =	0b01000000;
 static const uint8_t t0cResetOutputTimer =			0b00100000;
-static const uint8_t t0cReadRTC =					0b00010000;		// useDS1307clock
+static const uint8_t t0cReadRTC =					0b00010000;		// useRealTimeClockModule
 static const uint8_t t0cEnableJSONoutput =			0b00001000;		// useJSONoutput
 static const uint8_t t0cEnableOutputPin =			0b00000100;		// useOutputPins
 
@@ -1394,10 +1394,11 @@ static const uint8_t t0saDisplayDelayFlags =		(t0saDisplayDelayInit | t0saDispla
 // these flags specifically tell the main program to do something (v8Timer0Status1Idx)
 // system timer0 sets flag, main program acknowledges by clearing flag
 static const uint8_t t0sbSampleBLEfriend =			0b10000000;		// useBluetoothAdaFruitSPI
-static const uint8_t t0sbReadRTC =					0b01000000;		// useDS1307clock
-static const uint8_t t0sbResetFEvsTimeTrip =		0b00100000;		// useBarFuelEconVsTime
-static const uint8_t t0sbAccelTestFlag =			0b00010000;		// useDragRaceFunction
-static const uint8_t t0sbCoastdownTestFlag =		0b00001000;		// useCoastDownCalculator
+static const uint8_t t0sbReadRTC =					0b01000000;		// useRealTimeClockModule
+static const uint8_t t0sbErrorRTC =					0b00100000;		// useRealTimeClockModule
+static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useBarFuelEconVsTime
+static const uint8_t t0sbAccelTestFlag =			0b00001000;		// useDragRaceFunction
+static const uint8_t t0sbCoastdownTestFlag =		0b00000100;		// useCoastDownCalculator
 
 // these status flags inform the main program about MPGuino awake state (v8AwakeIdx)
 static const uint8_t aAwakeOnInjector =				0b10000000;

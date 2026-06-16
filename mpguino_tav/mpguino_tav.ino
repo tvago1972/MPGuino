@@ -924,9 +924,9 @@ int main(void)
 #if defined(useAnalogRead)
 				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingAnalogIdx);
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingTwoWireIdx);
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 				m32(m32DbgSampledInterruptProcessIdx) += v32(v32WorkingSerial0Idx);
 #if defined(useSerial0PortInput)
@@ -962,9 +962,9 @@ int main(void)
 #if defined(useAnalogRead)
 				m32(m32DbgSampledAnalogIdx) = v32(v32WorkingAnalogIdx);
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 				m32(m32DbgSampledTwoWireIdx) = v32(v32WorkingTwoWireIdx);
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 				m32(m32DbgSampledSerial0Idx) = v32(v32WorkingSerial0Idx);
 #if defined(useSerial0PortInput)
@@ -1002,9 +1002,9 @@ int main(void)
 #if defined(useAnalogRead)
 			v32(v32WorkingAnalogIdx) = 0;
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 			v32(v32WorkingTwoWireIdx) = 0;
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 			v32(v32WorkingSerial0Idx) = 0;
 #if defined(useSerial0PortInput)
@@ -1046,7 +1046,7 @@ int main(void)
 			if (EEPROM::readByte(pBluetoothOutputIdx)) bluetooth::mainOutput();
 
 #endif // defined(useBluetooth)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 			if (v08(v8Timer0Status1Idx) & t0sbReadRTC)
 			{
 
@@ -1061,7 +1061,7 @@ int main(void)
 
 			}
 
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 		}
 
 #if defined(useActivityLED)
@@ -1209,9 +1209,9 @@ int main(void)
 				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0CommandIdx));
 				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status0Idx));
 				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status1Idx));
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 				text::hexByteOut(m8DevDebugTerminalIdx, v08(v8TWIstatusIdx));
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 				text::newLine(m8DevDebugTerminalIdx);
 
 			}

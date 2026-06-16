@@ -10,9 +10,9 @@ namespace clockSet /* Clock support section prototype */
 	static void set(void);
 	static void cancel(void);
 #endif // defined(useClockDisplay)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 	static void setFromRTC(void);
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 
 };
 

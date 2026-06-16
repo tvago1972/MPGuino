@@ -187,7 +187,6 @@
 //#define useABresultViewer true				// (inw) Ability to graphically show current (B) versus stored (A) fuel consumption rates
 //#define useCoastDownCalculator true			// (inw) Ability to calculate C(rr) and C(d) from coastdown
 //#define useFuelParamCalculator true			// (inw) Ability to calculate microseconds per gallon and fuel injector delay stored parameters
-//#define useRealTimeClockModule true			// (inw) Ability to read and display Realtime Clock data from an SPI RTC module
 
 // other program measurement and debugging tools
 //
@@ -424,19 +423,28 @@ static const uint8_t TWIaddressMCP23017 = addressTWIadafruitRGBLCD;
 
 #if defined(useDS1307clock)
 static const uint8_t TWIaddressRTC = addressTWIRTC;
-#define useTWIsupport true
-#define useInterruptBasedTWI true
-#undef useSoftwareClock
+#define useTWIrtcModule true
+#define useRTCmoduleSelected true
 #endif // defined(useDS1307clock)
 
+#if defined(useTWIrtcModule)
+#define useRealTimeClockModule true
+#define useHardwareTWI true
+#define useInterruptBasedTWI true
+#endif // defined(useTWIrtcModule)
+
+#if defined(useRealTimeClockModule)
+#undef useSoftwareClock
+#endif // defined(useRealTimeClockModule)
+
 #if defined(useTWIbuttons)
-#define useTWIsupport true
+#define useHardwareTWI true
 #define useInterruptBasedTWI true
 #endif // defined(useTWIbuttons)
 
-#if defined(useSoftwareClock) || defined(useDS1307clock)
+#if defined(useSoftwareClock) || defined(useRealTimeClockModule)
 #define useClockSupport true
-#endif // defined(useSoftwareClock) || defined(useDS1307clock)
+#endif // defined(useSoftwareClock) || defined(useRealTimeClockModule)
 
 #if defined(useSavedTrips)
 #define useEEPROMtripStorage true
@@ -1005,7 +1013,7 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #endif
 
 #if defined(useTWI4BitLCD)
-#define useTWIsupport true
+#define useHardwareTWI true
 #define useBinaryLCDbrightness true
 #endif // defined(useTWI4BitLCD)
 
@@ -1029,9 +1037,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 
 // this section catches configuration errors
 
-#if defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
+#if defined(useHardwareTWI) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
 #error *** CANNOT configure for Legacy pushbuttons and TwoWire support!!! ***
-#endif // defined(useTWIsupport) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
+#endif // defined(useHardwareTWI) && defined(useLegacyButtons) && !defined(__AVR_ATmega2560__)
 
 #if ( defined(useLegacyButtons) + defined(useAnalogButtons) + defined(useTWIbuttons) ) > 1
 #error *** Button hardware configuration error detected!!! ***
@@ -1059,6 +1067,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #error *** Conflict exists between useHardwareSPI and useOutputPins / useActivityLED!!! ***
 #endif // defined(__AVR_ATmega328P__) && ( defined(useOutputPins) || defined(useActivityLED) )
 #endif // defined(useHardwareSPI)
+
+#if defined(useRealTimeClockModule) && !defined(useRTCmoduleSelected)
+#error useRealTimeClockModule requires a specific RTC module option, such as useDS1307clock
+#endif // defined(useRealTimeClockModule) && !defined(useRTCmoduleSelected)
 
 // major feature define configurations
 

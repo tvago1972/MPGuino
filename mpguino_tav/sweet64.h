@@ -32,8 +32,10 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static uint8_t isProgramRAMoverrideEnabled(void);
 	static uint8_t getProgramRAMoverrideIndex(void);
 	static uint8_t getProgramRAMoverrideAddress(void);
-	static uint16_t getProgramLength(uint8_t prgmIdx);
 #endif // defined(useSWEET64RAMprograms)
+#if defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))
+	static uint16_t getProgramLength(uint8_t prgmIdx);
+#endif // defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))
 	static uint8_t isProgramValid(s64pc_t prgmPtr);
 	static uint8_t readProgramByte(s64pc_t &prgmPtr);
 	static s64pc_t getProgramPC(uint8_t prgmIdx);
@@ -42,6 +44,7 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static uint32_t runPrgm(s64pc_t sched, uint8_t tripIdx);
 	static void fetchInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, uint8_t * prgmReg8);
 	static void executeInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+	static void setProgramError(uint8_t * prgmReg8, uint8_t errorCode);
 	static void addProgramOffset(s64pc_t &prgmPtr, uint8_t offset);
 	static void copy64(union union_64 * an, union union_64 * ann);
 	static void swap64(union union_64 * an, union union_64 * ann);
@@ -67,6 +70,17 @@ static const uint8_t s64vOperandIndexed =			0b00001000;
 static const uint8_t s64vExtraIndexed =				0b00000100;
 static const uint8_t s64vExtraJump =				0b00000010;
 static const uint8_t s64vRelativeOperand =			0b00000001;
+
+static const uint8_t s64errNone =					0;
+static const uint8_t s64errBadProgramCounter =		s64errNone + 1;
+static const uint8_t s64errBadOpcode =				s64errBadProgramCounter + 1;
+static const uint8_t s64errBadRegisterOperand =		s64errBadOpcode + 1;
+static const uint8_t s64errMissingRegisterOperand =	s64errBadRegisterOperand + 1;
+static const uint8_t s64errMissingPrimaryOperand =	s64errMissingRegisterOperand + 1;
+static const uint8_t s64errMissingExtraOperand =	s64errMissingPrimaryOperand + 1;
+static const uint8_t s64errBadExpandedOpcode =		s64errMissingExtraOperand + 1;
+static const uint8_t s64errStackOverflow =			s64errBadExpandedOpcode + 1;
+static const uint8_t s64errBadOperand =				s64errStackOverflow + 1;
 
 static const uint8_t r00 =	0;			// do not fetch register operand
 static const uint8_t r01 =	r00 + 32;	// fetch rX and rY from program
@@ -195,6 +209,7 @@ static const uint8_t SWEET64carryFlag =			0b00000001;			// this is set for arith
 static const uint8_t SWEET64zeroFlag =			0b00000010;			// this is set for arithmetic and branch test operations
 static const uint8_t SWEET64minusFlag =			0b00000100;			// this is set for arithmetic and branch test operations
 static const uint8_t SWEET64overflowFlag =		0b00001000;			// this is set for arithmetic and branch test operations
+static const uint8_t SWEET64errorFlag =			0b00010000;			// this is set when the SWEET64 engine detects malformed program flow or operands
 
 static const uint8_t SWEET64traceSaveFlag =		0b00100000;			// last known trace state (for calls to SWEET64-based mul64 / div64)
 static const uint8_t SWEET64traceCommandFlag =	0b01000000;			// commands whether trace mode is on or off
@@ -238,7 +253,12 @@ static const uint8_t si64reg8valid =		si64reg8flags + 1;
 static const uint8_t si64reg8trip =			si64reg8valid + 1;
 static const uint8_t si64reg8spnt =			si64reg8trip + 1;
 static const uint8_t si64reg8jump =			si64reg8spnt + 1;
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t si64reg8error =		si64reg8jump + 1;
+#define nextAllowedValue si64reg8error + 1;
+#else // defined(useDebugTerminalSWEET64)
 #define nextAllowedValue si64reg8jump + 1;
+#endif // defined(useDebugTerminalSWEET64)
 
 static const uint8_t si64reg8count =		nextAllowedValue;
 
@@ -258,6 +278,9 @@ static const char terminalSWEET64registerLabels[] PROGMEM = {
 	"si64reg8trip" tcEOS
 	"si64reg8spnt" tcEOS
 	"si64reg8jump" tcEOS
+#if defined(useDebugTerminalSWEET64)
+	"si64reg8error" tcEOS
+#endif // defined(useDebugTerminalSWEET64)
 };
 
 #endif // defined(useDebugTerminalLabels)
@@ -975,6 +998,7 @@ static const uint8_t bcdFormatHHMMSS =		nextAllowedValue;
 #endif // defined(useClockSupport)
 static const uint8_t bcdFormatH9MMSS =		nextAllowedValue;
 static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
+static const uint8_t bcdFormatCount =		bcdFormatOverflow + 1;
 
 const uint8_t s64BCDformatList[] PROGMEM = {
 	// 10 digit number format

@@ -1166,7 +1166,7 @@ static s64prgm_ptr_t const S64programList[] PROGMEM = {
 
 #endif // !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
 
-#if defined(useSWEET64RAMprograms) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+#if (defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
 
 #define S64_PROGRAM_LENGTH_TABLE_ENTRY(idx, prgm) sizeof(prgm),
 
@@ -1176,7 +1176,7 @@ static const uint16_t S64programLengthList[] PROGMEM = {
 
 #undef S64_PROGRAM_LENGTH_TABLE_ENTRY
 
-#endif // defined(useSWEET64RAMprograms) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+#endif // (defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
 
 // trip functions are grouped into three categories, in order
 //

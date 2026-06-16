@@ -269,9 +269,9 @@ static const uint8_t prgmInitMPGuinoSoftware[] PROGMEM = {
 #if defined(useAnalogRead)
 	instrStRegVariable, 0x02, v32WorkingAnalogIdx,
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	instrStRegVariable, 0x02, v32WorkingTwoWireIdx,
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 	instrStRegVariable, 0x02, v32WorkingSerial0Idx,
 #if defined(useSerial0PortInput)
@@ -308,9 +308,9 @@ static const uint8_t prgmInitMPGuinoSoftware[] PROGMEM = {
 #if defined(useAnalogRead)
 	instrStRegVariable, 0x02, m32DbgSampledAnalogIdx,
 #endif // defined(useAnalogRead)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	instrStRegVariable, 0x02, m32DbgSampledTwoWireIdx,
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 	instrStRegVariable, 0x02, m32DbgSampledSerial0Idx,
 #if defined(useSerial0PortInput)

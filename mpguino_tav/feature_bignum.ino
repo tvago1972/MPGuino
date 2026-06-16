@@ -76,9 +76,9 @@ static void clockSet::set(void)
 
 	uint8_t b;
 	uint8_t v;
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 	uint8_t oldSREG;
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 
 	csBuff[4] = '0'; // set seconds to zero
 	csBuff[5] = '0';
@@ -142,7 +142,7 @@ static void clockSet::cancel(void)
 }
 
 #endif // defined(useClockDisplay)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 static void clockSet::setFromRTC(void)
 {
 
@@ -150,6 +150,7 @@ static void clockSet::setFromRTC(void)
 	uint8_t c;
 	uint8_t oldSREG;
 
+#if defined(useDS1307clock)
 	for (uint8_t x = 0; x < 3; x++)
 	{
 
@@ -169,12 +170,13 @@ static void clockSet::setFromRTC(void)
 		m08(x + m8SecondIdx) = b + c; // store natural value of time
 
 	}
+#endif // defined(useDS1307clock)
 
 	SWEET64::runPrgm(S64_PRGM_PTR(prgmSetClock), 0); // convert time value into timer0 clock cycles
 
 }
 
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 #endif // defined(useClockSupport)
 #if defined(useClockDisplay)
  /* Big Clock Display support section */
@@ -192,7 +194,8 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
-			text::statusOut(m8DevLCDidx, PSTR("Clock"));
+			if (v08(v8Timer0Status1Idx) & t0sbErrorRTC) text::statusOut(m8DevLCDidx, PSTR("RTC Failure"));
+			else text::statusOut(m8DevLCDidx, PSTR("Clock"));
 		case displayOutputIdx:
 			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputClockTime)), (v08(v8HeartbeatBitmaskIdx) & 0b01010101), 4, 0, 0);
 			break;
