@@ -88,10 +88,10 @@ static uint8_t parameterEdit::sharedFunctionCall(uint8_t cmd)
 	{
 
 		case nesLoadInitial:
-			SWEET64::runPrgm(prgmFetchParameterValue, parameterPtr);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), parameterPtr);
 
 		case nesLoadValue:
-			ull2str(pBuff, 3, prgmFormatToNumber);
+			ull2str(pBuff, 3, S64_PRGM_PTR(prgmFormatToNumber));
 #if defined(useButtonInput)
 			parameterEdit::findLeft();
 #endif // defined(useButtonInput)
@@ -268,7 +268,7 @@ static void parameterEdit::findRight(void)
 static void parameterEdit::readInitial(void)
 {
 
-	SWEET64::runPrgm(prgmFetchInitialParamValue, numberEditObj.parameterIdx);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchInitialParamValue), numberEditObj.parameterIdx);
 	sharedFunctionCall(nesLoadValue);
 
 }
@@ -276,7 +276,7 @@ static void parameterEdit::readInitial(void)
 static void parameterEdit::readMaxValue(void)
 {
 
-	SWEET64::runPrgm(prgmFetchMaximumParamValue, numberEditObj.parameterIdx);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), numberEditObj.parameterIdx);
 	sharedFunctionCall(nesLoadValue);
 
 }
@@ -333,7 +333,7 @@ static void parameterEdit::changeDigit(uint8_t digitDir)
 			pBuff[(uint16_t)(cp)] = w;
 
 			str2ull(pBuff); // convert parameter buffer string into uint64_t
-			w = (uint8_t)(SWEET64::runPrgm(prgmCompareWithMaximumParamValue, numberEditObj.parameterIdx));
+			w = (uint8_t)(SWEET64::runPrgm(S64_PRGM_PTR(prgmCompareWithMaximumParamValue), numberEditObj.parameterIdx));
 
 			if (w) switch (digitDir)
 			{
@@ -371,9 +371,9 @@ static void parameterEdit::save(void)
 		case 10:
 			str2ull(pBuff); // convert parameter buffer string into uint64_t
 #if defined(usePartialRefuel)
-			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
+			if (numberEditObj.parameterIdx == pRefuelSizeIdx) SWEET64::runPrgm(S64_PRGM_PTR(prgmAddToPartialRefuel), 0);
 #endif // defined(usePartialRefuel)
-			retVal = EEPROM::onChange(prgmWriteParameterValue, numberEditObj.parameterIdx); // go save parameter and do any required housekeeping
+			retVal = EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), numberEditObj.parameterIdx); // go save parameter and do any required housekeeping
 
 			cursor::screenLevelEntry(numberEditObj.neStatusMessage, retVal, numberEditObj.callingDisplayIdx);
 			break;

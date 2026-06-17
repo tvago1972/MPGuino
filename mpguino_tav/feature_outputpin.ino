@@ -179,7 +179,7 @@ static void outputPin::shutdown(void)
 static void outputPin::setOutputPin1(uint8_t pin)
 {
 
-	uint8_t val = SWEET64::runPrgm(prgmCalculateOutputPinValue, pin);
+	uint8_t val = SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateOutputPinValue), pin);
 
 #if defined(__AVR_ATmega32U4__)
 	OCR4A = val;
@@ -197,7 +197,7 @@ static void outputPin::setOutputPin1(uint8_t pin)
 static void outputPin::setOutputPin2(uint8_t pin)
 {
 
-	uint8_t val = SWEET64::runPrgm(prgmCalculateOutputPinValue, pin);
+	uint8_t val = SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateOutputPinValue), pin);
 
 #if defined(__AVR_ATmega32U4__)
 	OCR4D = val;

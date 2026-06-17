@@ -10,7 +10,229 @@
 
 */
 
-static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
+#if defined(useSWEET64RAMprograms)
+static uint8_t s64programRAM[256];
+static uint8_t s64programRAMoverrideIdx;
+static uint8_t s64programRAMoverrideAddr;
+static uint8_t s64programRAMoverrideFlags;
+static const uint8_t s64programRAMoverrideEnabled = 0x01;
+#endif // defined(useSWEET64RAMprograms)
+
+static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
+{
+
+	s64pc_t prgmPtr;
+	
+	prgmPtr.ptr = ptr;
+#if defined(useSWEET64RAMprograms)
+	prgmPtr.ram_ptr = 0;
+	prgmPtr.source = s64srcProgmem;
+#endif // defined(useSWEET64RAMprograms)
+
+	return prgmPtr;
+
+}
+
+#if defined(useSWEET64RAMprograms)
+static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
+{
+
+	s64pc_t prgmPtr;
+	
+	prgmPtr.ptr = 0;
+	prgmPtr.ram_ptr = ptr;
+	prgmPtr.source = s64srcRAM;
+
+	return prgmPtr;
+
+}
+
+static uint8_t SWEET64::readProgramRAM(uint8_t addr)
+{
+
+	return s64programRAM[(uint16_t)(addr)];
+
+}
+
+static void SWEET64::writeProgramRAM(uint8_t addr, uint8_t value)
+{
+
+	s64programRAM[(uint16_t)(addr)] = value;
+
+}
+
+static void SWEET64::fillProgramRAM(uint8_t value)
+{
+
+	for (uint16_t x = 0; x < sizeof(s64programRAM); x++) s64programRAM[x] = value;
+
+}
+
+static uint16_t SWEET64::getProgramRAMsize(void)
+{
+
+	return sizeof(s64programRAM);
+
+}
+
+static uint8_t * SWEET64::getProgramRAMaddress(uint8_t addr)
+{
+
+	return &s64programRAM[(uint16_t)(addr)];
+
+}
+
+static uint8_t SWEET64::getProgramRAMoffset(uint8_t * ptr)
+{
+
+	return (uint8_t)(ptr - s64programRAM);
+
+}
+
+static s64pc_t SWEET64::makeRAMprogram(uint8_t addr)
+{
+
+	return makeRAMprogram(getProgramRAMaddress(addr));
+
+}
+
+static void SWEET64::enableProgramRAMoverride(uint8_t prgmIdx, uint8_t ramAddr)
+{
+
+	s64programRAMoverrideIdx = prgmIdx;
+	s64programRAMoverrideAddr = ramAddr;
+	s64programRAMoverrideFlags |= s64programRAMoverrideEnabled;
+
+}
+
+static void SWEET64::disableProgramRAMoverride(void)
+{
+
+	s64programRAMoverrideFlags &= ~(s64programRAMoverrideEnabled);
+
+}
+
+static uint8_t SWEET64::isProgramRAMoverrideEnabled(void)
+{
+
+	return (s64programRAMoverrideFlags & s64programRAMoverrideEnabled);
+
+}
+
+static uint8_t SWEET64::getProgramRAMoverrideIndex(void)
+{
+
+	return s64programRAMoverrideIdx;
+
+}
+
+static uint8_t SWEET64::getProgramRAMoverrideAddress(void)
+{
+
+	return s64programRAMoverrideAddr;
+
+}
+
+#endif // defined(useSWEET64RAMprograms)
+static uint8_t SWEET64::isProgramValid(s64pc_t prgmPtr)
+{
+
+#if defined(useSWEET64RAMprograms)
+	switch (prgmPtr.source)
+	{
+
+		case s64srcProgmem:
+			return (prgmPtr.ptr != 0);
+
+		case s64srcRAM:
+			return (prgmPtr.ram_ptr != 0);
+
+		default:
+			return 0;
+
+	}
+#else // defined(useSWEET64RAMprograms)
+	return prgmPtr.ptr;
+#endif // defined(useSWEET64RAMprograms)
+
+}
+
+static uint8_t SWEET64::readProgramByte(s64pc_t &prgmPtr)
+{
+
+#if defined(useSWEET64RAMprograms)
+    if (prgmPtr.source == s64srcRAM) return *(prgmPtr.ram_ptr++);
+    else
+#endif
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return pgm_read_byte_far(prgmPtr.ptr++);
+#else
+	return pgm_read_byte(prgmPtr.ptr++);
+#endif
+
+}
+
+static s64pc_t SWEET64::getProgramPC(uint8_t prgmIdx)
+{
+
+#if defined(useSWEET64RAMprograms)
+	if ((s64programRAMoverrideFlags & s64programRAMoverrideEnabled) && (prgmIdx == s64programRAMoverrideIdx)) return makeRAMprogram(s64programRAMoverrideAddr);
+#endif // defined(useSWEET64RAMprograms)
+
+	return makeProgmemProgram(getProgramPointer(prgmIdx));
+
+}
+
+static s64prgm_ptr_t SWEET64::getProgramPointer(uint8_t prgmIdx)
+{
+
+	if (prgmIdx >= dfMaxValTotalCount) return 0;
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	switch (prgmIdx)
+	{
+#define S64_PROGRAM_CASE(idx, prgm) case idx: return (s64prgm_ptr_t)pgm_get_far_address(prgm);
+		S64_PROGRAM_ENTRIES(S64_PROGRAM_CASE)
+#undef S64_PROGRAM_CASE
+		default:
+			return 0;
+	}
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return (s64prgm_ptr_t)(pgm_read_word(&S64programList[(uint16_t)(prgmIdx)]));
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+}
+
+#if defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))
+static uint16_t SWEET64::getProgramLength(uint8_t prgmIdx)
+{
+
+	if (prgmIdx >= dfMaxValTotalCount) return 0;
+
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	switch (prgmIdx)
+	{
+#define S64_PROGRAM_LENGTH_CASE(idx, prgm) case idx: return sizeof(prgm);
+		S64_PROGRAM_ENTRIES(S64_PROGRAM_LENGTH_CASE)
+#undef S64_PROGRAM_LENGTH_CASE
+		default:
+			return 0;
+	}
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	return pgm_read_word(&S64programLengthList[(uint16_t)(prgmIdx)]);
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+}
+
+#endif // defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))
+static uint32_t SWEET64::runPrgm(s64prgm_ptr_t sched, uint8_t tripIdx)
+{
+
+	return runPrgm(makeProgmemProgram(sched), tripIdx);
+
+}
+
+static uint32_t SWEET64::runPrgm(s64pc_t sched, uint8_t tripIdx)
 {
 
 	uint32_t instrLWord;
@@ -28,16 +250,37 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 	s64reg8[(uint16_t)(si64reg8flags)] = 0; // initialize processor flags
 	s64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize stack pointer
 	s64reg8[(uint16_t)(si64reg8jump)] = 0; // initialize jump index register
+#if defined(useDebugTerminalSWEET64)
+	s64reg8[(uint16_t)(si64reg8error)] = s64errNone; // initialize error code
+#endif // defined(useDebugTerminalSWEET64)
 
 	do
 	{
 
 		fetchInstruction(iLW, sched, s64reg8); // decode instruction
 
-		if (s64reg8[(uint16_t)(si64reg8valid)]) executeInstruction(iLW, sched, s64stack, s64reg, s64reg8); // execute instruction
-#if defined(useDebugTerminal)
-		else terminal::dumpSWEET64information(iLW, sched, s64stack, s64reg, s64reg8); // invalid instruction encountered, output relevant information
-#endif // defined(useDebugTerminal)
+		if (s64reg8[(uint16_t)(si64reg8valid)])
+		{
+
+			executeInstruction(iLW, sched, s64stack, s64reg, s64reg8); // execute instruction
+#if defined(useDebugTerminalSWEET64)
+			if ((s64reg8[(uint16_t)(si64reg8valid)] == 0) && (s64reg8[(uint16_t)(si64reg8error)]))
+			{
+
+				terminal::reportSWEET64error(iLW, sched, s64stack, s64reg, s64reg8); // execution error encountered, output relevant information
+
+			}
+#endif // defined(useDebugTerminalSWEET64)
+
+		}
+#if defined(useDebugTerminalSWEET64)
+		else if (s64reg8[(uint16_t)(si64reg8error)])
+		{
+
+			terminal::reportSWEET64error(iLW, sched, s64stack, s64reg, s64reg8); // invalid instruction encountered, output relevant information
+
+		}
+#endif // defined(useDebugTerminalSWEET64)
 
 	}
 	while (s64reg8[(uint16_t)(si64reg8valid)]);
@@ -54,13 +297,25 @@ static uint32_t SWEET64::runPrgm(const uint8_t * sched, uint8_t tripIdx)
 
 }
 
-static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t * prgmReg8)
+static void SWEET64::fetchInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, uint8_t * prgmReg8)
 {
 
 	uint8_t isValid;
 	uint8_t reg;
 
-	if (prgmPtr) instrLWord->u08[0] = pgm_read_byte(prgmPtr++); // read opcode byte
+#if defined(useDebugTerminalSWEET64)
+	prgmReg8[(uint16_t)(si64reg8error)] = s64errNone;
+#endif // defined(useDebugTerminalSWEET64)
+	instrLWord->u32 = 0;
+
+	if (isProgramValid(prgmPtr)) instrLWord->u08[0] = readProgramByte(prgmPtr); // read opcode byte
+	else
+	{
+
+		setProgramError(prgmReg8, s64errBadProgramCounter);
+		return;
+
+	}
 
 	if (instrLWord->u08[0] < maxValidSWEET64instr) // if opcode byte is valid
 	{
@@ -82,13 +337,26 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 			case r01:	// fetch rX and rY from program
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if (((reg & 0x70) || (reg & 0x07)) && ((reg & 0x88) == 0)) s64operands[(uint16_t)(s64oprRegXY)] = reg; // ensure valid 64-bit register reference
-					else isValid = 0;
+					else
+					{
+
+						setProgramError(prgmReg8, s64errBadRegisterOperand);
+						return;
+
+					}
+
+				}
+				else
+				{
+
+					setProgramError(prgmReg8, s64errMissingRegisterOperand);
+					return;
 
 				}
 				break;
@@ -104,10 +372,10 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 			case r04:	// fetch rP and rS from program
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if (((reg & 0x70) || (reg & 0x07)) && ((reg & 0x88) == 0)) // ensure valid 64-bit register reference
 					{
@@ -116,7 +384,20 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 						s64operands[(uint16_t)(s64oprRegXY)] = reg;
 
 					}
-					else isValid = 0;
+					else
+					{
+
+						setProgramError(prgmReg8, s64errBadRegisterOperand);
+						return;
+
+					}
+
+				}
+				else
+				{
+
+					setProgramError(prgmReg8, s64errMissingRegisterOperand);
+					return;
 
 				}
 				break;
@@ -128,10 +409,10 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 			case r06:	// fetch rP from program, set rS = r5, and rX to r5
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if ((reg & 0x07) && ((reg & 0xF8) == 0)) // ensure valid 64-bit register reference
 					{
@@ -140,7 +421,20 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 						s64operands[(uint16_t)(s64oprRegXY)] = 0x05;
 
 					}
-					else isValid = 0;
+					else
+					{
+
+						setProgramError(prgmReg8, s64errBadRegisterOperand);
+						return;
+
+					}
+
+				}
+				else
+				{
+
+					setProgramError(prgmReg8, s64errMissingRegisterOperand);
+					return;
 
 				}
 				break;
@@ -148,10 +442,10 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 			case r07:	// fetch rX and rY from program, shift rY to rX if in metric mode, or throw rY away if in SAE mode
 				isValid |= (s64vReadInRegisterByte);
 
-				if (prgmPtr)
+				if (isProgramValid(prgmPtr))
 				{
 
-					reg = pgm_read_byte(prgmPtr++);
+					reg = readProgramByte(prgmPtr);
 
 					if ((reg & 0x77) && ((reg & 0x88) == 0)) // ensure valid 64-bit register reference
 					{
@@ -163,14 +457,27 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 						s64operands[(uint16_t)(s64oprRegXY)] = reg;
 
 					}
-					else isValid = 0;
+					else
+					{
+
+						setProgramError(prgmReg8, s64errBadRegisterOperand);
+						return;
+
+					}
+
+				}
+				else
+				{
+
+					setProgramError(prgmReg8, s64errMissingRegisterOperand);
+					return;
 
 				}
 				break;
 
 			default:	// invalid rxx code detected, exit program
-				isValid = 0;
-				break;
+				setProgramError(prgmReg8, s64errBadExpandedOpcode);
+				return;
 
 		}
 
@@ -196,7 +503,14 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 				case p01:	// load primary operand from program
 					isValid |= (s64vReadInOperandByte);
 
-					if (prgmPtr) s64operands[(uint16_t)(s64oprPrimary)] += pgm_read_byte(prgmPtr++);
+					if (isProgramValid(prgmPtr)) s64operands[(uint16_t)(s64oprPrimary)] += readProgramByte(prgmPtr);
+					else
+					{
+
+						setProgramError(prgmReg8, s64errMissingPrimaryOperand);
+						return;
+
+					}
 					break;
 
 				case p02:	// load primary operand from index
@@ -204,8 +518,8 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 					break;
 
 				default:	// invalid pxx code detected, exit program
-					isValid = 0;
-					break;
+					setProgramError(prgmReg8, s64errBadExpandedOpcode);
+					return;
 
 			}
 
@@ -224,7 +538,14 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 
 				case s01:	// fetch secondary operand from program
 					isValid |= (s64vReadInExtraByte);
-					if (prgmPtr) s64operands[(uint16_t)(s64oprExtra)] += pgm_read_byte(prgmPtr++);
+					if (isProgramValid(prgmPtr)) s64operands[(uint16_t)(s64oprExtra)] += readProgramByte(prgmPtr);
+					else
+					{
+
+						setProgramError(prgmReg8, s64errMissingExtraOperand);
+						return;
+
+					}
 					break;
 
 				case s02:	// fetch secondary operand from index
@@ -236,21 +557,41 @@ static void SWEET64::fetchInstruction(union union_32 * instrLWord, const uint8_t
 					break;
 
 				default:	// invalid sxx code detected, exit program
-					isValid = 0;
-					break;
+					setProgramError(prgmReg8, s64errBadExpandedOpcode);
+					return;
 
 			}
 
 		}
 
 	}
-	else isValid = 0; // otherwise, opcode byte is not valid
+	else
+	{
+
+		setProgramError(prgmReg8, s64errBadOpcode);
+		return;
+
+	}
 
 	prgmReg8[(uint16_t)(si64reg8valid)] = isValid;
 
 }
 
-static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+static void SWEET64::setProgramError(uint8_t * prgmReg8, uint8_t errorCode)
+{
+
+#if defined(useDebugTerminalSWEET64)
+	prgmReg8[(uint16_t)(si64reg8error)] = errorCode;
+#else // defined(useDebugTerminalSWEET64)
+	(void)errorCode;
+#endif // defined(useDebugTerminalSWEET64)
+	prgmReg8[(uint16_t)(si64reg8flags)] |= SWEET64errorFlag;
+	SWEET64processorFlags = prgmReg8[(uint16_t)(si64reg8flags)];
+	prgmReg8[(uint16_t)(si64reg8valid)] = 0;
+
+}
+
+static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
 {
 
 	uint8_t oldSREG;
@@ -315,6 +656,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 					default:
 						extra = 0;
+						setProgramError(prgmReg8, s64errBadOperand);
+						isValid = 0;
 						break;
 
 				}
@@ -356,6 +699,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 					default:
 						extra = 255;
+						setProgramError(prgmReg8, s64errBadOperand);
+						isValid = 0;
 						break;
 
 				}
@@ -380,7 +725,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 		}
 
-		switch (instrLWord->u08[2]) // perform load or store operation, according to ixx
+		if (isValid) switch (instrLWord->u08[2]) // perform load or store operation, according to ixx
 		{
 
 			case i00:	// do nothing
@@ -431,6 +776,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 						break;
 
 					default:
+						setProgramError(prgmReg8, s64errBadOperand);
+						isValid = 0;
 						break;
 
 				}
@@ -465,6 +812,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 						break;
 
 					default:
+						setProgramError(prgmReg8, s64errBadOperand);
+						isValid = 0;
 						break;
 
 				}
@@ -487,6 +836,8 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 						break;
 
 					default:
+						setProgramError(prgmReg8, s64errBadOperand);
+						isValid = 0;
 						break;
 
 				}
@@ -599,35 +950,91 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 #if defined(useMatrixMath)
 			case i20:	// load rX with element of Matrix X
-				copy64(regX, (union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)]);
+				if ((operand < 3) && (extra < 3)) copy64(regX, (union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)]);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i21:	// store Matrix X rX
-				copy64((union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+				if ((operand < 3) && (extra < 3)) copy64((union union_64 *)&matrix_x[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i22:	// load rX with element of Inverse Matrix
-				copy64(regX, (union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)]);
+				if ((operand < 3) && (extra < 3)) copy64(regX, (union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)]);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i23:	// store Inverse Matrix rX
-				copy64((union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+				if ((operand < 3) && (extra < 3)) copy64((union union_64 *)&matrix_r[(uint16_t)(operand)][(uint16_t)(extra)], regX);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i24:	// load rX with element of ExpData Matrix
-				copy64(regX, (union union_64 *)&matrix_e[(uint16_t)(extra)]);
+				if (extra < 3) copy64(regX, (union union_64 *)&matrix_e[(uint16_t)(extra)]);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i25:	// store ExpData Matrix rX
-				copy64((union union_64 *)&matrix_e[(uint16_t)(extra)], regX);
+				if (extra < 3) copy64((union union_64 *)&matrix_e[(uint16_t)(extra)], regX);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i26:	// load rX with element of Coefficient Matrix
-				copy64(regX, (union union_64 *)&matrix_c[(uint16_t)(extra)]);
+				if (extra < 3) copy64(regX, (union union_64 *)&matrix_c[(uint16_t)(extra)]);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 			case i27:	// store Coefficient Matrix rX
-				copy64((union union_64 *)&matrix_c[(uint16_t)(extra)], regX);
+				if (extra < 3) copy64((union union_64 *)&matrix_c[(uint16_t)(extra)], regX);
+				else
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+
+				}
 				break;
 
 #endif // defined(useMatrixMath)
@@ -657,6 +1064,15 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				break;
 
 			case i31:	// BCD adjust
+				if (operand >= bcdFormatCount)
+				{
+
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
+					break;
+
+				}
+
 				s64BCDptr = s64BCDformatList;
 
 				while (operand)
@@ -692,6 +1108,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				break;
 
 			default:	// invalid ixx code detected, exit program
+				setProgramError(prgmReg8, s64errBadExpandedOpcode);
 				isValid = 0;
 				break;
 
@@ -699,7 +1116,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 		if (branchFlag) SREG = oldSREG; // restore interrupt flag status
 
-		switch (instrLWord->u08[3]) // perform basic arithmetic operation, given mxx
+		if (isValid) switch (instrLWord->u08[3]) // perform basic arithmetic operation, given mxx
 		{
 
 			case m00:	// non-arithmetic
@@ -750,6 +1167,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 				break;
 
 			default:	// invalid mxx opcode detected, exit program
+				setProgramError(prgmReg8, s64errBadExpandedOpcode);
 				isValid = 0;
 				break;
 
@@ -831,13 +1249,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 			}
 
-			if (branchFlag)
-			{
-
-				if (extra < 128) prgmPtr += extra;
-				else prgmPtr -= (256 - extra);
-
-			}
+			if (branchFlag) addProgramOffset(prgmPtr, extra);
 
 		}
 		else // instruction is not a conditional branching instruction
@@ -909,10 +1321,17 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					break;
 
 				case e27:	// call
+					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15)
+					{
+
+						setProgramError(prgmReg8, s64errStackOverflow);
+						isValid = 0;
+						break;
+
+					}
 					prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
-					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15) isValid = 0;
 				case e28:	// jump
-					prgmPtr = (const uint8_t *)pgm_read_word(&S64programList[(uint16_t)(extra)]);
+					prgmPtr = getProgramPC(extra);
 					break;
 
 				case e29:	// load jump register
@@ -925,6 +1344,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 					break;
 
 				default:	// invalid sxx code detected, exit program
+					setProgramError(prgmReg8, s64errBadExpandedOpcode);
 					isValid = 0;
 					break;
 
@@ -956,6 +1376,25 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, const uint8
 
 	prgmReg8[(uint16_t)(si64reg8valid)] = isValid;
 	prgmReg8[(uint16_t)(si64reg8flags)] = SWEET64processorFlags;
+
+}
+
+static void SWEET64::addProgramOffset(s64pc_t &prgmPtr, uint8_t offset)
+{
+
+
+#if defined(useSWEET64RAMprograms)
+    if (prgmPtr.source == s64srcRAM)
+	{
+
+		if (offset < 128) prgmPtr.ram_ptr += offset;
+		else prgmPtr.ram_ptr -= (256 - offset);
+
+	}
+    else
+#endif
+	if (offset < 128) prgmPtr.ptr += offset;
+	else prgmPtr.ptr -= (256 - offset);
 
 }
 

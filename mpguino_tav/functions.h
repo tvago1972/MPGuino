@@ -310,7 +310,7 @@ static const uint8_t prgmVSStotalTime[] PROGMEM = {		// tVSStotalTime - time veh
 	instrJump, tConvertToMilliSeconds					// go convert timer0 cycles to milliseconds
 };
 
-static const uint8_t prgmConvertToMicroSeconds[] PROGMEM = {	// tConvertToMilliSeconds - convert value in timer0 cycles to decimal formatted milliseconds
+static const uint8_t prgmConvertToMilliSeconds[] PROGMEM = {	// tConvertToMilliSeconds - convert value in timer0 cycles to decimal formatted milliseconds
 	instrMul2byRdOnly, idxMicroSecondsPerSecond,		// multiply by conversion factor for microseconds per second (also milliseconds per second times decimal formatting factor)
 	instrDiv2byRdOnly, idxCycles0PerSecond,				// divide by conversion factor for cycles to seconds
 	instrDone											// exit to caller
@@ -993,105 +993,190 @@ static const uint8_t prgmAccelTestTime[] PROGMEM = {
 };
 
 #endif // defined(useDragRaceFunction)
-static const uint8_t * const S64programList[] PROGMEM = {
 // this is the start of the SWEET64 display function list
-	prgmEngineRunTime,							// tEngineRunTime - engine runtime (H9mmSS)
-	prgmRangeTime,								// tRangeTime - estimated total runtime from full tank (H9mmSS)
-	prgmReserveTime,							// tReserveTime - estimated reserve runtime from full tank (H9mmSS)
-	prgmBingoTime,								// tBingoTime - estimated bingo fuel runtime from full tank (H9mmSS)
-	prgmTimeToEmpty,							// tTimeToEmpty - estimated remaining engine runtime (H9mmSS)
-	prgmReserveTimeToEmpty,						// tReserveTimeToEmpty - estimated remaining reserve engine runtime (H9mmSS)
-	prgmBingoTimeToEmpty,						// tBingoTimeToEmpty - estimated bingo fuel quantity engine runtime (H9mmSS)
-	prgmMotionTime,								// tMotionTime - time vehicle in motion (H9mmSS)
-	prgmInjectorOpenTime,						// tInjectorOpenTime - fuel used (milliseconds)
-	prgmInjectorTotalTime,						// tInjectorTotalTime - engine run time (milliseconds)
-	prgmVSStotalTime,							// tVSStotalTime - time vehicle in motion (milliseconds)
-	prgmEngineSpeed,							// tEngineSpeed - engine speed (1/m)
-	prgmInjectorPulseCount,						// tInjectorPulseCount - fuel injector pulse count
-	prgmVSSpulseEdgeCount,						// tVSSpulseEdgeCount - VSS pulse edge count
-	prgmDistance,								// tDistance - vehicle distance traveled (SI/SAE)
-	prgmSpeed,									// tSpeed - vehicle speed (SI/SAE)
-	prgmFuelUsed,								// tFuelUsed - fuel quantity used (SI/SAE)
-	prgmFuelRate,								// tFuelRate - fuel consumption rate (SI/SAE)
-	prgmFuelEcon,								// tFuelEcon - fuel economy (SI/SAE)
-	prgmRangeDistance,							// tRangeDistance - estimated total distance on a full tank (SI/SAE)
-	prgmReserveDistance,						// tReserveDistance - estimated reserve fuel tank distance (SI/SAE)
-	prgmBingoDistance,							// tBingoDistance - estimated bingo fuel tank distance (SI/SAE)
-	prgmDistanceToEmpty,						// tDistanceToEmpty - estimated remaining distance (SI/SAE)
-	prgmReserveDistanceToEmpty,					// tReserveDistanceToEmpty - estimated reserve remaining distance (SI/SAE)
-	prgmBingoDistanceToEmpty,					// tBingoDistanceToEmpty - estimated bingo remaining distance (SI/SAE)
+#define S64_PROGRAM_BASE_ENTRIES(X) \
+	X(tEngineRunTime, prgmEngineRunTime) \
+	X(tRangeTime, prgmRangeTime) \
+	X(tReserveTime, prgmReserveTime) \
+	X(tBingoTime, prgmBingoTime) \
+	X(tTimeToEmpty, prgmTimeToEmpty) \
+	X(tReserveTimeToEmpty, prgmReserveTimeToEmpty) \
+	X(tBingoTimeToEmpty, prgmBingoTimeToEmpty) \
+	X(tMotionTime, prgmMotionTime) \
+	X(tInjectorOpenTime, prgmInjectorOpenTime) \
+	X(tInjectorTotalTime, prgmInjectorTotalTime) \
+	X(tVSStotalTime, prgmVSStotalTime) \
+	X(tEngineSpeed, prgmEngineSpeed) \
+	X(tInjectorPulseCount, prgmInjectorPulseCount) \
+	X(tVSSpulseEdgeCount, prgmVSSpulseEdgeCount) \
+	X(tDistance, prgmDistance) \
+	X(tSpeed, prgmSpeed) \
+	X(tFuelUsed, prgmFuelUsed) \
+	X(tFuelRate, prgmFuelRate) \
+	X(tFuelEcon, prgmFuelEcon) \
+	X(tRangeDistance, prgmRangeDistance) \
+	X(tReserveDistance, prgmReserveDistance) \
+	X(tBingoDistance, prgmBingoDistance) \
+	X(tDistanceToEmpty, prgmDistanceToEmpty) \
+	X(tReserveDistanceToEmpty, prgmReserveDistanceToEmpty) \
+	X(tBingoDistanceToEmpty, prgmBingoDistanceToEmpty)
+
 #if defined(useFuelCost)
-	prgmFuelCostUsed,							// tFuelCostUsed - cost of fuel quantity used
-	prgmFuelRateCost,							// tFuelRateCost - fuel rate cost in currency units
-	prgmFuelCostPerDistance,					// tFuelCostPerDistance - fuel cost per unit distance (SI/SAE)
-	prgmDistancePerFuelCost,					// tDistancePerFuelCost - distance per unit fuel cost (SI/SAE)
+#define S64_PROGRAM_FUEL_COST_ENTRIES(X) \
+    X(tFuelCostUsed, prgmFuelCostUsed) \
+    X(tFuelRateCost, prgmFuelRateCost) \
+    X(tFuelCostPerDistance, prgmFuelCostPerDistance) \
+    X(tDistancePerFuelCost, prgmDistancePerFuelCost)
+	
+#else // defined(useFuelCost)
+#define S64_PROGRAM_FUEL_COST_ENTRIES(X)
 #endif // defined(useFuelCost)
+
 #if defined(useDragRaceFunction)
-	prgmAccelTestTime,							// tAccelTestTime - acceleration test time (sec)
+#define S64_PROGRAM_DRAG_RACE_ENTRIES(X) \
+    X(tAccelTestTime, prgmAccelTestTime)
+#else // defined(useDragRaceFunction)
+#define S64_PROGRAM_DRAG_RACE_ENTRIES(X)
 #endif // defined(useDragRaceFunction)
 
 // this is the start of the SWEET64 display function list for those programs which do not require a trip index
-	prgmFuelQuantity,							// tFuelQuantity - tank total fuel quantity (SI/SAE)
-	prgmReserveQuantity,						// tReserveQuantity - tank reserve fuel quantity (SI/SAE)
-	prgmBingoQuantity,							// tBingoQuantity - tank bingo fuel quantity (SI/SAE)
-	prgmRemainingFuel,							// tRemainingFuel - estimated remaining fuel quantity (SI/SAE)
-	prgmReserveRemainingFuel,					// tReserveRemainingFuel - estimated remaining reserve fuel quantity (SI/SAE)
-	prgmBingoRemainingFuel,						// tBingoRemainingFuel - estimated bingo fuel quantity remaining (SI/SAE)
+#define S64_DISPLAY_FUNCTION_BASE_ENTRIES(X) \
+	X(tFuelQuantity, prgmFuelQuantity) \
+	X(tReserveQuantity, prgmReserveQuantity) \
+	X(tBingoQuantity, prgmBingoQuantity) \
+	X(tRemainingFuel, prgmRemainingFuel) \
+	X(tReserveRemainingFuel, prgmReserveRemainingFuel) \
+	X(tBingoRemainingFuel, prgmBingoRemainingFuel)
+
 #if defined(useDebugAnalog)
-	prgmAnalogChannel,							// tAnalogChannel - DC voltage
+#define S64_FUNCTION_DEBUG_ANALOG_ENTRIES(X) \
+	X(tAnalogChannel, prgmAnalogChannel)
+#else // defined(useDebugAnalog)
+#define S64_FUNCTION_DEBUG_ANALOG_ENTRIES(X)
 #endif // defined(useDebugAnalog)
+
 #if defined(useAlternatorVoltage)
-	prgmAlternatorChannel,						// tAlternatorChannel - DC voltage
+#define S64_FUNCTION_ALTERNATOR_ENTRIES(X) \
+	X(tAlternatorChannel, prgmAlternatorChannel)
+#else // defined(useAlternatorVoltage)
+#define S64_FUNCTION_ALTERNATOR_ENTRIES(X)
 #endif // defined(useAlternatorVoltage)
+
 #if defined(useChryslerMAPCorrection)
-	prgmPressureChannel,						// tPressureChannel - absolute pressure (SI/SAE)
+#define S64_FUNCTION_CHRYSLER_MAP_ENTRIES(X) \
+	X(tPressureChannel, prgmPressureChannel)
+#else // defined(useChryslerMAPCorrection)
+#define S64_FUNCTION_CHRYSLER_MAP_ENTRIES(X)
 #endif // defined(useChryslerMAPCorrection)
+
 #if defined(useFuelCost)
-	prgmFuelCostTank,							// tFuelCostTank - full tank fuel cost in currency units
-	prgmFuelCostReserve,						// tFuelCostReserve - reserve fuel quantity fuel cost in currency units
-	prgmFuelCostBingo,							// tFuelCostBingo - bingo fuel quantity cost in currency units
-	prgmFuelCostRemaining,						// tFuelCostRemaining - value of estimated remaining total fuel quantity in currency units
-	prgmFuelCostReserveRemaining,				// tFuelCostReserveRemaining - value of estimated remaining reserve fuel quantity in currency units
-	prgmFuelCostBingoRemaining,					// tFuelCostBingoRemaining - value of estimated remaining bingo fuel quantity in currency units
+#define S64_FUNCTION_FUEL_COST_ENTRIES(X) \
+	X(tFuelCostTank, prgmFuelCostTank) \
+	X(tFuelCostReserve, prgmFuelCostReserve) \
+	X(tFuelCostBingo, prgmFuelCostBingo) \
+	X(tFuelCostRemaining, prgmFuelCostRemaining) \
+	X(tFuelCostReserveRemaining, prgmFuelCostReserveRemaining) \
+	X(tFuelCostBingoRemaining, prgmFuelCostBingoRemaining)
+#else // defined(useFuelCost)
+#define S64_FUNCTION_FUEL_COST_ENTRIES(X)
 #endif // defined(useFuelCost)
+
 #if defined(useDragRaceFunction)
-	prgmEstimatedEnginePower,					// tEstimatedEnginePower - estimated engine power (SI/SAE)
-	prgmDragSpeed,								// tDragSpeed - acceleration test maximum vehicle speed (SI/SAE)
-	prgmTrapSpeed,								// tTrapSpeed - acceleration test vehicle speed at defined distance (SI/SAE)
+#define S64_FUNCTION_DRAG_RACE_ENTRIES(X) \
+	X(tEstimatedEnginePower, prgmEstimatedEnginePower) \
+	X(tDragSpeed, prgmDragSpeed) \
+	X(tTrapSpeed, prgmTrapSpeed)
+#else // defined(useDragRaceFunction)
+#define S64_FUNCTION_DRAG_RACE_ENTRIES(X)
 #endif // defined(useDragRaceFunction)
 
 // this is the start of the SWEET64 function list for useful functions that do not get displayed
 #if defined(useBluetooth)
-	prgmGetBTparameterValue,					// tGetBTparameterValue
-	prgmGetProgramVariableValue,				// tGetProgramVariableValue
+#define S64_INTERNAL_BLUETOOTH_ENTRIES(X) \
+	X(tGetBTparameterValue, prgmGetBTparameterValue) \
+	X(tGetProgramVariableValue, prgmGetProgramVariableValue)
+#else // defined(useBluetooth)
+#define S64_INTERNAL_BLUETOOTH_ENTRIES(X)
 #endif // defined(useBluetooth)
 
 // this is the start of the internal SWEET64 index program address list
-	prgmCalculateRemainingTank,					// tCalculateRemainingTank - calculate estimated remaining fuel quantity in injector open cycles
-	prgmCalculateRemainingReserve,				// tCalculateRemainingReserve - calculate estimated remaining fuel reserve value in injector open cycles
-	prgmCalculateBingoFuel,						// tCalculateBingoFuel - calculate estimated fuel bingo value in injector open cycles
-	prgmConvertToMicroSeconds,					// tConvertToMilliSeconds - convert value in timer0 cycles to decimal formatted milliseconds
-	prgmCalculateFuelQuantity,					// tCalculateFuelQuantity - convert fuel quantity in timer0 cycles to unit liquid quantity
-	prgmCalculateFuelDistance,					// tCalculateFuelDistance
-	prgmCalculateFuelTime,						// tCalculateFuelTime
-	prgmCalculateSpeed,							// tCalculateSpeed
-	prgmFormatToNumber,							// tFormatToNumber
-	prgmLoadTrip,								// tLoadTrip
-	prgmSaveTrip,								// tSaveTrip
+#define S64_INTERNAL_BASE_ENTRIES(X) \
+	X(tCalculateRemainingTank, prgmCalculateRemainingTank) \
+	X(tCalculateRemainingReserve, prgmCalculateRemainingReserve) \
+	X(tCalculateBingoFuel, prgmCalculateBingoFuel) \
+	X(tConvertToMilliSeconds, prgmConvertToMilliSeconds) \
+	X(tCalculateFuelQuantity, prgmCalculateFuelQuantity) \
+	X(tCalculateFuelDistance, prgmCalculateFuelDistance) \
+	X(tCalculateFuelTime, prgmCalculateFuelTime) \
+	X(tCalculateSpeed, prgmCalculateSpeed) \
+	X(tFormatToNumber, prgmFormatToNumber) \
+	X(tLoadTrip, prgmLoadTrip) \
+	X(tSaveTrip, prgmSaveTrip)
+
 #if defined(useBarFuelEconVsTime)
-	prgmFEvTgetDistance,						// tFEvTgetDistance
-	prgmFEvTgetConsumedFuel,					// tFEvTgetConsumedFuel
-	prgmFEvTgetFuelEconomy,						// tFEvTgetFuelEconomy
+#define S64_INTERNAL_BFEVT_ENTRIES(X) \
+	X(tFEvTgetDistance, prgmFEvTgetDistance) \
+	X(tFEvTgetConsumedFuel, prgmFEvTgetConsumedFuel) \
+	X(tFEvTgetFuelEconomy, prgmFEvTgetFuelEconomy)
+#else // defined(useBarFuelEconVsTime)
+#define S64_INTERNAL_BFEVT_ENTRIES(X)
 #endif // defined(useBarFuelEconVsTime)
+
 #if defined(useBarFuelEconVsSpeed)
-	prgmFEvSgetDistance,						// tFEvSgetDistance
-	prgmFEvSgetConsumedFuel,					// tFEvSgetConsumedFuel
-	prgmFEvSgetFuelEconomy,						// tFEvSgetFuelEconomy
+#define S64_INTERNAL_BFEVS_ENTRIES(X) \
+	X(tFEvSgetDistance, prgmFEvSgetDistance) \
+	X(tFEvSgetConsumedFuel, prgmFEvSgetConsumedFuel) \
+	X(tFEvSgetFuelEconomy, prgmFEvSgetFuelEconomy)
+#else // defined(useBarFuelEconVsSpeed)
+#define S64_INTERNAL_BFEVS_ENTRIES(X)
 #endif // defined(useBarFuelEconVsSpeed)
+
 #if defined(useDebugTerminal)
-	prgmParseCharacterToReg,					// tParseCharacterToReg
+#define S64_INTERNAL_DEBUG_ENTRIES(X) \
+	X(tParseCharacterToReg, prgmParseCharacterToReg)
+#else // defined(useDebugTerminal)
+#define S64_INTERNAL_DEBUG_ENTRIES(X)
 #endif //defined(useDebugTerminal)
+
+#define S64_PROGRAM_ENTRIES(X) \
+    S64_PROGRAM_BASE_ENTRIES(X) \
+    S64_PROGRAM_FUEL_COST_ENTRIES(X) \
+	S64_PROGRAM_DRAG_RACE_ENTRIES(X) \
+	S64_DISPLAY_FUNCTION_BASE_ENTRIES(X) \
+	S64_FUNCTION_DEBUG_ANALOG_ENTRIES(X) \
+	S64_FUNCTION_ALTERNATOR_ENTRIES(X) \
+	S64_FUNCTION_CHRYSLER_MAP_ENTRIES(X) \
+	S64_FUNCTION_FUEL_COST_ENTRIES(X) \
+	S64_FUNCTION_DRAG_RACE_ENTRIES(X) \
+	S64_INTERNAL_BLUETOOTH_ENTRIES(X) \
+	S64_INTERNAL_BASE_ENTRIES(X) \
+	S64_INTERNAL_BFEVT_ENTRIES(X) \
+	S64_INTERNAL_BFEVS_ENTRIES(X) \
+	S64_INTERNAL_DEBUG_ENTRIES(X)
+
+#if !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+
+#define S64_PROGRAM_TABLE_ENTRY(idx, prgm) prgm,
+
+static s64prgm_ptr_t const S64programList[] PROGMEM = {
+	S64_PROGRAM_ENTRIES(S64_PROGRAM_TABLE_ENTRY)
 };
+
+#undef S64_PROGRAM_TABLE_ENTRY
+
+#endif // !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+
+#if (defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
+
+#define S64_PROGRAM_LENGTH_TABLE_ENTRY(idx, prgm) sizeof(prgm),
+
+static const uint16_t S64programLengthList[] PROGMEM = {
+	S64_PROGRAM_ENTRIES(S64_PROGRAM_LENGTH_TABLE_ENTRY)
+};
+
+#undef S64_PROGRAM_LENGTH_TABLE_ENTRY
+
+#endif // (defined(useSWEET64RAMprograms) || (defined(useDebugTerminalSWEET64) && defined(useDebugTerminalLabels))) && !(defined(__AVR__) && defined(__AVR_3_BYTE_PC__))
 
 // trip functions are grouped into three categories, in order
 //

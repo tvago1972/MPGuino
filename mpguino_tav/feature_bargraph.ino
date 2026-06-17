@@ -242,7 +242,7 @@ static void barGraphSupport::graphData(uint8_t cursorPos, uint8_t calcIdx, uint8
 	uint8_t blinkFlag;
 	uint8_t fl;
 
-	SWEET64::runPrgm(prgmGenerateHistographData, calcIdx);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmGenerateHistographData), calcIdx);
 
 	rollSum = 0;
 	yStart = 0;

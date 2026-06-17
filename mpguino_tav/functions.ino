@@ -79,12 +79,16 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 #endif // defined(useDebugTerminal) || defined(useJSONoutput)
 
 		// perform calculation
-		mainCalcFuncVar.value = SWEET64::runPrgm((const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(mainCalcFuncVar.calcIdx)])), mainCalcFuncVar.tripIdx);
+#if defined(useSWEET64RAMprograms)
+		mainCalcFuncVar.value = SWEET64::runPrgm(SWEET64::getProgramPC(mainCalcFuncVar.calcIdx), mainCalcFuncVar.tripIdx);
+#else // defined(useSWEET64RAMprograms)
+		mainCalcFuncVar.value = SWEET64::runPrgm(SWEET64::getProgramPointer(mainCalcFuncVar.calcIdx), mainCalcFuncVar.tripIdx);
+#endif // defined(useSWEET64RAMprograms)
 
 		if (mainCalcFuncVar.calcFmtIdx == calcFormatTimeH9mmSSIdx)
 		{
 
-			ull2str(nBuff, 0, prgmFormatToH9MMSStime);
+			ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToH9MMSStime));
 
 			if (windowLength > 6)
 			{

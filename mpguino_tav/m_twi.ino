@@ -1,4 +1,4 @@
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 /* Two-Wire Interface support */
 
 ISR( TWI_vect )
@@ -311,7 +311,7 @@ static void TWImain::transmit(uint8_t sendStop) // this is in main program conte
 
 }
 
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useMCP23017portExpander)
 // initialize MCP23017 port expander to a known initial state
 void MCP23017portExpanderSupport::init(void)

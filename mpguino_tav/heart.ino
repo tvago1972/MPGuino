@@ -104,17 +104,19 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 			v32(v32ClockCycleIdx) = 0;
 
 #endif // defined(useSoftwareClock)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 		// update clockcycles - if clockcycles goes past two times day length in timer0 ticks, roll back to day length in timer0 ticks
 		if ((++v32(v32ClockCycleIdx)) >= (2 * t0TicksPerDay))
 		{
 
 			v32(v32ClockCycleIdx) = t0TicksPerDay;
+#if defined(useTWIrtcModule)
 			internalFlags |= (internalReadTWIrtc);
+#endif // defined(useTWIrtcModule)
 
 		}
 
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 	}
 
 #if defined(useOutputPins)
@@ -535,16 +537,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useCoastDownCalculator)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 	if (v08(v8Timer0CommandIdx) & t0cReadRTC)
 	{
 
 		v08(v8Timer0CommandIdx) &= ~(t0cReadRTC); // acknowledge RTC read request
+#if defined(useTWIrtcModule)
 		internalFlags |= (internalReadTWIrtc); // generate TWI RTC read request
+#endif // defined(useTWIrtcModule)
 
 	}
 
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 #if defined(useTWIbuttons) || defined(useAnalogButtons)
 	if (v08(v8ButtonStatusIdx) & btnCmdEnableSampling)
 	{
@@ -604,17 +608,22 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 					v08(v8TWIstatusIdx) &= ~(twiInterruptInUse);
 					break;
 
-#if defined(useDS1307clock)
+#if defined(useTWIrtcModule)
 				case 10:
+					v08(v8Timer0Status1Idx) &= ~(t0sbReadRTC | t0sbErrorRTC);
+
+#if defined(useDS1307clock)
 					for (uint8_t x = 0; x < TWIsampleLength; x++) v08(v8RTCsecondIdx + x) = twiDataBuffer[(uint16_t)(x)];
 
 					// if the RTC clock is not halted, notify main program that RTC time has been read in
-					if ((v08(v8RTCsecondIdx) & 0x80) == 0) v08(v8Timer0Status1Idx) |= (t0sbReadRTC);
+					if (v08(v8RTCsecondIdx) & 0x80) v08(v8Timer0Status1Idx) |= (t0sbErrorRTC);
+					else v08(v8Timer0Status1Idx) |= (t0sbReadRTC);
 
+#endif // defined(useDS1307clock)
 					v08(v8TWIstatusIdx) &= ~(twiInterruptInUse);
 					break;
 
-#endif // defined(useDS1307clock)
+#endif // defined(useTWIrtcModule)
 #if defined(useTWIbuttons)
 				case 20:
 					if (v08(v8ButtonStatusIdx) & btnCmdEnableSampling)
@@ -638,24 +647,24 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 		if ((v08(v8TWIstatusIdx) & twiInUse) == 0) // wait for TWI to be closed and allow ISR activity
 		{
 
+#if defined(useTWIrtcModule)
 			if (internalFlags & internalReadTWIrtc)
 			{
 
 				internalFlags &= ~(internalReadTWIrtc); // acknowledge TWI RTC read request
 
-#if defined(useDS1307clock)
 				TWIsampleAddress = TWIaddressRTC; // specify TWI RTC clock device address
+#if defined(useDS1307clock)
 				TWIsampleLength = 8; // set up to read in all date and time bytes, and RTC status byte
 				TWIsampleRegister = 0; // specify RTC seconds register
+#endif // defined(useDS1307clock)
 				TWIsampleState = 1; // next state is to write out RTC register address request
 				nextTWIsampleState = 10; // final state is to process the TWI port input as RTC input data
 
-#else // defined(useDS1307clock)
-				TWIsampleState = 0;
-
-#endif // defined(useDS1307clock)
 			}
-			else if (internalFlags & internalReadTWIbutton)
+			else
+#endif // defined(useTWIrtcModule)
+			if (internalFlags & internalReadTWIbutton)
 			{
 
 				internalFlags &= ~(internalReadTWIbutton); // acknowledge TWI button read request
@@ -2162,13 +2171,13 @@ static void heart::initHardware(void)
 	ringBuffer::init();
 
 #endif // defined(useBuffering)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	TWI::init();
 #if defined(useMCP23017portExpander)
 	MCP23017portExpanderSupport::init(); // go init MCP23017 port expander
 #endif // defined(useMCP23017portExpander)
 
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
 	serial0::init();
 #endif // defined(useSerial0Port)
@@ -2208,10 +2217,10 @@ static void heart::initHardware(void)
 #if defined(useOutputPins)
 	outputPin::init();
 #endif // defined(useOutputPins)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 
 	changeBitFlagBits(v8Timer0CommandIdx, 0, t0cReadRTC); // tell timer0 to read RTC
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 
 }
 
@@ -2438,9 +2447,9 @@ static void heart::doGoDeepSleep(void)
 #if defined(useSerial0Port)
 	serial0::shutdown();
 #endif // defined(useSerial0Port)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	TWI::shutdown();
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 
 #if defined(useTimer1)
 #if defined(useTimer1Interrupt)

@@ -153,8 +153,8 @@ void coastdown::goDisplay(void)
 
 		i = displayCursor[(uint16_t)(coastdownIdx)] + pCoefficientDidx;
 
-		SWEET64::runPrgm(prgmFetchParameterValue, i);
-		ull2str(nBuff, 0, prgmFormatToNumber);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), i);
+		ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber));
 
 		text::stringOut(m8DevLCDidx, parmLabels, i); // print parameter name at top left
 		text::numberOut(m8DevLCDidx, 0);

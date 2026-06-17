@@ -172,13 +172,13 @@ static const uint8_t analogChannelValue[(uint16_t)(v16AnalogLength)] PROGMEM = {
 	,(1 << REFS0)|													(1 << MUX1)|	(1 << MUX0)	// 2 PF3 A3
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 3 ground
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 4 ground
-#else // defined(useTWIsupport)
+#else // defined(useHardwareTWI)
 	,(1 << REFS0)|									(1 << MUX2)									// 3 PF4 A4
 	,(1 << REFS0)|									(1 << MUX2)|					(1 << MUX0)	// 4 PF5 A5
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 5 ground
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 6 ground
 #endif // defined(__AVR_ATmega2560__)
@@ -212,13 +212,13 @@ static const uint8_t analogChannelValue[(uint16_t)(v16AnalogLength)] PROGMEM = {
 	,(1 << REFS0)|													(1 << MUX1)|	(1 << MUX0)	// 2 PC3 A3
 #endif // defined(useAnalogButtons)
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useTWIsupport)
+#if defined(useHardwareTWI)
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0) // 3 ground
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 4 ground
-#else // defined(useTWIsupport)
+#else // defined(useHardwareTWI)
 	,(1 << REFS0)|									(1 << MUX2)									// 3 PC4 A4
 	,(1 << REFS0)|									(1 << MUX2)|					(1 << MUX0)	// 4 PC5 A5
-#endif // defined(useTWIsupport)
+#endif // defined(useHardwareTWI)
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 5 ground
 	,(1 << REFS0)|					(1 << MUX3)|	(1 << MUX2)|	(1 << MUX1)|	(1 << MUX0)	// 6 ground
 #endif // defined(__AVR_ATmega328P__)

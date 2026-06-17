@@ -28,7 +28,7 @@ static uint8_t clockSet::displayHandler(uint8_t cmd, uint8_t cursorPos)
 	{
 
 		case displayInitialEntryIdx:
-			ull2str(csBuff, 0, prgmOutputClockTime);
+			ull2str(csBuff, 0, S64_PRGM_PTR(prgmOutputClockTime));
 		case displayCursorUpdateIdx:
 		case displayOutputIdx:
 			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), csBuff, (v08(v8Timer0Status0Idx) & t0saShowCursor), cursorPos, 0, 0);
@@ -76,9 +76,9 @@ static void clockSet::set(void)
 
 	uint8_t b;
 	uint8_t v;
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 	uint8_t oldSREG;
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 
 	csBuff[4] = '0'; // set seconds to zero
 	csBuff[5] = '0';
@@ -97,7 +97,7 @@ static void clockSet::set(void)
 
 	}
 
-	SWEET64::runPrgm(prgmSetClock, 0); // convert time value into timer0 clock cycles
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmSetClock), 0); // convert time value into timer0 clock cycles
 
 #endif // defined(useSoftwareClock)
 #if defined(useDS1307clock)
@@ -142,7 +142,7 @@ static void clockSet::cancel(void)
 }
 
 #endif // defined(useClockDisplay)
-#if defined(useDS1307clock)
+#if defined(useRealTimeClockModule)
 static void clockSet::setFromRTC(void)
 {
 
@@ -150,6 +150,7 @@ static void clockSet::setFromRTC(void)
 	uint8_t c;
 	uint8_t oldSREG;
 
+#if defined(useDS1307clock)
 	for (uint8_t x = 0; x < 3; x++)
 	{
 
@@ -169,12 +170,13 @@ static void clockSet::setFromRTC(void)
 		m08(x + m8SecondIdx) = b + c; // store natural value of time
 
 	}
+#endif // defined(useDS1307clock)
 
-	SWEET64::runPrgm(prgmSetClock, 0); // convert time value into timer0 clock cycles
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmSetClock), 0); // convert time value into timer0 clock cycles
 
 }
 
-#endif // defined(useDS1307clock)
+#endif // defined(useRealTimeClockModule)
 #endif // defined(useClockSupport)
 #if defined(useClockDisplay)
  /* Big Clock Display support section */
@@ -192,9 +194,10 @@ static uint8_t clockDisplay::displayHandler(uint8_t cmd, uint8_t cursorPos)
 			LCD::flushCGRAM();
 
 		case displayCursorUpdateIdx:
-			text::statusOut(m8DevLCDidx, PSTR("Clock"));
+			if (v08(v8Timer0Status1Idx) & t0sbErrorRTC) text::statusOut(m8DevLCDidx, PSTR("RTC Failure"));
+			else text::statusOut(m8DevLCDidx, PSTR("Clock"));
 		case displayOutputIdx:
-			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, 0, prgmOutputClockTime), (v08(v8HeartbeatBitmaskIdx) & 0b01010101), 4, 0, 0);
+			bigDigit::outputTime(((LCDcharWidth - 16) >> 1), ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputClockTime)), (v08(v8HeartbeatBitmaskIdx) & 0b01010101), 4, 0, 0);
 			break;
 
 		default:
@@ -249,7 +252,7 @@ static uint8_t statusBar::displayHandler(uint8_t cmd, uint8_t cursorPos)
 		case displayCursorUpdateIdx:
 			text::statusOut(m8DevLCDidx, PSTR("INST vs "), tripFormatReverseNames, cursorPos + 1);
 		case displayOutputIdx:
-			outputStatusBar(SWEET64::runPrgm(prgmCalculateRelativeInstVsTripFE, tripIdx));
+			outputStatusBar(SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateRelativeInstVsTripFE), tripIdx));
 			text::charOut(m8DevLCDidx, ' ', (LCDcharWidth / 2));
 			mainDisplay::outputFunction(3, (instantIdx << 8 ) | (tFuelEcon), 136, 0);
 			break;
@@ -434,7 +437,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #endif // defined(useBigDTE)
 #if defined(useBigTTE)
 				case bigTTEdisplayIdx:
-					outputTime(0, ull2str(nBuff, tripIdx, prgmOutputTTE), (v08(v8HeartbeatBitmaskIdx) & 0b10001000), 4, cursorPos, PSTR("TTE "));
+					outputTime(0, ull2str(nBuff, tripIdx, S64_PRGM_PTR(prgmOutputTTE)), (v08(v8HeartbeatBitmaskIdx) & 0b10001000), 4, cursorPos, PSTR("TTE "));
 					break;
 
 #endif // defined(useBigTTE)

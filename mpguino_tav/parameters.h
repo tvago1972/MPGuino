@@ -5,7 +5,7 @@ namespace EEPROM /* EEPROM parameter I/O section prototype */
 	static void initGuinoHardware(void);
 	static void initGuinoSoftware(void);
 	static void setMetricDisplayMode(void);
-	static uint8_t onChange(const uint8_t * sched, uint8_t parameterIdx);
+	static uint8_t onChange(s64prgm_ptr_t sched, uint8_t parameterIdx);
 	static uint8_t readByte(uint8_t eePtr);
 #if defined(useScreenEditor)
 	static uint16_t readWord(uint8_t eePtr);

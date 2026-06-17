@@ -149,7 +149,7 @@ static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(m8DevLCDidx, PSTR(" T"));
 #endif // LCDcharWidth == 20
-			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, prgmOutputOperatingTime)); // output system time (since MPGuino was powered up)
+			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputOperatingTime))); // output system time (since MPGuino was powered up)
 
 			text::gotoXY(m8DevLCDidx, 0, 1);
 #if LCDcharWidth == 20
@@ -157,7 +157,7 @@ static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 #else // LCDcharWidth == 20
 			text::stringOut(m8DevLCDidx, PSTR("FREE RAM: "));
 #endif // LCDcharWidth == 20
-			SWEET64::runPrgm(prgmOutputAvailableRAM, 0);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmOutputAvailableRAM), 0);
 			text::stringOut(m8DevLCDidx, ull2str(nBuff, 0, (LCDcharWidth / 2) - 2, 0));
 			break;
 
@@ -172,7 +172,7 @@ static void systemInfo::showCPUload(void)
 {
 
 	text::stringOut(m8DevLCDidx, PSTR("C%"));
-	SWEET64::runPrgm(prgmFindCPUutilPercent, 0);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFindCPUutilPercent), 0);
 	text::stringOut(m8DevLCDidx, ull2str(nBuff, 2, 6, 0));
 
 }
@@ -527,6 +527,46 @@ static const uint8_t terminalButtonValues[] PROGMEM = {
 
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
+static uint8_t terminal::removeTerminalInputByte(void)
+{
+
+	uint8_t chr;
+
+	if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsEmpty)) return 0;
+
+	if (ringBufferDef[(uint16_t)(rbIdxTerminal)].start) ringBufferDef[(uint16_t)(rbIdxTerminal)].start--;
+	else ringBufferDef[(uint16_t)(rbIdxTerminal)].start = ringBufferDef[(uint16_t)(rbIdxTerminal)].size - 1;
+
+	chr = ringBufferDef[(uint16_t)(rbIdxTerminal)].data[ringBufferDef[(uint16_t)(rbIdxTerminal)].start];
+
+	ringBufferDef[(uint16_t)(rbIdxTerminal)].status &= ~(bufferIsFull);
+	if (ringBufferDef[(uint16_t)(rbIdxTerminal)].start == ringBufferDef[(uint16_t)(rbIdxTerminal)].end) ringBufferDef[(uint16_t)(rbIdxTerminal)].status |= bufferIsEmpty;
+
+	return chr;
+
+}
+
+static void terminal::backspaceTerminalInput(void)
+{
+
+	uint8_t chr = removeTerminalInputByte();
+
+	if (chr)
+	{
+
+		for (uint8_t x = 0; x < ((chr > 31) ? 1 : 2); x++)
+		{
+
+			text::charOut(m8DevDebugTerminalIdx, 0x08);
+			text::charOut(m8DevDebugTerminalIdx, ' ');
+			text::charOut(m8DevDebugTerminalIdx, 0x08);
+
+		}
+
+	}
+
+}
+
 static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 {
 
@@ -538,7 +578,7 @@ static void terminal::outputTripFunctionValue(uint8_t lineNumber)
 static void terminal::outputConstantValue(uint8_t lineNumber)
 {
 
-	text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchConstantValue, lineNumber));
+	text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchConstantValue), lineNumber));
 
 #if defined(useDebugTerminalLabels)
 	switch (lineNumber)
@@ -562,16 +602,16 @@ static void terminal::outputConstantValue(uint8_t lineNumber)
 static void terminal::outputConstantExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchConstantValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchConstantValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 }
 
 static void terminal::outputParameterValue(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 #if defined(useDebugTerminalLabels)
 	switch (lineNumber)
@@ -608,8 +648,8 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 	{
 
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(" (orig "));
-		SWEET64::runPrgm(prgmFetchInitialParamValue, lineNumber);
-		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchInitialParamValue), lineNumber);
+		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 		text::stringOut(m8DevDebugTerminalIdx, PSTR(")"));
 
 	}
@@ -620,7 +660,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 		i >>= 3;
 
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		SWEET64::runPrgm(prgmFetchParameterValue, lineNumber);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchParameterValue), lineNumber);
 
 		for (uint8_t x = 7; x < 8; x--)
 			if (x < i) text::hexByteOut(m8DevDebugTerminalIdx, ((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]))->u08[(uint16_t)(x)]);
@@ -641,22 +681,22 @@ static void terminal::outputVariableValue(uint8_t lineNumber)
 		case (v8VariableStartIdx) ... (v8VariableEndIdx - 1):
 		case (m8VariableStartIdx) ... (m8VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 14);
-			text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (v16VariableStartIdx) ... (v16VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 12);
-			text::hexWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (v32VariableStartIdx) ... (v32VariableEndIdx - 1):
 		case (m32VariableStartIdx) ... (m32VariableEndIdx - 1):
 			text::charOut(m8DevDebugTerminalIdx, ' ', 8);
-			text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchVariableValue, lineNumber));
+			text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber));
 			break;
 
 		case (m64VariableStartIdx) ... (m64VariableEndIdx - 1):
-			SWEET64::runPrgm(prgmFetchVariableValue, lineNumber);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber);
 			text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 			break;
 
@@ -672,8 +712,8 @@ static void terminal::outputVariableValue(uint8_t lineNumber)
 static void terminal::outputVariableExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchVariableValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchVariableValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 }
 
 static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
@@ -683,13 +723,13 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 	{
 
 		text::charOut(m8DevDebugTerminalIdx, ' ', 8);
-		text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber));
+		text::hexDWordOut(m8DevDebugTerminalIdx, SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber));
 
 	}
 	else
 	{
 
-		SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber);
 		text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 
 	}
@@ -699,15 +739,15 @@ static void terminal::outputTripVarMeasuredValue(uint8_t lineNumber)
 static void terminal::outputTripVarMeasuredExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchTripVarValue, lineNumber);
-	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, prgmFormatToNumber));
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchTripVarValue), lineNumber);
+	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
 
 }
 
 static void terminal::outputDecimalValue(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmUpdateDecimalValue, lineNumber);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmUpdateDecimalValue), lineNumber);
 	text::hexLWordOut(m8DevDebugTerminalIdx, &s64reg[(uint16_t)(s64reg64_2)]);
 
 }
@@ -715,7 +755,7 @@ static void terminal::outputDecimalValue(uint8_t lineNumber)
 static void terminal::outputDecimalExtra(uint8_t lineNumber)
 {
 
-	SWEET64::runPrgm(prgmFetchDecimalValue, lineNumber);
+	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchDecimalValue), lineNumber);
 	text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, decPlace, decWindow, decMode));
 
 }
@@ -726,7 +766,7 @@ static void terminal::processMath(uint8_t cmd)
 	if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 	if (terminalMode & tmSourceReadIn) decPlace = terminalSource; // if decimal count specified, save it
 	// save terminal register contents for later
-	if ((terminalMode & tmByteReadIn) || (cmd == '_')) SWEET64::runPrgm(prgmPerformMathOperation, cmd);
+	if ((terminalMode & tmByteReadIn) || (cmd == '_')) SWEET64::runPrgm(S64_PRGM_PTR(prgmPerformMathOperation), cmd);
 
 }
 
@@ -742,10 +782,264 @@ static void terminal::outputDecimalSettings(void)
 
 }
 
-static void terminal::dumpSWEET64information(union union_32 * instrLWord, const uint8_t * &prgmPtr, const uint8_t * prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+static uint8_t terminal::outputSystemStatusFlag(uint8_t flags, uint8_t mask, const char * label, uint8_t needsSeparator)
 {
 
-	text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmPtr));
+	if ((flags & mask) == 0) return needsSeparator;
+
+	if (needsSeparator) text::charOut(m8DevDebugTerminalIdx, ',');
+	text::stringOut(m8DevDebugTerminalIdx, label);
+	return 1;
+
+}
+
+static void terminal::outputSystemStatusFlagGroup(const char * label, uint8_t flags, uint8_t groupIdx)
+{
+
+	uint8_t foundFlag = 0;
+
+	text::stringOut(m8DevDebugTerminalIdx, label);
+	text::charOut(m8DevDebugTerminalIdx, '=');
+
+	switch (groupIdx)
+	{
+
+		case 0:
+			foundFlag = outputSystemStatusFlag(flags, aAwakeOnInjector, PSTR("inj"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, aAwakeOnVSS, PSTR("vss"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, aAwakeOnInput, PSTR("input"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, aAwakeEngineRunning, PSTR("eng"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, aAwakeVehicleMoving, PSTR("move"), foundFlag);
+			break;
+
+		case 1:
+			foundFlag = outputSystemStatusFlag(flags, afEngineOffFlag, PSTR("engOff"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afVehicleStoppedFlag, PSTR("stopped"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afUserInputFlag, PSTR("input"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afParkFlag, PSTR("park"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afActivityTimeoutFlag, PSTR("timeout"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afVehicleIdleFlag, PSTR("idle"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, afVehicleEOCflag, PSTR("eoc"), foundFlag);
+			break;
+
+		case 2:
+			foundFlag = outputSystemStatusFlag(flags, t0cResetTimer, PSTR("reset"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0cResetInputActivityTimer, PSTR("input"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0cResetOutputTimer, PSTR("display"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0cReadRTC, PSTR("rtc"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0cEnableJSONoutput, PSTR("json"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0cEnableOutputPin, PSTR("outPin"), foundFlag);
+			break;
+
+		case 3:
+			foundFlag = outputSystemStatusFlag(flags, t0saTakeSample, PSTR("sample"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saUpdateDisplay, PSTR("display"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saShowCursor, PSTR("cursor"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saDisplayDelayInit, PSTR("delayInit"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saDisplayDelayActive, PSTR("delay"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saOutputJSON, PSTR("json"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0saOutputPinEnabled, PSTR("outPin"), foundFlag);
+			break;
+
+		case 4:
+			foundFlag = outputSystemStatusFlag(flags, t0sbSampleBLEfriend, PSTR("ble"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0sbReadRTC, PSTR("rtc"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0sbErrorRTC, PSTR("rtcErr"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0sbResetFEvsTimeTrip, PSTR("fevt"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0sbAccelTestFlag, PSTR("accel"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, t0sbCoastdownTestFlag, PSTR("coast"), foundFlag);
+			break;
+
+		case 5:
+			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorOpen, PSTR("open"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorClose, PSTR("close"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorOpenPeriod, PSTR("period"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorRead, PSTR("read"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dInjectorReadInProgress, PSTR("busy"), foundFlag);
+			break;
+
+		case 6:
+			foundFlag = outputSystemStatusFlag(flags, dGoodVSSsignal, PSTR("signal"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dVSSreadInProgress, PSTR("busy"), foundFlag);
+			foundFlag = outputSystemStatusFlag(flags, dGoodVSSpulse, PSTR("pulse"), foundFlag);
+			break;
+
+		default:
+			break;
+
+	}
+
+	if (foundFlag == 0) text::stringOut(m8DevDebugTerminalIdx, PSTR("none"));
+
+}
+
+static void terminal::outputSystemStatusFlags(void)
+{
+
+	outputSystemStatusFlagGroup(PSTR("AW"), v08(v8AwakeIdx), 0);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" ACT"));
+	outputSystemStatusFlagGroup(PSTR(""), v08(v8ActivityIdx), 1);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" CHG"));
+	outputSystemStatusFlagGroup(PSTR(""), v08(v8ActivityChangeIdx), 1);
+	text::newLine(m8DevDebugTerminalIdx);
+
+	outputSystemStatusFlagGroup(PSTR("T0C"), v08(v8Timer0CommandIdx), 2);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S0"));
+	outputSystemStatusFlagGroup(PSTR(""), v08(v8Timer0Status0Idx), 3);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S1"));
+	outputSystemStatusFlagGroup(PSTR(""), v08(v8Timer0Status1Idx), 4);
+	text::newLine(m8DevDebugTerminalIdx);
+
+	outputSystemStatusFlagGroup(PSTR("INJ"), v08(v8DirtyInjectorIdx), 5);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" VSS"));
+	outputSystemStatusFlagGroup(PSTR(""), v08(v8DirtyVSSIdx), 6);
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static void terminal::outputSystemStatusBytes(void)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("SYS AW="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8AwakeIdx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" ACT="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8ActivityIdx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" CHG="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8ActivityChangeIdx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0C="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0CommandIdx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S0="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status0Idx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S1="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8Timer0Status1Idx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" INJ="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8DirtyInjectorIdx));
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(" VSS="));
+	text::hexByteOut(m8DevDebugTerminalIdx, v08(v8DirtyVSSIdx));
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+#if defined(useSimulatedFIandVSS)
+static void terminal::outputSignalSimSetting(uint8_t lineNumber)
+{
+
+	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
+	else text::charOut(m8DevDebugTerminalIdx, ' ');
+
+}
+
+#endif // defined(useSimulatedFIandVSS)
+#if defined(useDebugTerminalSWEET64)
+static void terminal::outputSWEET64programCounter(s64pc_t prgmPtr)
+{
+
+#if defined(useSWEET64RAMprograms)
+	if (prgmPtr.source == s64srcRAM) text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoffset(prgmPtr.ram_ptr));
+    else
+#endif
+#if defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	text::hexDWordOut(m8DevDebugTerminalIdx, (uint32_t)prgmPtr.ptr);
+#else // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+	text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmPtr.ptr));
+#endif // defined(__AVR__) && defined(__AVR_3_BYTE_PC__)
+
+#if defined(useSWEET64RAMprograms)
+    text::charOut(m8DevDebugTerminalIdx, (prgmPtr.source == s64srcRAM) ? 'R' : 'P');
+
+#endif // defined(useSWEET64RAMprograms)
+}
+
+static void terminal::outputSWEET64error(uint8_t errorCode)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("S64 ERR "));
+	text::hexByteOut(m8DevDebugTerminalIdx, errorCode);
+	text::stringOut(m8DevDebugTerminalIdx, PSTR(": "));
+	if (errorCode <= s64errBadOperand) text::stringOut(m8DevDebugTerminalIdx, terminalSWEET64errorList, errorCode);
+	else text::stringOut(m8DevDebugTerminalIdx, PSTR("unknown"));
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static uint8_t terminal::isSWEET64errorLatched(uint8_t errorCode, s64pc_t prgmPtr)
+{
+
+	if (terminalS64errorLatched == 0) return 0;
+	if (terminalS64lastErrorCode != errorCode) return 0;
+#if defined(useSWEET64RAMprograms)
+	if (terminalS64lastErrorPC.source != prgmPtr.source) return 0;
+	if (prgmPtr.source == s64srcRAM) return (terminalS64lastErrorPC.ram_ptr == prgmPtr.ram_ptr);
+#endif // defined(useSWEET64RAMprograms)
+
+	return (terminalS64lastErrorPC.ptr == prgmPtr.ptr);
+
+}
+
+static void terminal::clearSWEET64errorLatch(void)
+{
+
+	terminalS64errorLatched = 0;
+	terminalS64lastErrorCode = s64errNone;
+	terminalS64lastErrorCount = 0;
+	terminalS64lastErrorPC = SWEET64::makeProgmemProgram(0);
+
+}
+
+static void terminal::outputSWEET64errorLatch(void)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("S64 ERR "));
+
+	if (terminalS64errorLatched)
+	{
+
+		text::stringOut(m8DevDebugTerminalIdx, PSTR("count="));
+		text::hexWordOut(m8DevDebugTerminalIdx, terminalS64lastErrorCount);
+		text::stringOut(m8DevDebugTerminalIdx, PSTR(" @ "));
+		outputSWEET64programCounter(terminalS64lastErrorPC);
+		text::stringOut(m8DevDebugTerminalIdx, PSTR(" last="));
+		text::hexByteOut(m8DevDebugTerminalIdx, terminalS64lastErrorCode);
+		text::charOut(m8DevDebugTerminalIdx, ' ');
+		if (terminalS64lastErrorCode <= s64errBadOperand) text::stringOut(m8DevDebugTerminalIdx, terminalSWEET64errorList, terminalS64lastErrorCode);
+		else text::stringOut(m8DevDebugTerminalIdx, PSTR("unknown"));
+
+	}
+	else text::stringOut(m8DevDebugTerminalIdx, PSTR("last=none"));
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static void terminal::reportSWEET64error(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+{
+
+	uint8_t errorCode = prgmReg8[(uint16_t)(si64reg8error)];
+
+	if (errorCode == s64errNone) return;
+
+	if (isSWEET64errorLatched(errorCode, prgmPtr))
+	{
+
+		if (terminalS64lastErrorCount < 0xFFFF) terminalS64lastErrorCount++;
+		return;
+
+	}
+
+	terminalS64errorLatched = 1;
+	terminalS64lastErrorCode = errorCode;
+	terminalS64lastErrorCount = 1;
+	terminalS64lastErrorPC = prgmPtr;
+
+	outputSWEET64error(errorCode);
+	dumpSWEET64information(instrLWord, prgmPtr, prgmStack, prgmReg64, prgmReg8);
+
+}
+
+static void terminal::dumpSWEET64information(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8)
+{
+
+	outputSWEET64programCounter(prgmPtr);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
 	text::hexDWordOut(m8DevDebugTerminalIdx, instrLWord->u32);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
@@ -758,7 +1052,7 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 		text::charOut(m8DevDebugTerminalIdx, 9);
 		text::hexByteOut(m8DevDebugTerminalIdx, x);
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(prgmStack[(uint16_t)(x)]));
+		outputSWEET64programCounter(prgmStack[(uint16_t)(x)]);
 
 		if (x < s64reg64count)
 		{
@@ -788,17 +1082,15 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, const 
 
 }
 
-#if defined(useSimulatedFIandVSS)
-static void terminal::outputSignalSimSetting(uint8_t lineNumber)
+#if defined(useDebugTerminalLabels)
+static void terminal::outputSWEET64functionLength(uint8_t lineNumber)
 {
 
-	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
-	else text::charOut(m8DevDebugTerminalIdx, ' ');
+	text::hexWordOut(m8DevDebugTerminalIdx, SWEET64::getProgramLength(lineNumber));
 
 }
 
-#endif // defined(useSimulatedFIandVSS)
-#if defined(useDebugTerminalSWEET64)
+#endif // defined(useDebugTerminalLabels)
 static void terminal::outputSWEET64registerContents(uint8_t lineNumber)
 {
 
@@ -828,7 +1120,7 @@ static void terminal::outputSWEET64registerExtra(uint8_t lineNumber)
 	else
 	{
 
-		SWEET64::runPrgm(prgmLoadByteValue, terminalS64reg8[(uint16_t)(lineNumber - s64reg64count)]);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadByteValue), terminalS64reg8[(uint16_t)(lineNumber - s64reg64count)]);
 		i = 0;
 
 	}
@@ -845,6 +1137,635 @@ static void terminal::outputSWEET64byte(uint8_t byt)
 
 }
 
+#if defined(useSWEET64RAMprograms)
+static void terminal::outputSWEET64programRAMline(uint8_t lineNumber)
+{
+
+	text::hexByteOut(m8DevDebugTerminalIdx, lineNumber);
+	text::charOut(m8DevDebugTerminalIdx, 'R');
+	text::charOut(m8DevDebugTerminalIdx, ':');
+
+	uint16_t byteCount = ((uint8_t)(s64programRAMdumpEnd - lineNumber)) + 1;
+	if (byteCount > 8) byteCount = 8;
+
+	for (uint8_t x = 0; x < byteCount; x++)
+	{
+
+		text::charOut(m8DevDebugTerminalIdx, ' ');
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::readProgramRAM((uint8_t)(lineNumber + x)));
+
+	}
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static void terminal::outputSWEET64programRAMoverride(void)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("S64 RAM override="));
+
+	if (SWEET64::isProgramRAMoverrideEnabled())
+	{
+
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoverrideIndex());
+		text::stringOut(m8DevDebugTerminalIdx, PSTR("<-"));
+		text::hexByteOut(m8DevDebugTerminalIdx, SWEET64::getProgramRAMoverrideAddress());
+
+	}
+	else text::stringOut(m8DevDebugTerminalIdx, PSTR("off"));
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static uint8_t terminal::getSWEET64instructionByteCount(uint8_t opCode, uint8_t format)
+{
+
+	uint8_t instrByteCount = 1;
+
+	if (opCode >= maxValidSWEET64instr) return instrByteCount;
+
+	switch (format & rxxMask)
+	{
+
+		case r01:
+		case r04:
+		case r06:
+		case r07:
+			instrByteCount++;
+			break;
+
+		default:
+			break;
+
+	}
+
+	switch (format & pxxMask)
+	{
+
+		case p01:
+		case p03:
+			instrByteCount++;
+			break;
+
+		default:
+			break;
+
+	}
+
+	if ((format & sxxMask) == s01) instrByteCount++;
+
+	return instrByteCount;
+
+}
+
+static void terminal::outputSWEET64sourceByte(uint8_t byt)
+{
+
+	text::stringOut(m8DevDebugTerminalIdx, PSTR("0x"));
+	text::hexByteOut(m8DevDebugTerminalIdx, byt);
+
+}
+
+static uint8_t terminal::outputSWEET64sourceLabelByte(uint8_t byt, uint8_t labelIdx)
+{
+
+#if defined(useDebugTerminalLabels)
+	uint8_t flg;
+	uint8_t typ;
+	uint8_t len;
+	const char * labelList;
+
+	if (labelIdx)
+	{
+
+		typ = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+
+		do
+		{
+
+			flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+			if (flg != typ) return 0;
+
+			len = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
+
+			if (byt < len)
+			{
+
+				labelList = (const char *)(pgm_read_word(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelStringPointer));
+				text::stringOut(m8DevDebugTerminalIdx, labelList, byt);
+				return 1;
+
+			}
+
+			byt -= len;
+			labelIdx++;
+
+		}
+		while (labelIdx < dslIdxEnd);
+
+	}
+
+#endif // defined(useDebugTerminalLabels)
+	return 0;
+
+}
+
+static uint8_t terminal::outputSWEET64programRAMsourceLine(uint8_t lineNumber)
+{
+
+	uint8_t opCode;
+	uint8_t format;
+	uint8_t instr;
+	uint16_t opcodeWord;
+	uint8_t instrByteCount;
+	uint8_t operandCount = 0;
+	uint8_t byt;
+	uint8_t x;
+	uint8_t validSourceInstruction = 0;
+#if defined(useDebugTerminalLabels)
+	uint8_t operandLabelIdx;
+	uint8_t extraLabelIdx;
+#endif // defined(useDebugTerminalLabels)
+
+	opCode = SWEET64::readProgramRAM(lineNumber);
+
+	if (opCode < maxValidSWEET64instr)
+	{
+
+		opcodeWord = pgm_read_word(&opcodeFetchWord[(uint16_t)(opCode)]);
+		instr = opcodeWord;
+		format = opcodeWord >> 8;
+		instrByteCount = getSWEET64instructionByteCount(opCode, format);
+
+		if ((uint8_t)(s64programRAMdumpEnd - lineNumber) >= (uint8_t)(instrByteCount - 1)) validSourceInstruction = 1;
+		else instrByteCount = 1;
+
+	}
+	else instrByteCount = 1;
+
+	text::charOut(m8DevDebugTerminalIdx, 0x09);
+
+	if (validSourceInstruction)
+	{
+
+		text::stringOut(m8DevDebugTerminalIdx, PSTR("instr"));
+		text::stringOut(m8DevDebugTerminalIdx, opCodeList, opCode);
+
+#if defined(useDebugTerminalLabels)
+		getSWEET64operandLabelIndexes(instr, format, operandLabelIdx, extraLabelIdx);
+#endif // defined(useDebugTerminalLabels)
+
+		switch (format & rxxMask)
+		{
+
+			case r01:
+			case r04:
+			case r06:
+			case r07:
+				text::stringOut(m8DevDebugTerminalIdx, PSTR(", "));
+				outputSWEET64sourceByte(SWEET64::readProgramRAM((uint8_t)(lineNumber + (++operandCount))));
+				break;
+
+			default:
+				break;
+
+		}
+
+		switch (format & pxxMask)
+		{
+
+			case p01:
+			case p03:
+				text::stringOut(m8DevDebugTerminalIdx, PSTR(", "));
+				byt = SWEET64::readProgramRAM((uint8_t)(lineNumber + (++operandCount)));
+#if defined(useDebugTerminalLabels)
+				if (outputSWEET64sourceLabelByte(byt, operandLabelIdx) == 0)
+#endif // defined(useDebugTerminalLabels)
+					outputSWEET64sourceByte(byt);
+				break;
+
+			default:
+				break;
+
+		}
+
+		if ((format & sxxMask) == s01)
+		{
+
+			text::stringOut(m8DevDebugTerminalIdx, PSTR(", "));
+			byt = SWEET64::readProgramRAM((uint8_t)(lineNumber + (++operandCount)));
+#if defined(useDebugTerminalLabels)
+			if ((instr < eMaxBranchInstrIdx) || (outputSWEET64sourceLabelByte(byt, extraLabelIdx) == 0))
+#endif // defined(useDebugTerminalLabels)
+				outputSWEET64sourceByte(byt);
+
+		}
+
+	}
+	else
+	{
+
+		for (x = 0; x < instrByteCount; x++)
+		{
+
+			if (x) text::stringOut(m8DevDebugTerminalIdx, PSTR(", "));
+			outputSWEET64sourceByte(SWEET64::readProgramRAM((uint8_t)(lineNumber + x)));
+
+		}
+
+	}
+
+	text::charOut(m8DevDebugTerminalIdx, ',');
+	text::newLine(m8DevDebugTerminalIdx);
+	return instrByteCount;
+
+}
+
+static uint8_t terminal::chrEqualIgnoreCase(uint8_t inputChar, uint8_t storedChar)
+{
+
+	uint8_t diff = inputChar ^ storedChar;
+
+	if (diff == 0) return 1;
+	if (diff != 0x20) return 0;
+
+	inputChar |= 0x20;
+	return ((inputChar >= 'a') && (inputChar <= 'z'));
+
+}
+
+static uint8_t terminal::matchSWEET64opcodeAlias(char * token, const char * opCodePtr)
+{
+
+	uint8_t tokenIdx = 0;
+	uint8_t storedChar;
+	uint8_t inputChar;
+	uint8_t sawAliasChar = 0;
+
+	for (;;)
+	{
+
+		storedChar = pgm_read_byte(opCodePtr++);
+		inputChar = token[(uint16_t)(tokenIdx)];
+
+		if ((storedChar == '/') || (storedChar == 0))
+		{
+
+			if ((inputChar == 0) && (sawAliasChar)) return 1;
+			if (storedChar == 0) return 0;
+
+			tokenIdx = 0;
+			sawAliasChar = 0;
+			continue;
+
+		}
+
+		sawAliasChar = 1;
+
+		if ((inputChar == 0) || (chrEqualIgnoreCase(inputChar, storedChar) == 0))
+		{
+
+			while ((storedChar != '/') && (storedChar != 0)) storedChar = pgm_read_byte(opCodePtr++);
+			if (storedChar == 0) return 0;
+
+			tokenIdx = 0;
+			sawAliasChar = 0;
+			continue;
+
+		}
+
+		tokenIdx++;
+
+	}
+
+}
+
+static uint8_t terminal::findSWEET64opcode(char * token)
+{
+
+	for (uint8_t x = 0; x < maxValidSWEET64instr; x++)
+		if (matchSWEET64opcodeAlias(token, findStr(opCodeList, x))) return x;
+
+	return maxValidSWEET64instr;
+
+}
+
+static uint8_t terminal::pullSWEET64assemblerToken(void)
+{
+
+	uint8_t tokenIdx = 0;
+	uint8_t chr;
+
+	while (ringBuffer::testBufferNot(rbIdxTerminal, bufferIsEmpty))
+	{
+
+		chr = ringBuffer::pull(rbIdxTerminal);
+
+		if ((chr == ' ') || (chr == ','))
+		{
+
+			if (tokenIdx) break;
+			else continue;
+
+		}
+
+		if (tokenIdx >= (sizeof(s64programRAMassemblerToken) - 1))
+		{
+
+			while (ringBuffer::testBufferNot(rbIdxTerminal, bufferIsEmpty)) ringBuffer::pull(rbIdxTerminal);
+			return 2;
+
+		}
+
+		s64programRAMassemblerToken[(uint16_t)(tokenIdx++)] = chr;
+
+	}
+
+	if (tokenIdx == 0) return 0;
+	s64programRAMassemblerToken[(uint16_t)(tokenIdx)] = 0;
+	return 1;
+
+}
+
+static uint8_t terminal::parseSWEET64assemblerByte(char * token, uint8_t &byt)
+{
+
+	uint8_t chr;
+	uint8_t digit;
+	uint8_t digitCount = 0;
+
+	byt = 0;
+
+	if ((token[0] == '0') && (chrEqualIgnoreCase(token[1], 'x'))) token += 2;
+
+	while (*token)
+	{
+
+		chr = *token++;
+
+		if ((chr >= '0') && (chr <= '9')) digit = chr - '0';
+		else
+		{
+
+			chr |= 0x20;
+			if ((chr >= 'a') && (chr <= 'f')) digit = (chr - 'a') + 10;
+			else return 0;
+
+		}
+
+		if (digitCount >= 2) return 0;
+
+		byt <<= 4;
+		byt |= digit;
+		digitCount++;
+
+	}
+
+	return digitCount;
+
+}
+
+#if defined(useDebugTerminalLabels)
+static uint8_t terminal::findSWEET64labelByte(char * token, uint8_t labelIdx, uint8_t &byt)
+{
+
+	uint8_t typ;
+	uint8_t flg;
+	uint8_t len;
+	const char * labelList;
+
+	if (labelIdx == 0) return 0;
+
+	byt = 0;
+	typ = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+
+	do
+	{
+
+		flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+		if (flg != typ) return 0;
+
+		labelList = (const char *)(pgm_read_word(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelStringPointer));
+		len = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
+
+		for (uint8_t x = 0; x < len; x++)
+			if (matchSWEET64opcodeAlias(token, findStr(labelList, x)))
+			{
+
+				byt += x;
+				return 1;
+
+			}
+
+		byt += len;
+		labelIdx++;
+
+	}
+	while (labelIdx < dslIdxEnd);
+
+	return 0;
+
+}
+
+static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t format, uint8_t &operandLabelIdx, uint8_t &extraLabelIdx)
+{
+
+	operandLabelIdx = 0;
+	extraLabelIdx = 0;
+
+	if ((format & rxxMask) != r00) // instruction does something with the 64 bit registers
+	{
+
+		switch (instr & ixxMask) // perform load or store operation, according to ixx
+		{
+
+			case i14:	// load rX with const
+				operandLabelIdx = dslIdxConst;
+				break;
+
+			case i03:	// load rX with EEPROM
+			case i04:	// store EEPROM rX
+				operandLabelIdx = dslIdxEEPROM;
+				break;
+
+			case i07:	// load rX with volatile
+			case i08:	// store volatile rX
+				operandLabelIdx = dslIdxProgramVariable;
+				break;
+
+#if defined(useBarFuelEconVsTime)
+			case i17:	// load rX with FEvT trip variable
+#endif // defined(useBarFuelEconVsTime)
+			case i18:	// load rX with trip variable
+			case i19:	// store trip variable rX
+				operandLabelIdx = dslIdxTripVariable;
+				extraLabelIdx = dslIdxTripMeasurement;
+				break;
+
+			case i31:	// BCD adjust
+				operandLabelIdx = dslIdxBCDformat;
+				break;
+
+			default:
+				break;
+
+		}
+
+	}
+	else
+	{
+
+		if (instr >= eMaxBranchInstrIdx)
+		{
+
+			switch (instr)
+			{
+
+				case e29:	// load jump register
+				case e27:	// call
+				case e28:	// jump
+					extraLabelIdx = dslIdxFunction;
+					break;
+
+				case e24:	// load index EEPROM
+				case e26:	// load index EEPROM parameter length
+					extraLabelIdx = dslIdxEEPROM;
+					break;
+
+				default:
+					break;
+
+			}
+
+		}
+
+	}
+
+}
+
+#endif // defined(useDebugTerminalLabels)
+
+static uint8_t terminal::pullSWEET64assemblerOperand(uint8_t &byt, uint8_t labelIdx)
+{
+
+	if (pullSWEET64assemblerToken() != 1) return 0;
+	if (parseSWEET64assemblerByte(s64programRAMassemblerToken, byt)) return 1;
+#if defined(useDebugTerminalLabels)
+	if (findSWEET64labelByte(s64programRAMassemblerToken, labelIdx, byt)) return 1;
+#endif // defined(useDebugTerminalLabels)
+
+	return 0;
+
+}
+
+static uint8_t terminal::assembleSWEET64programRAMline(void)
+{
+
+	uint8_t opCode;
+	uint8_t format;
+	uint8_t instr;
+	uint16_t opcodeWord;
+	uint8_t operandCount = 0;
+	uint8_t operands[3];
+	int16_t relativeOffset;
+#if defined(useDebugTerminalLabels)
+	uint8_t operandLabelIdx;
+	uint8_t extraLabelIdx;
+#endif // defined(useDebugTerminalLabels)
+
+	if (pullSWEET64assemblerToken() != 1) return 0;
+
+	opCode = findSWEET64opcode(s64programRAMassemblerToken);
+	if (opCode >= maxValidSWEET64instr) return 0;
+
+	opcodeWord = pgm_read_word(&opcodeFetchWord[(uint16_t)(opCode)]);
+	instr = opcodeWord;
+	format = opcodeWord >> 8;
+#if defined(useDebugTerminalLabels)
+	getSWEET64operandLabelIndexes(instr, format, operandLabelIdx, extraLabelIdx);
+#endif // defined(useDebugTerminalLabels)
+
+	switch (format & rxxMask)
+	{
+
+		case r01:
+		case r04:
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if (((operands[(uint16_t)(operandCount)] & 0x70) || (operands[(uint16_t)(operandCount)] & 0x07)) && ((operands[(uint16_t)(operandCount)] & 0x88) == 0)) operandCount++;
+			else return 0;
+			break;
+
+		case r06:
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if ((operands[(uint16_t)(operandCount)] & 0x07) && ((operands[(uint16_t)(operandCount)] & 0xF8) == 0)) operandCount++;
+			else return 0;
+			break;
+
+		case r07:
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if ((operands[(uint16_t)(operandCount)] & 0x77) && ((operands[(uint16_t)(operandCount)] & 0x88) == 0)) operandCount++;
+			else return 0;
+			break;
+
+		default:
+			break;
+
+	}
+
+	switch (format & pxxMask)
+	{
+
+		case p01:
+		case p03:
+#if defined(useDebugTerminalLabels)
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount++)], operandLabelIdx) == 0) return 0;
+#else // defined(useDebugTerminalLabels)
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount++)], 0) == 0) return 0;
+#endif // defined(useDebugTerminalLabels)
+			break;
+
+		default:
+			break;
+
+	}
+
+	if ((format & sxxMask) == s01)
+	{
+
+#if defined(useDebugTerminalLabels)
+		if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], extraLabelIdx) == 0) return 0;
+#else // defined(useDebugTerminalLabels)
+		if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+#endif // defined(useDebugTerminalLabels)
+
+		if (instr < eMaxBranchInstrIdx)
+		{
+
+			relativeOffset = (int16_t)(operands[(uint16_t)(operandCount)]) - (int16_t)(s64programRAMassemblerAddr + 1 + operandCount + 1);
+			if ((relativeOffset < -128) || (relativeOffset > 127)) return 0;
+			operands[(uint16_t)(operandCount)] = (uint8_t)(relativeOffset);
+
+		}
+
+		operandCount++;
+
+	}
+
+	if (pullSWEET64assemblerToken() != 0) return 0;
+
+	if ((uint16_t)(s64programRAMassemblerAddr) + 1 + operandCount > SWEET64::getProgramRAMsize()) return 0; // reject the line if it would overflow program RAM, instead of silently wrapping and overwriting earlier instructions
+
+	clearSWEET64errorLatch();
+	SWEET64::writeProgramRAM(s64programRAMassemblerAddr++, opCode);
+	for (uint8_t x = 0; x < operandCount; x++) SWEET64::writeProgramRAM(s64programRAMassemblerAddr++, operands[(uint16_t)(x)]);
+
+	return 1;
+
+}
+
+#endif // defined(useSWEET64RAMprograms)
 static void terminal::outputSWEET64operand(uint8_t flag, uint8_t &byt)
 {
 
@@ -888,12 +1809,14 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 
 	uint32_t instrLWord;
 	union union_32 * iLW = (union union_32 *)(&instrLWord);
-	const uint8_t * prgmPtr;
+	uint8_t formatBytes[4];
+	s64pc_t prgmPtr;
 	uint8_t isValid;
 	uint8_t i;
 
-	iLW->u08[0] = lineNumber; // store instruction to be decoded here
-	prgmPtr = 0;
+	formatBytes[0] = lineNumber; // opcode to be decoded
+	formatBytes[1] = formatBytes[2] = formatBytes[3] = 0x01; // placeholder bytes that satisfy every register-operand validity check in fetchInstruction, so the opcode's format is decoded without tripping a bogus program error
+	prgmPtr = SWEET64::makeRAMprogram(formatBytes);
 
 	SWEET64::fetchInstruction(iLW, prgmPtr, terminalS64reg8); // decode instruction
 	isValid = terminalS64reg8[(uint16_t)(si64reg8valid)];
@@ -939,9 +1862,9 @@ static void terminal::outputSWEET64opcode(uint8_t lineNumber)
 }
 
 #if defined(useDebugTerminalLabels)
-static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t operandIdx, uint8_t labelIdx)
+static void terminal::outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, uint8_t operandIdx, uint8_t labelIdx)
 #else // defined(useDebugTerminalLabels)
-static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t flag, uint8_t operandIdx)
+static void terminal::outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, uint8_t operandIdx)
 #endif // defined(useDebugTerminalLabels)
 {
 
@@ -970,29 +1893,18 @@ static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t 
 				{
 
 					flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+					if (flg != typ) break; // crossed into a different label group - byt does not belong to any entry here
 
-					if (flg == typ)
-					{
+					flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
+					if (byt < flg) break; // found the entry byt belongs to
 
-						flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
-
-						if (byt < flg) flg = 0;
-						else
-						{
-
-							byt -= flg;
-							flg = 1;
-							labelIdx++;
-
-						}
-
-					}
-					else flg = 0;
+					byt -= flg;
+					labelIdx++;
 
 				}
-				while (flg);
+				while (labelIdx < dslIdxEnd);
 
-				if (byt < pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength))
+				if ((pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType) == typ) && (byt < pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength)))
 				{
 
 					text::stringOut(m8DevDebugTerminalIdx, (const char *)(pgm_read_word(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelStringPointer)), byt);
@@ -1024,10 +1936,9 @@ static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t 
 			break;
 
 		case (s64vReadInExtraByte | s64vRelativeOperand):
-			if (byt < 127) prgmPtr += byt;
-			else prgmPtr -= (256 - byt);
+			SWEET64::addProgramOffset(prgmPtr, byt);
 			text::stringOut(m8DevDebugTerminalIdx, PSTR(" $"));
-			text::hexWordOut(m8DevDebugTerminalIdx, prgmPtr);
+			outputSWEET64programCounter(prgmPtr);
 			break;
 
 		case (s64vExtraJump):
@@ -1041,10 +1952,11 @@ static void terminal::outputSWEET64prgmOperand(const uint8_t * prgmPtr, uint8_t 
 
 }
 
-static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const uint8_t * &prgmPtr, uint8_t traceFlag)
+static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, s64pc_t &prgmPtr, uint8_t traceFlag)
 {
 
-	const uint8_t * oldSched;
+	s64pc_t oldSched;
+	uint8_t instrByteCount = 1;
 	uint8_t isValid;
 	uint8_t opCode;
 	uint8_t reg;
@@ -1055,26 +1967,71 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 #endif // defined(useDebugTerminalLabels)
 
 	oldSched = prgmPtr;
+	opCode = SWEET64::readProgramByte(oldSched);
+	oldSched = prgmPtr;
 
 	SWEET64::fetchInstruction(instrLWord, prgmPtr, terminalS64reg8); // decode instruction
 	isValid = terminalS64reg8[(uint16_t)(si64reg8valid)];
+
+	if (opCode < maxValidSWEET64instr)
+	{
+
+		switch (instrLWord->u08[1] & rxxMask)
+		{
+
+			case r01:
+			case r04:
+			case r06:
+			case r07:
+				instrByteCount++;
+				break;
+
+			default:
+				break;
+
+		}
+
+		switch (instrLWord->u08[1] & pxxMask)
+		{
+
+			case p01:
+			case p03:
+				instrByteCount++;
+				break;
+
+			default:
+				break;
+
+		}
+
+		if ((instrLWord->u08[1] & sxxMask) == s01) instrByteCount++;
+
+	}
+
+	if ((isValid == 0) && (opCode < maxValidSWEET64instr))
+	{
+
+		prgmPtr = oldSched;
+		SWEET64::addProgramOffset(prgmPtr, instrByteCount);
+
+	}
 
 	if (traceFlag)
 	{
 
 		text::charOut(m8DevDebugTerminalIdx, ' ');
-		text::hexWordOut(m8DevDebugTerminalIdx, (uint16_t)(oldSched));
+		outputSWEET64programCounter(oldSched);
 		text::charOut(m8DevDebugTerminalIdx, '-');
 
 		for (uint8_t x = 0; x < 5; x++)
 		{
 
-			i = pgm_read_byte(oldSched++);
+			i = SWEET64::readProgramByte(oldSched);
 			if (x == 0) opCode = i;
 			if (x == 1) reg = i;
 
-			if (oldSched > prgmPtr) text::charOut(m8DevDebugTerminalIdx, ' ', 3);
-			else outputSWEET64byte(i); // output opcode byte
+			if (x < instrByteCount) outputSWEET64byte(i); // output opcode byte
+			else text::charOut(m8DevDebugTerminalIdx, ' ', 3);
 
 		}
 
@@ -1082,77 +2039,7 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 		{
 
 #if defined(useDebugTerminalLabels)
-			operandLabelIdx = 0;
-			extraLabelIdx = 0;
-
-			if (isValid & s64vRegisterOperation) // instruction does something with the 64 bit registers
-			{
-
-				switch (instrLWord->u08[2]) // perform load or store operation, according to ixx
-				{
-
-					case i14:	// load rX with const
-						operandLabelIdx = dslIdxConst;
-						break;
-
-					case i03:	// load rX with EEPROM
-					case i04:	// store EEPROM rX
-						operandLabelIdx = dslIdxEEPROM;
-						break;
-
-					case i07:	// load rX with volatile
-					case i08:	// store volatile rX
-						operandLabelIdx = dslIdxProgramVariable;
-						break;
-
-#if defined(useBarFuelEconVsTime)
-					case i17:	// load rX with FEvT trip variable
-#endif // defined(useBarFuelEconVsTime)
-					case i18:	// load rX with trip variable
-					case i19:	// store trip variable rX
-						operandLabelIdx = dslIdxTripVariable;
-						extraLabelIdx = dslIdxTripMeasurement;
-						break;
-
-					case i31:	// BCD adjust
-						operandLabelIdx = dslIdxBCDformat;
-						break;
-
-					default:
-						break;
-
-				}
-
-			}
-			else
-			{
-
-				if ((isValid & s64vRelativeOperand) == 0)
-				{
-
-					switch (instrLWord->u08[0])
-					{
-
-						case e29:	// load jump register
-						case e27:	// call
-						case e28:	// jump
-							extraLabelIdx = dslIdxFunction;
-							break;
-
-						case e24:	// load index EEPROM
-						case e26:	// load index EEPROM parameter length
-							extraLabelIdx = dslIdxEEPROM;
-							break;
-
-						default:
-							break;
-
-					}
-
-				}
-
-			}
-
+			getSWEET64operandLabelIndexes(instrLWord->u08[0], instrLWord->u08[1], operandLabelIdx, extraLabelIdx);
 #endif // defined(useDebugTerminalLabels)
 			text::stringOut(m8DevDebugTerminalIdx, opCodeList, opCode); // output opcode mnemonic
 
@@ -1176,7 +2063,19 @@ static void terminal::outputSWEET64prgmLine(union union_32 * instrLWord, const u
 
 #endif // defined(useDebugTerminalLabels)
 		}
-		else text::stringOut(m8DevDebugTerminalIdx, PSTR("?????"));
+		else
+		{
+
+			if (opCode < maxValidSWEET64instr)
+			{
+
+				text::stringOut(m8DevDebugTerminalIdx, opCodeList, opCode);
+				text::stringOut(m8DevDebugTerminalIdx, PSTR(" * INVALID OPERAND *"));
+
+			}
+			else text::stringOut(m8DevDebugTerminalIdx, PSTR("?????"));
+
+		}
 
 		text::newLine(m8DevDebugTerminalIdx);
 
@@ -1366,6 +2265,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 							terminalState = tsError;
 							break;
 
+						case 0x08:	// backspace
+						case 0x7F:	// delete
+							backspaceTerminalInput();
+							break;
+
 #if defined(useDebugTerminalSWEET64)
 						case 0x05:	// display SWEET64 register contents
 #if defined(useDebugTerminalLabels)
@@ -1373,6 +2277,10 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #endif // defined(useDebugTerminalLabels)
 						case 0x09:	// list SWEET64 opcodes and their operands
 						case 0x0C:	// list 20 lines of SWEET64 pseudo-code
+#if defined(useSWEET64RAMprograms)
+						case 0x0F:	// enable/disable SWEET64 program RAM override
+						case 0x17:	// export SWEET64 program RAM as source
+#endif // defined(useSWEET64RAMprograms)
 						case 0x14:	// trace 1 or more lines of SWEET64 pseudo-code
 #endif // defined(useDebugTerminalSWEET64)
 						case 0x13:	// display supplemental system information
@@ -1417,7 +2325,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 			primaryFunc = 0;
 			extraFunc = 0;
 			maxLine = 0;
-			prgmPtr = 0;
+			prgmPtr = SWEET64::makeProgmemProgram(0);
 #if defined(useDebugTerminalLabels)
 			labelList = 0;
 			labelListOffset = 0;
@@ -1494,7 +2402,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case '0' ... '9':
 									chr -= 48;
 									terminalMode |= (tmByteReadIn);
-									terminalByte = SWEET64::runPrgm(prgmParseHexDigit, chr);
+									terminalByte = SWEET64::runPrgm(S64_PRGM_PTR(prgmParseHexDigit), chr);
 									break;
 
 								default:
@@ -1520,7 +2428,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case '0' ... '9':
 									chr -= 48;
 									terminalMode |= (tmByteReadIn);
-									terminalByte = SWEET64::runPrgm(prgmParseDecimalDigit, chr);
+									terminalByte = SWEET64::runPrgm(S64_PRGM_PTR(prgmParseDecimalDigit), chr);
 									break;
 
 								default:
@@ -1606,11 +2514,33 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								break;
 
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useSWEET64RAMprograms)
+							case 'm':	// enter a SWEET64 program RAM byte
+								if (terminalMode & tmByteReadIn) // if a byte value was read in
+								{
+
+									clearSWEET64errorLatch();
+									SWEET64::writeProgramRAM(terminalAddress++, terminalByte);
+
+									if (terminalAddress)
+									{
+
+										terminalMode &= ~(tmInputMask); // clear input mode processing bits
+										terminalMode |= (tmHexInput | tmInitInput); // shift to reading a new hexadecimal byte
+
+									}
+									else terminalState = i; // if byte address wrapped, reset command
+
+								}
+								else terminalState = i; // no byte value was read in, so cancel program RAM byte entry mode
+								break;
+
+#endif // defined(useSWEET64RAMprograms)
 							case 'p':   // enter a stored parameter value
 								if (terminalMode & tmByteReadIn) // if a parameter value was read in
 								{
 
-									EEPROM::onChange(prgmTerminalWriteParameterValue, terminalAddress++);
+									EEPROM::onChange(S64_PRGM_PTR(prgmTerminalWriteParameterValue), terminalAddress++);
 
 									if (terminalAddress < maxLine)
 									{
@@ -1657,7 +2587,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 							case '=':	// output last result
 								processMath(terminalCmd);
 
-								SWEET64::runPrgm(prgmFetchResultValue, 0);
+								SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchResultValue), 0);
 								outputDecimalSettings();
 								text::charOut(m8DevDebugTerminalIdx, '=');
 								text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, decPlace, decWindow, decMode));
@@ -1679,6 +2609,86 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								nextTerminalState = i;
 								break;
 
+#if defined(useSWEET64RAMprograms)
+							case 'M':	// list SWEET64 program RAM bytes
+								if ((terminalMode & tmTargetReadIn) && (terminalMode & tmByteReadIn))
+								{
+
+									uint16_t prgmLength = SWEET64::getProgramLength(terminalByte);
+
+									if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+									else if ((prgmLength == 0) || (prgmLength > SWEET64::getProgramRAMsize())) errIdx = tseIdxBadSWEET64addr;
+									else if (prgmLength > (SWEET64::getProgramRAMsize() - terminalTarget)) errIdx = tseIdxTargetVal;
+									else
+									{
+
+										s64pc_t src = SWEET64::makeProgmemProgram(SWEET64::getProgramPointer(terminalByte));
+										uint8_t dst = terminalTarget;
+
+										clearSWEET64errorLatch();
+										while (prgmLength--) SWEET64::writeProgramRAM(dst++, SWEET64::readProgramByte(src));
+
+										terminalState = i;
+
+									}
+
+									break;
+
+								}
+								else if (terminalMode & tmTargetReadIn)
+								{
+
+									if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+									else
+									{
+
+										clearSWEET64errorLatch();
+										SWEET64::fillProgramRAM(terminalTarget);
+
+										terminalState = i;
+
+									}
+
+									break;
+
+								}
+								else if (terminalMode & tmSourceReadIn)
+								{
+
+									terminalLine = terminalSource;
+									if (terminalMode & tmByteReadIn) s64programRAMdumpEnd = terminalByte;
+									else s64programRAMdumpEnd = 255;
+
+									maxLine = (((uint8_t)(s64programRAMdumpEnd - terminalSource)) >> 3) + 1;
+
+								}
+								else
+								{
+
+									if (terminalMode & tmByteReadIn)
+									{
+
+										terminalLine = terminalByte;
+										s64programRAMdumpEnd = terminalByte;
+										maxLine = 1;
+
+									}
+									else
+									{
+
+										terminalLine = 0;
+										s64programRAMdumpEnd = 255;
+										maxLine = 32;
+
+									}
+
+								}
+
+								terminalState = tsOutputSWEET64RAMline;
+								nextTerminalState = i;
+								break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 							case 'P':   // list available stored parameters
 								primaryFunc = terminal::outputParameterValue;
@@ -1749,8 +2759,26 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 #endif // defined(useDebugButtonInjection)
 								case 0x13:	// display supplemental system information
+									text::stringOut(m8DevDebugTerminalIdx, PSTR("UP "));
+									text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputOperatingTime)));
+									text::newLine(m8DevDebugTerminalIdx);
+#if defined(useClockDisplay)
+									text::stringOut(m8DevDebugTerminalIdx, PSTR("CLK "));
+									text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputClockTime)));
+									text::newLine(m8DevDebugTerminalIdx);
+#endif // defined(useClockDisplay)
 									outputDecimalSettings();
+									outputSystemStatusFlags();
+									outputSystemStatusBytes();
 
+#if defined(useSWEET64RAMprograms)
+									outputSWEET64programRAMoverride();
+
+#endif // defined(useSWEET64RAMprograms)
+#if defined(useDebugTerminalSWEET64)
+									outputSWEET64errorLatch();
+
+#endif // defined(useDebugTerminalSWEET64)
 #if defined(useBluetoothAdaFruitSPI)
 									outputBluetoothResponse();
 
@@ -1806,9 +2834,16 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #if defined(useDebugTerminalSWEET64)
 											case 0x25:	// enter a SWEET64 register value
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useSWEET64RAMprograms)
+											case 'm':	// enter a SWEET64 program RAM byte
+#endif // defined(useSWEET64RAMprograms)
 											case 's':	// enter a bitflag register value
 												terminalMode |= (tmInitHex); // shift to hexadecimal input
+#if defined(useSWEET64RAMprograms)
+												if ((chr != 'm') && (terminalAddress >= maxLine)) errIdx = tseIdxAddressVal;
+#else // defined(useSWEET64RAMprograms)
 												if (terminalAddress >= maxLine) errIdx = tseIdxAddressVal;
+#endif // defined(useSWEET64RAMprograms)
 												break;
 
 											default:	// unsupported storage command
@@ -1899,8 +2934,8 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 										else
 										{
 
-											SWEET64::runPrgm(prgmLoadTrip, terminalByte); // this allows direct loading/saving of trips to EEPROM
-											SWEET64::runPrgm(prgmSaveTrip, terminalTarget);
+											SWEET64::runPrgm(S64_PRGM_PTR(prgmLoadTrip), terminalByte); // this allows direct loading/saving of trips to EEPROM
+											SWEET64::runPrgm(S64_PRGM_PTR(prgmSaveTrip), terminalTarget);
 
 											terminalState = tsInitProcessing;
 
@@ -1943,6 +2978,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 								case 0x06:	// display complete list of available SWEET64 functions
 									maxLine = dfMaxValTotalCount;
 									labelList = terminalTripFuncNames;
+									primaryFunc = terminal::outputSWEET64functionLength;
 									terminalState = tsInitListReadOnly; // this command could print a lot of different lines, so handle this command one iteration at a time
 									break;
 
@@ -1953,34 +2989,124 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									terminalState = tsInitListReadOnly; // this command could print a lot of different lines, so handle this command one iteration at a time
 									break;
 
+#if defined(useSWEET64RAMprograms)
+								case '!':	// enter SWEET64 program RAM assembler
+									if (terminalMode & (tmSourceReadIn | tmTargetReadIn)) errIdx = tseIdxSyntax;
+									else
+									{
+
+										if (terminalMode & tmByteReadIn) s64programRAMassemblerAddr = terminalByte;
+										else s64programRAMassemblerAddr = 0;
+
+										terminalState = tsInitSWEET64assembler;
+
+									}
+
+									break;
+
+								case 0x0F:	// enable/disable SWEET64 program RAM override
+									if ((terminalMode & tmTargetReadIn) && (terminalMode & tmByteReadIn))
+									{
+
+										uint16_t prgmLength = SWEET64::getProgramLength(terminalByte);
+
+										if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+										else if ((prgmLength == 0) || (prgmLength > SWEET64::getProgramRAMsize())) errIdx = tseIdxBadSWEET64addr;
+										else if (prgmLength > (SWEET64::getProgramRAMsize() - terminalTarget)) errIdx = tseIdxTargetVal;
+										else
+										{
+
+											clearSWEET64errorLatch();
+											SWEET64::enableProgramRAMoverride(terminalByte, terminalTarget);
+											terminalState = tsInitProcessing;
+
+										}
+
+									}
+									else if (terminalMode & tmReadInMask) errIdx = tseIdxSyntax;
+									else
+									{
+
+										SWEET64::disableProgramRAMoverride();
+										terminalState = tsInitProcessing;
+
+									}
+
+									break;
+
+								case 0x17:	// export SWEET64 program RAM as source
+									if ((terminalMode & tmTargetReadIn) || ((terminalMode & (tmSourceReadIn | tmByteReadIn)) != (tmSourceReadIn | tmByteReadIn))) errIdx = tseIdxSyntax;
+									else if (terminalSource > terminalByte) errIdx = tseIdxSourceVal;
+									else
+									{
+
+										terminalLine = terminalSource;
+										s64programRAMdumpEnd = terminalByte;
+										text::stringOut(m8DevDebugTerminalIdx, PSTR("static const uint8_t prgmRAMexport[] PROGMEM = {" tcCR));
+										terminalState = tsOutputSWEET64RAMsourceLine;
+
+									}
+
+									break;
+
+#endif // defined(useSWEET64RAMprograms)
 								case 0x14:	// trace 1 or more lines of SWEET64 pseudo-code
 									if (terminalMode & tmTargetReadIn)
 									{
 
-										terminalExecSched = (const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(terminalTarget)]));
+										if (terminalMode & tmSourceReadIn) errIdx = tseIdxSyntax;
+										else
+										{
 
-										if (terminalListSched == 0) terminalListSched = terminalExecSched;
-										if (terminalMode & tmSourceReadIn) terminalS64reg8[(uint16_t)(si64reg8trip)] = terminalSource;
+#if defined(useSWEET64RAMprograms)
+											terminalExecSched = SWEET64::makeRAMprogram(terminalTarget);
+#else // defined(useSWEET64RAMprograms)
+											terminalExecSched = SWEET64::getProgramPC(terminalTarget);
+#endif // defined(useSWEET64RAMprograms)
+
+											if (!SWEET64::isProgramValid(terminalListSched)) terminalListSched = terminalExecSched;
+
+											terminalS64reg8[(uint16_t)(si64reg8flags)] = SWEET64traceFlagGroup; // initialize terminal SWEET64 flags
+											terminalS64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize terminal SWEET64 stack pointer
+											terminalS64reg8[(uint16_t)(si64reg8jump)] = 0; // initialize terminal SWEET64 jump register
+											terminalS64reg8[(uint16_t)(si64reg8error)] = s64errNone; // initialize terminal SWEET64 error code
+											clearSWEET64errorLatch(); // this is a new trace run, so do not let it be suppressed by a stale latched error from a previous run
+
+										}
+
+									}
+									else if (terminalMode & tmSourceReadIn)
+									{
+
+										terminalExecSched = SWEET64::getProgramPC(terminalSource);
+
+										if (!SWEET64::isProgramValid(terminalListSched)) terminalListSched = terminalExecSched;
 
 										terminalS64reg8[(uint16_t)(si64reg8flags)] = SWEET64traceFlagGroup; // initialize terminal SWEET64 flags
 										terminalS64reg8[(uint16_t)(si64reg8spnt)] = 0; // initialize terminal SWEET64 stack pointer
 										terminalS64reg8[(uint16_t)(si64reg8jump)] = 0; // initialize terminal SWEET64 jump register
+										terminalS64reg8[(uint16_t)(si64reg8error)] = s64errNone; // initialize terminal SWEET64 error code
+										clearSWEET64errorLatch(); // this is a new trace run, so do not let it be suppressed by a stale latched error from a previous run
 
 									}
 									if (terminalMode & tmByteReadIn) maxLine = terminalByte;
 									else maxLine = 1;
 
-									if (terminalExecSched) terminalState = tsTraceSWEET64line;
+									if (SWEET64::isProgramValid(terminalExecSched)) terminalState = tsTraceSWEET64line;
 									else errIdx = tseIdxBadSWEET64addr;
 
 									break;
 
 								case 0x0C:	// list 20 lines of SWEET64 pseudo-code
-									if (terminalMode & tmByteReadIn) terminalListSched = (const uint8_t *)(pgm_read_word(&S64programList[(uint16_t)(terminalByte)]));
+#if defined(useSWEET64RAMprograms)
+									if (terminalMode & tmTargetReadIn) terminalListSched = SWEET64::makeRAMprogram(terminalTarget);
+									else
+#endif // defined(useSWEET64RAMprograms)
+									if (terminalMode & tmByteReadIn) terminalListSched = SWEET64::getProgramPC(terminalByte);
 
 									maxLine = 20;
 
-									if (terminalListSched) terminalState = tsOutputSWEET64line;
+									if (SWEET64::isProgramValid(terminalListSched)) terminalState = tsOutputSWEET64line;
 									else errIdx = tseIdxBadSWEET64addr;
 
 									break;
@@ -1989,6 +3115,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									maxLine = s64reg64count + si64reg8count;
 									break;
 
+#if defined(useSWEET64RAMprograms)
+								case 'M':	// access SWEET64 program RAM
+									break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useSimulatedFIandVSS)
 								case 'S':   // list available signal simulator mode values, with optional mode setting
@@ -2080,7 +3211,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 								case 'T':   // list available trip variable measurements, with optional trip variable value storage
 									maxLine = rvMeasuredCount;
-									prgmPtr = prgmWriteTripMeasurementValue;
+									prgmPtr = SWEET64::makeProgmemProgram(S64_PRGM_PTR(prgmWriteTripMeasurementValue));
 									break;
 
 								case 'V':   // list available program variables, with optional program variable value storage
@@ -2137,7 +3268,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									}
 
 									maxLine = programVariableMaxIdx;
-									prgmPtr = prgmWriteVariableValue;
+									prgmPtr = SWEET64::makeProgmemProgram(S64_PRGM_PTR(prgmWriteVariableValue));
 									break;
 
 								case 'X':	// enter hexadecimal entry mode (if not caught by number parser above, it's a syntax error)
@@ -2220,7 +3351,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #endif // defined(useDebugButtonInjection)
 #if defined(useDebugTerminalSWEET64)
 		case tsTraceSWEET64line:	// trace one or more lines of SWEET64 program
-			if ((terminalExecSched) && (terminalState == tsTraceSWEET64line))
+			if ((SWEET64::isProgramValid(terminalExecSched)) && (terminalState == tsTraceSWEET64line))
 			{
 
 				// decode instruction, and output if trace flag is enabled
@@ -2231,13 +3362,25 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 					SWEET64::executeInstruction(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8); // execute instruction
 
-					if (terminalS64reg8[(uint16_t)(si64reg8valid)] == 0) terminalExecSched = 0;
+					if (terminalS64reg8[(uint16_t)(si64reg8valid)] == 0)
+					{
+
+						reportSWEET64error(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8);
+						terminalExecSched = SWEET64::makeProgmemProgram(0);
+
+					}
 
 					if (terminalS64reg8[(uint16_t)(si64reg8flags)] & SWEET64traceFlag) // if trace flag is still enabled, output register values
 						dumpSWEET64information(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8);
 
 				}
-				else terminalExecSched = 0;
+				else
+				{
+
+					reportSWEET64error(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8);
+					terminalExecSched = SWEET64::makeProgmemProgram(0);
+
+				}
 
 				if (maxLine)
 				{
@@ -2249,7 +3392,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 			}
 
-			if (terminalExecSched == 0) terminalState = tsInitProcessing;
+			if (!SWEET64::isProgramValid(terminalExecSched)) terminalState = tsInitProcessing;
 
 			break;
 
@@ -2260,6 +3403,116 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 			break;
 
+#if defined(useSWEET64RAMprograms)
+		case tsOutputSWEET64RAMline:	// output SWEET64 program RAM bytes
+			outputSWEET64programRAMline(terminalLine);
+			terminalLine += 8;
+
+			if ((--maxLine) == 0) terminalState = nextTerminalState;
+
+			break;
+
+		case tsOutputSWEET64RAMsourceLine:	// output SWEET64 program RAM as source
+			i = outputSWEET64programRAMsourceLine(terminalLine);
+
+			if ((terminalLine >= s64programRAMdumpEnd) || (i > (uint8_t)(s64programRAMdumpEnd - terminalLine)))
+			{
+
+				text::stringOut(m8DevDebugTerminalIdx, PSTR("};" tcCR));
+				terminalState = tsInitProcessing;
+
+			}
+			else terminalLine += i;
+
+			break;
+
+		case tsInitSWEET64assembler:	// initialize SWEET64 program RAM assembler input
+			text::newLine(m8DevDebugTerminalIdx);
+			text::hexByteOut(m8DevDebugTerminalIdx, s64programRAMassemblerAddr);
+			text::stringOut(m8DevDebugTerminalIdx, PSTR("!:"));
+			ringBuffer::empty(rbIdxTerminal);
+			terminalState = tsSWEET64assemblerInput;
+			errIdx = tseIdxLineCancel;
+			break;
+
+		case tsSWEET64assemblerInput:	// get SWEET64 program RAM assembler line
+			do
+			{
+
+				i = text::chrIn(m8DevDebugTerminalIdx);
+
+				if (i)
+				{
+
+					switch (i)
+					{
+
+						case 0x0D:	// enter
+							text::charOut(m8DevDebugTerminalIdx, 0x0D);
+							heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
+
+							if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsEmpty)) terminalState = tsInitInput;
+							else
+							{
+
+								uint8_t assembledAddr = s64programRAMassemblerAddr;
+
+								if (assembleSWEET64programRAMline())
+								{
+
+									s64pc_t assembledLine = SWEET64::makeRAMprogram(assembledAddr);
+
+									outputSWEET64prgmLine(iLW, assembledLine, 1);
+									terminalState = tsInitSWEET64assembler;
+
+								}
+								else
+								{
+
+									ringBuffer::empty(rbIdxTerminal);
+									errIdx = tseIdxSyntax;
+									terminalState = tsError;
+
+								}
+
+							}
+
+							break;
+
+						case 0x03:	// cancel line input
+						case 0x18:	// cancel line input
+							terminalState = tsInitInput;
+							break;
+
+						case 0x08:	// backspace
+						case 0x7F:	// delete
+							backspaceTerminalInput();
+							break;
+
+						case 0x20 ... 0x7E:
+							if (ringBuffer::testBuffer(rbIdxTerminal, bufferIsFull)) terminalState = tsError;
+							else
+							{
+
+								ringBuffer::push(rbIdxTerminal, i);
+								text::charOut(m8DevDebugTerminalIdx, i);
+
+							}
+							break;
+
+						default:
+							break;
+
+					}
+
+				}
+
+			}
+			while ((i) && (terminalState == tsSWEET64assemblerInput));
+
+			break;
+
+#endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 		case tsInitListDecimal:
 			if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it

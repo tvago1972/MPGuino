@@ -292,15 +292,15 @@ static void bluetooth::mainProcess(void)
 												case tGetBTparameterValue:
 													str2ull(btInpBuff); // convert digit string into a number
 #if defined(usePartialRefuel)
-													if (btF->u08[1] == pRefuelSizeIdx) SWEET64::runPrgm(prgmAddToPartialRefuel, 0);
+													if (btF->u08[1] == pRefuelSizeIdx) SWEET64::runPrgm(S64_PRGM_PTR(prgmAddToPartialRefuel), 0);
 #endif // defined(usePartialRefuel)
-													EEPROM::onChange(prgmWriteBTparameterValue, btF->u08[1]);
+													EEPROM::onChange(S64_PRGM_PTR(prgmWriteBTparameterValue), btF->u08[1]);
 													heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
 													break;
 
 												case tGetProgramVariableValue:
 													str2ull(btInpBuff); // convert digit string into a number
-													SWEET64::runPrgm(prgmWriteProgramVariableValue, btF->u08[1]);
+													SWEET64::runPrgm(S64_PRGM_PTR(prgmWriteProgramVariableValue), btF->u08[1]);
 													heart::changeBitFlagBits(v8Timer0CommandIdx, 0, t0cResetInputActivityTimer);
 													break;
 
@@ -373,7 +373,7 @@ static void bluetooth::mainProcess(void)
 						if ((btF->u08[1] == instantIdx) && (btF->u08[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
 						{
 
-							if (SWEET64::runPrgm(prgmCheckInstantSpeed, 0) == 0) btF->u08[0] = tFuelRate;
+							if (SWEET64::runPrgm(S64_PRGM_PTR(prgmCheckInstantSpeed), 0) == 0) btF->u08[0] = tFuelRate;
 
 						}
 
