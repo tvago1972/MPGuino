@@ -486,7 +486,7 @@ A two-way serial terminal for development use (requires `useDebugTerminal`).
 
 Default baud rate: 38400.
 
-Commands available (ATmega2560 only, auto-enabled):
+Commands available in full on ATmega2560 debug builds, where the extended monitor features are auto-enabled:
 - `?` — brief help
 - Button injection (inject virtual button presses)
 - SWEET64 program listing and trace

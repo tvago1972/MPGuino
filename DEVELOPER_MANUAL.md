@@ -524,12 +524,12 @@ instrBranchIfZero, <offset_to_overflow_return>,   // bail if zero
 // Call by PROGMEM pointer (most common)
 uint32_t result = SWEET64::runPrgm(S64_PRGM_PTR(prgmMyCalc), tripIdx);
 
-// Call by function dispatch index
-uint32_t result = SWEET64::runPrgm(SWEET64::getProgramPointer(tFuelEcon), currentIdx);
-
-// Call by PC (supports both PROGMEM and RAM)
+// Call by function dispatch index (supports RAM override if active)
 s64pc_t pc = SWEET64::getProgramPC(tFuelEcon);  // respects RAM override if active
 uint32_t result = SWEET64::runPrgm(pc, tankIdx);
+
+// Call by raw PROGMEM dispatch pointer (bypasses RAM override)
+uint32_t result = SWEET64::runPrgm(SWEET64::getProgramPointer(tFuelEcon), currentIdx);
 ```
 
 `runPrgm()` returns the lower 32 bits of r2 at `instrDone`. If the error flag is set, the returned value is unreliable; check `SWEET64processorFlags & SWEET64errorFlag`.
@@ -587,7 +587,7 @@ Commands are single characters, optionally preceded by numeric arguments separat
 - `z` — tertiary argument (decimal window width, etc.)
 - Values after `:` are written to the target
 
-Numeric input is **decimal by default**; prefix with `0x` for hexadecimal.
+Numeric input is **hexadecimal by default**. Use `\` to switch the current number entry to decimal. Use `$` or `X` to switch back to hexadecimal.
 
 ---
 
@@ -684,7 +684,7 @@ These operations use SWEET64 internally (registers r6/r7 are the debug terminal'
 
 ### 11.11 System Status (`^S`)
 
-Prints all internal status flag bytes and their individual named bits.
+`^S` means Ctrl-S. It prints a compact system snapshot, including uptime, clock time when `useClockDisplay` is enabled, decimal-format settings, decoded status flags, raw status bytes, SWEET64 RAM override status when enabled, the SWEET64 error latch when enabled, and Bluetooth response state when the BLE shield support is compiled in.
 
 ### 11.12 Help (`?`)
 
@@ -694,7 +694,7 @@ Prints the full command reference (requires `useDebugTerminalHelp`).
 
 ## 12. SWEET64 Listing & Tracing
 
-These commands require `useDebugTerminalSWEET64`.
+These commands require `useDebugTerminalSWEET64`. Commands shown with `^` use control-key notation; for example, `^I` means Ctrl-I, not a literal caret followed by `I`.
 
 ### 12.1 Instruction Reference (`^I`)
 
@@ -825,7 +825,7 @@ Traces the RAM program starting at address `z`, for `y` instructions (`y=0` = ru
 x.y^W
 ```
 
-Exports the RAM bytes between addresses `x` and `y` as a `static const uint8_t prgmRAMexport[] PROGMEM = { ... };` C declaration, ready to paste into a `.ino` file.
+Exports the RAM bytes between addresses `x` and `y` as a `static const uint8_t prgmRAMexport[] PROGMEM = { ... };` C declaration, ready to paste into a `.ino` file. `^W` means Ctrl-W.
 
 ### 13.7 Program RAM Override (`^O`)
 
@@ -926,7 +926,7 @@ Call `activityLED::assert(flag)` to set the LED for a phase and `activityLED::re
 | `useDebugTerminalHelp` | `?` command |
 | `useDebugTerminalLabels` | Symbolic names in all output |
 | `useDebugTerminalSWEET64` | `^L`, `^T`, `^I`, `^F`, `^E` commands |
-| `useSWEET64RAMprograms` | `!`, `M`, `^W`, `^O` commands + RAM assembler |
+| `useSWEET64RAMprograms` | `!`, `M`, Ctrl-W / `^W`, Ctrl-O / `^O` commands + RAM assembler |
 | `useDebugButtonInjection` | `I` command (requires `useDebugTerminal` + buttons) |
 | `useDebugCPUreading` | Fine-grained interrupt-level CPU counters |
 | `useSimulatedFIandVSS` | `S` command + injector/VSS simulation |
