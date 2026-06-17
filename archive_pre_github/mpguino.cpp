@@ -74,21 +74,15 @@ typedef uint8_t byte;
 //#define injhold parms[injectorSettleTimeIdx]
 
 //#define usedefaults true
-void enableLButton();
-void enableMButton();
-void enableRButton();
-void addEvent(byte eventID, unsigned int ms);
+void toggleVSS(void);
 unsigned long microSeconds(void);
 unsigned long elapsedMicroseconds(unsigned long startMicroSeconds,
 		unsigned long currentMicroseconds);
 unsigned long elapsedMicroseconds(unsigned long startMicroSeconds);
-void processInjOpen(void);
-void processInjClosed(void);
-void enableVSS();
 void setup(void);
 void mainloop(void);
+void dispv(byte lidx, unsigned long num);
 char* format(unsigned long num);
-char * getStr(prog_char * str);
 void doDisplayCustom();
 void doDisplayEOCIdleData();
 void doDisplayInstantCurrent();
@@ -99,14 +93,13 @@ void doDisplayBigTank();
 void doDisplayCurrentTripData(void);
 void doDisplayTankTripData(void);
 void doDisplaySystemInfo(void);
-void displayTripCombo(char *lu1, char * lm1, unsigned long v1, char * lu2, char * lm2, unsigned long v2,
-		char * lu3, char * lm3, unsigned long v3, char * lu4, char * lm4, unsigned long v4);
+void displayTripCombo(byte lidx1, unsigned long v1, byte lidx2, unsigned long v2, byte lidx3, unsigned long v3, byte lidx4, unsigned long v4);
 void tDisplay(void * r);
 int memoryTest();
 unsigned long instantmph();
 unsigned long instantmpg();
 unsigned long instantgph();
-void bigNum(unsigned long t, char * txt1, const char * txt2);
+void bigNum(unsigned long t, PGM_P txt1);
 void init64(unsigned long an[], unsigned long bigPart,
 				unsigned long littlePart);
 void shl64(unsigned long an[]);
@@ -122,27 +115,189 @@ byte load();
 char * uformat(unsigned long val);
 unsigned long rformat(char * val);
 void editParm(byte parmIdx);
-void initGuino();
+void editGuino(void);
+void initGuino(void);
 unsigned long millis2();
 void delay2(unsigned long ms);
-void delayMicroseconds2(unsigned int us);
-
 
 void simpletx(char * string);
-unsigned long parms[] = { 55ul, 8208ul, 500000000ul, 3ul, 420000000ul, 10300ul,
-		500ul, 2400ul, 0ul, 2ul, 0ul, 0ul };//default values
-char * parmLabels[] = { "Contrast", "VSS Pulses/Mile", "MicroSec/Gallon",
-		"Pulses/2 revs", "Timout(microSec)", "Tank Gal * 1000",
-		"Injector DelayuS", "Weight (lbs)", "Scratchpad(odo?)", "VSS Delay ms",
-		"InjTrg 0-Dn 1-Up", "Metric (1=yes)" };
-//byte brightness[]={255,214,171,128}; //middle button cycles through these brightness settings
+unsigned long parms[] = { // default values
+  55ul,
+  8208ul,
+  500000000ul,
+  3ul,
+  420000000ul,
+  10300ul,
+  500ul,
+  2400ul,
+  0ul,
+  2ul,
+  0ul,
+  0ul
+};
+
+PROGMEM prog_char fontBigNum[]={
+  B11111,B11111,B11111,B00000,B00000,B00000,B00000,B00000,
+  B00000,B00000,B00000,B00000,B00000,B11111,B11111,B11111,
+  B11111,B11111,B11111,B00000,B00000,B11111,B11111,B11111,
+  B11111,B11111,B11111,B11111,B11111,B11111,B11111,B11111,
+  B00000,B00000,B00000,B00000,B00000,B01110,B01110,B01110};
+
+#define fontBigNumLength (sizeof(fontBigNum)/sizeof(prog_char)) // custom character array size
+
+PROGMEM prog_char fString_00[] = "Contrast";
+PROGMEM prog_char fString_01[] = "VSS Pulses/Mile";
+PROGMEM prog_char fString_02[] = "MicroSec/Gallon";
+PROGMEM prog_char fString_03[] = "Pulses/2 revs";
+PROGMEM prog_char fString_04[] = "Timout(microSec)";
+PROGMEM prog_char fString_05[] = "Tank Gal * 1000";
+PROGMEM prog_char fString_06[] = "Injector DelayuS";
+PROGMEM prog_char fString_07[] = "Weight (lbs)";
+PROGMEM prog_char fString_08[] = "Scratchpad(odo?)";
+PROGMEM prog_char fString_09[] = "VSS Delay ms";
+PROGMEM prog_char fString_10[] = "InjTrg 0-Dn 1-Up";
+PROGMEM prog_char fString_11[] = "Metric (1=yes)";
+PROGMEM prog_char fString_12[] = "Custom  ";
+PROGMEM prog_char fString_13[] = "Instant/Current ";
+PROGMEM prog_char fString_14[] = "Instant/Tank ";
+PROGMEM prog_char fString_15[] = "BIG Instant ";
+PROGMEM prog_char fString_16[] = "BIG Current ";
+PROGMEM prog_char fString_17[] = "BIG Tank ";
+PROGMEM prog_char fString_18[] = "Current ";
+PROGMEM prog_char fString_19[] = "Tank ";
+PROGMEM prog_char fString_20[] = "EOC/Idle ";
+PROGMEM prog_char fString_21[] = "CPU Monitor ";
+
+PROGMEM prog_char fString_22[] = {4, 1, 4, 32, 0};
+PROGMEM prog_char fString_23[] = {1, 4, 32, 32, 0};
+PROGMEM prog_char fString_24[] = {3, 3, 4, 32, 0};
+PROGMEM prog_char fString_25[] = {1, 3, 4, 32, 0};
+PROGMEM prog_char fString_26[] = {4, 2, 4, 32, 0};
+PROGMEM prog_char fString_27[] = {4, 3, 3, 32, 0};
+PROGMEM prog_char fString_28[] = {4, 3, 3, 32, 0};
+PROGMEM prog_char fString_29[] = {1, 1, 4, 32, 0};
+PROGMEM prog_char fString_30[] = {4, 3, 4, 32, 0};
+PROGMEM prog_char fString_31[] = {4, 3, 4, 32, 0};
+
+PROGMEM prog_char fString_32[] = {4, 2, 4, 0};
+PROGMEM prog_char fString_33[] = {2, 4, 2, 0};
+PROGMEM prog_char fString_34[] = {4, 2, 2, 0};
+PROGMEM prog_char fString_35[] = {2, 2, 4, 0};
+PROGMEM prog_char fString_36[] = {32, 32, 4, 0};
+PROGMEM prog_char fString_37[] = {2, 2, 4, 0};
+PROGMEM prog_char fString_38[] = {4, 2, 4, 0};
+PROGMEM prog_char fString_39[] = {32, 4, 32, 0};
+PROGMEM prog_char fString_40[] = {4, 2, 4, 0};
+PROGMEM prog_char fString_41[] = {2, 2, 4, 0};
+
+PROGMEM prog_char fString_42[] = " MPG";
+PROGMEM prog_char fString_43[] = " L/K";
+PROGMEM prog_char fString_44[] = "INST";
+PROGMEM prog_char fString_45[] = "CURR";
+PROGMEM prog_char fString_46[] = "TANK";
+
+PROGMEM prog_char fString_47[] = "MG"; // fuel economy
+PROGMEM prog_char fString_48[] = "LK";
+PROGMEM prog_char fString_49[] = "MH"; // speed
+PROGMEM prog_char fString_50[] = "KH";
+PROGMEM prog_char fString_51[] = "GH"; // fuel consumption
+PROGMEM prog_char fString_52[] = "LH";
+PROGMEM prog_char fString_53[] = " G"; // fuel quantity
+PROGMEM prog_char fString_54[] = " L";
+PROGMEM prog_char fString_55[] = " M"; // distance
+PROGMEM prog_char fString_56[] = " K";
+PROGMEM prog_char fString_57[] = "EM"; // EOC distance
+PROGMEM prog_char fString_58[] = "EK"; // EOC distance
+
+PROGMEM PGM_P displayLabels[] = {
+  fString_47,
+  fString_48,
+  fString_49,
+  fString_50,
+  fString_51,
+  fString_52,
+  fString_53,
+  fString_54,
+  fString_55,
+  fString_56,
+  fString_57,
+  fString_58
+};
+
+PROGMEM PGM_P fuelEconLabel[] = {
+  fString_42,
+  fString_43,
+  fString_44,
+  fString_45,
+  fString_46
+};
+
+PROGMEM PGM_P bigNumChars1[] = {
+  fString_22,
+  fString_23,
+  fString_24,
+  fString_25,
+  fString_26,
+  fString_27,
+  fString_28,
+  fString_29,
+  fString_30,
+  fString_31
+};
+
+PROGMEM PGM_P bigNumChars2[] = {
+  fString_32,
+  fString_33,
+  fString_34,
+  fString_35,
+  fString_36,
+  fString_37,
+  fString_38,
+  fString_39,
+  fString_40,
+  fString_41
+};
+
+PROGMEM PGM_P parmLabels[] = {
+  fString_00,
+  fString_01,
+  fString_02,
+  fString_03,
+  fString_04,
+  fString_05,
+  fString_06,
+  fString_07,
+  fString_08,
+  fString_09,
+  fString_10,
+  fString_11
+};
+
+PROGMEM PGM_P displayFuncNames[] = {
+  fString_12,
+  fString_13,
+  fString_14,
+  fString_15,
+  fString_16,
+  fString_17,
+  fString_18,
+  fString_19,
+  fString_20,
+  fString_21
+};
+
+#define displayFuelEconIdx 0
+#define displaySpeedIdx 2
+#define displayFuelConsIdx 4
+#define displayFuelQuanIdx 6
+#define displayDistIdx 8
+#define displayEOCIdx 10
+
 byte brightness[] = { 0, 41, 84, 128 }; //middle button cycles through these brightness settings
 #define brightnessLength (sizeof(brightness)/sizeof(byte)) //array size
 byte brightnessIdx = 1;
 
-
-
-#define contrastIdx 0  //do contrast first to get display dialed in
+#define contrastIdx 0  // do contrast first to get display dialed in
 #define vssPulsesPerMileIdx 1
 volatile unsigned long distancefactor;
 
@@ -161,6 +316,7 @@ volatile unsigned long fuelfactor;
 #define parmsLength (sizeof(parms)/sizeof(unsigned long)) /*  //array size      */
 
 unsigned long injectorSettleTime;
+unsigned long vssPauseCount;
 
 #define nil 3999999999ul
 
@@ -174,70 +330,95 @@ unsigned long injectorSettleTime;
 
 typedef void (* pFunc)(void);//type for display function pointers
 
-volatile unsigned long timer2_overflow_count;
+volatile unsigned long timer2_overflow_count=0;
+volatile int countsVSS=0;
 
-/*** Set up the Events ***
- We have our own ISR for timer2 which gets called about once a millisecond.
- So we define certain event functions that we can schedule by calling addEvent
- with the event ID and the number of milliseconds to wait before calling the event.
- The milliseconds is approximate.
+// VSS debounce and button debounce interrupt
+//   button pin states are polled every 1.024 milliseconds
+//   if button pin states change, then a 10.24 ms wait is started
+//   if button pin states change during the 10.24 ms wait, the wait gets restarted
+//   if the 10.24 ms wait finishes, the program button state is updated with the new button pin states
 
- Keep the event functions SMALL!!!  This is an interrupt!
-
- */
-//event functions
-
-void enableLButton() {
-	PCMSK1 |= (1 << PCINT11);
-}
-void enableMButton() {
-	PCMSK1 |= (1 << PCINT12);
-}
-void enableRButton() {
-	PCMSK1 |= (1 << PCINT13);
-}
-//array of the event functions
-pFunc eventFuncs[] = { enableVSS, enableLButton, enableMButton, enableRButton };
-#define eventFuncSize (sizeof(eventFuncs)/sizeof(pFunc))
-//define the event IDs
-#define enableVSSID 0
-#define enableLButtonID 1
-#define enableMButtonID 2
-#define enableRButtonID 3
-//ms counters
-unsigned int eventFuncCounts[eventFuncSize];
-
-//schedule an event to occur ms milliseconds from now
-void addEvent(byte eventID, unsigned int ms) {
-	if (ms == 0)
-		eventFuncs[eventID]();
-	else
-		eventFuncCounts[eventID] = ms;
-}
-
-/* this ISR gets called every 1.024 milliseconds, we will call that a millisecond for our purposes
- go through all the event counts,
- if any are non zero subtract 1 and call the associated function if it just turned zero.  */
-ISR(TIMER2_OVF_vect)
+ISR( TIMER2_OVF_vect )             // this ISR gets called every 1.024 milliseconds (we will call that a millisecond for our purposes)
 {
-	timer2_overflow_count++;
-	for (byte eventID = 0; eventID < eventFuncSize; eventID++) {
-		if (eventFuncCounts[eventID] != 0) {
-			eventFuncCounts[eventID]--;
-			if (eventFuncCounts[eventID] == 0)
-				eventFuncs[eventID]();
-		}
-	}
+  static uint8_t pinBtnCurrState=0;
+  static uint8_t pinBtnPrevState=0;
+  static int countsButtons=0;
+
+  pinBtnCurrState=PINC&buttonsUp; // read relevant pins (bypassing digitalRead for interrupt performance)
+  timer2_overflow_count++;         // update timer overflow countdown
+  if(countsVSS!=0){                // if VSS event countdown is in progress,
+    if(!(countsVSS--)) toggleVSS();  // if VSS event countdown reaches zero, toggle VSS state
+  }
+
+  if(pinBtnCurrState^pinBtnPrevState) countsButton=10; // if button pin states changed during the last ISR period, (re)start a button countdown
+  else if(countsButton!=0){        // if button countdown in progress and button pin state has not changed,
+    if(!(countsButton--)) buttonState &= pinBtnCurrState; // if button countdown reaches zero, update button state with current pin state
+  }
+
+  pinBtnPrevState = pinBtnCurrState;      // save current pin state for the next time this ISR gets called
+}
+
+ISR( PCINT1_vect )                 // VSS event handler interrupt
+{
+  static uint8_t pinVSSCurrState=0;
+  static uint8_t pinVSSPrevState=0;
+
+  pinVSSCurrState=PINC&vssBit;    // read relevant pins (bypassing digitalRead for interrupt performance)
+  if (pinVSSCurrState^pinVSSPrevState){   // if VSS pin actually changed state
+    if(vssPauseCount==0) toggleVSS(); // if VSS debounce pause defined to be zero, immediately toggle VSS state
+    else if(countsVSS==0) countsVSS=vssPauseCount; // otherwise, if no VSS event is scheduled, schedule a delayed VSS state flip
+  }
+
+  pinVSSPrevState = pinVSSCurrState;      // save current pin state for the next time this ISR gets called
+}
+
+void toggleVSS(void){
+  static unsigned long lastVSSTime=0;
+  static unsigned long currVSSTime=0;
+  static unsigned long VSSTimeLength=0;
+
+  lastVSSTime = currVSSTime;       // save previous VSS pulse tick
+  currVSSTime = microSeconds();    // get current VSS pulse tick
+  t = elapsedMicroseconds(lastVSSTime,currVSSTime); // calculate current VSS pulse length
+  tmpTrip.vssPulses++;             // bump VSS pulse count by 1
+  tmpTrip.vssPulseLength += t;     // add measured VSS pulse length to VSS pulse length accumulator
+}
+
+volatile unsigned long lastInjStartTime=nil;
+volatile unsigned long currInjStartTime=nil;
+volatile unsigned long currInjEndTime=nil;
+
+ISR( INT0_vect ){
+  lastInjStartTime = curInjStartTime;
+  currInjStartTime = microSeconds();
+}
+
+ISR( INT1_vect ){
+  static unsigned long injPulseLength=0;
+  static unsigned long temp=0;
+
+  currInjEndtime=microSeconds();
+
+  if (currInjStartTime != nil) {
+    tmpTrip.injHiLength = currInjStartTime - lastInjStartTime;
+    injPulseLength = elapsedMicroseconds(currInjStartTime,currInjEndtime) - injectorSettleTime;
+    temp = tmpTrip.injHius;
+    tmpTrip.injHius += injPulseLength;
+    if (tmpTrip.injHius < temp) tmpTrip.injHiSec++;
+    tmpTrip.injPulses++;
+  }
 }
 
 unsigned long maxLoopLength = 0; //see if we are overutilizing the CPU
-
 
 #define buttonsUp   lbuttonBit + mbuttonBit + rbuttonBit  // start with the buttons in the right state
 byte buttonState = buttonsUp;
 
 //overflow counter used by millis2()
+
 unsigned long lastMicroSeconds = millis2() * 1000;
+
 unsigned long microSeconds(void) {
 	unsigned long tmp_timer2_overflow_count;
 	unsigned long tmp;
@@ -271,10 +452,11 @@ class Trip {
 public:
 	unsigned long loopCount; //how long has this trip been running
 	unsigned long injPulses; //rpm
-	unsigned long injHiSec;// seconds the injector has been open
-	unsigned long injHius;// microseconds, fractional part of the injectors open
-	unsigned long injIdleHiSec;// seconds the injector has been open
-	unsigned long injIdleHius;// microseconds, fractional part of the injectors open
+	unsigned long injHiLength; // actual rpm, only used by instant
+	unsigned long injHiSec; // seconds the injector has been open
+	unsigned long injHius; // microseconds, fractional part of the injectors open
+	unsigned long injIdleHiSec; // seconds the injector has been open
+	unsigned long injIdleHius; // microseconds, fractional part of the injectors open
 	unsigned long vssPulses;//from the speedo
 	unsigned long vssEOCPulses;//from the speedo
 	unsigned long vssPulseLength; // only used by instant
@@ -293,126 +475,44 @@ public:
 };
 
 //LCD prototype
-namespace LCD {
-void gotoXY(byte x, byte y);
-void print(char * string);
-void init();
-void tickleEnable();
-void cmdWriteSet();
-void LcdCommandWrite(byte value);
-void LcdDataWrite(byte value);
-byte pushNibble(byte value);
-}
-;
+namespace LCD{
+  void init();
+  void gotoXY(byte x, byte y);
+  void printProgMem(PGM_P s);
+  void print(char * string);
+  void WriteByte(uint8_t value, uint8_t rs);
+  void writeNybble(uint8_t value, uint8_t mask, uint8_t rs);
+};
+
+#define LCDCommand B0
+#define LCDData B1
 
 //main objects we will be working with:
-unsigned long injHiStart; //for timing injector pulses
 Trip tmpTrip;
 Trip instant;
 Trip current;
 Trip tank;
 
-unsigned volatile long instInjStart = nil;
-unsigned volatile long tmpInstInjStart = nil;
-unsigned volatile long instInjEnd;
-unsigned volatile long tmpInstInjEnd;
-unsigned volatile long instInjTot;
-unsigned volatile long tmpInstInjTot;
-unsigned volatile long instInjCount;
-unsigned volatile long tmpInstInjCount;
+pFunc displayFuncs[] = {
+  doDisplayCustom,
+  doDisplayInstantCurrent,
+  doDisplayInstantTank,
+  doDisplayBigInstant,
+  doDisplayBigCurrent,
+  doDisplayBigTank,
+  doDisplayCurrentTripData,
+  doDisplayTankTripData,
+  doDisplayEOCIdleData,
+  doDisplaySystemInfo
+};
 
-volatile static pFunc int0Func;
-ISR(INT0_vect)
-{ //processInjOpen by default
-	int0Func();
-}
-
-volatile static pFunc int1Func;
-ISR(INT1_vect)
-{//processInjClosed
-	int1Func();
-}
-
-void processInjOpen(void) {
-	injHiStart = microSeconds();
-}
-
-void processInjClosed(void) {
-	long t = microSeconds();
-	long x = elapsedMicroseconds(injHiStart, t) - injectorSettleTime;
-	if (x > 0)
-		tmpTrip.injHius += x;
-	tmpTrip.injPulses++;
-
-	if (tmpInstInjStart != nil) {
-		if (x > 0)
-			tmpInstInjTot += x;
-		tmpInstInjCount++;
-	} else {
-		tmpInstInjStart = t;
-	}
-
-	tmpInstInjEnd = t;
-}
-
-volatile boolean vssFlop = 0;
-
-void enableVSS() {
-	//    tmpTrip.vssPulses++;
-	vssFlop = !vssFlop;
-}
-
-unsigned volatile long lastVSS1;
-unsigned volatile long lastVSSTime;
-unsigned volatile long lastVSS2;
-
-volatile boolean lastVssFlop = vssFlop;
-
-//attach the vss/buttons interrupt
-ISR( PCINT1_vect )
-{
-	static byte vsspinstate = 0;
-	byte p = PINC;//bypassing digitalRead for interrupt performance
-	if ((p & vssBit) != (vsspinstate & vssBit)) {
-		addEvent(enableVSSID, parms[vsspauseIdx]); //check back in a couple milli
-	}
-	if (lastVssFlop != vssFlop) {
-		lastVSS1 = lastVSS2;
-		unsigned long t = microSeconds();
-		lastVSS2 = elapsedMicroseconds(lastVSSTime, t);
-		lastVSSTime = t;
-		tmpTrip.vssPulses++;
-		tmpTrip.vssPulseLength += lastVSS2;
-		lastVssFlop = vssFlop;
-	}
-	vsspinstate = p;
-	buttonState &= p;
-}
-
-pFunc displayFuncs[] = { doDisplayCustom, doDisplayInstantCurrent,
-		doDisplayInstantTank, doDisplayBigInstant, doDisplayBigCurrent,
-		doDisplayBigTank, doDisplayCurrentTripData, doDisplayTankTripData,
-		doDisplayEOCIdleData, doDisplaySystemInfo, };
 #define displayFuncSize (sizeof(displayFuncs)/sizeof(pFunc)) //array size
-prog_char * displayFuncNames[displayFuncSize];
+
 byte newRun = 0;
 void setup(void) {
 
-	newRun = load();//load the default parameters
-	byte x = 0;
-	displayFuncNames[x++] = PSTR("Custom  ");
-	displayFuncNames[x++] = PSTR("Instant/Current ");
-	displayFuncNames[x++] = PSTR("Instant/Tank ");
-	displayFuncNames[x++] = PSTR("BIG Instant ");
-	displayFuncNames[x++] = PSTR("BIG Current ");
-	displayFuncNames[x++] = PSTR("BIG Tank ");
-	displayFuncNames[x++] = PSTR("Current ");
-	displayFuncNames[x++] = PSTR("Tank ");
-	displayFuncNames[x++] = PSTR("EOC/Idle ");
-	displayFuncNames[x++] = PSTR("CPU Monitor ");
-
-	//  analogWrite(BrightnessPin,brightness[brightnessIdx]);
-	sbi(TCCR1A, COM1A1); //brightness pwm enable
+	newRun = load(); // load the default parameters
+	sbi(TCCR1A, COM1A1); // brightness pwm enable
 
 	OCR1A = brightness[brightnessIdx];
 
@@ -421,45 +521,21 @@ void setup(void) {
 
 	delay2(500);
 
-	//  analogWrite(ContrastPin,parms[contrastIdx]);
-	sbi(TCCR0A, COM0A1);//contrast pwm enable
+	sbi(TCCR0A, COM0A1); // contrast pwm enable
 	OCR0A = parms[contrastIdx];
 
 	LCD::init();
-	LCD::LcdCommandWrite(0b00000001); // clear display, set cursor position to zero
-	LCD::LcdCommandWrite(0b10000); // set dram to zero
+	LCD::WriteByte(0b00000001, LCDCommand); // clear display, set cursor position to zero
+	LCD::WriteByte(0b10000, LCDCommand); // set dram to zero
 	LCD::gotoXY(0, 0);
-	LCD::print(getStr(PSTR("OpenGauge       ")));
+	LCD::printProgMem(PSTR("OpenGauge       "));
 	LCD::gotoXY(0, 1);
-	LCD::print(getStr(PSTR("  MPGuino  v0.86")));
+	LCD::printProgMem(PSTR("MPGuino  v0.86tav"));
 
-	injectorSettleTime = injhold;
-	int0Func = processInjOpen;
-	int1Func = processInjClosed;
-
-	//set up the external interrupts
-	EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01)))
-			| ((parms[injEdgeIdx] == 1 ? RISING : FALLING) << ISC00);
-	EIMSK |= (1 << INT0);
-	EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11)))
-			| ((parms[injEdgeIdx] == 1 ? FALLING : RISING) << ISC10);
-	EIMSK |= (1 << INT1);
+	initGuino(void);
 
 	PORTC |= (1 << 5) | (1 << 4) | (1 << 3); //button pullup resistors
-
-	distancefactor = parms[vssPulsesPerMileIdx];
-	fuelfactor = parms[microSecondsPerGallonIdx];
-
-	if (parms[metricIdx] == 1){
-		distancefactor /= 1.609;
-		fuelfactor /= 3.785;
-	}
-
-	//low level interrupt enable stuff
-	PCMSK1 |= (1 << PCINT8);
-	enableLButton();
-	enableMButton();
-	enableRButton();
+	PCMSK1 |= (1 << PCINT8); // enable vss input pin interrupt
 	PCICR |= (1 << PCIE1);
 
 	delay2(1500);
@@ -470,25 +546,17 @@ byte holdDisplay = 0;
 
 void mainloop(void) {
 	if (newRun != 1)
-		initGuino();//go through the initialization screen
+		editGuino(void); // go through the initialization screen
+		initGuino(void); // load stored parameters from EEPROM
 	unsigned long lastActivity = microSeconds();
 	unsigned long tankHold; //state at point of last activity
 	while (true) {
 		unsigned long loopStart = microSeconds();
 		instant.reset(); //clear instant
+
 		cli();
 		instant.update(tmpTrip); //"copy" of tmpTrip in instant now
 		tmpTrip.reset(); //reset tmpTrip first so we don't lose too many interrupts
-		instInjStart = tmpInstInjStart;
-		instInjEnd = tmpInstInjEnd;
-		instInjTot = tmpInstInjTot;
-		instInjCount = tmpInstInjCount;
-
-		tmpInstInjStart = nil;
-		tmpInstInjEnd = nil;
-		tmpInstInjTot = 0;
-		tmpInstInjCount = 0;
-
 		sei();
 
 		//send out instantmpg * 1000, instantmph * 1000, the injector/vss raw data
@@ -507,14 +575,9 @@ void mainloop(void) {
 		tank.update(instant); //use instant to update tank
 
 		//currentTripResetTimeoutUS
-		if (instant.vssPulses == 0 && instant.injPulses == 0 && holdDisplay
-				== 0) {
-			if (elapsedMicroseconds(lastActivity)
-					> parms[currentTripResetTimeoutUSIdx] && lastActivity
-					!= nil) {
-				//        analogWrite(BrightnessPin,brightness[0]);    //nitey night
+		if (instant.vssPulses == 0 && instant.injPulses == 0 && holdDisplay == 0) {
+			if (elapsedMicroseconds(lastActivity) > parms[currentTripResetTimeoutUSIdx] && lastActivity != nil) {
 				OCR1A = brightness[0];
-
 				lastActivity = nil;
 			}
 		} else {
@@ -538,35 +601,30 @@ void mainloop(void) {
 
 			//see if any buttons were pressed, display a brief message if so
 			if (!(buttonState & lbuttonBit) && !(buttonState & rbuttonBit)) {// left and right = initialize
-				LCD::print(getStr(PSTR("Setup ")));
+				LCD::printProgMem(PSTR("Setup "));
+				editGuino();
 				initGuino();
-				//}else if(!(buttonState&lbuttonBit) && !(buttonState&rbuttonBit)){// left and right = run lcd init = tank reset
-				//    LCD::print(getStr(PSTR("Init LCD ")));
-				//    LCD::init();
-			} else if (!(buttonState & lbuttonBit) && !(buttonState
-					&mbuttonBit)) {// left and middle = tank reset
+			} else if (!(buttonState & lbuttonBit) && !(buttonState & mbuttonBit)) {// left and middle = tank reset
 				tank.reset();
-				LCD::print(getStr(PSTR("Tank Reset ")));
-			} else if (!(buttonState & mbuttonBit) && !(buttonState
-					&rbuttonBit)) {// right and middle = current reset
+				LCD::printProgMem(PSTR("Tank Reset "));
+			} else if (!(buttonState & mbuttonBit) && !(buttonState & rbuttonBit)) {// right and middle = current reset
 				current.reset();
-				LCD::print(getStr(PSTR("Current Reset ")));
+				LCD::printProgMem(PSTR("Current Reset "));
 			} else if (!(buttonState & lbuttonBit)) { //left is rotate through screeens to the left
-				if (screen != 0)
-					screen = (screen - 1);
-				else
-					screen = displayFuncSize - 1;
-				LCD::print(getStr(displayFuncNames[screen]));
+				if (screen == 0) screen = displayFuncSize;
+				screen--;
+				LCD::printProgMem(displayFuncNames[screen]);
 			} else if (!(buttonState & mbuttonBit)) { //middle is cycle through brightness settings
-				brightnessIdx = (brightnessIdx + 1) % brightnessLength;
+				brightnessIdx++;
+				if (brightnessIdx == brightnessLength) brightnessIdx = 0;
 				OCR1A = brightness[brightnessIdx];
-				//        analogWrite(BrightnessPin,brightness[brightnessIdx]);
-				LCD::print(getStr(PSTR("Brightness ")));
-				LCD::LcdDataWrite('0' + brightnessIdx);
+				LCD::printProgMem(PSTR("Brightness "));
+				LCD::WriteByte('0' + brightnessIdx, LCDData);
 				LCD::print(" ");
-			} else if (!(buttonState & rbuttonBit)) {//right is rotate through screeens to the left
-				screen = (screen + 1) % displayFuncSize;
-				LCD::print(getStr(displayFuncNames[screen]));
+			} else if (!(buttonState & rbuttonBit)) {//right is rotate through screeens to the right
+				screen++;
+				if (screen == displayFuncSize) screen = 0;
+				LCD::printProgMem(displayFuncNames[screen]);
 			}
 			if (buttonState != buttonsUp)
 				holdDisplay = 1;
@@ -577,19 +635,17 @@ void mainloop(void) {
 
 		//keep track of how long the loops take before we go int waiting.
 		unsigned long loopX = elapsedMicroseconds(loopStart);
-		if (loopX > maxLoopLength)
-			maxLoopLength = loopX;
+		if (loopX > maxLoopLength) maxLoopLength = loopX;
 
 		while (elapsedMicroseconds(loopStart) < (looptime))
 			;//wait for the end of a second to arrive
 	}
-
 }
 
 char fBuff[7];//used by format
 
-void dispv(char * usl, char * ml, unsigned long num) {
-	LCD::print(parms[metricIdx]==1?ml:usl);
+void dispv(byte lidx, unsigned long num) {
+	LCD::printProgMem(displayLabels[parms[metricIdx] + lidx]);
 	LCD::print(format(num));
 }
 
@@ -623,50 +679,43 @@ char* format(unsigned long num) {
 	fBuff[6] = 0;
 	return fBuff;
 }
-//get a string from flash
-char mBuff[17];//used by getStr
-char * getStr(prog_char * str) {
-	strcpy_P(mBuff, str);
-	return mBuff;
-}
 
 void doDisplayCustom() {
-	displayTripCombo("MG","LK", instantmpg(), " S", " S", instantmph(), "GH","LH",
-			instantgph(), " C"," C", current.mpg());
+	displayTripCombo(displayFuelEconIdx, instantmpg(), displaySpeedIdx, instantmph(), displayFuelConsIdx, instantgph(), displayFuelEconIdx, current.mpg());
 }
-//void doDisplayCustom(){displayTripCombo('I','M',instantmpg(),'S',instantgph(),'R','P',instantrpm(),'C',current.injIdleHiSec*1000);}
-//void doDisplayCustom(){displayTripCombo('I','M',995,'S',994,'R','P',999994,'C',999995);}
+
 void doDisplayEOCIdleData() {
-	displayTripCombo("CE","CE", current.eocMiles(), " G"," L", current.idleGallons(),
-			"TE","TE", tank.eocMiles(), " G"," L", tank.idleGallons());
+	displayTripCombo(displayEOCIdx, current.eocMiles(), displayFuelQuanIdx, current.idleGallons(), displayEOCIdx, tank.eocMiles(), displayFuelQuanIdx, tank.idleGallons());
 }
 void doDisplayInstantCurrent() {
-	displayTripCombo("IM","IL", instantmpg(), " S"," S", instantmph(), "CM","CL",
-			current.mpg(), " D"," D", current.miles());
+	displayTripCombo(displayFuelEconIdx, instantmpg(), displaySpeedIdx, instantmph(), displayFuelEconIdx, current.mpg(), displayDistIdx, current.miles());
 }
 
 void doDisplayInstantTank() {
-	displayTripCombo("IM","IL", instantmpg(), " S"," S", instantmph(), "TM","TL",
-			tank.mpg(), " D"," D", tank.miles());
+	displayTripCombo(displayFuelEconIdx, instantmpg(), displaySpeedIdx, instantmph(), displayFuelEconIdx, tank.mpg(), displayDistIdx, tank.miles());
 }
 
 void doDisplayBigInstant() {
-	bigNum(instantmpg(), "INST", parms[metricIdx]==1?"L/K ":"MPG ");
+	bigNum(instantmpg(), fuelEconLabel[2]);
 }
+
 void doDisplayBigCurrent() {
-	bigNum(current.mpg(), "CURR", parms[metricIdx]==1?"L/K ":"MPG ");
+	bigNum(current.mpg(), fuelEconLabel[3]);
 }
+
 void doDisplayBigTank() {
-	bigNum(tank.mpg(), "TANK", parms[metricIdx]==1?"L/K ":"MPG ");
+	bigNum(tank.mpg(), fuelEconLabel[4]);
 }
 
 
 void doDisplayCurrentTripData(void) {
 	tDisplay(&current);
 } //display current trip formatted data.
+
 void doDisplayTankTripData(void) {
 	tDisplay(&tank);
 } //display tank trip formatted data.
+
 void doDisplaySystemInfo(void) {
 	LCD::gotoXY(0, 0);
 	LCD::print("C%");
@@ -682,28 +731,25 @@ void doDisplaySystemInfo(void) {
 //	LCD::print(format(readTemp()));
 } //display max cpu utilization and ram.
 
-void displayTripCombo(char *lu1, char * lm1, unsigned long v1, char * lu2, char * lm2, unsigned long v2,
-		char * lu3, char * lm3, unsigned long v3, char * lu4, char * lm4, unsigned long v4) {
+void displayTripCombo(byte lidx1, unsigned long v1, byte lidx2, unsigned long v2, byte lidx3, unsigned long v3, byte lidx4, unsigned long v4){
 	LCD::gotoXY(0, 0);
-	dispv(lu1, lm1, v1);
-	dispv(lu2, lm2, v2);
+	dispv(lidx1, v1);
+	dispv(lidx2, v2);
 	LCD::gotoXY(0, 1);
-	dispv(lu3, lm3, v3);
-	dispv(lu4, lm4, v4);
+	dispv(lidx3, v3);
+	dispv(lidx4, v4);
 }
 
 //arduino doesn't do well with types defined in a script as parameters, so have to pass as void * and use -> notation.
 void tDisplay(void * r) { //display trip functions.
 	Trip *t = (Trip *) r;
 	LCD::gotoXY(0, 0);
-	dispv("MH","KH",t->mph());
-	dispv("MG","LK",t->mpg());
+	dispv(displaySpeedIdx, t->mph());
+	dispv(displayFuelEconIdx, t->mpg());
 	LCD::gotoXY(0, 1);
-	dispv("MI","KM",t->miles());
-	dispv("GA"," L",t->gallons());
+	dispv(displayDistIdx ,t->miles());
+	dispv(displayFuelQuanIdx, t->gallons());
 }
-
-
 
 //x=0..16, y= 0..1
 void LCD::gotoXY(byte x, byte y) {
@@ -714,103 +760,63 @@ void LCD::gotoXY(byte x, byte y) {
 		dr += 0x14;
 	if (y == 3)
 		dr += 0x54;
-	LCD::LcdCommandWrite(dr);
+	LCD::WriteByte(dr, LCDCommand);
 }
 
-void LCD::print(char * string) {
-	byte x = 0;
-	char c = string[x];
-	while (c != 0) {
-		LCD::LcdDataWrite(c);
-		x++;
-		c = string[x];
-	}
+void LCD::printProgMem(PGM_P s){
+  while((c=pgm_read_byte(s++))!=0) LCD::WriteByte(c, LCDData);
 }
 
-void LCD::init() {
-	delay2(16); // wait for more than 15 msec
-	pushNibble(0b00110000); // send (B0011) to DB7-4
-	cmdWriteSet();
-	tickleEnable();
-	delay2(5); // wait for more than 4.1 msec
-	pushNibble(0b00110000); // send (B0011) to DB7-4
-	cmdWriteSet();
-	tickleEnable();
-	delay2(1); // wait for more than 100 usec
-	pushNibble(0b00110000); // send (B0011) to DB7-4
-	cmdWriteSet();
-	tickleEnable();
-	delay2(1); // wait for more than 100 usec
-	pushNibble(0b00100000); // send (B0010) to DB7-4 for 4bit
-	cmdWriteSet();
-	tickleEnable();
-	delay2(1); // wait for more than 100 usec
-	// ready to use normal LcdCommandWrite() function now!
-	LcdCommandWrite(0b00101000); // 4-bit interface, 2 display lines, 5x8 font
-	LcdCommandWrite(0b00001100); // display control:
-	LcdCommandWrite(0b00000110); // entry mode set: increment automatically, no display shift
+void LCD::print(char * string){
+  while(*string) LCD::WriteByte(*string++, LCDData);
+}
 
-	//creating the custom fonts:
-	LcdCommandWrite(0b01001000); // set cgram
-	static byte chars[] PROGMEM = { 0b11111, 0b00000, 0b11111, 0b11111,
-			0b00000, 0b11111, 0b00000, 0b11111, 0b11111, 0b00000, 0b00000,
-			0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000, 0b00000,
-			0b11111, 0b00000, 0b00000, 0b00000, 0b00000, 0b11111, 0b00000,
-			0b00000, 0b00000, 0b00000, 0b11111, 0b01110, 0b00000, 0b11111,
-			0b11111, 0b11111, 0b01110, 0b00000, 0b11111, 0b11111, 0b11111,
-			0b01110 };
+void LCD::init(){
 
-	for (byte x = 0; x < 5; x++)
-		for (byte y = 0; y < 8; y++)
-			LcdDataWrite(pgm_read_byte(&chars[y*5+x])); //write the character data to the character generator ram
-	LcdCommandWrite(0b00000001); // clear display, set cursor position to zero
-	LcdCommandWrite(0b10000000); // set dram to zero
+  delay2(16);                    // wait for more than 15 msec
+  writeNybble(0b00110000, HIGH, LCDCommand); // send (B0011) to DB7-4
+  delay2(5);                     // wait for more than 4.1 msec
+  writeNybble(0b00110000, HIGH, LCDCommand); // send (B0011) to DB7-4
+  delay2(1);                     // wait for more than 100 usec
+  writeNybble(0b00110000, HIGH, LCDCommand); // send (B0011) to DB7-4
+  delay2(1);                     // wait for more than 100 usec
+  writeNybble(0b00100000, HIGH, LCDCommand); // send (B0010) to DB7-4 for 4bit
+  delay2(1);                     // wait for more than 100 usec
+  // ready to use normal WriteByte() function now!
+  WriteByte(0b00101000, LCDCommand); // 4-bit interface, 2 display lines, 5x8 font
+  WriteByte(0b00001100, LCDCommand); // display control:
+  WriteByte(0b00000110, LCDCommand); // entry mode set: increment automatically, no display shift
+
+  WriteByte(0b01001000, LCDCommand);  // set cgram to define the custom fonts
+  for(byte x=0;x<fontBigNumLength;x++)
+    WriteByte(pgm_read_byte(&fontBigNum[x]), LCDData); //write the character font data to the character generator ram
+  WriteByte(0b00000001, LCDCommand);  // clear display, set cursor position to zero
+  WriteByte(0b10000000, LCDCommand);  // set dram to zero
 
 }
 
-void LCD::tickleEnable() {
-	// send a pulse to enable  PD5
-	PORTD |= (1 << 5);
-	delayMicroseconds2(1); // pause 1 ms according to datasheet
-	PORTD &= ~(1 << 5);
-	delayMicroseconds2(1); // pause 1 ms according to datasheet
+void LCD::WriteByte(uint8_t value, uint8_t rs){
+
+  writeNybble(value, HIGH, rs); // write out high nybble of output byte
+  writeNybble(value, LOW, rs); // write out low nybble of output byte
+
 }
 
-void LCD::cmdWriteSet() { //set enable (PD5) low and DI(PD4) low
-	PORTD &= ~(1 << 5);
-	delayMicroseconds2(1); // pause 1 ms according to datasheet
-	PORTD &= ~(1 << 4);
-}
+void LCD::writeNybble(uint8_t value, uint8_t mask, uint8_t rs){ // db7=PB5, db6=PB4, db5 = PB0, db4  = PD7
 
-byte LCD::pushNibble(byte value) { //db7=PB5, db6=PB4, db5 = PB0, db4  = PD7
-	value & 128 ? PORTB |= (1 << 5) : PORTB &= ~(1 << 5);
-	value <<= 1;
-	value & 128 ? PORTB |= (1 << 4) : PORTB &= ~(1 << 4);
-	value <<= 1;
-	value & 128 ? PORTB |= (1 << 0) : PORTB &= ~(1 << 0);
-	value <<= 1;
-	value & 128 ? PORTD |= (1 << 7) : PORTD &= ~(1 << 7);
-	value <<= 1;
-	return value;
-}
+  uint8_t v;
 
-void LCD::LcdCommandWrite(byte value) {
-	value = pushNibble(value);
-	cmdWriteSet();
-	tickleEnable();
-	value = pushNibble(value);
-	cmdWriteSet();
-	tickleEnable();
-	delay2(5);
-}
+  if(mask==LOW) v=value&B00001111;
+  else v=value&B11110000;
 
-void LCD::LcdDataWrite(byte value) {
-	PORTD |= (1 << 4); //di on pd4
-	value = pushNibble(value);
-	tickleEnable();
-	value = pushNibble(value);
-	tickleEnable();
-	delay2(5);
+  rs & LCDData ? PORTD |= (1 << 4) : PORTD &= ~(1 << 4); // tell LCD module whether output nybble is a command nybble or a data nybble
+  v & B10001000 ? PORTB |= (1 << 5) : PORTB &= ~(1 << 5); // write out bit 7 (bit 3) of nybble
+  v & B01000100 ? PORTB |= (1 << 4) : PORTB &= ~(1 << 4); // write out bit 6 (bit 2) of nybble
+  v & B00100010 ? PORTB |= (1 << 0) : PORTB &= ~(1 << 0); // write out bit 5 (bit 1 of nybble
+  v & B00010001 ? PORTD |= (1 << 7) : PORTD &= ~(1 << 7); // write out bit 4 (bit 0) of nybble
+  PORTD |= (1 << 5);               // tell LCD module to pay attention to us
+  PORTD &= ~(1 << 5);              // tell LCD module to process the nybble
+
 }
 
 // this function will return the number of bytes currently free in RAM
@@ -834,7 +840,6 @@ unsigned long tmp2[2];
 unsigned long tmp3[2];
 
 unsigned long instantmph() {
-	//unsigned long vssPulseTimeuS = (lastVSS1 + lastVSS2) / 2;
 	unsigned long vssPulseTimeuS = instant.vssPulseLength / instant.vssPulses;
 
 	init64(tmp1, 0, 1000000000ul);
@@ -881,35 +886,18 @@ unsigned long instantmpg() {
 }
 
 unsigned long instantgph() {
-	//  unsigned long vssPulseTimeuS = instant.vssPulseLength/instant.vssPulses;
-
-	//  unsigned long instInjStart=nil;
-	//unsigned long instInjEnd;
-	//unsigned long instInjTot;
-	init64(tmp1, 0, instInjTot);
+  if (lastInjStartTime == nil) return 0;
+	init64(tmp1, injHiSec, injHius);
 	init64(tmp2, 0, 3600000000ul);
 	mul64(tmp1, tmp2);
 	init64(tmp2, 0, 1000ul);
 	mul64(tmp1, tmp2);
 	init64(tmp2, 0, fuelfactor);
 	div64(tmp1, tmp2);
-	init64(tmp2, 0, instInjEnd - instInjStart);
+	init64(tmp2, 0, injHiLength);
 	div64(tmp1, tmp2);
 	return tmp1[1];
 }
-/*
- unsigned long instantrpm(){
- init64(tmp1,0,instInjCount);
- init64(tmp2,0,120000000ul);
- mul64(tmp1,tmp2);
- init64(tmp2,0,1000ul);
- mul64(tmp1,tmp2);
- init64(tmp2,0,parms[injPulsesPer2Revolutions]);
- div64(tmp1,tmp2);
- init64(tmp2,0,instInjEnd-instInjStart);
- div64(tmp1,tmp2);
- return tmp1[1];
- } */
 
 unsigned long Trip::miles() {
 	init64(tmp1, 0, vssPulses);
@@ -945,12 +933,7 @@ unsigned long Trip::mph() {
 }
 
 unsigned long Trip::gallons() {
-	init64(tmp1, 0, injHiSec);
-	init64(tmp2, 0, 1000000);
-	mul64(tmp1, tmp2);
-	init64(tmp2, 0, injHius);
-	add64(tmp1, tmp2);
-	//  init64(tmp2,0,1250);
+	init64(tmp1, injHiSec, injHius);
 	init64(tmp2, 0, dispadj);
 	mul64(tmp1, tmp2);
 	init64(tmp2, 0, fuelfactor);
@@ -981,15 +964,11 @@ unsigned long Trip::lkm() {
 		return 999999000; //who doesn't like to see 999999?  :)
 
 
-	init64(tmp1, 0, injHiSec);
-	init64(tmp3, 0, 1000000ul);
-	mul64(tmp3, tmp1);
-	init64(tmp1, 0, injHius);
-	add64(tmp3, tmp1);
+	init64(tmp3, injHiSec, injHius);
 	init64(tmp1, 0, distancefactor);
 	mul64(tmp3, tmp1);
 	init64(tmp1, 0, 80000ul);
-//	init64(tmp1, 0, 100000000);
+//	init64(tmp1, 0, 100000000ul);
 	mul64(tmp3, tmp1);
 
 	init64(tmp1, 0, fuelfactor);
@@ -1010,11 +989,7 @@ unsigned long Trip::mpg() {
 	if (injPulses == 0)
 		return 999999000; //who doesn't like to see 999999?  :)
 
-	init64(tmp1, 0, injHiSec);
-	init64(tmp3, 0, 1000000);
-	mul64(tmp3, tmp1);
-	init64(tmp1, 0, injHius);
-	add64(tmp3, tmp1);
+	init64(tmp3, injHiSec, injHius);
 	init64(tmp1, 0, distancefactor);
 	mul64(tmp3, tmp1);
 
@@ -1042,6 +1017,7 @@ unsigned long Trip::time() {
 void Trip::reset() {
 	loopCount = 0;
 	injPulses = 0;
+	injHiLength = 0;
 	injHius = 0;
 	injHiSec = 0;
 	vssPulses = 0;
@@ -1052,36 +1028,25 @@ void Trip::reset() {
 }
 
 void Trip::update(Trip t) {
+	static unsigned long temp=0;
+
 	loopCount++; //we call update once per loop
 	vssPulses += t.vssPulses;
 	vssPulseLength += t.vssPulseLength;
-	if (t.injPulses == 0) //track distance traveled with engine off
-		vssEOCPulses += t.vssPulses;
-
-	if (t.injPulses > 2 && t.injHius < 500000) {//chasing ghosts
-		injPulses += t.injPulses;
-		injHius += t.injHius;
-		if (injHius >= 1000000) { //rollover into the injHiSec counter
-			injHiSec++;
-			injHius -= 1000000;
-		}
-		if (t.vssPulses == 0) { //track gallons spent sitting still
-
-			injIdleHius += t.injHius;
-			if (injIdleHius >= 1000000) { //r
-				injIdleHiSec++;
-				injIdleHius -= 1000000;
-			}
-		}
+	injHiLength = t.injHiLength;
+	if (t.injPulses == 0) vssEOCPulses += t.vssPulses; // track distance traveled with engine off
+	injPulses += t.injPulses;
+	temp = injHius;
+	injHius += t.injHius;
+	if (injHius < temp) injHiSec++; // rollover into the injHiSec counter
+	if (t.vssPulses == 0) { // track gallons spent sitting still
+		temp = injIdleHius;
+		injIdleHius += t.injHius;
+		if (injIdleHius < temp) injIdleHiSec++; // rollover
 	}
 }
 
-char bignumchars1[] = { 4, 1, 4, 0, 1, 4, 32, 0, 3, 3, 4, 0, 1, 3, 4, 0, 4, 2,
-		4, 0, 4, 3, 3, 0, 4, 3, 3, 0, 1, 1, 4, 0, 4, 3, 4, 0, 4, 3, 4, 0 };
-char bignumchars2[] = { 4, 2, 4, 0, 2, 4, 2, 0, 4, 2, 2, 0, 2, 2, 4, 0, 32, 32,
-		4, 0, 2, 2, 4, 0, 4, 2, 4, 0, 32, 4, 32, 0, 4, 2, 4, 0, 2, 2, 4, 0 };
-
-void bigNum(unsigned long t, char * txt1, const char * txt2) {
+void bigNum(unsigned long t, PGM_P txt1) {
 	//  unsigned long t = 98550ul;//number in thousandths
 	//  unsigned long t = 9855ul;//number in thousandths
 	//  char * txt1="INST";
@@ -1089,12 +1054,14 @@ void bigNum(unsigned long t, char * txt1, const char * txt2) {
 	char dp1 = 32;
 	char dp2 = 32;
 
+    char txt2 = fuelEconLabel[parms[metricIdx]];
+
 //	return format2(num,4,9999);
 
 
 	char * r = "009.99"; //default to 999
 	if (t <= 9950) {
-		r = format(t ); //009.86
+		r = format(t); //009.86
 		dp1 = 5;
 	} else if (t <= 99500) {
 		r = format(t / 10); //009.86
@@ -1104,22 +1071,18 @@ void bigNum(unsigned long t, char * txt1, const char * txt2) {
 	}
 
 	LCD::gotoXY(0, 0);
-	LCD::print(bignumchars1 + (r[2] - '0') * 4);
-	LCD::print(" ");
-	LCD::print(bignumchars1 + (r[4] - '0') * 4);
-	LCD::print(" ");
-	LCD::print(bignumchars1 + (r[5] - '0') * 4);
-	LCD::print(" ");
-	LCD::print(txt1);
+	LCD::printProgMem(bigNumChars1[r[2] - '0']);
+	LCD::printProgMem(bigNumChars1[r[4] - '0']);
+	LCD::printProgMem(bigNumChars1[r[5] - '0']);
+	LCD::printProgMem(txt1);
 
 	LCD::gotoXY(0, 1);
-	LCD::print(bignumchars2 + (r[2] - '0') * 4);
-	LCD::LcdDataWrite(dp1);
-	LCD::print(bignumchars2 + (r[4] - '0') * 4);
-	LCD::LcdDataWrite(dp2);
-	LCD::print(bignumchars2 + (r[5] - '0') * 4);
-	LCD::print(" ");
-	LCD::print((char *)txt2);
+	LCD::printProgMem(bigNumChars2[r[2] - '0']);
+	LCD::WriteByte(dp1, LCDData);
+	LCD::printProgMem(bigNumChars2[r[4] - '0']);
+	LCD::WriteByte(dp2, LCDData);
+	LCD::printProgMem(bigNumChars2[r[5] - '0']);
+	LCD::printProgMem(fuelEconLabel[parms[metricIdx]]);
 }
 
 //the standard 64 bit math brings in  5000+ bytes
@@ -1297,12 +1260,12 @@ void editParm(byte parmIdx) {
 	LCD::gotoXY(8, 0);
 	LCD::print("        ");
 	LCD::gotoXY(0, 0);
-	LCD::print(parmLabels[parmIdx]);
+	LCD::printProgMem(parmLabels[parmIdx]);
 	LCD::gotoXY(0, 1);
 	char * fmtv = uformat(v);
 	LCD::print(fmtv);
 	LCD::print(" OK XX");
-	LCD::LcdCommandWrite(0b00001110);
+	LCD::WriteByte(0b00001110, LCDCommand);
 
 	for (int x = 9; x >= 0; x--) { //do a nice thing and put the cursor at the first non zero number
 		if (fmtv[x] != '0')
@@ -1320,7 +1283,7 @@ void editParm(byte parmIdx) {
 
 		if (keyLock == 0) {
 			if (!(buttonState & lbuttonBit) && !(buttonState & rbuttonBit)) {// left & right
-				LCD::LcdCommandWrite(0b00001100);
+				LCD::WriteByte(0b00001100, LCDCommand);
 				return;
 			} else if (!(buttonState & lbuttonBit)) {// left
 				p = p - 1;
@@ -1332,11 +1295,11 @@ void editParm(byte parmIdx) {
 					p = 0;
 			} else if (!(buttonState & mbuttonBit)) {// middle
 				if (p == 11) { //cancel selected
-					LCD::LcdCommandWrite(0b00001100);
+					LCD::WriteByte(0b00001100, LCDCommand);
 					return;
 				}
 				if (p == 10) { //ok selected
-					LCD::LcdCommandWrite(0b00001100);
+					LCD::WriteByte(0b00001100, LCDCommand);
 					parms[parmIdx] = rformat(fmtv);
 					return;
 				}
@@ -1351,12 +1314,7 @@ void editParm(byte parmIdx) {
 				LCD::gotoXY(0, 1);
 				LCD::print(fmtv);
 				LCD::gotoXY(p, 1);
-				if (parmIdx == contrastIdx)//adjust contrast dynamically
-					OCR0A = rformat(fmtv);
-
-				//                 analogWrite(ContrastPin,rformat(fmtv));
-
-
+				if (parmIdx == contrastIdx) OCR0A = rformat(fmtv); //adjust contrast dynamically
 			}
 
 			if (buttonState != buttonsUp)
@@ -1370,26 +1328,27 @@ void editParm(byte parmIdx) {
 
 }
 
-void initGuino() { //edit all the parameters
+void editGuino(void) { // edit all the parameters
 	for (int x = 0; x < parmsLength; x++)
 		editParm(x);
 	save();
+}
+
+void initGuino(void) { // initialize all the parameters
+
 	injectorSettleTime = injhold;
-
-	int0Func = processInjOpen;
-	int1Func = processInjClosed;
-	EIMSK &= ~(1 << INT0);
-	EIMSK &= ~(1 << INT1);
-
-	EICRA = (EICRA & ~((1 << ISC00) | (1 << ISC01)))
-			| ((parms[injEdgeIdx] == 1 ? RISING : FALLING) << ISC00);
-	EIMSK |= (1 << INT0);
-	EICRA = (EICRA & ~((1 << ISC10) | (1 << ISC11)))
-			| ((parms[injEdgeIdx] == 1 ? FALLING : RISING) << ISC10);
-	EIMSK |= (1 << INT1);
-
 	distancefactor = parms[vssPulsesPerMileIdx];
 	fuelfactor = parms[microSecondsPerGallonIdx];
+	vssPauseCount = parms[vsspause];
+
+	EIMSK &= ~((1 << INT0) | (1 << INT1));
+
+	EICRA &= ~((1 << ISC00) | (1 << ISC01) | (1 << ISC10) | (1 << ISC11));
+	EICRA |= (parms[injEdgeIdx] == 1 ? ((RISING << ISC00) | (FALLING << ISC10)) : ((FALLING << ISC00) | (RISING << ISC10)));
+
+	EIMSK |= (1 << INT1) | (1 << INT0);
+
+
 	if (parms[metricIdx] == 1){
 		distancefactor /= 1.609;
 		fuelfactor /= 3.785;
@@ -1406,26 +1365,6 @@ void delay2(unsigned long ms) {
 	unsigned long start = millis2();
 	while (millis2() - start < ms)
 		;
-}
-
-/* Delay for the given number of microseconds.  Assumes a 16 MHz clock.
- * Disables interrupts, which will disrupt the millis2() function if used
- * too frequently. */
-void delayMicroseconds2(unsigned int us) {
-	uint8_t oldSREG;
-	if (--us == 0)
-		return;
-	us <<= 2;
-	us -= 2;
-	oldSREG = SREG;
-	cli();
-	// busy wait
-	__asm__ __volatile__ (
-			"1: sbiw %0,1" "\n\t" // 2 cycles
-			"brne 1b" : "=w" (us) : "0" (us) // 2 cycles
-	);
-	// reenable interrupts.
-	SREG = oldSREG;
 }
 
 void simpletx(char * string) {
@@ -1485,6 +1424,3 @@ int main(void) {
 
 	return 0;
 }
-
-
-
