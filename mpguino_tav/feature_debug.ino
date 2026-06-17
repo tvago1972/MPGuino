@@ -1692,9 +1692,21 @@ static uint8_t terminal::assembleSWEET64programRAMline(void)
 
 		case r01:
 		case r04:
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if (((operands[(uint16_t)(operandCount)] & 0x70) || (operands[(uint16_t)(operandCount)] & 0x07)) && ((operands[(uint16_t)(operandCount)] & 0x88) == 0)) operandCount++;
+			else return 0;
+			break;
+
 		case r06:
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if ((operands[(uint16_t)(operandCount)] & 0x07) && ((operands[(uint16_t)(operandCount)] & 0xF8) == 0)) operandCount++;
+			else return 0;
+			break;
+
 		case r07:
-			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount++)], 0) == 0) return 0;
+			if (pullSWEET64assemblerOperand(operands[(uint16_t)(operandCount)], 0) == 0) return 0;
+			if ((operands[(uint16_t)(operandCount)] & 0x77) && ((operands[(uint16_t)(operandCount)] & 0x88) == 0)) operandCount++;
+			else return 0;
 			break;
 
 		default:
@@ -1881,29 +1893,18 @@ static void terminal::outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, ui
 				{
 
 					flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType);
+					if (flg != typ) break; // crossed into a different label group - byt does not belong to any entry here
 
-					if (flg == typ)
-					{
+					flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
+					if (byt < flg) break; // found the entry byt belongs to
 
-						flg = pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength);
-
-						if (byt < flg) flg = 0;
-						else
-						{
-
-							byt -= flg;
-							flg = 1;
-							labelIdx++;
-
-						}
-
-					}
-					else flg = 0;
+					byt -= flg;
+					labelIdx++;
 
 				}
-				while (flg);
+				while (labelIdx < dslIdxEnd);
 
-				if (byt < pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength))
+				if ((pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelType) == typ) && (byt < pgm_read_byte(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelLength)))
 				{
 
 					text::stringOut(m8DevDebugTerminalIdx, (const char *)(pgm_read_word(&debugSWEET64labelList[(uint16_t)(labelIdx - 1)].labelStringPointer)), byt);
