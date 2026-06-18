@@ -44,6 +44,8 @@ Design goals:
 - **Metric/SAE branches** - a single program handles both unit systems via either conditional branches, or instructions that automatically fetch values based on the EEPROM metric mode parameter.
 - **Traceability** - when the debug terminal is compiled in, every instruction can be listed or single-stepped with register dumps.
 
+Historical Note - SWEET64 evolved into its present form, initially from noticing multiple different display calculations began requiring similar 64-bit arithmetic sequences, and then after new features added required 64-bit precision for intermediate math steps even if their output was 32-bit precision or less.
+
 ---
 
 ## 2. Virtual Machine Architecture
@@ -65,6 +67,15 @@ SWEET64 has **5 general-purpose 64-bit registers** (r1–r5), plus 2 additional 
 Instruction operands that refer to two registers use a packed hex byte `0xYX`, where X is the destination (rX) and Y is the source (rY). Example: `instrLdReg, 0x21` loads r1 into r2.
 
 All 64-bit registers are stored in the global array `uint64_t s64reg[]`.
+
+Why 64-bit Registers? Many MPGuino calculations involve multiplying large accumulated values by conversion factors.
+
+Examples:
+
+    Injector microseconds × 3785411784
+    Distance pulses × 1609344
+
+32-bit intermediates overflow during these operations, even though the final displayed result may fit in 32 bits. SWEET64 therefore performs calculations using 64-bit intermediates and returns the lower 32 bits of the final result.
 
 ### 2.2 8-bit Internal Registers
 
@@ -146,7 +157,7 @@ If `trackIdleEOCdata` is selected as a compile-time program option, the followin
 
 | Slot | Meaning |
 |---|---|
-| `eocIdleInstantIdx` | Last sample period only (or window-filtered average) |
+| `eocIdleInstantIdx` | Last sample period only |
 | `eocIdleCurrentIdx` | Running total since last current-trip reset |
 | `eocIdleTankIdx` | Running total since last tank reset / fill-up |
 
@@ -814,6 +825,22 @@ Trace output is written to the debug terminal in real time as the program execut
 ## 13. RAM Program Assembler
 
 Requires `useSWEET64RAMprograms` (auto-enabled with `useDebugTerminalSWEET64` on ATmega2560).
+
+The RAM assembler exists to permit rapid development and testing of SWEET64 programs without having to recompile and reflash MPGuino.
+
+Typical workflow:
+
+    Copy existing program
+    Modify instruction or instructions
+    Enable override
+    Test
+    Revise as necessary
+    Retest as necessary
+    Export as source
+
+This significantly reduces iteration time when developing or debugging SWEET64 code.
+
+The RAM assembler also permits more accurate determination of conditional branch instruction offset values, which would otherwise have to be figured out by hand. This eliminates a source of bugs.
 
 The assembler provides an interactive text-based environment to write, edit, and run SWEET64 programs without recompiling. Programs are assembled into the 256-byte `s64programRAM[]` buffer.
 
