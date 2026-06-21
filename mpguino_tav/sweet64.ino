@@ -1427,8 +1427,8 @@ static void SWEET64::copy64(union union_64 * an, union union_64 * ann) // an = a
 		"	ld	__tmp_reg__, %a1+	\n"
 		"	st	%a0+, __tmp_reg__	\n"
 
-		: "+e" (an)
-		: "e" (ann)
+		: "+e" (an), "+e" (ann)
+		:
 	);
 #else // defined(useAssemblyLanguage)
 	for (uint8_t x = 0; x < 4; x++) an->u16[(uint16_t)(x)] = ann->u16[(uint16_t)(x)];
@@ -1758,7 +1758,11 @@ static void SWEET64::registerTest64(union union_64 * an)
 
 }
 
+#if defined(useAssemblyLanguage)
+static void __attribute__((noinline)) SWEET64::mult64(uint64_t * prgmReg64)
+#else // defined(useAssemblyLanguage)
 static void SWEET64::mult64(uint64_t * prgmReg64)
+#endif // defined(useAssemblyLanguage)
 {
 
 	union union_64 * an = (union union_64 *)(&prgmReg64[(uint16_t)(s64reg64_2)]);	// multiplier in an, result to an
@@ -1932,7 +1936,11 @@ static void SWEET64::mult64(uint64_t * prgmReg64)
 #endif // defined(useAssemblyLanguage)
 }
 
+#if defined(useAssemblyLanguage)
+static void __attribute__((noinline)) SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-restoring hardware division
+#else // defined(useAssemblyLanguage)
 static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-restoring hardware division
+#endif // defined(useAssemblyLanguage)
 {
 
 	union union_64 * ann = (union union_64 *)(&prgmReg64[(uint16_t)(s64reg64_1)]);	// remainder in ann
@@ -1987,6 +1995,8 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 		"	st	x+, r25				\n"		// store overflow value into remainder and quotient
 		"	dec	r24					\n"
 		"	brne	d64_ovfl%=		\n"
+		"	subi	r26, 16			\n"		// restore X reg to original ann value
+		"	sbci	r27, 0			\n"
 		"	rjmp	d64_exit%=		\n"		// go exit
 
 		"d64_cont1%=:				\n"
