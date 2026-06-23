@@ -34,11 +34,11 @@ namespace systemInfo /* CPU loading and RAM availability support section prototy
 
 };
 
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 extern char __bss_end;
 extern char *__brkval;
 
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useSimulatedFIandVSS)
 namespace signalSim /* VSS / fuel injector on-board simulator support section prototype */
@@ -272,6 +272,7 @@ namespace terminal /* debug terminal section prototype */
 	static void outputSWEET64errorLatch(void);
 	static void reportSWEET64error(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
 	static void dumpSWEET64information(union union_32 * instrLWord, s64pc_t &prgmPtr, s64pc_t prgmStack[], uint64_t * prgmReg64, uint8_t * prgmReg8);
+	static void hexByteOut(uint8_t devIdx, uint8_t val);
 #if defined(useDebugTerminalLabels)
 	static void outputSWEET64functionLength(uint8_t lineNumber);
 #endif // defined(useDebugTerminalLabels)
@@ -295,11 +296,11 @@ namespace terminal /* debug terminal section prototype */
 	static uint8_t pullSWEET64assemblerOperand(uint8_t &byt, uint8_t labelIdx);
 #if defined(useDebugTerminalLabels)
 	static uint8_t findSWEET64labelByte(char * token, uint8_t labelIdx, uint8_t &byt);
-	static void getSWEET64operandLabelIndexes(uint8_t instr, uint8_t format, uint8_t &operandLabelIdx, uint8_t &extraLabelIdx);
 #endif // defined(useDebugTerminalLabels)
 	static uint8_t assembleSWEET64programRAMline(void);
 #endif // defined(useSWEET64RAMprograms)
 #if defined(useDebugTerminalLabels)
+	static void getSWEET64operandLabelIndexes(uint8_t instr, uint8_t format, uint8_t &operandLabelIdx, uint8_t &extraLabelIdx);
 	static void outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, uint8_t byt, uint8_t labelIdx);
 #else // defined(useDebugTerminalLabels)
 	static void outputSWEET64prgmOperand(s64pc_t prgmPtr, uint8_t flag, uint8_t byt);
@@ -308,8 +309,7 @@ namespace terminal /* debug terminal section prototype */
 #endif // defined(useDebugTerminalSWEET64)
 	static void processMath(uint8_t cmd);
 	static void outputDecimalSettings(void);
-	static uint8_t outputSystemStatusFlag(uint8_t flags, uint8_t mask, const char * label, uint8_t needsSeparator);
-	static void outputSystemStatusFlagGroup(const char * label, uint8_t flags, uint8_t groupIdx);
+	static void outputFlagStatusGroup(const char * flagGroup, uint8_t flags, uint8_t labelFlag);
 	static void outputSystemStatusFlags(void);
 	static void outputSystemStatusBytes(void);
 #if defined(useBluetoothAdaFruitSPI)
@@ -463,103 +463,102 @@ static const uint8_t tmButtonReadIn =		(tmButtonInput | tmByteReadIn);
 
 #if defined(useDebugTerminalHelp)
 static const char terminalHelp[] PROGMEM = {
-	"       [y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
+	tcSP7 "[y].[x]P - list stored parameters, optionally between [y] and [x]" tcEOSCR
 	"xP:y [y] [y]... - store one or more y values, starting at stored parameter x" tcCR tcEOSCR
 
-	"       [y].[x]V - list program variables, optionally between [y] and [x]" tcEOSCR
+	tcSP7 "[y].[x]V - list program variables, optionally between [y] and [x]" tcEOSCR
 	"xV:y [y] [y]... - store one or more y values, starting at program variable x" tcCR tcEOSCR
 
-	"       [y].[x]T - list terminal trip variable values, optionally between [y]" tcEOSCR
-	"                  and [x]" tcEOSCR
-	"xT:y [y] [y]... - store one or more y values, starting at terminal trip" tcEOSCR
-	"                  variable x" tcCR tcEOSCR
+	tcSP7 "[y].[x]T - list terminal trip variable values, optionally between [y] and [x]" tcCR tcEOSCR
+	"xT:y [y] [y]... - store one or more y values, starting at terminal trip variable x" tcCR tcEOSCR
 
 #if defined(useDebugTerminalSWEET64)
-	"      [y].[x]^E - list SWEET64 register contents" tcEOSCR
-	"                   [z] - decimal window length (optional)" tcEOSCR
-	"                   [y] - decimal digit count (optional)" tcEOSCR
-	"                   [x] - decimal processing flag (optional)" tcCR tcEOSCR
+	tcSP11 "N - toggle SWEET64 error mute (suppress/unsuppress repeated error output)" tcCR tcEOSCR
+	tcSP6 "[y].[x]^E - list SWEET64 register contents" tcEOSCR
+	tcSP19 "[z] - decimal window length (optional)" tcEOSCR
+	tcSP19 "[y] - decimal digit count (optional)" tcEOSCR
+	tcSP19 "[x] - decimal processing flag (optional)" tcCR tcEOSCR
 	"x^E:y           - store one or more y values, starting at SWEET64 register x" tcCR tcEOSCR
 #if defined(useSWEET64RAMprograms)
-	"       [x]!    - assemble SWEET64 into program RAM, starting at x" tcEOSCR
-	"       [y].[x]M - dump SWEET64 program RAM, optionally between [y] and [x]" tcEOSCR
+	tcSP7 "[x]!    - assemble SWEET64 into program RAM, starting at x" tcEOSCR
+	tcSP7 "[y].[x]M - dump SWEET64 program RAM, optionally between [y] and [x]" tcEOSCR
 	"xM:y [y] [y]... - store one or more bytes, starting at SWEET64 program RAM x" tcEOSCR
-	"       [x]<M    - fill SWEET64 program RAM with x, default 00" tcEOSCR
-	"       x<yM    - copy SWEET64 program y to program RAM, starting at x" tcEOSCR
-	"       x<^L    - list SWEET64 program RAM as pseudo-code, starting at x" tcEOSCR
-	"       x.y^T   - trace SWEET64 function x, optionally for y lines" tcEOSCR
-	"       z<y^T   - trace SWEET64 program RAM at z, optionally for y lines" tcEOSCR
-	"                  if y is omitted, traces 1 line; if y is 0, traces until done" tcCR tcEOSCR
-	"       x.y^W   - export SWEET64 program RAM between x and y as source" tcEOSCR
-	"       x<y^O   - substitute program RAM at x for SWEET64 function y" tcEOSCR
-	"       ^O      - disable SWEET64 program RAM substitution" tcCR tcEOSCR
+	tcSP7 "[x]<M    - fill SWEET64 program RAM with x, default 00" tcEOSCR
+	tcSP7 "x<yM    - copy SWEET64 program y to program RAM, starting at x" tcEOSCR
+	tcSP7 "x<^L    - list SWEET64 program RAM as pseudo-code, starting at x" tcEOSCR
+	tcSP7 "x.y^T   - trace SWEET64 function x, optionally for y lines" tcEOSCR
+	tcSP7 "z<y^T   - trace SWEET64 program RAM at z, optionally for y lines" tcEOSCR
+	tcSP18 "if y is omitted, traces 1 line; if y is 0, traces until done" tcCR tcEOSCR
+	tcSP7 "x.y^W   - export SWEET64 program RAM between x and y as source" tcEOSCR
+	tcSP7 "x<y^O   - substitute program RAM at x for SWEET64 function y" tcEOSCR
+	tcSP7 "^O      - disable SWEET64 program RAM substitution" tcCR tcEOSCR
 #endif // defined(useSWEET64RAMprograms)
 
 #endif // defined(useDebugTerminalSWEET64)
-	"    [y].[x]O - list program constants, optionally between [y] and [x]" tcEOSCR
-	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally" tcEOSCR
-	"               between [y] and [x]" tcEOSCR
-	"                [z] - decimal window length (optional)" tcEOSCR
+	tcSP4 "[y].[x]O - list program constants, optionally between [y] and [x]" tcEOSCR
+	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]" tcEOSCR
+	tcSP16 "[z] - decimal window length (optional)" tcCR tcEOSCR
+#if !defined(useAtMega328debugMonitor)
 	"[z]<[y].[x]U - list decimal number sample for output" tcEOSCR
-	"                [z] - decimal window length (optional)" tcEOSCR
-	"                [y] - decimal digit count (optional)" tcEOSCR
-	"                [x] - decimal processing flag (optional)" tcCR tcEOSCR
+	tcSP16 "[z] - decimal window length (optional)" tcEOSCR
+	tcSP16 "[y] - decimal digit count (optional)" tcEOSCR
+	tcSP16 "[x] - decimal processing flag (optional)" tcCR tcEOSCR
+#endif // !defined(useAtMega328debugMonitor)
 
 #if defined(useDebugTerminalSWEET64)
-	"   [y].[x]^I - list SWEET64 instructions, along with their operands, optionally" tcEOSCR
-	"               between [y] and [x]" tcEOSCR
+	tcSP3 "[y].[x]^I - list SWEET64 instructions, along with their operands, optionally between [y] and [x]" tcCR tcEOSCR
 #if defined(useDebugTerminalLabels)
-	"   [y].[x]^F - list all available SWEET64 functions and byte lengths," tcEOSCR
-	"               optionally between [y] and [x]" tcEOSCR
+	tcSP3 "[y].[x]^F - list all available SWEET64 functions and byte lengths, optionally between [y] and [x]" tcCR tcEOSCR
 #endif // defined(useDebugTerminalLabels)
-	"       [x]^L - list 20 lines of SWEET64 program code, optionally beginning at" tcEOSCR
-	"               trip function [x]" tcEOSCR
+	tcSP7 "[x]^L - list 20 lines of SWEET64 program code, optionally beginning at trip function [x]" tcCR tcEOSCR
 #if !defined(useSWEET64RAMprograms)
-	"       x.y^T - trace SWEET64 function x, optionally for y lines" tcEOSCR
-	"               if y is omitted, traces 1 line" tcEOSCR
-	"               if y is explicitly set to 0, traces until program completes" tcCR tcEOSCR
+	tcSP7 "x.y^T - trace SWEET64 function x, optionally for y lines" tcEOSCR
+	tcSP15 "if y is omitted, traces 1 line" tcEOSCR
+	tcSP15 "if y is explicitly set to 0, traces until program completes" tcCR tcEOSCR
 #endif // !defined(useSWEET64RAMprograms)
 
 #endif // defined(useDebugTerminalSWEET64)
-	"    [y]<[x]R - read trip variable x into trip variable y" tcEOSCR
-	"                default for x and y is terminal trip variable" tcEOSCR
+	tcSP4 "[y]<[x]R - read trip variable x into trip variable y" tcEOSCR
+	tcSP16 "default for x and y is terminal trip variable" tcEOSCR
 #if defined(useDebugTerminalLabels)
-	"                if no x or y specified, lists available trip variables" tcCR tcEOSCR
+	tcSP16 "if no x or y specified, lists available trip variables" tcCR tcEOSCR
 #else // defined(useDebugTerminalLabels)
-	"                either or both of x or y must be specified" tcCR tcEOSCR
+	tcSP16 "either or both of x or y must be specified" tcCR tcEOSCR
 #endif // defined(useDebugTerminalLabels)
 
-	"   [z]<[y].x - enters a number x into the 64-bit math accumulator" tcEOSCR
-	"                [z] - decimal window length (optional)" tcEOSCR
-	"                [y] - decimal digit count (optional)" tcEOSCR
-	"          +x - adds x to math accumulator" tcEOSCR
-	"          -x - subtracts x from math accumulator" tcEOSCR
-	"          *x - multiplies math accumulator by x" tcEOSCR
+#if !defined(useAtMega328debugMonitor)
+	tcSP3 "[z]<[y].x - enters a number x into the 64-bit math accumulator" tcEOSCR
+	tcSP16 "[z] - decimal window length (optional)" tcEOSCR
+	tcSP16 "[y] - decimal digit count (optional)" tcEOSCR
+	tcSP10 "+x - adds x to math accumulator" tcEOSCR
+	tcSP10 "-x - subtracts x from math accumulator" tcEOSCR
+	tcSP10 "*x - multiplies math accumulator by x" tcEOSCR
 #if defined(useIsqrt)
-	"          |  - finds square root of math accumulator" tcEOSCR
+	tcSP10 "|  - finds square root of math accumulator" tcEOSCR
 #endif // defined(useIsqrt)
-	"          /x - divides math accumulator by x" tcEOSCR
-	"          =x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
+	tcSP10 "/x - divides math accumulator by x" tcEOSCR
+	tcSP10 "=x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
+#endif // !defined(useAtMega328debugMonitor)
 
 #if defined(useDebugButtonInjection)
-	"           I - inject button press" tcEOSCR
+	tcSP11 "I - inject button press" tcEOSCR
 #if defined(useLegacyButtons)
-	"                short (l, c, r)" tcEOSCR
-	"                 long (L, C, R)" tcCR tcEOSCR
+	tcSP16 "short (l, c, r)" tcEOSCR
+	tcSP17 "long (L, C, R)" tcCR tcEOSCR
 #else // defined(useLegacyButtons)
-	"                short (l, c, r, u, d)" tcEOSCR
-	"                 long (L, C, R, U, D)" tcCR tcEOSCR
+	tcSP16 "short (l, c, r, u, d)" tcEOSCR
+	tcSP17 "long (L, C, R, U, D)" tcCR tcEOSCR
 #endif // defined(useLegacyButtons)
 #endif // defined(useDebugButtonInjection)
 #if defined(useSimulatedFIandVSS)
-	"           S - lists available signal simulator modes" tcEOSCR
-	"          yS - sets signal simulator mode to y" tcEOSCR
+	tcSP11 "S - lists available signal simulator modes" tcEOSCR
+	tcSP10 "yS - sets signal simulator mode to y" tcEOSCR
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
-	"           Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
+	tcSP11 "Y - sends the rest of the input string to BLEfriend shield" tcEOSCR
 #endif // defined(useBluetoothAdaFruitSPI)
-	"          ^S - displays supplemental system information" tcEOSCR
-	"           ? - displays this help" tcEOSCR
+	tcSP10 "^S - displays supplemental system information" tcEOSCR
+	tcSP11 "? - displays this help" tcEOSCR
 	tcEOS
 };
 
@@ -569,11 +568,12 @@ static s64pc_t terminalListSched;
 static s64pc_t terminalExecSched;
 static s64pc_t terminalS64lastErrorPC;
 
-static s64pc_t terminalStack[16];
+static s64pc_t terminalStack[(uint16_t)(s64stackSize)];
 
 static uint8_t terminalS64reg8[(uint16_t)(si64reg8count)];
 static uint8_t terminalS64lastErrorCode;
 static uint8_t terminalS64errorLatched;
+static uint8_t terminalS64errorMuted;
 static uint16_t terminalS64lastErrorCount;
 
 static uint64_t terminalS64reg64[(uint16_t)(s64reg64count)];

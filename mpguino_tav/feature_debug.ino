@@ -120,6 +120,7 @@ static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
+#endif // defined(useCPUreading) && defined(useButtonInput)
 static const uint8_t prgmOutputOperatingTime[] PROGMEM = {
 	instrLdRegVariable, 0x02, v32SystemCycleIdx,
 	instrDiv2byRdOnly, idxTicks0PerSecond,
@@ -134,6 +135,7 @@ static const uint8_t prgmOutputAvailableRAM[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
+#if defined(useCPUreading) && defined(useButtonInput)
 static uint8_t systemInfo::displayHandler(uint8_t cmd, uint8_t cursorPos)
 {
 
@@ -782,91 +784,29 @@ static void terminal::outputDecimalSettings(void)
 
 }
 
-static uint8_t terminal::outputSystemStatusFlag(uint8_t flags, uint8_t mask, const char * label, uint8_t needsSeparator)
-{
-
-	if ((flags & mask) == 0) return needsSeparator;
-
-	if (needsSeparator) text::charOut(m8DevDebugTerminalIdx, ',');
-	text::stringOut(m8DevDebugTerminalIdx, label);
-	return 1;
-
-}
-
-static void terminal::outputSystemStatusFlagGroup(const char * label, uint8_t flags, uint8_t groupIdx)
+static void terminal::outputFlagStatusGroup(const char * flagGroup, uint8_t flags, uint8_t labelFlag)
 {
 
 	uint8_t foundFlag = 0;
 
-	text::stringOut(m8DevDebugTerminalIdx, label);
+	if (labelFlag) text::stringOut(m8DevDebugTerminalIdx, flagGroup);
 	text::charOut(m8DevDebugTerminalIdx, '=');
 
-	switch (groupIdx)
+	for (uint8_t x = 0; x < 8; x++)
 	{
 
-		case 0:
-			foundFlag = outputSystemStatusFlag(flags, aAwakeOnInjector, PSTR("inj"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, aAwakeOnVSS, PSTR("vss"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, aAwakeOnInput, PSTR("input"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, aAwakeEngineRunning, PSTR("eng"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, aAwakeVehicleMoving, PSTR("move"), foundFlag);
-			break;
+		if (flags & 0x80)
+		{
 
-		case 1:
-			foundFlag = outputSystemStatusFlag(flags, afEngineOffFlag, PSTR("engOff"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afVehicleStoppedFlag, PSTR("stopped"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afUserInputFlag, PSTR("input"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afParkFlag, PSTR("park"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afActivityTimeoutFlag, PSTR("timeout"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afVehicleIdleFlag, PSTR("idle"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, afVehicleEOCflag, PSTR("eoc"), foundFlag);
-			break;
+			if (foundFlag) text::charOut(m8DevDebugTerminalIdx, ',');
+			text::stringOut(m8DevDebugTerminalIdx, flagGroup, x + 1);
 
-		case 2:
-			foundFlag = outputSystemStatusFlag(flags, t0cResetTimer, PSTR("reset"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0cResetInputActivityTimer, PSTR("input"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0cResetOutputTimer, PSTR("display"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0cReadRTC, PSTR("rtc"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0cEnableJSONoutput, PSTR("json"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0cEnableOutputPin, PSTR("outPin"), foundFlag);
-			break;
+			foundFlag++;
 
-		case 3:
-			foundFlag = outputSystemStatusFlag(flags, t0saTakeSample, PSTR("sample"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saUpdateDisplay, PSTR("display"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saShowCursor, PSTR("cursor"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saDisplayDelayInit, PSTR("delayInit"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saDisplayDelayActive, PSTR("delay"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saOutputJSON, PSTR("json"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0saOutputPinEnabled, PSTR("outPin"), foundFlag);
-			break;
+		}
 
-		case 4:
-			foundFlag = outputSystemStatusFlag(flags, t0sbSampleBLEfriend, PSTR("ble"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0sbReadRTC, PSTR("rtc"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0sbErrorRTC, PSTR("rtcErr"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0sbResetFEvsTimeTrip, PSTR("fevt"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0sbAccelTestFlag, PSTR("accel"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, t0sbCoastdownTestFlag, PSTR("coast"), foundFlag);
-			break;
-
-		case 5:
-			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorOpen, PSTR("open"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorClose, PSTR("close"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorOpenPeriod, PSTR("period"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dGoodInjectorRead, PSTR("read"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dInjectorReadInProgress, PSTR("busy"), foundFlag);
-			break;
-
-		case 6:
-			foundFlag = outputSystemStatusFlag(flags, dGoodVSSsignal, PSTR("signal"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dVSSreadInProgress, PSTR("busy"), foundFlag);
-			foundFlag = outputSystemStatusFlag(flags, dGoodVSSpulse, PSTR("pulse"), foundFlag);
-			break;
-
-		default:
-			break;
-
+		flags <<= 1;
+		
 	}
 
 	if (foundFlag == 0) text::stringOut(m8DevDebugTerminalIdx, PSTR("none"));
@@ -876,23 +816,20 @@ static void terminal::outputSystemStatusFlagGroup(const char * label, uint8_t fl
 static void terminal::outputSystemStatusFlags(void)
 {
 
-	outputSystemStatusFlagGroup(PSTR("AW"), v08(v8AwakeIdx), 0);
+	outputFlagStatusGroup(awakeFlagMarkers, v08(v8AwakeIdx), 1);
 	text::stringOut(m8DevDebugTerminalIdx, PSTR(" ACT"));
-	outputSystemStatusFlagGroup(PSTR(""), v08(v8ActivityIdx), 1);
+	outputFlagStatusGroup(activityFlagMarkers, v08(v8ActivityIdx), 0);
 	text::stringOut(m8DevDebugTerminalIdx, PSTR(" CHG"));
-	outputSystemStatusFlagGroup(PSTR(""), v08(v8ActivityChangeIdx), 1);
+	outputFlagStatusGroup(activityFlagMarkers, v08(v8ActivityChangeIdx), 0);
 	text::newLine(m8DevDebugTerminalIdx);
 
-	outputSystemStatusFlagGroup(PSTR("T0C"), v08(v8Timer0CommandIdx), 2);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S0"));
-	outputSystemStatusFlagGroup(PSTR(""), v08(v8Timer0Status0Idx), 3);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" T0S1"));
-	outputSystemStatusFlagGroup(PSTR(""), v08(v8Timer0Status1Idx), 4);
+	outputFlagStatusGroup(timer0CommandFlagMarkers, v08(v8Timer0CommandIdx), 1);
+	outputFlagStatusGroup(timer0Status0FlagMarkers, v08(v8Timer0Status0Idx), 1);
+	outputFlagStatusGroup(timer0Status1FlagMarkers, v08(v8Timer0Status1Idx), 1);
 	text::newLine(m8DevDebugTerminalIdx);
 
-	outputSystemStatusFlagGroup(PSTR("INJ"), v08(v8DirtyInjectorIdx), 5);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" VSS"));
-	outputSystemStatusFlagGroup(PSTR(""), v08(v8DirtyVSSIdx), 6);
+	outputFlagStatusGroup(dirtyInjectorFlagMarkers, v08(v8DirtyInjectorIdx), 1);
+	outputFlagStatusGroup(dirtyVSSflagMarkers, v08(v8DirtyVSSIdx), 1);
 	text::newLine(m8DevDebugTerminalIdx);
 
 }
@@ -990,6 +927,7 @@ static void terminal::outputSWEET64errorLatch(void)
 {
 
 	text::stringOut(m8DevDebugTerminalIdx, PSTR("S64 ERR "));
+	if (terminalS64errorMuted) text::stringOut(m8DevDebugTerminalIdx, PSTR("[muted] "));
 
 	if (terminalS64errorLatched)
 	{
@@ -1022,14 +960,18 @@ static void terminal::reportSWEET64error(union union_32 * instrLWord, s64pc_t &p
 	{
 
 		if (terminalS64lastErrorCount < 0xFFFF) terminalS64lastErrorCount++;
-		return;
 
+	}
+	else
+	{
+		terminalS64lastErrorCode = errorCode;
+		terminalS64lastErrorCount = 1;
+		terminalS64lastErrorPC = prgmPtr;
 	}
 
 	terminalS64errorLatched = 1;
-	terminalS64lastErrorCode = errorCode;
-	terminalS64lastErrorCount = 1;
-	terminalS64lastErrorPC = prgmPtr;
+
+	if (terminalS64errorMuted) return;
 
 	outputSWEET64error(errorCode);
 	dumpSWEET64information(instrLWord, prgmPtr, prgmStack, prgmReg64, prgmReg8);
@@ -1042,35 +984,22 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, s64pc_
 	outputSWEET64programCounter(prgmPtr);
 	text::charOut(m8DevDebugTerminalIdx, ' ');
 	text::hexDWordOut(m8DevDebugTerminalIdx, instrLWord->u32);
-	text::charOut(m8DevDebugTerminalIdx, ' ');
-	text::hexByteOut(m8DevDebugTerminalIdx, SWEET64processorFlags);
+	outputFlagStatusGroup(SWEET64processorFlagMarkers, SWEET64processorFlags, 1);
 	text::newLine(m8DevDebugTerminalIdx);
 
-	for (uint8_t x = 0; x < 16; x++)
+	for (uint8_t x = 0; x < s64stackSize; x++)
 	{
 
-		text::charOut(m8DevDebugTerminalIdx, 9);
-		text::hexByteOut(m8DevDebugTerminalIdx, x);
-		text::charOut(m8DevDebugTerminalIdx, ' ');
-		outputSWEET64programCounter(prgmStack[(uint16_t)(x)]);
+		hexByteOut(m8DevDebugTerminalIdx, x);
 
-		if (x < s64reg64count)
+		if ((x < prgmReg8[(uint16_t)(si64reg8spnt)]) && (prgmReg8[(uint16_t)(si64reg8spnt)] < s64stackSize))
 		{
 
-			text::charOut(m8DevDebugTerminalIdx, 9, 2);
-			text::hexByteOut(m8DevDebugTerminalIdx, (x + 1));
-			text::charOut(m8DevDebugTerminalIdx, ' ');
-			text::hexLWordOut(m8DevDebugTerminalIdx, &prgmReg64[(uint16_t)(x)]);
-
-		}
-
-		if (x < si64reg8count)
-		{
-
-			text::charOut(m8DevDebugTerminalIdx, 9);
-			text::hexByteOut(m8DevDebugTerminalIdx, x);
-			text::charOut(m8DevDebugTerminalIdx, ' ');
-			text::hexByteOut(m8DevDebugTerminalIdx, prgmReg8[(uint16_t)(x)]);
+			outputSWEET64programCounter(prgmStack[(uint16_t)(x)]);
+			hexByteOut(m8DevDebugTerminalIdx, s64callIndexStack[(uint16_t)(x)]);
+#if defined(useDebugTerminalLabels)
+			text::stringOut(m8DevDebugTerminalIdx, terminalTripFuncNames, s64callIndexStack[(uint16_t)(x)]);
+#endif // defined(useDebugTerminalLabels)
 
 		}
 
@@ -1079,6 +1008,49 @@ static void terminal::dumpSWEET64information(union union_32 * instrLWord, s64pc_
 	}
 
 	text::newLine(m8DevDebugTerminalIdx);
+
+	for (uint8_t x = 0; x < s64reg64count; x++)
+	{
+
+		hexByteOut(m8DevDebugTerminalIdx, x);
+		text::hexLWordOut(m8DevDebugTerminalIdx, &prgmReg64[(uint16_t)(x)]);
+
+#if defined(useDebugTerminalLabels)
+		text::charOut(m8DevDebugTerminalIdx, ' ');
+		text::stringOut(m8DevDebugTerminalIdx, terminalSWEET64registerLabels, x);
+
+#endif // defined(useDebugTerminalLabels)
+		text::newLine(m8DevDebugTerminalIdx);
+
+	}
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+	for (uint8_t x = 0; x < si64reg8count; x++)
+	{
+
+		hexByteOut(m8DevDebugTerminalIdx, x);
+		text::hexByteOut(m8DevDebugTerminalIdx, prgmReg8[(uint16_t)(x)]);
+
+#if defined(useDebugTerminalLabels)
+		text::charOut(m8DevDebugTerminalIdx, ' ');
+		text::stringOut(m8DevDebugTerminalIdx, terminalSWEET64registerLabels, x + s64reg64count);
+
+#endif // defined(useDebugTerminalLabels)
+		text::newLine(m8DevDebugTerminalIdx);
+
+	}
+
+	text::newLine(m8DevDebugTerminalIdx);
+
+}
+
+static void terminal::hexByteOut(uint8_t devIdx, uint8_t val)
+{
+
+	text::charOut(devIdx, 9);
+	text::hexByteOut(devIdx, val);
+	text::charOut(devIdx, ' ');
 
 }
 
@@ -1569,82 +1541,6 @@ static uint8_t terminal::findSWEET64labelByte(char * token, uint8_t labelIdx, ui
 
 }
 
-static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t format, uint8_t &operandLabelIdx, uint8_t &extraLabelIdx)
-{
-
-	operandLabelIdx = 0;
-	extraLabelIdx = 0;
-
-	if ((format & rxxMask) != r00) // instruction does something with the 64 bit registers
-	{
-
-		switch (instr & ixxMask) // perform load or store operation, according to ixx
-		{
-
-			case i14:	// load rX with const
-				operandLabelIdx = dslIdxConst;
-				break;
-
-			case i03:	// load rX with EEPROM
-			case i04:	// store EEPROM rX
-				operandLabelIdx = dslIdxEEPROM;
-				break;
-
-			case i07:	// load rX with volatile
-			case i08:	// store volatile rX
-				operandLabelIdx = dslIdxProgramVariable;
-				break;
-
-#if defined(useBarFuelEconVsTime)
-			case i17:	// load rX with FEvT trip variable
-#endif // defined(useBarFuelEconVsTime)
-			case i18:	// load rX with trip variable
-			case i19:	// store trip variable rX
-				operandLabelIdx = dslIdxTripVariable;
-				extraLabelIdx = dslIdxTripMeasurement;
-				break;
-
-			case i31:	// BCD adjust
-				operandLabelIdx = dslIdxBCDformat;
-				break;
-
-			default:
-				break;
-
-		}
-
-	}
-	else
-	{
-
-		if (instr >= eMaxBranchInstrIdx)
-		{
-
-			switch (instr)
-			{
-
-				case e29:	// load jump register
-				case e27:	// call
-				case e28:	// jump
-					extraLabelIdx = dslIdxFunction;
-					break;
-
-				case e24:	// load index EEPROM
-				case e26:	// load index EEPROM parameter length
-					extraLabelIdx = dslIdxEEPROM;
-					break;
-
-				default:
-					break;
-
-			}
-
-		}
-
-	}
-
-}
-
 #endif // defined(useDebugTerminalLabels)
 
 static uint8_t terminal::pullSWEET64assemblerOperand(uint8_t &byt, uint8_t labelIdx)
@@ -1766,6 +1662,84 @@ static uint8_t terminal::assembleSWEET64programRAMline(void)
 }
 
 #endif // defined(useSWEET64RAMprograms)
+#if defined(useDebugTerminalLabels)
+static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t format, uint8_t &operandLabelIdx, uint8_t &extraLabelIdx)
+{
+
+	operandLabelIdx = 0;
+	extraLabelIdx = 0;
+
+	if ((format & rxxMask) != r00) // instruction does something with the 64 bit registers
+	{
+
+		switch (instr & ixxMask) // perform load or store operation, according to ixx
+		{
+
+			case i14:	// load rX with const
+				operandLabelIdx = dslIdxConst;
+				break;
+
+			case i03:	// load rX with EEPROM
+			case i04:	// store EEPROM rX
+				operandLabelIdx = dslIdxEEPROM;
+				break;
+
+			case i07:	// load rX with volatile
+			case i08:	// store volatile rX
+				operandLabelIdx = dslIdxProgramVariable;
+				break;
+
+#if defined(useBarFuelEconVsTime)
+			case i17:	// load rX with FEvT trip variable
+#endif // defined(useBarFuelEconVsTime)
+			case i18:	// load rX with trip variable
+			case i19:	// store trip variable rX
+				operandLabelIdx = dslIdxTripVariable;
+				extraLabelIdx = dslIdxTripMeasurement;
+				break;
+
+			case i31:	// BCD adjust
+				operandLabelIdx = dslIdxBCDformat;
+				break;
+
+			default:
+				break;
+
+		}
+
+	}
+	else
+	{
+
+		if (instr >= eMaxBranchInstrIdx)
+		{
+
+			switch (instr)
+			{
+
+				case e29:	// load jump register
+				case e27:	// call
+				case e28:	// jump
+					extraLabelIdx = dslIdxFunction;
+					break;
+
+				case e24:	// load index EEPROM
+				case e26:	// load index EEPROM parameter length
+					extraLabelIdx = dslIdxEEPROM;
+					break;
+
+				default:
+					break;
+
+			}
+
+		}
+
+	}
+
+}
+
+#endif // defined(useDebugTerminalLabels)
 static void terminal::outputSWEET64operand(uint8_t flag, uint8_t &byt)
 {
 
@@ -2759,9 +2733,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 #endif // defined(useDebugButtonInjection)
 								case 0x13:	// display supplemental system information
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 									text::stringOut(m8DevDebugTerminalIdx, PSTR("UP "));
 									text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputOperatingTime)));
 									text::newLine(m8DevDebugTerminalIdx);
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useClockDisplay)
 									text::stringOut(m8DevDebugTerminalIdx, PSTR("CLK "));
 									text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmOutputClockTime)));
@@ -2868,6 +2844,13 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									terminalMode |= (tmInitInput); // shift to reading a new numeric value
 									break;
 
+#if defined(useDebugTerminalSWEET64)
+								case 'N':	// toggle SWEET64 error output mute
+									terminalS64errorMuted ^= 1;
+									terminalState = tsInitProcessing;
+									break;
+
+#endif // defined(useDebugTerminalSWEET64)
 								case 'L':   // list available trip functions
 									if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 
@@ -3369,8 +3352,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 						terminalExecSched = SWEET64::makeProgmemProgram(0);
 
 					}
-
-					if (terminalS64reg8[(uint16_t)(si64reg8flags)] & SWEET64traceFlag) // if trace flag is still enabled, output register values
+					else if (terminalS64reg8[(uint16_t)(si64reg8flags)] & SWEET64traceFlag) // if trace flag is still enabled, output register values
 						dumpSWEET64information(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8);
 
 				}

@@ -2,7 +2,7 @@
 
 static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrTestReg, 0x02,									// test register 2
-	instrBranchIfOverflow, 23,							// if register 2 has overflow value, exit
+	instrBranchIfOverflow, 21,							// if register 2 has overflow value, exit
 	instrCmpIndex, 2,									// check if 3 or more right hand digits were specified
 	instrBranchIfGT, 17,								// if so, just exit
 	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
@@ -234,7 +234,21 @@ static void text::stringOut(uint8_t devIdx, const char * str, uint8_t strIdx)
 static void text::stringOut(uint8_t devIdx, const char * str)
 {
 
-	while (charOut(devIdx, pgm_read_byte(str++))) ;
+	uint8_t chr;
+
+	while ((chr = pgm_read_byte(str++)))
+	{
+
+		if (chr == '\x01') // space-run: next byte is count
+		{
+
+			uint8_t count = pgm_read_byte(str++);
+			while (count--) charOut(devIdx, ' ');
+
+		}
+		else if (!charOut(devIdx, chr)) break;
+
+	}
 
 }
 

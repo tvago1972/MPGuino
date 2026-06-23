@@ -438,6 +438,18 @@ Logging Output / Debug Monitor I/O
 
 #define tcEOS		"\0"
 #define tcEOSCR		"\r"
+#define tcSPC		"\x01"			// space-run sentinel: followed by count byte, expands to that many spaces
+#define tcSP3		tcSPC "\x03"
+#define tcSP4		tcSPC "\x04"
+#define tcSP6		tcSPC "\x06"
+#define tcSP7		tcSPC "\x07"
+#define tcSP10		tcSPC "\x0a"
+#define tcSP11		tcSPC "\x0b"
+#define tcSP15		tcSPC "\x0f"
+#define tcSP16		tcSPC "\x10"
+#define tcSP17		tcSPC "\x11"
+#define tcSP18		tcSPC "\x12"
+#define tcSP19		tcSPC "\x13"
 #define tcOMOFF		"\xEB"
 #define tcOTOG		"\xEC"
 #define tcOON		"\xED"

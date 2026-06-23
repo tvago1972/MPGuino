@@ -214,30 +214,31 @@ static const uint8_t pSizeLCDcolor =					3;					// pLCDcolorIdx
 #endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-static const uint8_t pSizeFuelUnitCost =				24;
+static const uint8_t pSizeFuelUnitCost =				24;					// pCostPerQuantity
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-static const uint8_t pSizeOutputPin1Mode =				3;
-static const uint8_t pSizeOutputPin2Mode =				3;
+static const uint8_t pSizeOutputPin1Mode =				4;					// pOutputPin1Mode
+static const uint8_t pSizeOutputPin2Mode =				4;					// pOutputPin2Mode
+static const uint8_t pSizeOutputPinMaxFuelEconomy =		24;					// pOutputPinMaxFuelEconomy
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
-static const uint8_t pSizeVoltageOffset =				12;
+static const uint8_t pSizeVoltageOffset =				12;					// pVoltageOffset
 #endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
-static const uint8_t pSizeSerialDataLogging =			1;
+static const uint8_t pSizeSerialDataLogging =			1;					// pSerialDataLoggingIdx
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-static const uint8_t pSizeJSONoutput =					1;
+static const uint8_t pSizeJSONoutput =					1;					// pJSONoutputIdx
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-static const uint8_t pSizeBluetoothOutput =				1;
+static const uint8_t pSizeBluetoothOutput =				1;					// pBluetoothOutputIdx
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-static const uint8_t pSizeFEvsTime =					16;
+static const uint8_t pSizeFEvsTime =					16;					// pFEvsTimeIdx
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-static const uint8_t pSizeBarLowSpeedCutoff =			24;
-static const uint8_t pSizeBarSpeedQuantumIdx =			24;
+static const uint8_t pSizeBarLowSpeedCutoff =			24;					// pBarLowSpeedCutoffIdx
+static const uint8_t pSizeBarSpeedQuantumIdx =			24;					// pBarSpeedQuantumIdx
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
 static const uint8_t pSizeSysFuelPressure =				32;					// pSysFuelPressureIdx
@@ -371,37 +372,38 @@ static const uint16_t pAddressLCDcolor =					nextAllowedValue;	// pLCDcolorIdx
 #endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-static const uint16_t pAddressFuelUnitCost =				nextAllowedValue;
+static const uint16_t pAddressFuelUnitCost =				nextAllowedValue;	// pCostPerQuantity
 #define nextAllowedValue pAddressFuelUnitCost + byteSize(pSizeFuelUnitCost)
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-static const uint16_t pAddressOutputPin1Mode =				nextAllowedValue;
-static const uint16_t pAddressOutputPin2Mode =				pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);
-#define nextAllowedValue pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode)
+static const uint16_t pAddressOutputPin1Mode =				nextAllowedValue;	// pOutputPin1Mode
+static const uint16_t pAddressOutputPin2Mode =				pAddressOutputPin1Mode + byteSize(pSizeOutputPin1Mode);	// pOutputPin2Mode
+static const uint16_t pAddressOutputPinMaxFuelEconomy =		pAddressOutputPin2Mode + byteSize(pSizeOutputPin2Mode);	// pOutputPinMaxFuelEconomy
+#define nextAllowedValue pAddressOutputPinMaxFuelEconomy + byteSize(pSizeOutputPinMaxFuelEconomy)
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
-static const uint16_t pAddressVoltageOffset =				nextAllowedValue;
+static const uint16_t pAddressVoltageOffset =				nextAllowedValue;	// pVoltageOffset
 #define nextAllowedValue pAddressVoltageOffset + byteSize(pSizeVoltageOffset)
 #endif // defined(useAlternatorVoltage)
 #if defined(useDataLoggingOutput)
-static const uint16_t pAddressSerialDataLogging =			nextAllowedValue;
+static const uint16_t pAddressSerialDataLogging =			nextAllowedValue;	// pSerialDataLoggingIdx
 #define nextAllowedValue pAddressSerialDataLogging + byteSize(pSizeSerialDataLogging)
 #endif // defined(useDataLoggingOutput)
 #if defined(useJSONoutput)
-static const uint16_t pAddressJSONoutput =					nextAllowedValue;
+static const uint16_t pAddressJSONoutput =					nextAllowedValue;	// pJSONoutputIdx
 #define nextAllowedValue pAddressJSONoutput + byteSize(pSizeJSONoutput)
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-static const uint16_t pAddressBluetoothOutput =				nextAllowedValue;
+static const uint16_t pAddressBluetoothOutput =				nextAllowedValue;	// pBluetoothOutputIdx
 #define nextAllowedValue pAddressBluetoothOutput + byteSize(pSizeBluetoothOutput)
 #endif // defined(useBluetooth)
 #if defined(useBarFuelEconVsTime)
-static const uint16_t pAddressFEvsTime =					nextAllowedValue;
+static const uint16_t pAddressFEvsTime =					nextAllowedValue;	// pFEvsTimeIdx
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
 #endif // defined(useBarFuelEconVsTime)
 #if defined(useBarFuelEconVsSpeed)
-static const uint16_t pAddressBarLowSpeedCutoff =			nextAllowedValue;
-static const uint16_t pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);
+static const uint16_t pAddressBarLowSpeedCutoff =			nextAllowedValue;	// pBarLowSpeedCutoffIdx
+static const uint16_t pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);	// pBarSpeedQuantumIdx
 #define nextAllowedValue pAddressBarSpeedQuantumIdx + byteSize(pSizeBarSpeedQuantumIdx)
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useFuelPressure)
@@ -575,7 +577,8 @@ static const uint8_t pCostPerQuantity =					nextAllowedValue;
 #if defined(useOutputPins)
 static const uint8_t pOutputPin1Mode =					nextAllowedValue;
 static const uint8_t pOutputPin2Mode =					pOutputPin1Mode + 1;
-#define nextAllowedValue pOutputPin2Mode + 1
+static const uint8_t pOutputPinMaxFuelEconomy =			pOutputPin2Mode + 1;
+#define nextAllowedValue pOutputPinMaxFuelEconomy + 1
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 static const uint8_t pVoltageOffset =					nextAllowedValue;
@@ -783,6 +786,7 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useOutputPins)
 	"pOutputPin1Mode" tcEOS
 	"pOutputPin2Mode" tcEOS
+	"pOutputPinMaxFuelEconomy" tcEOS
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	"pVoltageOffset" tcEOS
@@ -1143,6 +1147,7 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useOutputPins)
 	(pSizeOutputPin1Mode & 0x07),												// Output Pin 1 mode
 	(pSizeOutputPin2Mode & 0x07),												// Output Pin 2 mode
+	(pSizeOutputPinMaxFuelEconomy & 0x07),										// Output pin max fuel economy
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	(pSizeVoltageOffset & 0x07),												// diode offset from V(alternator)
@@ -1290,11 +1295,12 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useLCDoutput)
 #if defined(useFuelCost)
-	pAddressFuelUnitCost,				// Price per unit volume of fuel
+	pAddressFuelUnitCost,				// pCostPerQuantity
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	pAddressOutputPin1Mode,				// Output Pin 1 mode
-	pAddressOutputPin2Mode,				// Output Pin 2 mode
+	pAddressOutputPin1Mode,				// pOutputPin1Mode
+	pAddressOutputPin2Mode,				// pOutputPin2Mode
+	pAddressOutputPinMaxFuelEconomy,	// Output pin max fuel economy
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	pAddressVoltageOffset,				// diode offset from V(alternator)
@@ -1450,6 +1456,7 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 #if defined(useOutputPins)
 	0,					// Output pin 1 mode
 	0,					// Output pin 2 mode
+	50000,				// Output pin max fuel economy (50 MPG * 1000 SAE, or equivalent KPL * 1000 in metric)
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	700,				// diode offset from V(alternator) (via meelis11)

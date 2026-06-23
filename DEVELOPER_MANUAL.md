@@ -27,6 +27,8 @@
 
 - [Appendix A: Quick Reference - Instruction Aliases](#appendix-a-quick-reference--instruction-aliases)
 - [Appendix B: Key `configs.h` Flags for Developers](#appendix-b-key-configsh-flags-for-developers)
+- [Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor)
+- [Appendix D: Second Arduino Uno as External Signal Generator](#appendix-d-second-arduino-uno-as-external-signal-generator)
 
 ---
 
@@ -630,7 +632,7 @@ On ATmega2560, the following are automatically enabled when `useDebugTerminal` i
 #define useBuffering true
 ```
 
-On ATmega328P, `useDebugTerminal` is silently disabled (too little flash).
+On ATmega328P, `useDebugTerminal` is normally silently disabled (too little flash). See [Appendix C](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor) for the dedicated 328P debug monitor build.
 
 ### 10.2 Connecting
 
@@ -753,7 +755,15 @@ These operations use SWEET64 internally (registers r6/r7 are the debug terminal'
 
 ### 11.11 System Status (`^S`)
 
-`^S` means Ctrl-S. It prints a compact system snapshot, including uptime, clock time when `useClockDisplay` is enabled, decimal-format settings, decoded status flags, raw status bytes, SWEET64 RAM override status when enabled, the SWEET64 error latch when enabled, and Bluetooth response state when the BLE shield support is compiled in.
+`^S` means Ctrl-S. It prints a compact system snapshot, including uptime when CPU/debug CPU timing support is compiled in, clock time when `useClockDisplay` is enabled, decimal-format settings, decoded status flags, raw status bytes, SWEET64 RAM override status when enabled, the SWEET64 error latch when enabled, and Bluetooth response state when the BLE shield support is compiled in.
+
+With `useDebugTerminalSWEET64`, the SWEET64 error latch reports the last engine-detected malformed-program error:
+
+```
+S64 ERR count=0027 @ 02R last=03 bad reg operand
+```
+
+The count increments when the same error repeats at the same SWEET64 program counter. A different error or different program counter resets the count to 1. The `N` command toggles SWEET64 error mute; while muted, repeated runtime error reports are suppressed, but the latch and count remain visible through `^S`.
 
 ### 11.12 Help (`?`)
 
@@ -810,15 +820,18 @@ Output shows both the raw 64-bit hex value and a formatted decimal representatio
 |---|---|
 | `x^T` | Trace function `x` for 1 instruction, dump state |
 | `x.y^T` | Trace function `x` for `y` instructions (`y=0` = run to completion) |
+| `z<y^T` | Trace RAM program at address `z` for `y` instructions (`y=0` = run to completion; requires `useSWEET64RAMprograms`) |
 
 Each traced instruction line shows:
 - Program counter (address)
 - Opcode name
 - Operands (symbolic if labels enabled)
-- Post-execution register file dump
-- Flags (C Z M V E)
+- Post-execution register file dump when trace remains active
+- Decoded SWEET64 flags, including carry, zero, minus, overflow, error, and trace state
 
 Trace output is written to the debug terminal in real time as the program executes.
+
+If a malformed instruction or bad operand is encountered, the trace stops, the SWEET64 error latch is updated, and the terminal prints the error report unless SWEET64 errors are muted with `N`.
 
 ---
 
@@ -902,7 +915,7 @@ Disassembles program RAM starting at address `x`, printing instructions in the s
 z<y^T
 ```
 
-Traces the RAM program starting at address `z`, for `y` instructions (`y=0` = run to completion).
+Traces the RAM program starting at address `z`, for `y` instructions (`y=0` = run to completion). This uses the same trace engine as function tracing, so invalid RAM opcodes, missing operands, stack overflow, and bad operand errors are reported through the SWEET64 error latch.
 
 ### 13.6 Export as C Source (`^W`)
 
@@ -945,7 +958,7 @@ When an error is detected, `SWEET64errorFlag` is set in `si64reg8flags` and an e
 | `s64errStackOverflow` | 8 | Call depth exceeded 16 |
 | `s64errBadOperand` | 9 | General operand validation failure |
 
-The debug terminal displays these symbolically in trace/error output. In production builds (no debug terminal), execution simply stops at the bad instruction and returns whatever is in r2.
+The debug terminal displays these symbolically in trace/error output and through the `^S` SWEET64 error latch. In production builds (no debug terminal), execution simply stops at the bad instruction and returns whatever is in r2.
 
 ---
 
@@ -1097,7 +1110,120 @@ At 31,373 Hz, a modest RC filter (e.g. 10 kΩ + 100 nF, f_RC ≈ 160 Hz) provide
 | `useDebugButtonInjection` | `I` command (requires `useDebugTerminal` + buttons) |
 | `useDebugCPUreading` | Fine-grained interrupt-level CPU counters |
 | `useSimulatedFIandVSS` | `S` command + injector/VSS simulation |
+| `useAtMega328debugMonitor` | Dedicated debug monitor build for ATmega328P |
 | `useActivityLED` | On-board LED phase indicator |
+
+---
+
+## Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)
+
+### C.1 Purpose
+
+`useAtMega328debugMonitor` is a special build configuration that enables a headless SWEET64 debug terminal on an Arduino Uno (ATmega328P). Normally `useDebugTerminal` is suppressed on 328P due to flash constraints (32256 bytes usable with Optiboot bootloader). This flag overrides that suppression and simultaneously strips out enough non-essential features to make the terminal fit.
+
+It is intended as a dedicated development and SWEET64 debugging firmware — not a configuration that would be used in a vehicle.
+
+### C.2 Enabling
+
+This configuration has been compile/upload tested on both Arduino Uno and Arduino Mega2560 hardware. The Mega2560 build can be useful for testing the same monitor personality with more flash headroom, while the Uno build proves the minimum dev-console target still fits.
+
+In `configs.h`, set only this flag:
+
+```c
+#define useAtMega328debugMonitor true
+```
+
+Everything else is configured automatically by the monitor block in `configs.h`. No other flags need to be set or cleared manually.
+
+### C.3 What the Monitor Block Enables
+
+```c
+#define useDebugTerminal true
+#define useDebugTerminalHelp true        // see flash budget notes below
+#define useDebugTerminalLabels true      // symbolic names in output
+#define useDebugTerminalSWEET64 true     // ^L, ^T, ^I, ^F, ^E commands
+#define useSWEET64RAMprograms true       // RAM assembler
+#define useDebugTerminalSerialPort0 true // UART0 (pins 0/1)
+```
+
+On Mega2560, the same monitor block also enables `useDebugCPUreading`. On ATmega328P, `useDebugCPUreading` is disabled to preserve flash for the SWEET64 monitor and RAM-program tools.
+
+### C.4 What the Monitor Block Disables
+
+To fit within the 328P flash budget, the monitor block disables all display hardware, button input, clocks, drag race, bar graphs, signal simulation, and other peripherals that are irrelevant to a headless debug session. Key items disabled include `useSimulatedFIandVSS`, `useSoftwareClock`, `useDS1307clock`, `useOutputPins`, `useDragRaceFunction`, all LCD/display options, all button options, Bluetooth/JSON/logging outputs, and board-specific display defines.
+
+### C.5 Flash Budget and Feature Tradeoffs
+
+The 32256-byte usable flash is tight. Representative sizes for key feature combinations:
+
+| Configuration | Flash used |
+|---|---|
+| Labels only, no help text | ~29728 bytes |
+| Labels + help text (attenuated for 328P) | ~32100 bytes |
+| Labels + help text + `useSimulatedFIandVSS` | ~34500 bytes |
+
+The help text in `terminalHelp` uses run-length encoding for space characters (`\x01\xNN` expands to N spaces in `text::stringOut`) to reduce flash consumption. For the 328P monitor build, the accumulator math operation entries and the decimal sample output (`U`) command entry are additionally omitted from the help text since they are straightforward enough to use without inline documentation.
+
+The status and trace code is also arranged so the headless monitor can inspect core runtime state without pulling in the LCD/button-facing screens. `^S` remains available for decoded activity/status bytes and SWEET64 error state; uptime appears only when CPU/debug CPU timing support is included.
+
+`useSimulatedFIandVSS` does not fit alongside the full debug terminal on 328P. Use a second Arduino Uno as an external signal generator instead — see [Appendix D](#appendix-d-second-arduino-uno-as-external-signal-generator).
+
+### C.6 Serial Connection
+
+Connect to UART0 (pin 1 = TX, pin 0 = RX) at the configured baud rate, 8N1. The USB-to-serial converter on the Uno board makes this straightforward — use the Arduino IDE Serial Monitor or any terminal program with CR or CR+LF line endings.
+
+### C.7 Primary Workflow
+
+The 328P monitor is meant to support SWEET64 development without an LCD:
+
+1. Use `^F`, `^I`, and `^L` to inspect existing SWEET64 functions.
+2. Use `x<yM` to copy a flash function into program RAM.
+3. Use `x!` to assemble or patch instructions in RAM.
+4. Use `z<y^T` to trace the RAM program.
+5. Use `x<y^O` to substitute the RAM program for an existing function.
+6. Use `x.y^W` to export the RAM program as paste-ready C source once the behavior is correct.
+
+The same workflow works on Mega2560, but the Uno build is the useful proof that SWEET64 bytecode can be developed on a cheap standalone board.
+
+---
+
+## Appendix D: Second Arduino Uno as External Signal Generator
+
+### D.1 Why
+
+`useSimulatedFIandVSS` — the built-in signal simulator — does not fit in the 328P flash alongside `useAtMega328debugMonitor`. A second Uno running dedicated signal-generation firmware is a cleaner solution in any case: it exercises the real hardware interrupt path rather than software-injected signals, and it keeps the device under test running exactly the firmware under development.
+
+### D.2 Signal Characteristics
+
+MPGuino expects two input signals:
+
+**VSS (vehicle speed sensor):**
+- A square wave on the VSS interrupt pin
+- Frequency proportional to simulated vehicle speed
+- Pulse width is not critical; a 50% duty cycle square wave works
+
+**Fuel injector:**
+- A pulse train on the injector interrupt pin
+- Edge polarity must match `pInjEdgeTriggerIdx`
+- The default saturated-injector setting treats falling edge as injector open and rising edge as injector close
+- Pulse width proportional to simulated fuel flow
+- Frequency should match simulated engine RPM
+
+Both signals are measured in Timer0 cycles by the MPGuino ISRs. Refer to the `idxTicks0PerSecond` and `idxCycles0PerSecond` constant table entries (§7) for the timer rate.
+
+### D.3 Connections
+
+| Signal | Generator Uno pin | MPGuino Uno pin |
+|---|---|---|
+| VSS | Any digital output | VSS interrupt input |
+| Injector | Any digital output | Injector interrupt input |
+| GND | GND | GND |
+
+A common ground between the two boards is required.
+
+### D.4 Generator Sketch
+
+A minimal generator sketch uses `tone()` or Timer1 to produce the VSS square wave, and a separate timer or `analogWrite()` channel for the injector pulse train. The exact frequencies needed depend on the VSS pulses-per-mile parameter stored in MPGuino's EEPROM and the injector flow rate parameter — set these in the MPGuino EEPROM via the `P` command first, then size the generator frequencies to produce the desired simulated speed and fuel flow.
 
 ---
 

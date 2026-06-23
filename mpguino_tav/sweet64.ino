@@ -33,20 +33,22 @@ static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
 
 }
 
-#if defined(useSWEET64RAMprograms)
 static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
 {
 
 	s64pc_t prgmPtr;
 	
 	prgmPtr.ptr = 0;
+#if defined(useSWEET64RAMprograms)
 	prgmPtr.ram_ptr = ptr;
 	prgmPtr.source = s64srcRAM;
+#endif // defined(useSWEET64RAMprograms)
 
 	return prgmPtr;
 
 }
 
+#if defined(useSWEET64RAMprograms)
 static uint8_t SWEET64::readProgramRAM(uint8_t addr)
 {
 
@@ -152,7 +154,7 @@ static uint8_t SWEET64::isProgramValid(s64pc_t prgmPtr)
 
 	}
 #else // defined(useSWEET64RAMprograms)
-	return prgmPtr.ptr;
+	return (prgmPtr.ptr != 0);
 #endif // defined(useSWEET64RAMprograms)
 
 }
@@ -1321,7 +1323,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 					break;
 
 				case e27:	// call
-					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15)
+					if (prgmReg8[(uint16_t)(si64reg8spnt)] >= s64stackSize)
 					{
 
 						setProgramError(prgmReg8, s64errStackOverflow);
@@ -1329,6 +1331,9 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 						break;
 
 					}
+#if defined(useDebugTerminalSWEET64)
+					s64callIndexStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)])] = extra;
+#endif // defined(useDebugTerminalSWEET64)
 					prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
 				case e28:	// jump
 					prgmPtr = getProgramPC(extra);
