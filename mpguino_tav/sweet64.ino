@@ -1263,40 +1263,11 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				case e18:	// instrTestIndex
 					break;
 
-				case e17:	// instrTraceDone
-#if defined(useDebugTerminalSWEET64)
-					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
-					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#endif // defined(useDebugTerminalSWEET64)
 				case e16:	// instrDone
 					if (prgmReg8[(uint16_t)(si64reg8spnt)]--) prgmPtr = prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)])];
 					else isValid = 0;
 					break;
 
-				case e19:	// instrTraceRestore
-#if defined(useDebugTerminalSWEET64)
-					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
-					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e20:	// instrTraceOn
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags |= (SWEET64traceCommandFlag | SWEET64traceSaveFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e22:	// instrTraceOff
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags &= ~(SWEET64traceCommandFlag | SWEET64traceSaveFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e21:	// instrTraceSave
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#endif // defined(useDebugTerminalSWEET64)
-					break;
 
 				case e23:	// load index
 					prgmReg8[(uint16_t)(si64reg8trip)] = operand;
