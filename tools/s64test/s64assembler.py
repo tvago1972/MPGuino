@@ -8,7 +8,13 @@ exits back to the ']' prompt; a syntax error prints a message and also drops
 back to ']'.
 
 Operands are hex bytes (optional '0x', max two digits).  Register operands are
-a single nibble-packed byte, e.g. 'LdReg 11' loads register X=1 from Y=1.
+a single nibble-packed byte whose encoding depends on the instruction:
+  - single-register ops (e.g. AddByteToX, Mul2byByte): low nibble = register
+    number (1-7), upper nibble must be 0.  Write '1', not '11'.
+  - two-register / arithmetic ops (LdRegByte, AddYtoX, CmpXtoY, SwapReg...):
+    high nibble = X, low nibble = Y, e.g. '12' is X=1, Y=2.
+The monitor rejects a line with 'syntax' if the operand nibbles are invalid
+for that instruction's format.
 
 Example:
     from s64assembler import assemble
