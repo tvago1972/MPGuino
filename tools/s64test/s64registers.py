@@ -1,7 +1,11 @@
 import re
 
-# Ctrl+E triggers the ^E register list command
-CMD_LIST_REGISTERS = '\x05'
+# Ctrl+E triggers the ^E register command (list, or store with :values)
+CMD_REGISTERS = '\x05'
+CMD_LIST_REGISTERS = CMD_REGISTERS   # backward-compatible alias
+
+# register layout (matches firmware: 7x 64-bit regs, then the 8-bit regs)
+S64_REG64_COUNT = 7
 
 # control character echoes look like '^X' — skip them silently
 _CTRL_ECHO_RE = re.compile(r'^\^[A-Z]$')
@@ -16,7 +20,7 @@ _HEADER_RE = re.compile(r'^decimalFlags=', re.IGNORECASE)
 _REG_RE = re.compile(
     r'^([0-9A-Fa-f]{2}):\s*'     # register index
     r'([0-9A-Fa-f]+)\s+-\s+'     # hex value (variable width, space padded)
-    r'(-?\d+)\s+-\s+'            # signed decimal value
+    r'(-?\d+|-+)\s+-\s+'         # signed decimal value, or dashes if not displayable
     r'(\S+)\s*$'                 # register label
 )
 
@@ -40,9 +44,32 @@ def _parse_line(line):
         return None
     index     = int(m.group(1), 16)
     hex_value = int(m.group(2), 16)
-    dec_value = int(m.group(3), 10)
+    dec_field = m.group(3)
+    # decimal column shows dashes when the value is too large to display
+    dec_value = int(dec_field, 10) if any(c.isdigit() for c in dec_field) else None
     label     = m.group(4)
     return S64Register(index, hex_value, dec_value, label)
+
+
+def set_registers(term, start_index, values):
+    """Store one or more values into SWEET64 registers starting at
+    start_index, using the 'x^E:v [v]...' monitor command.
+
+    values: list of ints (or a single int). Values are sent in hex, which
+    is the monitor's default numeric input mode. 64-bit registers accept a
+    full 64-bit value; 8-bit registers take only the low byte.
+
+    Returns the monitor's response lines (normally just the re-listed
+    registers, since ^E echoes the stored state)."""
+    if isinstance(values, int):
+        values = [values]
+    if not values:
+        raise ValueError('set_registers requires at least one value')
+
+    # index and values are all hexadecimal in the monitor
+    hexvals = ' '.join('{:X}'.format(v & 0xFFFFFFFFFFFFFFFF) for v in values)
+    cmd = '{:X}{}:{}'.format(start_index, CMD_REGISTERS, hexvals)
+    return term.send_command(cmd)
 
 
 def read_registers(term):
