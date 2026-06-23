@@ -554,11 +554,6 @@ static const char opCodeList[] PROGMEM = {
 	"ShiftRegLeft" tcEOS
 	"ShiftRegRight" tcEOS
 	"AddIndex" tcEOS
-	"TraceOn" tcEOS
-	"TraceOff" tcEOS
-	"TraceSave" tcEOS
-	"TraceRestore" tcEOS
-	"TraceDone" tcEOS
 	"LdJumpReg" tcEOS
 	"ClearFlag" tcEOS
 	"SetFlag" tcEOS
