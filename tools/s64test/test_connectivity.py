@@ -65,17 +65,36 @@ def main():
 
             # --- print instruction table ---
             print()
-            print('{:<5} {:<4} {:<30} {}'.format('IDX', 'FMT', 'MNEMONIC', 'OPERANDS'))
+            print('{:<5} {:<5} {:<3} {:<28} {}'.format(
+                'IDX', 'FMT', '#OP', 'MNEMONIC', 'OPERANDS'))
             print('-' * 72)
             for instr in by_opcode:
                 if instr is None:
                     continue
-                print('0x{:02X}  {:04X}  {:<30} {}'.format(
+                print('0x{:02X}  {:04X}  {:<3} {:<28} {}'.format(
                     instr.index,
                     instr.format_word,
+                    instr.operand_byte_count,
                     instr.mnemonic,
                     instr.operand_desc,
                 ))
+
+            # --- read registers (skip under mock) ---
+            if not use_mock:
+                print()
+                print('Reading SWEET64 registers via ^E...')
+                from s64registers import read_registers
+                by_index, by_label = read_registers(term)
+                print('OK: {} registers read'.format(len(by_index)))
+                print()
+                print('{:<5} {:<18} {:<12} {}'.format(
+                    'IDX', 'VALUE', 'DECIMAL', 'LABEL'))
+                print('-' * 60)
+                for reg in by_index:
+                    if reg is None:
+                        continue
+                    print('0x{:02X}  {:016X}   {:<12} {}'.format(
+                        reg.index, reg.hex_value, reg.dec_value, reg.label))
 
             print()
             print('Connectivity test PASSED.')

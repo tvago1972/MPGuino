@@ -17,12 +17,12 @@ from s64terminal import S64TerminalError
 # Format matches real monitor output: 'XX: (FFFF)OO [11] [22] [33]   mnemonic desc'
 _CANNED_INSTRUCTION_LIST = [
     '^I',
-    '00: (0000)00                  instrDone',
-    '01: (2011)01 11               instrLdReg 0x11',
-    '02: (2211)02 11 22            instrLdRegByteFromReg 0x11, (0x22)',
-    '03: (A311)03 11 22 33         instrLdRegEEPROM 0x11, (0x22), (0x33)',
-    '04: (0000)04                  INVALID INSTRUCTION',
-    '05: (2031)05 11 22            instrAddReg 0x11, (0x22)',
+    '00: (8004) 00 11         TestReg 0x11',
+    '01: (0011) 01            TestIndex',
+    '16: (2008) 16 11         LdReg 0x11',
+    '18: (2450) 18 11 22      LdRegByte 0x11 (0x22)',
+    '19: (8594) 19 11 22 33   LdRegTripVar 0x11 (0x22) (0x33)',
+    '57: (000F) 57            Done',
     ']',
 ]
 

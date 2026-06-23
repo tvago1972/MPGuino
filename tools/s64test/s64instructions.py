@@ -17,15 +17,21 @@ S64V_EXTRA_INDEXED       = 0x04
 S64V_EXTRA_JUMP          = 0x02
 S64V_RELATIVE_OPERAND    = 0x01
 
-# regex for a valid instruction line:
-#   XX: (FFFF)OO ...   instrSomething ...
-# The mnemonic always starts with 'instr'
+# regex for a valid instruction line, e.g.:
+#   '00: (8004) 00 11         TestReg 0x11'
+#   '01: (0011) 01            TestIndex'
+#   '18: (2450) 18 11 22      LdRegByte 0x11 (0x22)'
+# Layout: INDEX: (FORMAT) <space-separated raw bytes> <padding> MNEMONIC [operands]
+# The raw byte list is opcode + operand bytes; its length tells us how many
+# operand bytes the instruction consumes.  Mnemonics are short display names
+# (TestReg, LdReg, ...), not the instr-prefixed C constants.
 _LINE_RE = re.compile(
-    r'^([0-9A-Fa-f]{2}):\s+'     # opcode index
-    r'\(([0-9A-Fa-f]{4})\)'      # format word in parens
-    r'([0-9A-Fa-f ]+?)\s+'       # raw bytes (opcode + optional operand bytes)
-    r'(instr\S+)'                 # mnemonic
-    r'(.*)?$'                    # optional operand description
+    r'^([0-9A-Fa-f]{2}):\s+'                       # opcode index
+    r'\(([0-9A-Fa-f]{4})\)\s+'                     # format word in parens
+    r'([0-9A-Fa-f]{2}(?: [0-9A-Fa-f]{2})*)'        # raw bytes (single-space sep)
+    r'\s{2,}'                                       # column padding gap
+    r'([A-Za-z]\w*)'                               # mnemonic display name
+    r'(?:\s+(.*))?$'                               # optional operand description
 )
 
 
@@ -33,9 +39,12 @@ class S64Instruction:
     def __init__(self, index, format_word, mnemonic, raw_bytes, operand_desc):
         self.index        = index           # int opcode index
         self.format_word  = format_word     # int (upper byte = validity flags)
-        self.mnemonic     = mnemonic        # str e.g. 'instrDone'
-        self.raw_bytes    = raw_bytes       # str of hex bytes as shown
+        self.mnemonic     = mnemonic        # str display name e.g. 'LdReg'
+        self.raw_bytes    = raw_bytes       # list[int]: opcode + operand bytes
         self.operand_desc = operand_desc    # str operand description or ''
+
+        # number of operand bytes the instruction consumes (excludes opcode)
+        self.operand_byte_count = max(0, len(raw_bytes) - 1)
 
         # convenience flags derived from upper byte of format word
         flags = (format_word >> 8) & 0xFF
@@ -47,7 +56,9 @@ class S64Instruction:
     def __repr__(self):
         return (
             'S64Instruction(index=0x{:02X}, mnemonic={!r}, '
-            'format=0x{:04X})'.format(self.index, self.mnemonic, self.format_word)
+            'format=0x{:04X}, operands={})'.format(
+                self.index, self.mnemonic, self.format_word,
+                self.operand_byte_count)
         )
 
 
@@ -58,7 +69,7 @@ def _parse_line(line):
         return None
     index        = int(m.group(1), 16)
     format_word  = int(m.group(2), 16)
-    raw_bytes    = m.group(3).strip()
+    raw_bytes    = [int(b, 16) for b in m.group(3).split()]
     mnemonic     = m.group(4)
     operand_desc = m.group(5).strip() if m.group(5) else ''
     return S64Instruction(index, format_word, mnemonic, raw_bytes, operand_desc)
