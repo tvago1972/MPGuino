@@ -1,0 +1,61 @@
+"""Drive the MPGuino debug monitor's interactive SWEET64 RAM assembler.
+
+The assembler is entered with '<addr>!', which switches the prompt from the
+normal ']' to a per-address 'XX!:' prompt.  Each subsequent line is one
+instruction (mnemonic followed by hex operand bytes); on success the monitor
+echoes the disassembled line and advances to the next address.  An empty line
+exits back to the ']' prompt; a syntax error prints a message and also drops
+back to ']'.
+
+Operands are hex bytes (optional '0x', max two digits).  Register operands are
+a single nibble-packed byte, e.g. 'LdReg 11' loads register X=1 from Y=1.
+
+Example:
+    from s64assembler import assemble
+    assemble(term, 0, ['LdRegByte 12 2A', 'Done'])
+"""
+
+from s64terminal import (
+    EITHER_PROMPT_RE, NORMAL_PROMPT_RE, is_asm_prompt, S64TerminalError,
+)
+
+
+class S64AssemblerError(Exception):
+    pass
+
+
+def assemble(term, address, instructions):
+    """Assemble instruction source lines into SWEET64 program RAM beginning at
+    the given byte address.
+
+    instructions: iterable of strings, e.g. ['LdRegByte 12 2A', 'Done'].
+
+    Returns a list of the monitor's disassembly echo lines (one or more per
+    assembled instruction).  Raises S64AssemblerError if entry fails or any
+    line is rejected."""
+    # enter the assembler at the requested address
+    _, prompt = term.exchange('{:X}!'.format(address), EITHER_PROMPT_RE)
+    if not is_asm_prompt(prompt):
+        raise S64AssemblerError(
+            'failed to enter assembler at 0x{:02X} (prompt={!r})'.format(
+                address, prompt))
+
+    echoes = []
+    try:
+        for src in instructions:
+            lines, prompt = term.exchange(src, EITHER_PROMPT_RE, flush=False)
+            if not is_asm_prompt(prompt):
+                # dropped back to ']' — the line was rejected
+                raise S64AssemblerError(
+                    'assembler rejected {!r}; monitor said: {}'.format(
+                        src, ' | '.join(lines)))
+            echoes.extend(lines)
+    finally:
+        # always leave the assembler: an empty line returns to the ']' prompt.
+        # if we already errored back to ']', this is a harmless no-op command.
+        try:
+            term.exchange('', NORMAL_PROMPT_RE, flush=False)
+        except S64TerminalError:
+            term.sync()
+
+    return echoes

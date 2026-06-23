@@ -61,10 +61,11 @@ class MockTerminal:
         if self._closed:
             raise S64TerminalError('MockTerminal is closed')
 
-    def send_command(self, cmd):
+    def send_command(self, cmd, prompt_re=None):
         """Return canned output lines for known commands, prompt-only otherwise.
         Strips the trailing ']' prompt line before returning, matching
-        S64Terminal.send_command() behaviour."""
+        S64Terminal.send_command() behaviour.  prompt_re is accepted for
+        signature compatibility but ignored by the mock."""
         if self._closed:
             raise S64TerminalError('MockTerminal is closed')
 
