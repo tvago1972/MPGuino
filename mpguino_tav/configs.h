@@ -18,7 +18,8 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino
+#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino - recommended for use with Mega2560
+#define useAtMega328debugMonitor true		// PC-only Arduino UNO R3 debugging terminal interface between PC and MPGuino
 //#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
@@ -63,7 +64,7 @@
 //
 // Debug terminal serial output settings - if the corresponding serial output port is not selected, these will be ignored
 //
-#define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
+//#define useDebugTerminalBufferedOutput true	// speed up debug terminal output on serial port
 #define useDebugTerminalSerialBaudRate 38400
 
 // Bluetooth output port options
@@ -199,6 +200,91 @@
 // do not mess with them, or compilation errors will occur
 //
 
+#if defined(useAtMega328debugMonitor)
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
+#undef useSimulatedFIandVSS
+#define useDebugTerminal true
+#define useDebugTerminalHelp true
+#define useDebugTerminalLabels true
+#define useDebugTerminalSWEET64 true
+#define useSWEET64RAMprograms true
+#define useDebugTerminalSerialPort0 true
+#undef useDebugTerminalSerialPort1
+#undef useDebugTerminalSerialPort2
+#undef useDebugTerminalSerialPort3
+#undef useDebugTerminalSerialUSB
+#undef useDebugButtonInjection
+#if defined(__AVR_ATmega328P__)
+//#undef useSWEET64RAMprograms
+#undef useDebugCPUreading
+#undef useAnalogMuxButtons
+#undef useParallax5PositionSwitch
+#undef useAdafruitRGBLCDbuttons
+#undef useGenericTWIbuttons
+#undef useAnalogButtons
+#undef useTWIbuttons
+#undef useButtonInput
+#undef useOutputPins
+#undef useCPUreading
+#undef useSoftwareClock
+#undef useDS1307clock
+#undef useDragRaceFunction
+#undef useDeepSleep
+#undef useCalculatedFuelFactor
+#undef useLegacyBoard
+#undef useJellyBeanDriverBoard
+#undef useArduinoMega2560
+#undef useAdafruitRGBLCDshield
+#undef useTinkerkitLCDmodule
+#undef useMPGuinoColourTouch
+#undef useLegacyButtons
+#undef useWindowTripFilter
+#undef useDFR0009LCD
+#undef useAdafruitRGBLCDdisplay
+#undef useParallaxSerialLCDmodule
+#undef useSainSmart2004LCD
+#undef useGenericTWILCD
+#undef useSerialLCD
+#undef useTWI4BitLCD
+#undef usePort4BitLCD
+#undef use4BitLCD
+#undef useBigFE
+#undef useBigDTE
+#undef useBigTTE
+#undef useBigTimeDisplay
+#undef useBigNumberDisplay
+#undef useBigDigitDisplay
+#undef useBarFuelEconVsTime
+#undef useBarFuelEconVsSpeed
+#undef useBarGraph
+#undef useStatusMeter
+#undef useSpiffyTripLabels
+#undef useSpiffyBigChars
+#undef useLCDfonts
+#undef useLCDgraphics
+#undef useScreenEditor
+#undef blankScreenOnMessage
+#undef useClockDisplay
+#undef useExpandedMainDisplay
+#undef useLCDoutput
+#undef useLCDcontrast
+#undef useBinaryLCDbrightness
+#undef useBluetooth
+#undef useBluetoothAdaFruitSPI
+#undef useDataLoggingOutput
+#undef useJSONoutput
+#undef useLoggingBufferedOutput
+#undef useJSONserialBufferedOutput
+#undef useBluetoothBufferedOutput
+#endif // defined(__AVR_ATmega328P__)
+#if defined(__AVR_ATmega2560__)
+#define useDebugCPUreading true
+#endif // defined(__AVR_ATmega2560__)
+#else // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
+#undef useAtMega328debugMonitor
+#endif // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
+#endif // defined(useAtMega328debugMonitor)
+
 #if ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
 #error *** Pre-defined MPGuino board conflict exists!!! ***
 #endif // ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
@@ -264,6 +350,25 @@
 #undef useParallaxSerialLCDmodule
 #undef useSainSmart2004LCD
 #undef useGenericTWILCD
+#undef useLCDcontrast
+#undef useBinaryLCDbrightness
+#undef useLCDfonts
+#undef useLCDgraphics
+#undef useBigFE
+#undef useBigDTE
+#undef useBigTTE
+#undef useBigTimeDisplay
+#undef useBigNumberDisplay
+#undef useBigDigitDisplay
+#undef useBarFuelEconVsTime
+#undef useBarFuelEconVsSpeed
+#undef useBarGraph
+#undef useStatusMeter
+#undef useSpiffyTripLabels
+#undef useSpiffyBigChars
+#undef useScreenEditor
+#undef blankScreenOnMessage
+#undef useExpandedMainDisplay
 #endif // defined(useTFToutput)
 
 #if defined(useTouchScreenInput)
@@ -543,9 +648,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useJSONserialBufferedOutput
 #endif // defined(useJSONoutput)
 
-#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__)
+#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
 #undef useDebugTerminal
-#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__)
+#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
 
 #if defined(useDebugTerminal)
 #if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1

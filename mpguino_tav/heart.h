@@ -455,12 +455,6 @@ static const uint8_t v8RTCyearIdx =						v8RTCmonthIdx + 1;
 static const uint8_t v8RTCcontrolIdx =					v8RTCyearIdx + 1;
 #define nextAllowedValue v8RTCcontrolIdx + 1
 #endif // defined(useDS1307clock)
-#if defined(useOutputPins)
-static const uint8_t v8OutputPinCurrentIdx =			nextAllowedValue;
-static const uint8_t v8OutputPinBitmask =				v8OutputPinCurrentIdx + 1;
-static const uint8_t v8OutputPinOCvalue =				v8OutputPinBitmask + 16;
-#define nextAllowedValue v8OutputPinOCvalue + 16
-#endif // defined(useOutputPins)
 
 static const uint8_t v8VariableEndIdx =					nextAllowedValue;						// end of 8-bit volatile variable storage
 static const uint8_t v8VariableLength =					v8VariableEndIdx - v8VariableStartIdx;
@@ -642,10 +636,10 @@ static const uint8_t v32MaximumEnginePeriodIdx =		v32MaximumVSSperiodIdx + 1;			
 static const uint8_t v32InjectorOpenDelayIdx =			v32MaximumEnginePeriodIdx + 1;			// injector settle time in timer0 cycles
 static const uint8_t v32InjectorValidMaxWidthIdx =		v32InjectorOpenDelayIdx + 1;			// maximum valid fuel injector pulse width in timer0 cycles
 #define nextAllowedValue v32InjectorValidMaxWidthIdx + 1
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 static const uint8_t v32SystemCycleIdx =				nextAllowedValue;						// system timer tick count
 #define nextAllowedValue v32SystemCycleIdx + 1
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useClockSupport)
 static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software clock tick count
 #define nextAllowedValue v32ClockCycleIdx + 1
@@ -770,11 +764,11 @@ static const uint8_t m32FEvsSpeedQuantumIdx =			m32FEvsSpeedMinThresholdIdx + 1;
 #define nextAllowedValue m32FEvsSpeedQuantumIdx + 1
 
 #endif // defined(useBarFuelEconVsSpeed)
-#if defined(useCPUreading)
+#if defined(useCPUreading) || defined(useDebugCPUreading)
 static const uint8_t m32AvailableRAMidx =				nextAllowedValue;						// amount of remaining free RAM
 #define nextAllowedValue m32AvailableRAMidx + 1
 
-#endif // defined(useCPUreading)
+#endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
 static const uint8_t m32CPUworkingLoopStartIdx =		nextAllowedValue;
 static const uint8_t m32CPUworkingMainStartIdx =		m32CPUworkingLoopStartIdx + 1;
@@ -1003,41 +997,6 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v8RTCyearIdx" tcEOS
 	"v8RTCcontrolIdx" tcEOS
 #endif // defined(useDS1307clock)
-#if defined(useOutputPins)
-	"v8OutputPinCurrentIdx" tcEOS
-	"v8OutputPinBitmask[0x00]" tcEOS
-	"v8OutputPinBitmask[0x01]" tcEOS
-	"v8OutputPinBitmask[0x02]" tcEOS
-	"v8OutputPinBitmask[0x03]" tcEOS
-	"v8OutputPinBitmask[0x04]" tcEOS
-	"v8OutputPinBitmask[0x05]" tcEOS
-	"v8OutputPinBitmask[0x06]" tcEOS
-	"v8OutputPinBitmask[0x07]" tcEOS
-	"v8OutputPinBitmask[0x08]" tcEOS
-	"v8OutputPinBitmask[0x09]" tcEOS
-	"v8OutputPinBitmask[0x0A]" tcEOS
-	"v8OutputPinBitmask[0x0B]" tcEOS
-	"v8OutputPinBitmask[0x0C]" tcEOS
-	"v8OutputPinBitmask[0x0D]" tcEOS
-	"v8OutputPinBitmask[0x0E]" tcEOS
-	"v8OutputPinBitmask[0x0F]" tcEOS
-	"v8OutputPinOCvalue[0x00]" tcEOS
-	"v8OutputPinOCvalue[0x01]" tcEOS
-	"v8OutputPinOCvalue[0x02]" tcEOS
-	"v8OutputPinOCvalue[0x03]" tcEOS
-	"v8OutputPinOCvalue[0x04]" tcEOS
-	"v8OutputPinOCvalue[0x05]" tcEOS
-	"v8OutputPinOCvalue[0x06]" tcEOS
-	"v8OutputPinOCvalue[0x07]" tcEOS
-	"v8OutputPinOCvalue[0x08]" tcEOS
-	"v8OutputPinOCvalue[0x09]" tcEOS
-	"v8OutputPinOCvalue[0x0A]" tcEOS
-	"v8OutputPinOCvalue[0x0B]" tcEOS
-	"v8OutputPinOCvalue[0x0C]" tcEOS
-	"v8OutputPinOCvalue[0x0D]" tcEOS
-	"v8OutputPinOCvalue[0x0E]" tcEOS
-	"v8OutputPinOCvalue[0x0F]" tcEOS
-#endif // defined(useOutputPins)
 
 	"m8MetricModeFlags" tcEOS
 	"m8EEPROMchangeStatus" tcEOS
@@ -1377,8 +1336,21 @@ static const uint8_t t0cResetInputActivityTimer =	0b01000000;
 static const uint8_t t0cResetOutputTimer =			0b00100000;
 static const uint8_t t0cReadRTC =					0b00010000;		// useRealTimeClockModule
 static const uint8_t t0cEnableJSONoutput =			0b00001000;		// useJSONoutput
-static const uint8_t t0cEnableOutputPin =			0b00000100;		// useOutputPins
 
+#if defined(useDebugTerminal)
+static const char timer0CommandFlagMarkers[] PROGMEM = {
+	" T0C" tcEOS
+	"reset" tcEOS
+	"input" tcEOS
+	"display" tcEOS
+	"rtc" tcEOS
+	"json" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 // these flags specifically tell the main program to do something (v8Timer0Status0Idx)
 // system timer0 sets flag, main program acknowledges by clearing flag
 static const uint8_t t0saTakeSample =				0b10000000;		// tells the main program to perform trip variable sampling
@@ -1387,10 +1359,23 @@ static const uint8_t t0saShowCursor =				0b00100000;
 static const uint8_t t0saDisplayDelayInit =			0b00010000;		// this is an exception in that main program actually sets this flag
 static const uint8_t t0saDisplayDelayActive =		0b00001000;
 static const uint8_t t0saOutputJSON =				0b00000100;		// useJSONoutput
-static const uint8_t t0saOutputPinEnabled =			0b00000010;		// useOutputPins
 
 static const uint8_t t0saDisplayDelayFlags =		(t0saDisplayDelayInit | t0saDisplayDelayActive);
 
+#if defined(useDebugTerminal)
+static const char timer0Status0FlagMarkers[] PROGMEM = {
+	" T0S0" tcEOS
+	"sample" tcEOS
+	"display" tcEOS
+	"cursor" tcEOS
+	"delayInit" tcEOS
+	"delay" tcEOS
+	"json" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 // these flags specifically tell the main program to do something (v8Timer0Status1Idx)
 // system timer0 sets flag, main program acknowledges by clearing flag
 static const uint8_t t0sbSampleBLEfriend =			0b10000000;		// useBluetoothAdaFruitSPI
@@ -1400,6 +1385,20 @@ static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useBarFuelEconVsTi
 static const uint8_t t0sbAccelTestFlag =			0b00001000;		// useDragRaceFunction
 static const uint8_t t0sbCoastdownTestFlag =		0b00000100;		// useCoastDownCalculator
 
+#if defined(useDebugTerminal)
+static const char timer0Status1FlagMarkers[] PROGMEM = {
+	" T0S1" tcEOS
+	"ble" tcEOS
+	"rtc" tcEOS
+	"rtcErr" tcEOS
+	"fevt" tcEOS
+	"accel" tcEOS
+	"coast" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 // these status flags inform the main program about MPGuino awake state (v8AwakeIdx)
 static const uint8_t aAwakeOnInjector =				0b10000000;
 static const uint8_t aAwakeOnVSS =					0b01000000;
@@ -1410,6 +1409,20 @@ static const uint8_t aAwakeVehicleMoving =			0b00001000;
 static const uint8_t aAwake =						(aAwakeOnInjector | aAwakeOnVSS | aAwakeOnInput);
 static const uint8_t aAwakeOnVehicle =				(aAwakeOnInjector | aAwakeOnVSS | aAwakeEngineRunning | aAwakeVehicleMoving);
 
+#if defined(useDebugTerminal)
+static const char awakeFlagMarkers[] PROGMEM = {
+	" AW" tcEOS
+	"inj" tcEOS
+	"vss" tcEOS
+	"input" tcEOS
+	"eng" tcEOS
+	"move" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 // these status flags inform the main program about MPGuino sensor activity (v8ActivityIdx, v8ActivityChangeIdx)
 static const uint8_t afEngineOffFlag =				0b10000000;
 static const uint8_t afVehicleStoppedFlag =			0b01000000;
@@ -1419,6 +1432,20 @@ static const uint8_t afActivityTimeoutFlag =		0b00001000;
 static const uint8_t afVehicleIdleFlag =			0b00000100;
 static const uint8_t afVehicleEOCflag =				0b00000010;
 
+#if defined(useDebugTerminal)
+static const char activityFlagMarkers[] PROGMEM = {
+	"" tcEOS
+	"engOff" tcEOS
+	"stopped" tcEOS
+	"input" tcEOS
+	"park" tcEOS
+	"timeout" tcEOS
+	"idle" tcEOS
+	"eoc" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 static const uint8_t afValidFlags =					(afEngineOffFlag | afVehicleStoppedFlag | afParkFlag | afUserInputFlag | afActivityTimeoutFlag);
 static const uint8_t afInputCheckFlags =			(afEngineOffFlag | afVehicleStoppedFlag | afUserInputFlag);
 static const uint8_t afActivityCheckFlags =			(afEngineOffFlag | afVehicleStoppedFlag | afUserInputFlag | afParkFlag);
@@ -1434,6 +1461,20 @@ static const uint8_t dInjectorReadInProgress =		0b00001000;
 
 static const uint8_t dGoodEngineRun =				(dGoodInjectorOpen | dGoodInjectorClose | dGoodInjectorOpenPeriod | dInjectorReadInProgress | dGoodInjectorRead);
 
+#if defined(useDebugTerminal)
+static const char dirtyInjectorFlagMarkers[] PROGMEM = {
+	" INJ" tcEOS
+	"open" tcEOS
+	"close" tcEOS
+	"period" tcEOS
+	"read" tcEOS
+	"busy" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 // these status flags communicate instantaneous vehicle status between the sensor interrupts and the system timer0 interrupt (v8DirtyVSSIdx)
 static const uint8_t dGoodVSSsignal =				0b10000000;
 static const uint8_t dVSSreadInProgress =			0b01000000;
@@ -1441,6 +1482,20 @@ static const uint8_t dGoodVSSpulse =				0b00100000;
 
 static const uint8_t dGoodVehicleMotion =			(dGoodVSSsignal | dVSSreadInProgress | dGoodVSSpulse);
 
+#if defined(useDebugTerminal)
+static const char dirtyVSSflagMarkers[] PROGMEM = {
+	" VSS" tcEOS
+	"signal" tcEOS
+	"busy" tcEOS
+	"pulse" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+	"0" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 static const uint8_t internalOutputButton =			0b10000000;
 static const uint8_t internalProcessButton =		0b01000000;
 static const uint8_t internalButtonValid =			0b00100000;

@@ -18,6 +18,7 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 {
 
 	static s64pc_t makeProgmemProgram(s64prgm_ptr_t ptr);
+	static s64pc_t makeRAMprogram(uint8_t * ptr);
 #if defined(useSWEET64RAMprograms)
 	static uint8_t readProgramRAM(uint8_t addr);
 	static void writeProgramRAM(uint8_t addr, uint8_t value);
@@ -25,7 +26,6 @@ namespace SWEET64 /* 64-bit pseudo-processor section prototype */
 	static uint16_t getProgramRAMsize(void);
 	static uint8_t * getProgramRAMaddress(uint8_t addr);
 	static uint8_t getProgramRAMoffset(uint8_t * ptr);
-	static s64pc_t makeRAMprogram(uint8_t * ptr);
 	static s64pc_t makeRAMprogram(uint8_t addr);
 	static void enableProgramRAMoverride(uint8_t prgmIdx, uint8_t ramAddr);
 	static void disableProgramRAMoverride(void);
@@ -217,6 +217,20 @@ static const uint8_t SWEET64traceFlag =			0b10000000;
 
 static const uint8_t SWEET64traceFlagGroup =	SWEET64traceCommandFlag | SWEET64traceFlag;
 
+#if defined(useDebugTerminal)
+static const char SWEET64processorFlagMarkers[] PROGMEM = {
+	" S64status" tcEOS
+	"T" tcEOS
+	"TC" tcEOS
+	"TS" tcEOS
+	"E" tcEOS
+	"OVF" tcEOS
+	"N" tcEOS
+	"Z" tcEOS
+	"C" tcEOS
+};
+
+#endif // defined(useDebugTerminal)
 #define nextAllowedValue 0
 static const uint8_t s64reg64_1 =		nextAllowedValue;		// general purpose
 static const uint8_t s64reg64_2 =		s64reg64_1 + 1;			// output value / general purpose
@@ -234,7 +248,11 @@ static const uint8_t s64reg64count =	nextAllowedValue;
 
 static uint64_t s64reg[(uint16_t)(s64reg64count)];
 
-static s64pc_t s64stack[16];
+static const uint8_t s64stackSize =		16;
+static s64pc_t s64stack[(uint16_t)(s64stackSize)];
+#if defined(useDebugTerminalSWEET64)
+static uint8_t s64callIndexStack[s64stackSize + 1];
+#endif // defined(useDebugTerminalSWEET64)
 
 #define nextAllowedValue 0
 static const uint8_t s64oprRegXY =			nextAllowedValue;

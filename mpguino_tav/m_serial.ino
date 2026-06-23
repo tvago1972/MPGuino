@@ -84,7 +84,7 @@ static void serial0::chrOut(uint8_t chr)
 	SREG = oldSREG; // restore interrupt flag status
 
 #else // defined(useBufferedSerial0Port)
-	while ((UCSR0A & (1 << UDRE0)) == 0) heart::sleepModeIdle(LEDdebugUARTin | LEDdebugUART0); // go perform idle sleep mode
+	while ((UCSR0A & (1 << UDRE0)) == 0) heart::sleepModeIdle(LEDdebugUARTout | LEDdebugUART0); // go perform idle sleep mode
 
 	UCSR0A &= ~(1 << TXC0); // clear transmit complete flag
 	UDR0 = chr; //send the data

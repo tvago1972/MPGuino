@@ -119,41 +119,6 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 #endif // defined(useRealTimeClockModule)
 	}
 
-#if defined(useOutputPins)
-	if (v08(v8Timer0CommandIdx) & t0cEnableOutputPin)
-	{
-
-		if ((v08(v8Timer0Status0Idx) & t0saOutputPinEnabled) == 0)
-		{
-
-			v08(v8Timer0Status0Idx) |= (t0saOutputPinEnabled);
-
-			DDRL = 0xFF;
-
-		}
-
-		PORTL = v08(v08(v8OutputPinCurrentIdx));
-
-		v08(v8OutputPinCurrentIdx)++;
-		if (v08(v8OutputPinCurrentIdx) == v8OutputPinOCvalue) v08(v8OutputPinCurrentIdx) = v8OutputPinBitmask;
-
-	}
-	else
-	{
-
-		if (v08(v8Timer0Status0Idx) & t0saOutputPinEnabled)
-		{
-
-			v08(v8Timer0Status0Idx) &= ~(t0saOutputPinEnabled);
-
-			PORTL = 0;
-			DDRL = 0x00;
-
-		}
-
-	}
-
-#endif // defined(useOutputPins)
 	if (v08(v8AwakeIdx) & aAwakeOnInjector) // if MPGuino is awake on detected fuel injector event
 	{
 
@@ -1891,7 +1856,7 @@ static void heart::initCore(void)
 	TIFR0 |= (_BV(OCF0B) | _BV(OCF0A) | _BV(TOV0));
 
 	// disable digital inputs for all ADC capable pins to reduce power consumption
-	DIDR0 |= ((ADC7D) | _BV(ADC6D) | _BV(ADC5D) | _BV(ADC4D) | _BV(ADC1D) | _BV(ADC0D));
+	DIDR0 |= (_BV(ADC7D) | _BV(ADC6D) | _BV(ADC5D) | _BV(ADC4D) | _BV(ADC1D) | _BV(ADC0D));
 	DIDR1 |= _BV(AIN0D);
 	DIDR2 |= (_BV(ADC13D) | _BV(ADC12D) | _BV(ADC11D) | _BV(ADC10D) | _BV(ADC9D) | _BV(ADC8D));
 
@@ -2030,20 +1995,6 @@ static void heart::initCore(void)
 	v08(v8Timer1CommandIdx) = (t1cResetTimer);
 #endif // defined(useTimer1Interrupt)
 
-#if defined(useOutputPins)
-	v08(v8OutputPinCurrentIdx) = v8OutputPinBitmask;
-
-	for (uint8_t i = 7; i < 8; i--)
-	{
-
-		v08(v8OutputPinBitmask + i * 2) = (1 << i);
-		v08(v8OutputPinOCvalue + i * 2) = 0;
-		v08(v8OutputPinBitmask + i * 2 + 1) = 0;
-		v08(v8OutputPinOCvalue + i * 2 + 1) = 128;
-
-	}
-
-#endif // defined(useOutputPins)
 	SREG = oldSREG; // restore interrupt flag status
 
 }

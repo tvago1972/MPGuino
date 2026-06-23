@@ -1,4 +1,4 @@
-# MPGuino v1.95tav — Developer Manual
+# MPGuino v1.95tav - Developer Manual
 ## SWEET64 Engine & Debug Terminal
 
 **Version:** 1.95tav  
@@ -23,6 +23,12 @@
 13. [RAM Program Assembler](#13-ram-program-assembler)
 14. [SWEET64 Error Codes](#14-sweet64-error-codes)
 15. [CPU Loading & Activity LED](#15-cpu-loading--activity-led)
+16. [Hardware Timer Architecture](#16-hardware-timer-architecture)
+
+- [Appendix A: Quick Reference - Instruction Aliases](#appendix-a-quick-reference--instruction-aliases)
+- [Appendix B: Key `configs.h` Flags for Developers](#appendix-b-key-configsh-flags-for-developers)
+- [Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor)
+- [Appendix D: Second Arduino Uno as External Signal Generator](#appendix-d-second-arduino-uno-as-external-signal-generator)
 
 ---
 
@@ -30,14 +36,17 @@
 
 SWEET64 is a compact bytecode interpreter for 64-bit arithmetic, inspired by Steve Wozniak's SWEET16 (1977). Its purpose is to perform multi-step 64-bit calculations without the ROM overhead of inlining AVR assembly or C code for each formula.
 
-Every display value MPGuino shows — fuel economy, speed, distance, time to empty, engine power — is calculated by a SWEET64 program. Each program lives in AVR flash (`PROGMEM`) as a `static const uint8_t prgmXxx[] PROGMEM = { ... }` array and is invoked by the display or logging layer.
+Every display value MPGuino shows - fuel economy, speed, distance, time to empty, engine power - is calculated by a SWEET64 program. Each program lives in AVR flash (`PROGMEM`) as a `static const uint8_t prgmXxx[] PROGMEM = { ... }` array and is invoked by the display or logging layer.
 
 Design goals:
-- **Dense encoding** — most instructions are 1–4 bytes.
-- **64-bit registers** — avoids overflow in intermediate products (e.g. `µs × 3785411784` for volume conversion).
-- **Direct access** to EEPROM parameters, trip accumulators, and program variables without C function calls.
-- **Metric/SAE branches** — a single program handles both unit systems via conditional branches.
-- **Traceability** — when the debug terminal is compiled in, every instruction can be listed or single-stepped with register dumps.
+- **Speed** - about 95% as fast as a coded function written in pure C.
+- **Dense encoding** - most instructions are 1–4 bytes.
+- **64-bit registers** - avoids overflow in intermediate products (e.g. `µs × 3785411784` for volume conversion).
+- **Direct access** to EEPROM parameters, trip accumulators, main program variables, and interrupt-visible program variables without C function calls.
+- **Metric/SAE branches** - a single program handles both unit systems via either conditional branches, or instructions that automatically fetch values based on the EEPROM metric mode parameter.
+- **Traceability** - when the debug terminal is compiled in, every instruction can be listed or single-stepped with register dumps.
+
+Historical Note - SWEET64 evolved into its present form, initially from noticing multiple different display calculations began requiring similar 64-bit arithmetic sequences, and then after new features added required 64-bit precision for intermediate math steps even if their output was 32-bit precision or less.
 
 ---
 
@@ -60,6 +69,15 @@ SWEET64 has **5 general-purpose 64-bit registers** (r1–r5), plus 2 additional 
 Instruction operands that refer to two registers use a packed hex byte `0xYX`, where X is the destination (rX) and Y is the source (rY). Example: `instrLdReg, 0x21` loads r1 into r2.
 
 All 64-bit registers are stored in the global array `uint64_t s64reg[]`.
+
+Why 64-bit Registers? Many MPGuino calculations involve multiplying large accumulated values by conversion factors.
+
+Examples:
+
+    Injector microseconds × 3785411784
+    Distance pulses × 1609344
+
+32-bit intermediates overflow during these operations, even though the final displayed result may fit in 32 bits. SWEET64 therefore performs calculations using 64-bit intermediates and returns the lower 32 bits of the final result.
 
 ### 2.2 8-bit Internal Registers
 
@@ -106,6 +124,59 @@ A single 8-bit primary index (`si64reg8trip` is repurposed in some operations) c
 ### 2.6 Jump Register
 
 `si64reg8jump` holds an index value for `instrCallImplied` (indirect call). Loaded by `instrLdJumpReg`.
+
+### 2.7 Trip Variables
+
+Trip variables are the ISR-maintained accumulator arrays that hold every raw measurement MPGuino collects. They are one of SWEET64's three primary data sources alongside EEPROM parameters and program variables.
+
+#### Measured fields (`rv*Idx`)
+
+Each trip slot holds up to five fields (`trip_measurement.h`):
+
+| Index constant | Type | What it accumulates |
+|---|---|---|
+| `rvVSSpulseIdx` (0) | `uint32_t` | VSS pulse edges — the distance counter |
+| `rvVSScycleIdx` (1) | `uint64_t` | Timer0 cycles while vehicle was moving |
+| `rvInjPulseIdx` (2) | `uint32_t` | Injector pulse count — engine revolution proxy |
+| `rvInjCycleIdx` (3) | `uint64_t` | Timer0 cycles injector was open — the fuel counter |
+| `rvEngCycleIdx` (4) | `uint64_t` | Timer0 cycles engine was running |
+
+`rvVSSpulseIdx` and `rvInjCycleIdx` are used in every fuel-economy calculation: FE = `rvVSSpulseIdx` / `rvInjCycleIdx`, scaled by unit conversion constants. Not all fields exist in every slot — slots below `tripSlotFullCount` carry all five; slots from `tripSlotFullCount` to `tripSlotCount` carry only the first two, saving RAM for bar-graph history slots.
+
+`rvVSScycleIdx`, `rvInjCycleIdx`, and `rvEngCycleIdx` hold timer0 cycle counts, not milli- or microsecond values. This is to preserve the accuracy of the gathered time measurements for the trip variables.
+
+#### Trip slot indices
+
+Slots are allocated at compile time via a `#define nextAllowedValue` chain. The three slots used by almost all display programs:
+
+| Slot | Meaning |
+|---|---|
+| `instantIdx` | Last sample period only (or window-filtered average) |
+| `currentIdx` | Running total since last current-trip reset |
+| `tankIdx` | Running total since last tank reset / fill-up |
+
+If `trackIdleEOCdata` is selected as a compile-time program option, the following additional trip slots are allocated, and their meanings are slightly modified as compared to the above three slots. `rvVSSpulseIdx` and `rvVSScycleIdx` track vehicle movement while the engine is not detected to be running, while `rvInjPulseIdx`, `rvInjCycleIdx`, and `rvEngCycleIdx` collect engine run data while the vehicle is not detected as moving.
+
+| Slot | Meaning |
+|---|---|
+| `eocIdleInstantIdx` | Last sample period only |
+| `eocIdleCurrentIdx` | Running total since last current-trip reset |
+| `eocIdleTankIdx` | Running total since last tank reset / fill-up |
+
+Additional optional slots: `dragHalfSpeedIdx/FullSpeedIdx/DistanceIdx` (`useDragRaceFunction`), `windowTripFilterIdx[0..3]` (`useWindowTripFilter`), bar-graph history buckets (`useBarFuelEconVsTime`, `useBarFuelEconVsSpeed`), and EEPROM mirror slots (`useEEPROMtripStorage`).
+
+#### Raw → processed pipeline
+
+The Timer0 ISR accumulates into one of two raw double-buffer slots (`raw0tripIdx` / `raw1tripIdx`, tracked by `curRawTripIdx`). At each sample tick (2× per second) the main loop atomically swaps the active raw slot, then propagates the old raw slot into the processed slots via `tripUpdateList[]`. Bit 7 of the destination index selects the operation: set = **transfer** (replace), clear = **accumulate** (add). This is how trip measurement accuracy is maintained with a minimum possible chance of a trip related measurement being missed or garbled.
+
+#### Accessing from SWEET64
+
+```
+instrLdRegTripVar,        0xXY, <tripIdx>, <rvFieldIdx>   // load from named slot
+instrLdRegTripVarIndexed, 0xXY, <rvFieldIdx>              // load using index register as slot
+```
+
+See §5.6 for the full trip variable instruction reference.
 
 ---
 
@@ -218,7 +289,7 @@ All instruction constants are defined in `sweet64.h`. The following is a complet
 | Instruction | Operands | Description |
 |---|---|---|
 | `instrTestReg` | `rX` (packed in high nibble of register byte) | Test r5 for zero / high bit |
-| `instrTestIndex` | — | Test primary index for zero / high bit |
+| `instrTestIndex` | - | Test primary index for zero / high bit |
 | `instrCmpXtoY` | `rX`, `rY` | Compare rX to rY; set flags |
 | `instrCmpIndex` | primary byte | Compare primary index to immediate byte |
 
@@ -228,7 +299,7 @@ All branches take a **1-byte signed relative offset** (added to PC after the bra
 
 | Instruction | Alias | Branches when… |
 |---|---|---|
-| `instrBranchIfVclear` | — | overflow clear |
+| `instrBranchIfVclear` | - | overflow clear |
 | `instrBranchIfVset` | `instrBranchIfOverflow` | overflow set |
 | `instrBranchIfMclear` | `instrBranchIfPlus` | minus clear (result ≥ 0) |
 | `instrBranchIfMset` | `instrBranchIfMinus` | minus set (result < 0) |
@@ -236,20 +307,20 @@ All branches take a **1-byte signed relative offset** (added to PC after the bra
 | `instrBranchIfZset` | `instrBranchIfE`, `instrBranchIfZero` | zero set (X == Y) |
 | `instrBranchIfCclear` | `instrBranchIfLTorE` | carry clear (X ≤ Y) |
 | `instrBranchIfCset` | `instrBranchIfGT` | carry set (X > Y) |
-| `instrBranchIfLT` | — | X < Y |
-| `instrBranchIfGTorE` | — | X ≥ Y |
-| `instrBranchIfMetricMode` | — | metric mode active |
-| `instrBranchIfSAEmode` | — | SAE (imperial) mode active |
-| `instrBranchIfFuelOverDist` | — | output format is fuel/distance (L/100km) |
-| `instrBranchIfDistOverFuel` | — | output format is distance/fuel (MPG or km/L) |
-| `instrSkip` | — | always branch (unconditional) |
+| `instrBranchIfLT` | - | X < Y |
+| `instrBranchIfGTorE` | - | X ≥ Y |
+| `instrBranchIfMetricMode` | - | metric mode active |
+| `instrBranchIfSAEmode` | - | SAE (imperial) mode active |
+| `instrBranchIfFuelOverDist` | - | output format is fuel/distance (L/100km) |
+| `instrBranchIfDistOverFuel` | - | output format is distance/fuel (MPG or km/L) |
+| `instrSkip` | - | always branch (unconditional) |
 
 ### 5.3 Subroutine / Jump
 
 | Instruction | Operands | Description |
 |---|---|---|
 | `instrCall` | function index byte | Push PC, call indexed trip function |
-| `instrCallImplied` | — | Push PC, call function in jump register |
+| `instrCallImplied` | - | Push PC, call function in jump register |
 | `instrJump` | function index byte | Jump to indexed trip function (no push) |
 | `instrLdJumpReg` | index byte | Load jump register from primary index |
 
@@ -276,7 +347,7 @@ All branches take a **1-byte signed relative offset** (added to PC after the bra
 | `instrLxdIEEPROM` | parmIdx | primary index ← EEPROM value at parmIdx |
 | `instrLxdIEEPROMoffset` | parmIdx | primary index ← EEPROM value at (parmIdx + index) |
 | `instrLxdIParamLength` | parmIdx | primary index ← bit-length of EEPROM parmIdx |
-| `instrLxdIParamLengthIndexed` | — | primary index ← bit-length of EEPROM param at index |
+| `instrLxdIParamLengthIndexed` | - | primary index ← bit-length of EEPROM param at index |
 | `instrAddIndex` | offset byte | primary index += (program byte + old index) |
 
 ### 5.6 Trip Variable Access
@@ -472,7 +543,7 @@ static const uint8_t prgmCalculateFuelEconomy[] PROGMEM = {
 
 **Rules:**
 1. The program **must end with `instrDone`**. Falling off the end is undefined behaviour.
-2. `r2` is the **return value** — `runPrgm()` returns `(uint32_t)(s64reg[s64reg64_2])` (lower 32 bits).
+2. `r2` is the **return value** - `runPrgm()` returns `(uint32_t)(s64reg[s64reg64_2])` (lower 32 bits).
 3. Branch offsets are **signed bytes relative to the byte immediately after the branch instruction**. Positive = forward, negative = backward.
 4. The trip index passed to `runPrgm()` is available in `si64reg8trip`; instructions like `instrLdRegTripVar` substitute this automatically when `tripIdx` is used as the trip operand.
 5. All EEPROM parameters are already scaled by ×1000 (the `idxDecimalPoint` convention). When presenting to users, the display layer divides by 1000 for the decimal point.
@@ -561,7 +632,7 @@ On ATmega2560, the following are automatically enabled when `useDebugTerminal` i
 #define useBuffering true
 ```
 
-On ATmega328P, `useDebugTerminal` is silently disabled (too little flash).
+On ATmega328P, `useDebugTerminal` is normally silently disabled (too little flash). See [Appendix C](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor) for the dedicated 328P debug monitor build.
 
 ### 10.2 Connecting
 
@@ -582,9 +653,9 @@ Commands are single characters, optionally preceded by numeric arguments separat
 [z]<[y].[x]CMD[:value] [value2] ...
 ```
 
-- `x` — primary argument (start index, address, etc.)
-- `y` — secondary argument (end index, destination, etc.)
-- `z` — tertiary argument (decimal window width, etc.)
+- `x` - primary argument (start index, address, etc.)
+- `y` - secondary argument (end index, destination, etc.)
+- `z` - tertiary argument (decimal window width, etc.)
 - Values after `:` are written to the target
 
 Numeric input is **hexadecimal by default**. Use `\` to switch the current number entry to decimal. Use `$` or `X` to switch back to hexadecimal.
@@ -667,14 +738,14 @@ These operations use SWEET64 internally (registers r6/r7 are the debug terminal'
 | `y<xR` | Copy trip slot `x` into trip slot `y` |
 | `R` | Copy any trip into the terminal trip variable |
 
-### 11.9 Signal Simulator (`S`) — requires `useSimulatedFIandVSS`
+### 11.9 Signal Simulator (`S`) - requires `useSimulatedFIandVSS`
 
 | Syntax | Description |
 |---|---|
 | `S` | List simulator modes |
 | `nS` | Set simulator mode `n` |
 
-### 11.10 Button Injection (`I`) — requires `useDebugButtonInjection`
+### 11.10 Button Injection (`I`) - requires `useDebugButtonInjection`
 
 | Syntax | Description |
 |---|---|
@@ -684,7 +755,15 @@ These operations use SWEET64 internally (registers r6/r7 are the debug terminal'
 
 ### 11.11 System Status (`^S`)
 
-`^S` means Ctrl-S. It prints a compact system snapshot, including uptime, clock time when `useClockDisplay` is enabled, decimal-format settings, decoded status flags, raw status bytes, SWEET64 RAM override status when enabled, the SWEET64 error latch when enabled, and Bluetooth response state when the BLE shield support is compiled in.
+`^S` means Ctrl-S. It prints a compact system snapshot, including uptime when CPU/debug CPU timing support is compiled in, clock time when `useClockDisplay` is enabled, decimal-format settings, decoded status flags, raw status bytes, SWEET64 RAM override status when enabled, the SWEET64 error latch when enabled, and Bluetooth response state when the BLE shield support is compiled in.
+
+With `useDebugTerminalSWEET64`, the SWEET64 error latch reports the last engine-detected malformed-program error:
+
+```
+S64 ERR count=0027 @ 02R last=03 bad reg operand
+```
+
+The count increments when the same error repeats at the same SWEET64 program counter. A different error or different program counter resets the count to 1. The `N` command toggles SWEET64 error mute; while muted, repeated runtime error reports are suppressed, but the latch and count remain visible through `^S`.
 
 ### 11.12 Help (`?`)
 
@@ -703,7 +782,7 @@ These commands require `useDebugTerminalSWEET64`. Commands shown with `^` use co
 | `^I` | List all opcodes and their operand descriptions |
 | `y.x^I` | List opcodes from `y` to `x` |
 
-### 12.2 Function Length Table (`^F`) — requires `useDebugTerminalLabels`
+### 12.2 Function Length Table (`^F`) - requires `useDebugTerminalLabels`
 
 | Syntax | Description |
 |---|---|
@@ -741,21 +820,40 @@ Output shows both the raw 64-bit hex value and a formatted decimal representatio
 |---|---|
 | `x^T` | Trace function `x` for 1 instruction, dump state |
 | `x.y^T` | Trace function `x` for `y` instructions (`y=0` = run to completion) |
+| `z<y^T` | Trace RAM program at address `z` for `y` instructions (`y=0` = run to completion; requires `useSWEET64RAMprograms`) |
 
 Each traced instruction line shows:
 - Program counter (address)
 - Opcode name
 - Operands (symbolic if labels enabled)
-- Post-execution register file dump
-- Flags (C Z M V E)
+- Post-execution register file dump when trace remains active
+- Decoded SWEET64 flags, including carry, zero, minus, overflow, error, and trace state
 
 Trace output is written to the debug terminal in real time as the program executes.
+
+If a malformed instruction or bad operand is encountered, the trace stops, the SWEET64 error latch is updated, and the terminal prints the error report unless SWEET64 errors are muted with `N`.
 
 ---
 
 ## 13. RAM Program Assembler
 
 Requires `useSWEET64RAMprograms` (auto-enabled with `useDebugTerminalSWEET64` on ATmega2560).
+
+The RAM assembler exists to permit rapid development and testing of SWEET64 programs without having to recompile and reflash MPGuino.
+
+Typical workflow:
+
+    Copy existing program
+    Modify instruction or instructions
+    Enable override
+    Test
+    Revise as necessary
+    Retest as necessary
+    Export as source
+
+This significantly reduces iteration time when developing or debugging SWEET64 code.
+
+The RAM assembler also permits more accurate determination of conditional branch instruction offset values, which would otherwise have to be figured out by hand. This eliminates a source of bugs.
 
 The assembler provides an interactive text-based environment to write, edit, and run SWEET64 programs without recompiling. Programs are assembled into the 256-byte `s64programRAM[]` buffer.
 
@@ -817,7 +915,7 @@ Disassembles program RAM starting at address `x`, printing instructions in the s
 z<y^T
 ```
 
-Traces the RAM program starting at address `z`, for `y` instructions (`y=0` = run to completion).
+Traces the RAM program starting at address `z`, for `y` instructions (`y=0` = run to completion). This uses the same trace engine as function tracing, so invalid RAM opcodes, missing operands, stack overflow, and bad operand errors are reported through the SWEET64 error latch.
 
 ### 13.6 Export as C Source (`^W`)
 
@@ -860,7 +958,7 @@ When an error is detected, `SWEET64errorFlag` is set in `si64reg8flags` and an e
 | `s64errStackOverflow` | 8 | Call depth exceeded 16 |
 | `s64errBadOperand` | 9 | General operand validation failure |
 
-The debug terminal displays these symbolically in trace/error output. In production builds (no debug terminal), execution simply stops at the bad instruction and returns whatever is in r2.
+The debug terminal displays these symbolically in trace/error output and through the `^S` SWEET64 error latch. In production builds (no debug terminal), execution simply stops at the bad instruction and returns whatever is in r2.
 
 ---
 
@@ -879,9 +977,9 @@ MPGuino measures its own CPU utilisation using timer0 cycle counts. In the main 
 Every sample tick (2× per second), the working counters are snapshotted into `m32CPUsampledXxx` for display, then reset.
 
 The **CPU Info** display screen shows:
-- `C%` — main process fraction as a percentage of total loop time
-- `T` — system uptime since power-on
-- `FREE RAM` — available SRAM (heap top to stack pointer distance)
+- `C%` - main process fraction as a percentage of total loop time
+- `T` - system uptime since power-on
+- `FREE RAM` - available SRAM (heap top to stack pointer distance)
 
 With `useDebugCPUreading`, the breakdown is finer: devices, activity, sample, output, other, and interrupt processing times each get their own counter.
 
@@ -904,7 +1002,89 @@ Call `activityLED::assert(flag)` to set the LED for a phase and `activityLED::re
 
 ---
 
-## Appendix A: Quick Reference — Instruction Aliases
+## 16. Hardware Timer Architecture
+
+MPGuino relies on two AVR hardware timers for all time-critical internal functions. Understanding their roles is essential when modifying interrupt handlers, sleep behaviour, display timing, or output pin PWM.
+
+### 16.1 Timer0 - System Heartbeat
+
+Timer0 is MPGuino's primary timebase. It runs continuously at a fixed rate determined by the AVR clock and a prescaler of 64:
+
+```
+f_overflow = F_CPU / (prescaler × 256) = 16 MHz / (64 × 256) = 976 Hz
+```
+
+The overflow ISR (`TIMER0_OVF_vect`, `heart.ino`) is the heartbeat of the entire system. On every overflow it:
+
+- Counts VSS pulses and injector open-time cycles (the raw trip accumulators)
+- Manages the wake/sleep watchdog (see §16.3)
+- Drives the sampling ticker: every `delay0TickSampleLoop` overflows, sets `t0saTakeSample`, which tells the main loop to collect and snapshot trip data - this fires **twice per second** (`samplesPerSecond = 2`, `heart.h`)
+- Sets `t0saUpdateDisplay` to trigger a display refresh at the same rate
+- Manages LCD write-delay timing (`t0saDisplayDelayInit` / `t0saDisplayDelayActive`)
+- Toggles the cursor blink flag (`t0saShowCursor`)
+- Drives JSON data-logging output timing
+
+The `t0saTakeSample` and `t0saUpdateDisplay` flags in `v8Timer0Status0Idx` are the mechanism by which the ISR signals the main loop without blocking it; the main loop polls these flags and clears them after acting.
+
+`idxTicks0PerSecond` and `idxCycles0PerSecond` in the SWEET64 constant table expose the Timer0 rate to bytecode programs for time-based calculations (e.g. converting injector open cycles to fuel volume).
+
+### 16.2 Timer1 - Secondary Timer and PWM Source
+
+Timer1 runs in **8-bit phase-correct PWM mode with prescaler 1**, configured by `heart.ino`:
+
+```
+f_overflow = F_CPU / (2 × prescaler × TOP) = 16 MHz / (2 × 1 × 255) = 31,373 Hz
+```
+
+The overflow ISR (`TIMER1_OVF_vect`, `heart.ino`) fires at this rate and handles:
+
+- **LCD write delays** (`t1cDelayLCD`): precise inter-command timing for the LCD controller; the main loop busy-waits on this flag via `performSleepMode(SLEEP_MODE_IDLE)` rather than spinning
+- **Debug stopwatch** (`t1cEnableDebug`): accumulates Timer1 overflow counts into `v32WorkingTimer1Idx` for CPU interrupt-load measurement
+- **BLE keepalive**: re-enables the Timer1 interrupt when BLE activity requires it
+
+`idxCycles1PerTick = 510` and `idxTicks1PerSecond` in the SWEET64 constant table expose the Timer1 rate to bytecode programs (used by the signal simulator for injector pulse timing).
+
+Timer1's output compare units also drive PWM outputs:
+
+| MCU | Pin | Signal | Use |
+|---|---|---|---|
+| all | OC1A | LCD backlight brightness | `m_lcd.ino`, written via `OCR1A` |
+| ATmega328P | OC1B | EXP1 output pin | `feature_outputpin.ino`, written via `OCR1B` |
+
+Because the LCD backlight and EXP1 share Timer1, the 31,373 Hz PWM frequency is fixed by the timer configuration - it cannot be changed without affecting both functions simultaneously.
+
+### 16.3 Wake / Sleep Mechanism
+
+MPGuino can enter AVR sleep mode to reduce power consumption when the vehicle is not in use. The wake state is tracked in `v8AwakeIdx` using three independent flags:
+
+| Flag | Set when | Cleared when |
+|---|---|---|
+| `aAwakeOnInjector` | Injector pulse detected | No injector activity for timeout period |
+| `aAwakeOnVSS` | VSS pulse detected | No VSS pulses for timeout period |
+| `aAwakeOnInput` | Button pressed | Activity timeout expires |
+
+The **activity timeout** watchdog counter (`activityTimeoutCount`) is decremented on every Timer0 overflow. It is reset to `v16ActivityTimeoutIdx` whenever relevant activity is detected. When it reaches zero, the corresponding awake flag is cleared.
+
+MPGuino enters `SLEEP_MODE_IDLE` (Timer0 and Timer1 still running) during idle periods in the main loop via `heart::performSleepMode()`. This keeps the ISRs active while halting the CPU, saving power between events.
+
+### 16.4 Output Pin PWM Frequencies
+
+The EXP1 and EXP2 expansion output pins use hardware PWM for DAC-style analog output (PWM → RC low-pass filter → 0–5 V). The frequencies by MCU are:
+
+| MCU | Timer | Pin | Mode | Prescaler | f_PWM |
+|---|---|---|---|---|---|
+| ATmega328P | Timer1 | EXP1 (OC1B) | Phase-correct 8-bit | 1 | 31,373 Hz |
+| ATmega328P | Timer2 | EXP2 (OC2A) | Phase-correct 8-bit | 1 | 31,373 Hz |
+| ATmega2560 | Timer5 | EXP1 (OC5A) + EXP2 (OC5B) | Phase-correct 8-bit | 64 | 490 Hz |
+| ATmega32U4 | Timer4 | EXP1 (OC4A) + EXP2 (OC4D) | Set by Arduino core | board-specific | - |
+
+On ATmega328P, Timer2 is explicitly configured to phase-correct 8-bit PWM with prescaler 1 in `outputPin::init()`, overriding the Arduino core's default of fast PWM / prescaler 64 (~977 Hz). This ensures both EXP pins run at the same frequency and can share a single RC filter design.
+
+At 31,373 Hz, a modest RC filter (e.g. 10 kΩ + 100 nF, f_RC ≈ 160 Hz) provides approximately 200:1 attenuation of PWM ripple, leaving under 0.5% residual ripple on the analog output.
+
+---
+
+## Appendix A: Quick Reference - Instruction Aliases
 
 ```cpp
 #define instrBranchIfOverflow       instrBranchIfVset
@@ -930,7 +1110,120 @@ Call `activityLED::assert(flag)` to set the LED for a phase and `activityLED::re
 | `useDebugButtonInjection` | `I` command (requires `useDebugTerminal` + buttons) |
 | `useDebugCPUreading` | Fine-grained interrupt-level CPU counters |
 | `useSimulatedFIandVSS` | `S` command + injector/VSS simulation |
+| `useAtMega328debugMonitor` | Dedicated debug monitor build for ATmega328P |
 | `useActivityLED` | On-board LED phase indicator |
+
+---
+
+## Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)
+
+### C.1 Purpose
+
+`useAtMega328debugMonitor` is a special build configuration that enables a headless SWEET64 debug terminal on an Arduino Uno (ATmega328P). Normally `useDebugTerminal` is suppressed on 328P due to flash constraints (32256 bytes usable with Optiboot bootloader). This flag overrides that suppression and simultaneously strips out enough non-essential features to make the terminal fit.
+
+It is intended as a dedicated development and SWEET64 debugging firmware — not a configuration that would be used in a vehicle.
+
+### C.2 Enabling
+
+This configuration has been compile/upload tested on both Arduino Uno and Arduino Mega2560 hardware. The Mega2560 build can be useful for testing the same monitor personality with more flash headroom, while the Uno build proves the minimum dev-console target still fits.
+
+In `configs.h`, set only this flag:
+
+```c
+#define useAtMega328debugMonitor true
+```
+
+Everything else is configured automatically by the monitor block in `configs.h`. No other flags need to be set or cleared manually.
+
+### C.3 What the Monitor Block Enables
+
+```c
+#define useDebugTerminal true
+#define useDebugTerminalHelp true        // see flash budget notes below
+#define useDebugTerminalLabels true      // symbolic names in output
+#define useDebugTerminalSWEET64 true     // ^L, ^T, ^I, ^F, ^E commands
+#define useSWEET64RAMprograms true       // RAM assembler
+#define useDebugTerminalSerialPort0 true // UART0 (pins 0/1)
+```
+
+On Mega2560, the same monitor block also enables `useDebugCPUreading`. On ATmega328P, `useDebugCPUreading` is disabled to preserve flash for the SWEET64 monitor and RAM-program tools.
+
+### C.4 What the Monitor Block Disables
+
+To fit within the 328P flash budget, the monitor block disables all display hardware, button input, clocks, drag race, bar graphs, signal simulation, and other peripherals that are irrelevant to a headless debug session. Key items disabled include `useSimulatedFIandVSS`, `useSoftwareClock`, `useDS1307clock`, `useOutputPins`, `useDragRaceFunction`, all LCD/display options, all button options, Bluetooth/JSON/logging outputs, and board-specific display defines.
+
+### C.5 Flash Budget and Feature Tradeoffs
+
+The 32256-byte usable flash is tight. Representative sizes for key feature combinations:
+
+| Configuration | Flash used |
+|---|---|
+| Labels only, no help text | ~29728 bytes |
+| Labels + help text (attenuated for 328P) | ~32100 bytes |
+| Labels + help text + `useSimulatedFIandVSS` | ~34500 bytes |
+
+The help text in `terminalHelp` uses run-length encoding for space characters (`\x01\xNN` expands to N spaces in `text::stringOut`) to reduce flash consumption. For the 328P monitor build, the accumulator math operation entries and the decimal sample output (`U`) command entry are additionally omitted from the help text since they are straightforward enough to use without inline documentation.
+
+The status and trace code is also arranged so the headless monitor can inspect core runtime state without pulling in the LCD/button-facing screens. `^S` remains available for decoded activity/status bytes and SWEET64 error state; uptime appears only when CPU/debug CPU timing support is included.
+
+`useSimulatedFIandVSS` does not fit alongside the full debug terminal on 328P. Use a second Arduino Uno as an external signal generator instead — see [Appendix D](#appendix-d-second-arduino-uno-as-external-signal-generator).
+
+### C.6 Serial Connection
+
+Connect to UART0 (pin 1 = TX, pin 0 = RX) at the configured baud rate, 8N1. The USB-to-serial converter on the Uno board makes this straightforward — use the Arduino IDE Serial Monitor or any terminal program with CR or CR+LF line endings.
+
+### C.7 Primary Workflow
+
+The 328P monitor is meant to support SWEET64 development without an LCD:
+
+1. Use `^F`, `^I`, and `^L` to inspect existing SWEET64 functions.
+2. Use `x<yM` to copy a flash function into program RAM.
+3. Use `x!` to assemble or patch instructions in RAM.
+4. Use `z<y^T` to trace the RAM program.
+5. Use `x<y^O` to substitute the RAM program for an existing function.
+6. Use `x.y^W` to export the RAM program as paste-ready C source once the behavior is correct.
+
+The same workflow works on Mega2560, but the Uno build is the useful proof that SWEET64 bytecode can be developed on a cheap standalone board.
+
+---
+
+## Appendix D: Second Arduino Uno as External Signal Generator
+
+### D.1 Why
+
+`useSimulatedFIandVSS` — the built-in signal simulator — does not fit in the 328P flash alongside `useAtMega328debugMonitor`. A second Uno running dedicated signal-generation firmware is a cleaner solution in any case: it exercises the real hardware interrupt path rather than software-injected signals, and it keeps the device under test running exactly the firmware under development.
+
+### D.2 Signal Characteristics
+
+MPGuino expects two input signals:
+
+**VSS (vehicle speed sensor):**
+- A square wave on the VSS interrupt pin
+- Frequency proportional to simulated vehicle speed
+- Pulse width is not critical; a 50% duty cycle square wave works
+
+**Fuel injector:**
+- A pulse train on the injector interrupt pin
+- Edge polarity must match `pInjEdgeTriggerIdx`
+- The default saturated-injector setting treats falling edge as injector open and rising edge as injector close
+- Pulse width proportional to simulated fuel flow
+- Frequency should match simulated engine RPM
+
+Both signals are measured in Timer0 cycles by the MPGuino ISRs. Refer to the `idxTicks0PerSecond` and `idxCycles0PerSecond` constant table entries (§7) for the timer rate.
+
+### D.3 Connections
+
+| Signal | Generator Uno pin | MPGuino Uno pin |
+|---|---|---|
+| VSS | Any digital output | VSS interrupt input |
+| Injector | Any digital output | Injector interrupt input |
+| GND | GND | GND |
+
+A common ground between the two boards is required.
+
+### D.4 Generator Sketch
+
+A minimal generator sketch uses `tone()` or Timer1 to produce the VSS square wave, and a separate timer or `analogWrite()` channel for the injector pulse train. The exact frequencies needed depend on the VSS pulses-per-mile parameter stored in MPGuino's EEPROM and the injector flow rate parameter — set these in the MPGuino EEPROM via the `P` command first, then size the generator frequencies to produce the desired simulated speed and fuel flow.
 
 ---
 

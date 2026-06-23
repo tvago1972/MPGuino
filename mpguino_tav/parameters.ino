@@ -519,6 +519,22 @@ static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
 	instrStRegEEPROM, 0x02, pRefFuelPressureIdx,
 
 #endif // useCalculatedFuelFactor
+#if defined(useOutputPins)
+	instrLdRegRdOnlyMetric, 0x12, idxNumerDistance,		// convert output pin max FE value - distance part (miles <-> km)
+	instrLdRegRdOnlyMetric, 0x21, idxDenomDistance,
+	instrMul2byEEPROM, pOutputPinMaxFuelEconomy,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pOutputPinMaxFuelEconomy,
+
+	instrLdRegRdOnlyMetric, 0x12, idxDenomVolume,		// convert output pin max FE value - inverted volume part (per gallon <-> per liter)
+	instrLdRegRdOnlyMetric, 0x21, idxNumerVolume,
+	instrMul2byEEPROM, pOutputPinMaxFuelEconomy,
+	instrDiv2by1,
+	instrAdjustQuotient,
+	instrStRegEEPROM, 0x02, pOutputPinMaxFuelEconomy,
+
+#endif // defined(useOutputPins)
 	instrDone											// return to caller
 };
 

@@ -34,7 +34,7 @@ static const uint8_t displayCountSettingsDisplay = 2
 	+ 1
 #endif // defined(useFuelCost)
 #if defined(useOutputPins)
-	+ 2
+	+ 3
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	+ 1
@@ -141,6 +141,7 @@ static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no l
 #if defined(useOutputPins)
 	"OutPtPin 1 Mode" tcEOSCR
 	"OutPtPin 2 Mode" tcEOSCR
+	"OutPtPin MaxFE" tcEOSCR
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	"V(diode)*1000" tcEOSCR
@@ -272,6 +273,7 @@ static const char settingsParameterList[] PROGMEM = {
 #if defined(useOutputPins)
 	pOutputPin1Mode,
 	pOutputPin2Mode,
+	pOutputPinMaxFuelEconomy,
 #endif // defined(useOutputPins)
 #if defined(useAlternatorVoltage)
 	pVoltageOffset,

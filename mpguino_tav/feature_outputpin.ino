@@ -10,17 +10,22 @@
 	4	instant fuel economy > tank fuel economy (0 - false, 255 - true)
 	5	estimated tank fuel consumed (0 (none) to 255 (all of the tank), based on tank size)
 	6	estimated tank fuel remaining (0 (empty) to 255 (full), based on tank size)
+	7	instant fuel economy analog, 0 to pOutputPinMaxFuelEconomy (0 (zero FE) to 255 (at or above max FE))
+	8	instant fuel economy analog, 0 to 1.5 * current trip average FE (0 (zero) to 255 (at 1.5x average))
+	9	instant fuel economy analog, 0 to 1.5 * tank trip average FE (0 (zero) to 255 (at 1.5x average))
 */
 static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
 	instrCmpIndex, 2,									// is a valid expansion output pin number being requested?
-	instrBranchIfGTorE, 13,								// skip to output a zero if not
+	instrBranchIfGTorE, 17,								// skip to output a zero if not
 	instrLxdIEEPROMoffset, pOutputPin1Mode,				// load the indexed stored parameter index for the expansion output pin setting
 	instrTestIndex,										// test pin mode value for zero
-	instrBranchIfZero, 8,								// exit out if pin mode is zero
+	instrBranchIfZero, 12,								// exit out if pin mode is zero
 	instrCmpIndex, 4,									// test if pin mode is "fuel economy comparison between instant and whatever"
-	instrBranchIfLTorE,	26,								// if so, skip ahead
+	instrBranchIfLTorE, 30,								// if so, skip ahead
 	instrCmpIndex, 6,									// test if pin mode is analog output tank quantity or quantity remaining
-	instrBranchIfLTorE, 4,								// if so, skip ahead
+	instrBranchIfLTorE, 8,								// if so, skip ahead
+	instrCmpIndex, 9,									// test if pin mode is analog FE output
+	instrBranchIfLTorE, 78,								// if so, skip ahead
 
 //zeroOutRet:
 	instrLdRegByte, 0x02, 0,							// zero out result
@@ -81,11 +86,85 @@ static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
 	instrDone,											// return to caller
 
 	instrLdRegByte, 0x02, 0,							// zero out result
+	instrDone,											// exit to caller
+
+// for analog FE output (modes 7-9) the gauge always uses distance/fuel ratio regardless of metric mode setting,
+// so that higher output always means better fuel economy in all unit configurations
+
+//feAnalog:
+// mode 7: instant FE analog output scaled to pOutputPinMaxFuelEconomy
+// PWM = (inst_VSS * m32CyclesPerVolume * idxDecimalPoint * 255) / (inst_InjCycles * pPulseEdgePerDistance * pOutputPinMaxFuelEconomy)
+// pOutputPinMaxFuelEconomy is stored as FE * idxDecimalPoint (e.g. 50000 = 50 MPG or 50 KPL after metric conversion)
+	instrCmpIndex, 7,									// test if mode 7 (absolute max FE)
+	instrBranchIfGT, 41,								// if mode > 7, skip to modes 8/9 handler
+	instrLdRegTripVar, 0x02, instantIdx, rvInjCycleIdx,	// fetch instant injector open cycles (fuel denominator)
+	instrTestReg, 0x02,									// test for zero (coasting / engine off)
+	instrBranchIfNotZero, 4,							// if non-zero, skip to computation
+	instrLdRegByte, 0x02, 0,							// zero output when coasting
+	instrDone,											// exit to caller
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by pulse edges per distance
+	instrMul2byEEPROM, pOutputPinMaxFuelEconomy,		// multiply by stored max FE (FE * idxDecimalPoint)
+	instrLdReg, 0x21,									// save denominator in register 1
+	instrLdRegTripVar, 0x02, instantIdx, rvVSSpulseIdx,	// fetch instant VSS pulses (distance numerator)
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume
+	instrMul2byRdOnly, idxDecimalPoint,					// scale by idxDecimalPoint (cancels stored max FE scaling)
+	instrMul2byByte, 255,								// scale to 0-255 output range
+	instrDiv2by1,										// compute PWM = numerator / denominator
+	instrAdjustQuotient,								// round result
+	instrLdRegByte, 0x01, 255,							// load 255 for clamp comparison
+	instrCmpXtoY, 0x21,									// compare result to 255
+	instrBranchIfLTorE, 3,								// if result <= 255, skip clamp
+	instrLdRegByte, 0x02, 255,							// clamp output to 255
+	instrDone,											// exit to caller
+
+// modes 8/9: instant FE analog output scaled to 1.5 * average FE (current trip or tank)
+// PWM = (inst_VSS * accum_InjCycles * 170) / (inst_InjCycles * accum_VSS)
+// where 170 = 255 / 1.5, so full scale (255) corresponds to 1.5 * average FE
+// this computation is unit-agnostic: distance and fuel conversion factors cancel in the ratio
+	instrCmpIndex, 9,									// test if mode 9 (tank average)
+	instrBranchIfLT, 10,								// if mode < 9 (i.e. mode 8), skip to current trip load
+	instrLdRegTripVar, 0x03, tankIdx, rvInjCycleIdx,	// fetch tank accumulated injector open cycles
+	instrLdRegTripVar, 0x02, tankIdx, rvVSSpulseIdx,	// fetch tank accumulated VSS pulses
+	instrSkip, 8,										// skip current trip load
+	instrLdRegTripVar, 0x03, currentIdx, rvInjCycleIdx,	// fetch current accumulated injector open cycles
+	instrLdRegTripVar, 0x02, currentIdx, rvVSSpulseIdx,	// fetch current accumulated VSS pulses
+	instrTestReg, 0x02,									// test accum_VSS for zero (no trip data yet)
+	instrBranchIfNotZero, 4,							// if non-zero, continue
+	instrLdRegByte, 0x02, 0,							// zero output when no trip data
+	instrDone,											// exit to caller
+	instrLdRegTripVar, 0x01, instantIdx, rvInjCycleIdx,	// fetch instant injector open cycles
+	instrTestReg, 0x01,									// test for zero (coasting / engine off)
+	instrBranchIfNotZero, 4,							// if non-zero, continue
+	instrLdRegByte, 0x02, 0,							// zero output when coasting
+	instrDone,											// exit to caller
+	instrMul2by1,										// reg2 = accum_VSS * inst_InjCycles (denominator)
+	instrLdReg, 0x21,									// save denominator in register 1
+	instrSwapReg, 0x13,									// swap: reg1 = accum_InjCycles, reg3 = denominator
+	instrLdRegTripVar, 0x02, instantIdx, rvVSSpulseIdx,	// fetch instant VSS pulses
+	instrMul2by1,										// reg2 = inst_VSS * accum_InjCycles (numerator part)
+	instrMul2byByte, 170,								// scale to 0-255 range at 1.5x average (255/1.5 = 170)
+	instrSwapReg, 0x13,									// swap back: reg1 = denominator, reg3 = accum_InjCycles
+	instrDiv2by1,										// compute PWM = numerator / denominator
+	instrAdjustQuotient,								// round result
+	instrLdRegByte, 0x01, 255,							// load 255 for clamp comparison
+	instrCmpXtoY, 0x21,									// compare result to 255
+	instrBranchIfLTorE, 3,								// if result <= 255, skip clamp
+	instrLdRegByte, 0x02, 255,							// clamp output to 255
 	instrDone											// exit to caller
 };
 
 static void outputPin::init(void)
 {
+
+// PWM frequencies for RC DAC filter design (PWM -> RC low-pass -> 0-5V analog output):
+//
+// ATmega32U4  Timer4  EXP1 (OC4A) + EXP2 (OC4D): high-speed timer with PLL; WGM/CS set by Arduino core (board-specific)
+// ATmega2560  Timer5  EXP1 (OC5A) + EXP2 (OC5B): Arduino core sets phase-correct 8-bit PWM, prescaler 64
+//                     f_PWM = 16 MHz / (2 * 64 * 255) = 490 Hz
+// ATmega328P  Timer1  EXP1 (OC1B): heart.ino sets phase-correct 8-bit PWM, prescaler 1
+//                     f_PWM = 16 MHz / (2 * 1 * 255) = 31,373 Hz
+// ATmega328P  Timer2  EXP2 (OC2A): overridden below to phase-correct 8-bit PWM, prescaler 1
+//                     f_PWM = 16 MHz / (2 * 1 * 255) = 31,373 Hz  (matches EXP1)
 
 #if defined(__AVR_ATmega32U4__)
 	// set OC4A to clear-up/set-down PWM mode for EXP1 option pin
@@ -122,6 +201,12 @@ static void outputPin::init(void)
 	// set OC2A to clear-up/set-down for EXP2 option pin
 	TCCR2A &= ~(1 << COM2A0);
 	TCCR2A |= (1 << COM2A1);
+
+	// set Timer2 to phase-correct 8-bit PWM, prescaler 1 (matches Timer1/EXP1 at 31,373 Hz)
+	TCCR2A &= ~_BV(WGM21);
+	TCCR2A |= _BV(WGM20);
+	TCCR2B &= ~(_BV(CS22) | _BV(CS21));
+	TCCR2B |= _BV(CS20);
 
 	// enable EXP1 and EXP2 option pin outputs
 	DDRB |= ((1 << DDB3) | (1 << DDB2));

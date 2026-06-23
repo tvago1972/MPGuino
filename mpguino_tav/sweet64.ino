@@ -33,20 +33,22 @@ static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
 
 }
 
-#if defined(useSWEET64RAMprograms)
 static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
 {
 
 	s64pc_t prgmPtr;
 	
 	prgmPtr.ptr = 0;
+#if defined(useSWEET64RAMprograms)
 	prgmPtr.ram_ptr = ptr;
 	prgmPtr.source = s64srcRAM;
+#endif // defined(useSWEET64RAMprograms)
 
 	return prgmPtr;
 
 }
 
+#if defined(useSWEET64RAMprograms)
 static uint8_t SWEET64::readProgramRAM(uint8_t addr)
 {
 
@@ -152,7 +154,7 @@ static uint8_t SWEET64::isProgramValid(s64pc_t prgmPtr)
 
 	}
 #else // defined(useSWEET64RAMprograms)
-	return prgmPtr.ptr;
+	return (prgmPtr.ptr != 0);
 #endif // defined(useSWEET64RAMprograms)
 
 }
@@ -1321,7 +1323,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 					break;
 
 				case e27:	// call
-					if (prgmReg8[(uint16_t)(si64reg8spnt)] > 15)
+					if (prgmReg8[(uint16_t)(si64reg8spnt)] >= s64stackSize)
 					{
 
 						setProgramError(prgmReg8, s64errStackOverflow);
@@ -1329,6 +1331,9 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 						break;
 
 					}
+#if defined(useDebugTerminalSWEET64)
+					s64callIndexStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)])] = extra;
+#endif // defined(useDebugTerminalSWEET64)
 					prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)]++)] = prgmPtr;
 				case e28:	// jump
 					prgmPtr = getProgramPC(extra);
@@ -1427,8 +1432,8 @@ static void SWEET64::copy64(union union_64 * an, union union_64 * ann) // an = a
 		"	ld	__tmp_reg__, %a1+	\n"
 		"	st	%a0+, __tmp_reg__	\n"
 
-		: "+e" (an)
-		: "e" (ann)
+		: "+e" (an), "+e" (ann)
+		:
 	);
 #else // defined(useAssemblyLanguage)
 	for (uint8_t x = 0; x < 4; x++) an->u16[(uint16_t)(x)] = ann->u16[(uint16_t)(x)];
@@ -1758,7 +1763,11 @@ static void SWEET64::registerTest64(union union_64 * an)
 
 }
 
+#if defined(useAssemblyLanguage)
+static void __attribute__((noinline)) SWEET64::mult64(uint64_t * prgmReg64)
+#else // defined(useAssemblyLanguage)
 static void SWEET64::mult64(uint64_t * prgmReg64)
+#endif // defined(useAssemblyLanguage)
 {
 
 	union union_64 * an = (union union_64 *)(&prgmReg64[(uint16_t)(s64reg64_2)]);	// multiplier in an, result to an
@@ -1932,7 +1941,11 @@ static void SWEET64::mult64(uint64_t * prgmReg64)
 #endif // defined(useAssemblyLanguage)
 }
 
+#if defined(useAssemblyLanguage)
+static void __attribute__((noinline)) SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-restoring hardware division
+#else // defined(useAssemblyLanguage)
 static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-restoring hardware division
+#endif // defined(useAssemblyLanguage)
 {
 
 	union union_64 * ann = (union union_64 *)(&prgmReg64[(uint16_t)(s64reg64_1)]);	// remainder in ann
@@ -1987,6 +2000,8 @@ static void SWEET64::div64(uint64_t * prgmReg64) // uses algorithm for non-resto
 		"	st	x+, r25				\n"		// store overflow value into remainder and quotient
 		"	dec	r24					\n"
 		"	brne	d64_ovfl%=		\n"
+		"	subi	r26, 16			\n"		// restore X reg to original ann value
+		"	sbci	r27, 0			\n"
 		"	rjmp	d64_exit%=		\n"		// go exit
 
 		"d64_cont1%=:				\n"
