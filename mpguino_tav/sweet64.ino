@@ -2289,7 +2289,7 @@ static uint32_t iSqrt(uint32_t input)
 		"	cpc		%B1, r5			\n"
 		"	cpc		%C1, r6			\n"
 		"	cpc		%D1, r7			\n"
-		"	brlt	sq64_cont%=		\n" 	// if input reg < test reg, skip
+		"	brlo	sq64_cont%=		\n" 	// if input reg < test reg (unsigned), skip
 
 		"	mov		r8, r4			\n"		// save new (x ^ 2) reg
 		"	mov		r9, r5			\n"

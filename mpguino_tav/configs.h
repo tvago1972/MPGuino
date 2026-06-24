@@ -208,6 +208,7 @@
 #define useDebugTerminalLabels true
 #define useDebugTerminalSWEET64 true
 #define useSWEET64RAMprograms true
+#define useIsqrt true						// regression-test the Isqrt SWEET64 opcode
 #define useDebugTerminalSerialPort0 true
 #undef useDebugTerminalSerialPort1
 #undef useDebugTerminalSerialPort2
