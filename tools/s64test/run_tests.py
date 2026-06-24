@@ -26,6 +26,7 @@ import cases_setflag
 import cases_index
 import cases_mode
 import cases_loadstore
+import cases_bcd
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -41,6 +42,7 @@ ALL_CASES += cases_setflag.CASES
 ALL_CASES += cases_index.CASES
 ALL_CASES += cases_mode.CASES
 ALL_CASES += cases_loadstore.CASES
+ALL_CASES += cases_bcd.CASES
 
 
 if __name__ == '__main__':
