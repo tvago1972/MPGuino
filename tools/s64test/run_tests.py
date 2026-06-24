@@ -28,6 +28,7 @@ import cases_mode
 import cases_loadstore
 import cases_bcd
 import cases_eeprom
+import cases_const
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -45,6 +46,7 @@ ALL_CASES += cases_mode.CASES
 ALL_CASES += cases_loadstore.CASES
 ALL_CASES += cases_bcd.CASES
 ALL_CASES += cases_eeprom.CASES
+ALL_CASES += cases_const.CASES
 
 
 if __name__ == '__main__':
