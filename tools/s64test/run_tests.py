@@ -22,6 +22,7 @@ import cases_flow
 import cases_shiftmuldiv
 import cases_multibyte
 import cases_edge
+import cases_setflag
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -33,6 +34,7 @@ ALL_CASES += cases_flow.CASES
 ALL_CASES += cases_shiftmuldiv.CASES
 ALL_CASES += cases_multibyte.CASES
 ALL_CASES += cases_edge.CASES
+ALL_CASES += cases_setflag.CASES
 
 
 if __name__ == '__main__':
