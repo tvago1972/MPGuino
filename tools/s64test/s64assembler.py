@@ -31,6 +31,46 @@ class S64AssemblerError(Exception):
     pass
 
 
+def resolve_labels(instructions, base_address=0):
+    """Resolve symbolic branch-target labels to absolute addresses.
+
+    A line of the form 'name:' (a single token ending in ':') defines a label
+    at the current address.  Any operand token matching a defined label is
+    replaced with that label's address as a two-hex-digit byte.
+
+    Address computation relies on the fact that each assembled instruction
+    occupies exactly one byte per token (opcode byte + one byte per operand),
+    so an instruction's length equals its token count.  Forward references are
+    supported via a two-pass walk.  Definition lines are removed from output.
+    """
+    # pass 1: assign an address to each label, advancing by token count
+    labels = {}
+    addr = base_address
+    body = []                       # instruction lines (definitions stripped)
+    for line in instructions:
+        s = line.strip()
+        if not s:
+            continue
+        tokens = s.split()
+        if len(tokens) == 1 and tokens[0].endswith(':'):
+            labels[tokens[0][:-1]] = addr
+            continue
+        body.append(tokens)
+        addr += len(tokens)         # opcode + operands, one byte each
+
+    # pass 2: substitute label references in operands
+    out = []
+    for tokens in body:
+        resolved = [tokens[0]]
+        for t in tokens[1:]:
+            if t in labels:
+                resolved.append('{:02X}'.format(labels[t]))
+            else:
+                resolved.append(t)
+        out.append(' '.join(resolved))
+    return out
+
+
 def assemble(term, address, instructions):
     """Assemble instruction source lines into SWEET64 program RAM beginning at
     the given byte address.
@@ -39,7 +79,12 @@ def assemble(term, address, instructions):
 
     Returns a list of the monitor's disassembly echo lines (one or more per
     assembled instruction).  Raises S64AssemblerError if entry fails or any
-    line is rejected."""
+    line is rejected.
+
+    Symbolic labels (see resolve_labels) are resolved to absolute addresses
+    before assembly, so branch targets can be written by name."""
+    instructions = resolve_labels(instructions, address)
+
     # enter the assembler at the requested address
     _, prompt = term.exchange('{:X}!'.format(address), EITHER_PROMPT_RE)
     if not is_asm_prompt(prompt):
