@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 
 from s64assembler import assemble, S64AssemblerError
 from s64registers import set_registers, read_registers
+from s64variables import find_variable_index, set_variable, read_variables
 from s64exec import run_ram_program
 from s64terminal import S64TerminalError
 
@@ -38,8 +39,10 @@ class S64Case:
     name: str
     program: list                       # assembler source lines
     inputs: dict = field(default_factory=dict)   # {reg_number(1..7): value}
+    set_vars: dict = field(default_factory=dict)  # {var_label: value} program vars set before run
     expect: dict = field(default_factory=dict)   # {reg_number(1..7): value}
     expect_reg8: dict = field(default_factory=dict)   # {label: value} 8-bit regs
+    expect_vars: dict = field(default_factory=dict)   # {var_label: value} program vars
     expect_flags: dict = field(default_factory=dict)  # {FLAG_xxx: bool}
     expect_error: bool = False          # whether a SWEET64 error is expected
 
@@ -76,6 +79,10 @@ def run_case(term, case):
         for reg_number, value in sorted(case.inputs.items()):
             set_registers(term, _reg_index(reg_number), [value])
 
+        # seed program variables (resolved by label, not index)
+        for label, value in sorted(case.set_vars.items()):
+            set_variable(term, find_variable_index(term, label), value)
+
         # assemble and run
         assemble(term, RAM_ADDRESS, case.program)
         run_ram_program(term, RAM_ADDRESS, max_lines=0)
@@ -104,6 +111,21 @@ def run_case(term, case):
         elif reg.hex_value != expected:
             failures.append('reg {}: got 0x{:X}, expected 0x{:X}'.format(
                 label, reg.hex_value, expected))
+
+    # check expected program-variable values (read only if requested)
+    if case.expect_vars:
+        try:
+            _, vars_by_label = read_variables(term)
+        except S64TerminalError as e:
+            failures.append('could not read program variables: {}'.format(e))
+            vars_by_label = {}
+        for label, expected in sorted(case.expect_vars.items()):
+            var = vars_by_label.get(label)
+            if var is None:
+                failures.append('program var {!r} not reported'.format(label))
+            elif var.hex_value != expected:
+                failures.append('var {}: got 0x{:X}, expected 0x{:X}'.format(
+                    label, var.hex_value, expected))
 
     # check expected processor flags (only the specified bits are tested)
     if case.expect_flags:
