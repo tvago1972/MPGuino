@@ -12,7 +12,8 @@ a single nibble-packed byte whose encoding depends on the instruction:
   - single-register ops (e.g. AddByteToX, Mul2byByte): low nibble = register
     number (1-7), upper nibble must be 0.  Write '1', not '11'.
   - two-register / arithmetic ops (LdRegByte, AddYtoX, CmpXtoY, SwapReg...):
-    high nibble = X, low nibble = Y, e.g. '12' is X=1, Y=2.
+    low nibble = X, high nibble = Y, e.g. '21' is X=1, Y=2.  (Confirmed in
+    firmware sweet64.ino: regX = reg[(operand & 0x07) - 1], regY = high nibble.)
 The monitor rejects a line with 'syntax' if the operand nibbles are invalid
 for that instruction's format.
 

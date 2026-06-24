@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""SWEET64 opcode regression test runner.
+
+Opens the debug-terminal serial port once and runs every registered test
+case in that single session (the board resets on port open, so reopening
+mid-suite is avoided).
+
+Usage:
+    python run_tests.py <port> <baud>
+
+Example:
+    python run_tests.py COM3 38400
+"""
+
+from s64runner import main
+
+import cases_arithmetic
+
+# all case tables to run, in order
+ALL_CASES = []
+ALL_CASES += cases_arithmetic.CASES
+
+
+if __name__ == '__main__':
+    main(ALL_CASES)
