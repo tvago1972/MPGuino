@@ -62,6 +62,23 @@ def _reg_index(reg_number):
     return reg_number - 1
 
 
+def _resolve_var_refs(term, program):
+    """Replace '@varname' operand tokens with the variable's index (two hex
+    digits), resolved by label so unstable program-variable indices never
+    appear literally in a case. Other tokens pass through unchanged."""
+    out = []
+    for line in program:
+        tokens = line.split()
+        resolved = []
+        for t in tokens:
+            if t.startswith('@'):
+                resolved.append('{:02X}'.format(find_variable_index(term, t[1:])))
+            else:
+                resolved.append(t)
+        out.append(' '.join(resolved))
+    return out
+
+
 def run_case(term, case):
     """Execute one S64Case against the live monitor and return an S64Result.
 
@@ -83,8 +100,9 @@ def run_case(term, case):
         for label, value in sorted(case.set_vars.items()):
             set_variable(term, find_variable_index(term, label), value)
 
-        # assemble and run
-        assemble(term, RAM_ADDRESS, case.program)
+        # assemble and run (resolve @varname operand references first)
+        program = _resolve_var_refs(term, case.program)
+        assemble(term, RAM_ADDRESS, program)
         run_ram_program(term, RAM_ADDRESS, max_lines=0)
 
         # read results
