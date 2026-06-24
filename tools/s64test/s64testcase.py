@@ -17,7 +17,20 @@ from s64terminal import S64TerminalError
 
 REG64_COUNT = 7                     # SWEET64 64-bit registers (reg 1..7)
 ERROR_LABEL = 'si64reg8error'       # 8-bit register holding the last error code
+FLAGS_LABEL = 'si64reg8flags'       # 8-bit register holding processor flags
 RAM_ADDRESS = 0                     # where test programs are assembled
+
+# SWEET64 processor flag bits (low nibble of si64reg8flags); the high bits
+# (0xC0) are trace flags set during ^T and are ignored by flag checks.
+FLAG_CARRY    = 0x01
+FLAG_ZERO     = 0x02
+FLAG_MINUS    = 0x04
+FLAG_OVERFLOW = 0x08
+
+_FLAG_NAMES = {
+    FLAG_CARRY: 'carry', FLAG_ZERO: 'zero',
+    FLAG_MINUS: 'minus', FLAG_OVERFLOW: 'overflow',
+}
 
 
 @dataclass
@@ -26,6 +39,7 @@ class S64Case:
     program: list                       # assembler source lines
     inputs: dict = field(default_factory=dict)   # {reg_number(1..7): value}
     expect: dict = field(default_factory=dict)   # {reg_number(1..7): value}
+    expect_flags: dict = field(default_factory=dict)  # {FLAG_xxx: bool}
     expect_error: bool = False          # whether a SWEET64 error is expected
 
 
@@ -80,6 +94,16 @@ def run_case(term, case):
         elif reg.hex_value != expected:
             failures.append('reg {}: got 0x{:X}, expected 0x{:X}'.format(
                 reg_number, reg.hex_value, expected))
+
+    # check expected processor flags (only the specified bits are tested)
+    if case.expect_flags:
+        flags_reg = by_label.get(FLAGS_LABEL)
+        flags = flags_reg.hex_value if flags_reg is not None else 0
+        for bit, want in case.expect_flags.items():
+            got = bool(flags & bit)
+            if got != want:
+                name = _FLAG_NAMES.get(bit, '0x{:02X}'.format(bit))
+                failures.append('flag {}: got {}, expected {}'.format(name, got, want))
 
     # check error expectation
     err = by_label.get(ERROR_LABEL)

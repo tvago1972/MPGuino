@@ -15,10 +15,12 @@ Example:
 from s64runner import main
 
 import cases_arithmetic
+import cases_flags
 
 # all case tables to run, in order
 ALL_CASES = []
 ALL_CASES += cases_arithmetic.CASES
+ALL_CASES += cases_flags.CASES
 
 
 if __name__ == '__main__':
