@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from s64assembler import assemble, S64AssemblerError
 from s64registers import set_registers, read_registers
 from s64variables import find_variable_index, set_variable, read_variables
+from s64parameters import find_parameter_index, set_parameter, read_parameters
 from s64exec import run_ram_program
 from s64terminal import S64TerminalError
 
@@ -40,9 +41,11 @@ class S64Case:
     program: list                       # assembler source lines
     inputs: dict = field(default_factory=dict)   # {reg_number(1..7): value}
     set_vars: dict = field(default_factory=dict)  # {var_label: value} program vars set before run
+    set_params: dict = field(default_factory=dict)  # {param_label: value} EEPROM params set before run
     expect: dict = field(default_factory=dict)   # {reg_number(1..7): value}
     expect_reg8: dict = field(default_factory=dict)   # {label: value} 8-bit regs
     expect_vars: dict = field(default_factory=dict)   # {var_label: value} program vars
+    expect_params: dict = field(default_factory=dict)  # {param_label: value} EEPROM params
     expect_flags: dict = field(default_factory=dict)  # {FLAG_xxx: bool}
     expect_error: bool = False          # whether a SWEET64 error is expected
 
@@ -62,10 +65,13 @@ def _reg_index(reg_number):
     return reg_number - 1
 
 
-def _resolve_var_refs(term, program):
-    """Replace '@varname' operand tokens with the variable's index (two hex
-    digits), resolved by label so unstable program-variable indices never
-    appear literally in a case. Other tokens pass through unchanged."""
+def _resolve_refs(term, program):
+    """Replace symbolic operand references with two-hex-digit indices, so
+    unstable program-variable / EEPROM-parameter indices never appear
+    literally in a case:
+      '@name' -> program variable index (V command)
+      '&name' -> EEPROM parameter index (P command)
+    Other tokens pass through unchanged."""
     out = []
     for line in program:
         tokens = line.split()
@@ -73,6 +79,8 @@ def _resolve_var_refs(term, program):
         for t in tokens:
             if t.startswith('@'):
                 resolved.append('{:02X}'.format(find_variable_index(term, t[1:])))
+            elif t.startswith('&'):
+                resolved.append('{:02X}'.format(find_parameter_index(term, t[1:])))
             else:
                 resolved.append(t)
         out.append(' '.join(resolved))
@@ -100,8 +108,12 @@ def run_case(term, case):
         for label, value in sorted(case.set_vars.items()):
             set_variable(term, find_variable_index(term, label), value)
 
-        # assemble and run (resolve @varname operand references first)
-        program = _resolve_var_refs(term, case.program)
+        # seed EEPROM parameters (resolved by label, not index)
+        for label, value in sorted(case.set_params.items()):
+            set_parameter(term, find_parameter_index(term, label), value)
+
+        # assemble and run (resolve @var / &param operand references first)
+        program = _resolve_refs(term, case.program)
         assemble(term, RAM_ADDRESS, program)
         run_ram_program(term, RAM_ADDRESS, max_lines=0)
 
@@ -144,6 +156,24 @@ def run_case(term, case):
             elif var.hex_value != expected:
                 failures.append('var {}: got 0x{:X}, expected 0x{:X}'.format(
                     label, var.hex_value, expected))
+
+    # check expected EEPROM parameter values (read only if requested)
+    if case.expect_params:
+        try:
+            _, params_by_label = read_parameters(term)
+        except S64TerminalError as e:
+            failures.append('could not read EEPROM parameters: {}'.format(e))
+            params_by_label = {}
+        # NOTE: the P command reports values in SWEET64-formatted decimal, so
+        # this check is not SWEET64-independent; prefer verifying EEPROM values
+        # by loading them into a register and reading hex via ^E.
+        for label, expected in sorted(case.expect_params.items()):
+            param = params_by_label.get(label)
+            if param is None:
+                failures.append('EEPROM param {!r} not reported'.format(label))
+            elif param.value != expected:
+                failures.append('param {}: got {}, expected {}'.format(
+                    label, param.value, expected))
 
     # check expected processor flags (only the specified bits are tested)
     if case.expect_flags:
