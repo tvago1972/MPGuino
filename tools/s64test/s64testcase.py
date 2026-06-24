@@ -15,6 +15,7 @@ from s64registers import set_registers, read_registers
 from s64variables import find_variable_index, set_variable, read_variables
 from s64parameters import find_parameter_index, set_parameter, read_parameters
 from s64constants import find_constant_index
+from s64tripslots import find_trip_slot_index
 from s64exec import run_ram_program
 from s64terminal import S64TerminalError
 
@@ -73,6 +74,7 @@ def _resolve_refs(term, program):
       '@name' -> program variable index (V command)
       '&name' -> EEPROM parameter index (P command)
       '%name' -> program constant index (O command)
+      '$name' -> trip-slot index (R command)
     Other tokens pass through unchanged."""
     out = []
     for line in program:
@@ -85,6 +87,8 @@ def _resolve_refs(term, program):
                 resolved.append('{:02X}'.format(find_parameter_index(term, t[1:])))
             elif t.startswith('%'):
                 resolved.append('{:02X}'.format(find_constant_index(term, t[1:])))
+            elif t.startswith('$'):
+                resolved.append('{:02X}'.format(find_trip_slot_index(term, t[1:])))
             else:
                 resolved.append(t)
         out.append(' '.join(resolved))
