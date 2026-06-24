@@ -37,6 +37,20 @@ and runs the entire suite in that single session (reopening mid-suite would
 reset state). Each case re-establishes its own baseline by zeroing the
 registers and seeding its inputs.
 
+### Call/Jump RAM override and the main loop
+
+The Call/Jump/CallImplied cases use the program RAM-override (`^O`): a program
+index is briefly redirected to a RAM subroutine so the main test program can
+call it. While the override is active, the firmware's main loop could also
+reach that index (e.g. a display program internally calling it) and run the
+RAM subroutine in its place. This is harmless for regression testing: the
+substituted subroutine returns cleanly, so the worst case is a transient wrong
+value on the unit's own display for a frame or two — it does not affect the
+test, which runs in and reads back from the terminal's private register set.
+The override is always disabled immediately after the run. Since the goal here
+is to regression-test the SWEET64 opcodes (not the live display), this
+interaction is not a concern.
+
 ## Usage
 
 ```

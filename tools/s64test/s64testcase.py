@@ -16,13 +16,17 @@ from s64variables import find_variable_index, set_variable, read_variables
 from s64parameters import find_parameter_index, set_parameter, read_parameters
 from s64constants import find_constant_index
 from s64tripslots import find_trip_slot_index
-from s64exec import run_ram_program
+from s64exec import (
+    run_ram_program, enable_ram_override, disable_ram_override,
+)
 from s64terminal import S64TerminalError
 
 REG64_COUNT = 7                     # SWEET64 64-bit registers (reg 1..7)
 ERROR_LABEL = 'si64reg8error'       # 8-bit register holding the last error code
 FLAGS_LABEL = 'si64reg8flags'       # 8-bit register holding processor flags
-RAM_ADDRESS = 0                     # where test programs are assembled
+RAM_ADDRESS = 0                     # where ordinary test programs are assembled
+SUB_ADDR = 0x00                     # RAM address for a Call/Jump subroutine
+MAIN_ADDR = 0x80                    # RAM address for the main program (Call/Jump path)
 
 # SWEET64 processor flag bits (low nibble of si64reg8flags); the high bits
 # (0xC0) are trace flags set during ^T and are ignored by flag checks.
@@ -50,6 +54,8 @@ class S64Case:
     expect_params: dict = field(default_factory=dict)  # {param_label: value} EEPROM params
     expect_flags: dict = field(default_factory=dict)  # {FLAG_xxx: bool}
     expect_error: bool = False          # whether a SWEET64 error is expected
+    subroutine: list = field(default_factory=list)  # Call/Jump: RAM subroutine lines
+    override_index: int = 0             # program index redirected to the subroutine
 
 
 @dataclass
@@ -120,10 +126,22 @@ def run_case(term, case):
         for label, value in sorted(case.set_params.items()):
             set_parameter(term, find_parameter_index(term, label), value)
 
-        # assemble and run (resolve @var / &param operand references first)
-        program = _resolve_refs(term, case.program)
-        assemble(term, RAM_ADDRESS, program)
-        run_ram_program(term, RAM_ADDRESS, max_lines=0)
+        # assemble and run (resolve @var / &param / %const / $trip refs first)
+        if case.subroutine:
+            # Call/Jump path: assemble a RAM subroutine at SUB_ADDR, the main
+            # program at MAIN_ADDR, redirect a program index to the subroutine,
+            # run main, then always disable the override.
+            assemble(term, SUB_ADDR, _resolve_refs(term, case.subroutine))
+            assemble(term, MAIN_ADDR, _resolve_refs(term, case.program))
+            enable_ram_override(term, case.override_index, SUB_ADDR)
+            try:
+                run_ram_program(term, MAIN_ADDR, max_lines=0)
+            finally:
+                disable_ram_override(term)
+        else:
+            program = _resolve_refs(term, case.program)
+            assemble(term, RAM_ADDRESS, program)
+            run_ram_program(term, RAM_ADDRESS, max_lines=0)
 
         # read results
         by_index, by_label = read_registers(term)

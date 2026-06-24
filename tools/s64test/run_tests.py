@@ -31,6 +31,7 @@ import cases_eeprom
 import cases_const
 import cases_indexed
 import cases_trip
+import cases_call
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -51,6 +52,7 @@ ALL_CASES += cases_eeprom.CASES
 ALL_CASES += cases_const.CASES
 ALL_CASES += cases_indexed.CASES
 ALL_CASES += cases_trip.CASES
+ALL_CASES += cases_call.CASES
 
 
 if __name__ == '__main__':

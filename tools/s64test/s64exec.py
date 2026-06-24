@@ -20,6 +20,20 @@ from s64assembler import assemble
 from s64registers import set_registers, read_registers
 
 CMD_TRACE = '\x14'      # Ctrl+T
+CMD_RAM_OVERRIDE = '\x0F'   # Ctrl+O
+
+
+def enable_ram_override(term, prgm_idx, ram_addr):
+    """Redirect SWEET64 program index `prgm_idx` to RAM address `ram_addr`, so
+    Call/Jump/CallImplied to that index execute the RAM subroutine there.
+    Command: '<ram_addr> < <prgm_idx> ^O'  (target=ram_addr, byte=prgm_idx)."""
+    cmd = '{:X}<{:X}{}'.format(ram_addr, prgm_idx, CMD_RAM_OVERRIDE)
+    return term.send_command(cmd)
+
+
+def disable_ram_override(term):
+    """Disable the program RAM override (bare ^O)."""
+    return term.send_command(CMD_RAM_OVERRIDE)
 
 
 def run_ram_program(term, address=0, max_lines=0):
