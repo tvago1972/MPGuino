@@ -19,6 +19,7 @@ import cases_flags
 import cases_branch
 import cases_compare
 import cases_flow
+import cases_shiftmuldiv
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -27,6 +28,7 @@ ALL_CASES += cases_flags.CASES
 ALL_CASES += cases_branch.CASES
 ALL_CASES += cases_compare.CASES
 ALL_CASES += cases_flow.CASES
+ALL_CASES += cases_shiftmuldiv.CASES
 
 
 if __name__ == '__main__':
