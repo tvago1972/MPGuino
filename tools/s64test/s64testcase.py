@@ -39,6 +39,7 @@ class S64Case:
     program: list                       # assembler source lines
     inputs: dict = field(default_factory=dict)   # {reg_number(1..7): value}
     expect: dict = field(default_factory=dict)   # {reg_number(1..7): value}
+    expect_reg8: dict = field(default_factory=dict)   # {label: value} 8-bit regs
     expect_flags: dict = field(default_factory=dict)  # {FLAG_xxx: bool}
     expect_error: bool = False          # whether a SWEET64 error is expected
 
@@ -94,6 +95,15 @@ def run_case(term, case):
         elif reg.hex_value != expected:
             failures.append('reg {}: got 0x{:X}, expected 0x{:X}'.format(
                 reg_number, reg.hex_value, expected))
+
+    # check expected 8-bit register values (addressed by label)
+    for label, expected in sorted(case.expect_reg8.items()):
+        reg = by_label.get(label)
+        if reg is None:
+            failures.append('8-bit reg {!r} not reported'.format(label))
+        elif reg.hex_value != expected:
+            failures.append('reg {}: got 0x{:X}, expected 0x{:X}'.format(
+                label, reg.hex_value, expected))
 
     # check expected processor flags (only the specified bits are tested)
     if case.expect_flags:
