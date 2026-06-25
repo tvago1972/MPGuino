@@ -34,6 +34,7 @@ import cases_trip
 import cases_call
 import cases_isqrt
 import cases_memarith
+import cases_misc
 
 # all case tables to run, in order
 ALL_CASES = []
@@ -57,6 +58,7 @@ ALL_CASES += cases_trip.CASES
 ALL_CASES += cases_call.CASES
 ALL_CASES += cases_isqrt.CASES
 ALL_CASES += cases_memarith.CASES
+ALL_CASES += cases_misc.CASES
 
 
 if __name__ == '__main__':
