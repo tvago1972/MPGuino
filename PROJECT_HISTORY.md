@@ -26,7 +26,11 @@ Important SWEET64 milestones include:
 - ATmega2560 far-flash-safe program pointer handling
 - RAM program editing and substitution for live debugging
 - a monitor miniassembler for quick branch-safe SWEET64 experiments
-- an external regression tester that queries the monitor and tests selected opcodes
+- an external regression tester that queries the monitor and exercises the full opcode set
+- differential validation of the interpreter, running the same regression suite against both the assembly and C primitive builds and confirming they agree
+- per-instruction execution-cycle instrumentation, which quantified the assembly primitives' advantage (notably ~12x for 64-bit divide) and provides a performance-regression baseline
+
+A representative payoff of this tooling: the regression harness uncovered a long-standing `iSqrt` bug where the assembly implementation diverged from its C reference for inputs at or above 2^31, which was then fixed and guarded against regression.
 
 ## Debug Monitor
 
@@ -46,6 +50,8 @@ The project has supported several Arduino-era hardware targets and display combi
 - Adafruit RGB LCD shield style builds
 
 Mega2560 remains the most comfortable full debug target because of flash/RAM headroom. Uno-class boards remain important because they represent the constrained target that originally motivated SWEET64.
+
+A near-term hardware goal is full support for the **MPGuino Colour Touch board** — an ATmega2560-class design driving an ILI9341 TFT touchscreen (with Bluetooth) instead of a character LCD. This motivates the ongoing work to separate data/model features from LCD-only presentation features (for example the `useFEvTdata` split), so the calculation and SWEET64 layers can drive a pixel/touch UI without the assumptions baked into the character-LCD path.
 
 ## Experimental Features
 
@@ -72,7 +78,8 @@ The current development direction is to keep MPGuino usable on constrained AVR t
 
 Near-term priorities include:
 
+- bringing up full support for the MPGuino Colour Touch board (ILI9341 TFT touchscreen + Bluetooth)
+- separating data/model features from LCD-only presentation features so they can drive a TFT/touch UI
 - maintaining the SWEET64 regression test harness
 - keeping `useSWEET64devMonitor` small enough for Uno-class development
-- separating data/model features from LCD-only presentation features
 - avoiding new dependencies that make the final hex file harder to fit on target boards
