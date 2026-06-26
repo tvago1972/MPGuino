@@ -869,6 +869,11 @@ static const uint8_t m32DebugAccS64sqrtIdx =			nextAllowedValue;
 static const uint8_t m32DebugCountS64sqrtIdx =			m32DebugAccS64sqrtIdx + 1;
 #define nextAllowedValue m32DebugCountS64sqrtIdx + 1
 #endif // defined(useIsqrt)
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t m32S64programCyclesIdx =			nextAllowedValue;						// timer0 cycles executed in the last ^T trace run
+static const uint8_t m32S64programInstrIdx =			m32S64programCyclesIdx + 1;				// instructions executed in the last ^T trace run
+#define nextAllowedValue m32S64programInstrIdx + 1
+#endif // defined(useDebugTerminalSWEET64)
 #endif // defined(useDebugCPUreading)
 
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
@@ -1299,6 +1304,10 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"m32DebugAccS64sqrtIdx" tcEOS
 	"m32DebugCountS64sqrtIdx" tcEOS
 #endif // defined(useIsqrt)
+#if defined(useDebugTerminalSWEET64)
+	"m32S64programCyclesIdx" tcEOS
+	"m32S64programInstrIdx" tcEOS
+#endif // defined(useDebugTerminalSWEET64)
 #endif // defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useBluetooth)

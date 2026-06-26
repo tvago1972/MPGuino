@@ -3075,6 +3075,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									if (terminalMode & tmByteReadIn) maxLine = terminalByte;
 									else maxLine = 1;
 
+#if defined(useDebugCPUreading)
+									m32(m32S64programCyclesIdx) = 0; // reset per-run execution counters
+									m32(m32S64programInstrIdx) = 0;
+#endif // defined(useDebugCPUreading)
+
 									if (SWEET64::isProgramValid(terminalExecSched)) terminalState = tsTraceSWEET64line;
 									else errIdx = tseIdxBadSWEET64addr;
 
@@ -3343,7 +3348,14 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 				if (terminalS64reg8[(uint16_t)(si64reg8valid)])
 				{
 
+#if defined(useDebugCPUreading)
+					uint32_t s64execStartCycle = heart::cycles0(); // measure execution cycles only, excluding trace output
+#endif // defined(useDebugCPUreading)
 					SWEET64::executeInstruction(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8); // execute instruction
+#if defined(useDebugCPUreading)
+					m32(m32S64programCyclesIdx) += (heart::cycles0() - s64execStartCycle);
+					m32(m32S64programInstrIdx)++;
+#endif // defined(useDebugCPUreading)
 
 					if (terminalS64reg8[(uint16_t)(si64reg8valid)] == 0)
 					{

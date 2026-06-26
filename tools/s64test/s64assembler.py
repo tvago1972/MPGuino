@@ -85,12 +85,16 @@ def assemble(term, address, instructions):
     before assembly, so branch targets can be written by name."""
     instructions = resolve_labels(instructions, address)
 
-    # enter the assembler at the requested address
+    # enter the assembler at the requested address; retry once on a sync
+    # hiccup (e.g. the first command after connect occasionally lands on ']')
     _, prompt = term.exchange('{:X}!'.format(address), EITHER_PROMPT_RE)
     if not is_asm_prompt(prompt):
-        raise S64AssemblerError(
-            'failed to enter assembler at 0x{:02X} (prompt={!r})'.format(
-                address, prompt))
+        term.sync()
+        _, prompt = term.exchange('{:X}!'.format(address), EITHER_PROMPT_RE)
+        if not is_asm_prompt(prompt):
+            raise S64AssemblerError(
+                'failed to enter assembler at 0x{:02X} (prompt={!r})'.format(
+                    address, prompt))
 
     echoes = []
     try:
