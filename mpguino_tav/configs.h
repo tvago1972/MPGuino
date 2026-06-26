@@ -209,7 +209,11 @@
 #define useDebugTerminalSWEET64 true
 #define useSWEET64RAMprograms true
 #define useIsqrt true						// regression-test the Isqrt SWEET64 opcode
-#define useFEvTdata true					// FEvT SWEET64 data/opcode without the bar-graph display
+#if defined(__AVR_ATmega2560__)
+#define useFEvTdata true					// FEvT SWEET64 data/opcode (ATmega2560 dev monitor only; the FEvT slots + opcode do not fit the Uno-class build)
+#else // defined(__AVR_ATmega2560__)
+#undef useFEvTdata							// Uno-class dev monitor: drop FEvT to fit flash/RAM; cover the FEvT opcode on the ATmega2560 monitor build
+#endif // defined(__AVR_ATmega2560__)
 #define useDebugTerminalSerialPort0 true
 #undef useDebugTerminalSerialPort1
 #undef useDebugTerminalSerialPort2

@@ -259,10 +259,10 @@ static const FIFO_storage_t ringBufferDefList[(uint16_t)(rbIdxCount)] PROGMEM = 
 };
 
 #endif // defined(useBuffering)
-#if defined(useBarGraph)
-static const uint8_t bgDataSize = 15;
+#if defined(useBarGraph) || defined(useFEvTdata) || defined(useBarFuelEconVsSpeed)
+static const uint8_t bgDataSize = 15; // bar-graph dataset dimension; needed by the FEvT/FEvsSpeed trip data even when the bar-graph display is absent
 
-#endif // defined(useBarGraph)
+#endif // defined(useBarGraph) || defined(useFEvTdata) || defined(useBarFuelEconVsSpeed)
 typedef struct
 {
 
