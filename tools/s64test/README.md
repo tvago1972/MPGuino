@@ -8,7 +8,7 @@ as the firmware changes.
 ## Firmware compile-time requirements
 
 The target firmware must be built with all three of these flags. In the
-intended debug-monitor build (`useAtMega328debugMonitor`) they are enabled by
+intended debug-monitor build (`useSWEET64devMonitor`) they are enabled by
 default.
 
 | Flag | Why the harness needs it |

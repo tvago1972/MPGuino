@@ -27,7 +27,7 @@
 
 - [Appendix A: Quick Reference - Instruction Aliases](#appendix-a-quick-reference--instruction-aliases)
 - [Appendix B: Key `configs.h` Flags for Developers](#appendix-b-key-configsh-flags-for-developers)
-- [Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor)
+- [Appendix C: SWEET64 Dev Monitor (`useSWEET64devMonitor`)](#appendix-c-sweet64-dev-monitor-usesweet64devmonitor)
 - [Appendix D: Second Arduino Uno as External Signal Generator](#appendix-d-second-arduino-uno-as-external-signal-generator)
 
 ---
@@ -632,7 +632,7 @@ On ATmega2560, the following are automatically enabled when `useDebugTerminal` i
 #define useBuffering true
 ```
 
-On ATmega328P, `useDebugTerminal` is normally silently disabled (too little flash). See [Appendix C](#appendix-c-atmega328p-debug-monitor-useatmega328debugmonitor) for the dedicated 328P debug monitor build.
+On ATmega328P, `useDebugTerminal` is normally silently disabled (too little flash). See [Appendix C](#appendix-c-sweet64-dev-monitor-usesweet64devmonitor) for the dedicated SWEET64 development monitor build.
 
 ### 10.2 Connecting
 
@@ -1110,16 +1110,16 @@ At 31,373 Hz, a modest RC filter (e.g. 10 kΩ + 100 nF, f_RC ≈ 160 Hz) provide
 | `useDebugButtonInjection` | `I` command (requires `useDebugTerminal` + buttons) |
 | `useDebugCPUreading` | Fine-grained interrupt-level CPU counters |
 | `useSimulatedFIandVSS` | `S` command + injector/VSS simulation |
-| `useAtMega328debugMonitor` | Dedicated debug monitor build for ATmega328P |
+| `useSWEET64devMonitor` | Dedicated serial SWEET64 development monitor build |
 | `useActivityLED` | On-board LED phase indicator |
 
 ---
 
-## Appendix C: ATmega328P Debug Monitor (`useAtMega328debugMonitor`)
+## Appendix C: SWEET64 Dev Monitor (`useSWEET64devMonitor`)
 
 ### C.1 Purpose
 
-`useAtMega328debugMonitor` is a special build configuration that enables a headless SWEET64 debug terminal on an Arduino Uno (ATmega328P). Normally `useDebugTerminal` is suppressed on 328P due to flash constraints (32256 bytes usable with Optiboot bootloader). This flag overrides that suppression and simultaneously strips out enough non-essential features to make the terminal fit.
+`useSWEET64devMonitor` is a special build configuration that enables a headless SWEET64 debug terminal on small AVR boards such as the Arduino Uno (ATmega328P). Normally `useDebugTerminal` is suppressed on 328P due to flash constraints (32256 bytes usable with Optiboot bootloader). This flag overrides that suppression and simultaneously strips out enough non-essential features to make the terminal fit.
 
 It is intended as a dedicated development and SWEET64 debugging firmware — not a configuration that would be used in a vehicle.
 
@@ -1130,7 +1130,7 @@ This configuration has been compile/upload tested on both Arduino Uno and Arduin
 In `configs.h`, set only this flag:
 
 ```c
-#define useAtMega328debugMonitor true
+#define useSWEET64devMonitor true
 ```
 
 Everything else is configured automatically by the monitor block in `configs.h`. No other flags need to be set or cleared manually.
@@ -1191,7 +1191,7 @@ The same workflow works on Mega2560, but the Uno build is the useful proof that 
 
 ### D.1 Why
 
-`useSimulatedFIandVSS` — the built-in signal simulator — does not fit in the 328P flash alongside `useAtMega328debugMonitor`. A second Uno running dedicated signal-generation firmware is a cleaner solution in any case: it exercises the real hardware interrupt path rather than software-injected signals, and it keeps the device under test running exactly the firmware under development.
+`useSimulatedFIandVSS` — the built-in signal simulator — does not fit in the 328P flash alongside `useSWEET64devMonitor`. A second Uno running dedicated signal-generation firmware is a cleaner solution in any case: it exercises the real hardware interrupt path rather than software-injected signals, and it keeps the device under test running exactly the firmware under development.
 
 ### D.2 Signal Characteristics
 

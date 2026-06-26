@@ -43,6 +43,8 @@ This is a completely rewritten port of Dave Brink's original MPGuino, originally
 
 - [User Manual](USER_MANUAL.md) — installation, display screens, navigation, settings reference
 - [Developer Manual](DEVELOPER_MANUAL.md) — SWEET64 bytecode engine, instruction set reference, debug terminal
+- [Changelog](CHANGELOG.md) — brief release and development change notes
+- [Project History](PROJECT_HISTORY.md) — development background and pre-Git archaeology notes
 
 ## Building
 

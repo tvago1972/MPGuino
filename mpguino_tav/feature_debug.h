@@ -498,12 +498,12 @@ static const char terminalHelp[] PROGMEM = {
 	tcSP4 "[y].[x]O - list program constants, optionally between [y] and [x]" tcEOSCR
 	"[z]<[y].[x]L - list terminal trip variable function outputs, optionally between [y] and [x]" tcEOSCR
 	tcSP16 "[z] - decimal window length (optional)" tcCR tcEOSCR
-#if !defined(useAtMega328debugMonitor)
+#if !defined(useSWEET64devMonitor)
 	"[z]<[y].[x]U - list decimal number sample for output" tcEOSCR
 	tcSP16 "[z] - decimal window length (optional)" tcEOSCR
 	tcSP16 "[y] - decimal digit count (optional)" tcEOSCR
 	tcSP16 "[x] - decimal processing flag (optional)" tcCR tcEOSCR
-#endif // !defined(useAtMega328debugMonitor)
+#endif // !defined(useSWEET64devMonitor)
 
 #if defined(useDebugTerminalSWEET64)
 	tcSP3 "[y].[x]^I - list SWEET64 instructions, along with their operands, optionally between [y] and [x]" tcCR tcEOSCR
@@ -526,7 +526,7 @@ static const char terminalHelp[] PROGMEM = {
 	tcSP16 "either or both of x or y must be specified" tcCR tcEOSCR
 #endif // defined(useDebugTerminalLabels)
 
-#if !defined(useAtMega328debugMonitor)
+#if !defined(useSWEET64devMonitor)
 	tcSP3 "[z]<[y].x - enters a number x into the 64-bit math accumulator" tcEOSCR
 	tcSP16 "[z] - decimal window length (optional)" tcEOSCR
 	tcSP16 "[y] - decimal digit count (optional)" tcEOSCR
@@ -538,7 +538,7 @@ static const char terminalHelp[] PROGMEM = {
 #endif // defined(useIsqrt)
 	tcSP10 "/x - divides math accumulator by x" tcEOSCR
 	tcSP10 "=x - enters a number x into the 64-bit math accumulator" tcCR tcEOSCR
-#endif // !defined(useAtMega328debugMonitor)
+#endif // !defined(useSWEET64devMonitor)
 
 #if defined(useDebugButtonInjection)
 	tcSP11 "I - inject button press" tcEOSCR

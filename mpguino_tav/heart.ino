@@ -445,7 +445,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useSimulatedFIandVSS)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	if (v32(v32FEvsTimePeriodCountIdx)) v32(v32FEvsTimePeriodCountIdx)--;
 	else
 	{
@@ -457,7 +457,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useCoastDownCalculator)
 	if (v08(v8CoastdownStatusIdx) & cdTestTriggered) // if coastdown test has been requested
 	{

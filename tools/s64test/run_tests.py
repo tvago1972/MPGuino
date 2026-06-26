@@ -31,6 +31,7 @@ import cases_eeprom
 import cases_const
 import cases_indexed
 import cases_trip
+import cases_fevt
 import cases_call
 import cases_isqrt
 import cases_memarith
@@ -55,6 +56,7 @@ ALL_CASES += cases_eeprom.CASES
 ALL_CASES += cases_const.CASES
 ALL_CASES += cases_indexed.CASES
 ALL_CASES += cases_trip.CASES
+ALL_CASES += cases_fevt.CASES
 ALL_CASES += cases_call.CASES
 ALL_CASES += cases_isqrt.CASES
 ALL_CASES += cases_memarith.CASES

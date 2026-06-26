@@ -847,7 +847,7 @@ int main(void)
 
 			SREG = oldSREG; // restore interrupt flag status
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			if (v08(v8Timer0Status1Idx) & t0sbResetFEvsTimeTrip) 
 			{
 
@@ -863,7 +863,7 @@ int main(void)
 
 			}
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			for (uint8_t x = 0; x < tripUpdateListSize; x++)
 			{
 

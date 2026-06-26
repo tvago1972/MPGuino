@@ -233,9 +233,9 @@ static const uint8_t pSizeJSONoutput =					1;					// pJSONoutputIdx
 #if defined(useBluetooth)
 static const uint8_t pSizeBluetoothOutput =				1;					// pBluetoothOutputIdx
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t pSizeFEvsTime =					16;					// pFEvsTimeIdx
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t pSizeBarLowSpeedCutoff =			24;					// pBarLowSpeedCutoffIdx
 static const uint8_t pSizeBarSpeedQuantumIdx =			24;					// pBarSpeedQuantumIdx
@@ -397,10 +397,10 @@ static const uint16_t pAddressJSONoutput =					nextAllowedValue;	// pJSONoutputI
 static const uint16_t pAddressBluetoothOutput =				nextAllowedValue;	// pBluetoothOutputIdx
 #define nextAllowedValue pAddressBluetoothOutput + byteSize(pSizeBluetoothOutput)
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint16_t pAddressFEvsTime =					nextAllowedValue;	// pFEvsTimeIdx
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint16_t pAddressBarLowSpeedCutoff =			nextAllowedValue;	// pBarLowSpeedCutoffIdx
 static const uint16_t pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);	// pBarSpeedQuantumIdx
@@ -596,10 +596,10 @@ static const uint8_t pJSONoutputIdx =					nextAllowedValue;
 static const uint8_t pBluetoothOutputIdx =				nextAllowedValue;
 #define nextAllowedValue pBluetoothOutputIdx + 1
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t pBarLowSpeedCutoffIdx =			nextAllowedValue;
 static const uint8_t pBarSpeedQuantumIdx =				pBarLowSpeedCutoffIdx + 1;
@@ -800,9 +800,9 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useBluetooth)
 	"pBluetoothOutputIdx" tcEOS
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"pFEvsTimeIdx" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	"pBarLowSpeedCutoffIdx" tcEOS
 	"pBarSpeedQuantumIdx" tcEOS
@@ -1161,9 +1161,9 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useBluetooth)
 	(pSizeBluetoothOutput & 0x07),												// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	(pSizeFEvsTime & 0x07) | pfHardwareInitMPGuino,								// Period Of FE over Time BarGraph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	(pSizeBarLowSpeedCutoff & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph lower speed
 	(pSizeBarSpeedQuantumIdx & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph speed bar size
@@ -1314,9 +1314,9 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useBluetooth)
 	pAddressBluetoothOutput,			// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	pAddressFEvsTime,					// Period Of FE over Time Bar Graph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	pAddressBarLowSpeedCutoff,			// FE vs Speed Bargraph lower speed
 	pAddressBarSpeedQuantumIdx,			// FE vs Speed Bargraph speed bar size
@@ -1470,9 +1470,9 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 #if defined(useBluetooth)
 	1,					// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	60,					// Length Of BarGraph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	25000,				// FE vs Speed Bargraph lower speed
 	5000,				// FE vs Speed Bargraph speed bar size

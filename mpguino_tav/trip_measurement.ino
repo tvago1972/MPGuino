@@ -297,12 +297,12 @@ static uint8_t tripSupport::translateTripIndex(uint8_t tripTransferIdx, uint8_t 
 			break;
 
 #endif // defined(useWindowTripFilter)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 		case 0x7C:		// replace generic fuel econ vs time trip index with current fuel econ vs time trip index
 			i = bgFEvsTsupport::getFEvTimeIdx();
 			break;
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 		case 0x7B:	// replace generic fuel econ vs speed trip index with current fuel econ vs speed trip index
 			SWEET64::runPrgm(S64_PRGM_PTR(prgmFEvsSpeed), instantIdx);

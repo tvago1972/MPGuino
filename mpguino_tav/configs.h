@@ -18,8 +18,8 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino - recommended for use with Mega2560
-#define useAtMega328debugMonitor true		// PC-only Arduino UNO R3 debugging terminal interface between PC and MPGuino
+//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino - recommended for use with Mega2560
+#define useSWEET64devMonitor true			// serial SWEET64 development monitor for small AVR boards
 //#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
@@ -93,7 +93,7 @@
 //#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading
 //#define useDebugTerminalSWEET64 true		// support for listing and tracing indexed SWEET64-defined functions
-#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
+//#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //
@@ -164,7 +164,7 @@
 #define useBigFE true						// Show big fuel economy displays
 #define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 #define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define useStatusMeter true					// displays a graphical meter for use with MPG display
 #define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
@@ -200,7 +200,7 @@
 // do not mess with them, or compilation errors will occur
 //
 
-#if defined(useAtMega328debugMonitor)
+#if defined(useSWEET64devMonitor)
 #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
 #undef useSimulatedFIandVSS
 #define useDebugTerminal true
@@ -209,6 +209,7 @@
 #define useDebugTerminalSWEET64 true
 #define useSWEET64RAMprograms true
 #define useIsqrt true						// regression-test the Isqrt SWEET64 opcode
+#define useFEvTdata true					// FEvT SWEET64 data/opcode without the bar-graph display
 #define useDebugTerminalSerialPort0 true
 #undef useDebugTerminalSerialPort1
 #undef useDebugTerminalSerialPort2
@@ -282,9 +283,9 @@
 #define useDebugCPUreading true
 #endif // defined(__AVR_ATmega2560__)
 #else // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
-#undef useAtMega328debugMonitor
+#undef useSWEET64devMonitor
 #endif // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
-#endif // defined(useAtMega328debugMonitor)
+#endif // defined(useSWEET64devMonitor)
 
 #if ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
 #error *** Pre-defined MPGuino board conflict exists!!! ***
@@ -649,9 +650,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useJSONserialBufferedOutput
 #endif // defined(useJSONoutput)
 
-#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
+#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useSWEET64devMonitor)
 #undef useDebugTerminal
-#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
+#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useSWEET64devMonitor)
 
 #if defined(useDebugTerminal)
 #if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
@@ -1215,6 +1216,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
 #define useBigDigitDisplay true
 #endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
+
+#if defined(useBarFuelEconVsTime)
+#define useFEvTdata true					// the FEvT display implies the FEvT SWEET64 data/opcode
+#endif // defined(useBarFuelEconVsTime)
 
 #if defined(useBarFuelEconVsSpeed) || defined(useBarFuelEconVsTime)
 #define useBarGraph true

@@ -450,10 +450,10 @@ static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer 
 #define nextAllowedValue instrIsqrt + 1
 #endif // defined(useIsqrt)
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t instrLdRegTripFEvTindexed =	nextAllowedValue;						// load trip index from fuel econ vs time trip array
 #define nextAllowedValue instrLdRegTripFEvTindexed + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 
 #if defined(useMatrixMath)
 static const uint8_t instrLdRegXColIndexedRow =		nextAllowedValue;						// load 64-bit register X with contents of Matrix X indexed row specified column
@@ -560,9 +560,9 @@ static const char opCodeList[] PROGMEM = {
 #if defined(useIsqrt)
 	"Isqrt" tcEOS
 #endif // defined(useIsqrt)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"LdRegTripFEvTindexed" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useMatrixMath)
 	"LdRegXColIndexedRow" tcEOS
 	"StRegXColIndexedRow" tcEOS
@@ -674,9 +674,9 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 #if defined(useIsqrt)
 	(((r01 | p00 | s00) << 8) |			(m00 | i28)),			// instrIsqrt
 #endif // defined(useIsqrt)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	(((r04 | p02 | s01) << 8) |			(m04 | i17)),			// instrLdRegTripFEvTindexed
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useMatrixMath)
 	(((r01 | p01 | s02) << 8) |			(m00 | i20)),			// instrLdRegXColIndexedRow
 	(((r01 | p01 | s02) << 8) |			(m00 | i21)),			// instrStRegXColIndexedRow

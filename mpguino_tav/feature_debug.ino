@@ -1689,9 +1689,9 @@ static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t forma
 				operandLabelIdx = dslIdxProgramVariable;
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			case i18:	// load rX with trip variable
 			case i19:	// store trip variable rX
 				operandLabelIdx = dslIdxTripVariable;

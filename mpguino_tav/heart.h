@@ -432,10 +432,10 @@ static const uint8_t v8Serial2StatusIdx =				nextAllowedValue;
 static const uint8_t v8Serial3StatusIdx =				nextAllowedValue;
 #define nextAllowedValue v8Serial3StatusIdx + 1
 #endif // defined(useSerial3Port)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t v8FEvTimeTripIdx =					nextAllowedValue;
 #define nextAllowedValue v8FEvTimeTripIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useJSONoutput)
 static const uint8_t v8Subtitle1Idx =					nextAllowedValue;
 #define nextAllowedValue v8Subtitle1Idx + 1
@@ -648,11 +648,11 @@ static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software c
 static const uint8_t v32InjectorCorrectionIdx =			nextAllowedValue;						// Chrysler fuel injector correction value
 #define nextAllowedValue v32InjectorCorrectionIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t v32FEvsTimePeriodTickIdx =			nextAllowedValue;						// time period for fuel economy vs time bargraph
 static const uint8_t v32FEvsTimePeriodCountIdx =		v32FEvsTimePeriodTickIdx + 1;			// timer0 countdown timer for fuel economy vs time bargraph
 #define nextAllowedValue v32FEvsTimePeriodCountIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useDebugCPUreading)
 static const uint8_t v32WorkingTimer0Idx =				nextAllowedValue;						// timer0 overflow interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingTimer0Idx + 1
@@ -983,9 +983,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useSerial3Port)
 	"v8Serial3StatusIdx" tcEOS
 #endif // defined(useSerial3Port)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"v8FEvTimeTripIdx" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useJSONoutput)
 	"v8Subtitle1Idx" tcEOS
 #if defined(useDragRaceFunction)
@@ -1139,10 +1139,10 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useChryslerMAPCorrection)
 	"v32InjectorCorrectionIdx" tcEOS			// fi close
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"v32FEvsTimePeriodTickIdx" tcEOS			// timer0
 	"v32FEvsTimePeriodCountIdx" tcEOS			// timer0
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useDebugCPUreading)
 	"v32WorkingTimer0Idx" tcEOS					// timer0 overflow interrupt handler
 #if defined(useTimer1Interrupt)
@@ -1183,8 +1183,8 @@ static const char terminalVariableLabels[] PROGMEM = {
 #endif // defined(useSerial3Port)
 
 #endif // defined(useDebugCPUreading)
-#if defined(useBarFuelEconVsTime)
-#endif // defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
+#endif // defined(useFEvTdata)
 #if defined(useDragRaceFunction)
 	"v32DragRawTopSpeedIdx" tcEOS				// timer0
 	"v32DragRawTrapSpeedIdx" tcEOS				// timer0
@@ -1390,7 +1390,7 @@ static const char timer0Status0FlagMarkers[] PROGMEM = {
 static const uint8_t t0sbSampleBLEfriend =			0b10000000;		// useBluetoothAdaFruitSPI
 static const uint8_t t0sbReadRTC =					0b01000000;		// useRealTimeClockModule
 static const uint8_t t0sbErrorRTC =					0b00100000;		// useRealTimeClockModule
-static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useBarFuelEconVsTime
+static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useFEvTdata
 static const uint8_t t0sbAccelTestFlag =			0b00001000;		// useDragRaceFunction
 static const uint8_t t0sbCoastdownTestFlag =		0b00000100;		// useCoastDownCalculator
 

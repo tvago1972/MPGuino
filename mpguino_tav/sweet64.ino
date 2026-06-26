@@ -711,12 +711,12 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 			default:
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
 				branchFlag = true;
 				break;
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 		}
 
 		if (branchFlag)
@@ -845,7 +845,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				}
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
 				if (operand >= bgDataSize) operand = 0; // shift index
 				operand++;
@@ -854,7 +854,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				if (operand >= bgDataSize) operand -= bgDataSize; // perform wrap-around if required
 
 				operand += FEvsTimePeriodIdx; // shift back into trip index space
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			case i18:	// load rX with trip variable
 				if (operand < tripSlotCount)
 				{

@@ -1,3 +1,12 @@
+#if defined(useFEvTdata)
+namespace bgFEvsTsupport /* fuel economy over time histograph data support section prototype */
+{
+
+	static uint8_t getFEvTimeIdx(void);
+
+};
+
+#endif // defined(useFEvTdata)
 #if defined(useBarGraph)
 namespace barGraphSupport /* Bar Graph support section prototype */
 {
@@ -18,13 +27,6 @@ static const char bgSpaces[] PROGMEM = {
 };
 
 #if defined(useBarFuelEconVsTime)
-namespace bgFEvsTsupport /* fuel economy over time histograph support section prototype */
-{
-
-	static uint8_t getFEvTimeIdx(void);
-
-};
-
 static const char barFEvTfuncNames[] PROGMEM = {
 	"FuelUsed / Time" tcEOS
 	"Distance / Time" tcEOS
