@@ -94,3 +94,12 @@ CASES = [
         expect={3: 0x77778888},
     ),
 ]
+
+# LdRegTripFEvTindexed (and the FEvT trip slots/variable it uses) only exist
+# when the firmware is built with useFEvTdata.  That is force-enabled in the
+# ATmega2560 dev monitor but dropped from the Uno-class build (the FEvT data +
+# opcode do not fit the 328P flash budget), so these cases must be skipped
+# rather than hard-failed when run against a Uno.  Declaring the requirement
+# here lets the runner skip them when the connected build lacks the opcode.
+for _case in CASES:
+    _case.requires = ["LdRegTripFEvTindexed"]

@@ -29,6 +29,25 @@ default.
   resolved by name. That requirement makes labels mandatory for the harness as a
   whole — never hardcode a program-variable index.
 
+### Config-gated opcodes and target coverage
+
+A few opcodes are conditionally compiled and are **not present in every build**.
+The clearest example is `LdRegTripFEvTindexed` (the FE-vs-time trip read, gated
+by `useFEvTdata`): it is force-enabled in the **ATmega2560** dev monitor but
+**dropped from the Uno-class (ATmega328P) build**, because the FEvT trip slots
+plus opcode do not fit the 328P flash budget.
+
+Because of this, **full opcode coverage requires running the suite against the
+ATmega2560 `useSWEET64devMonitor` build.** The Uno build is a valid target, but
+it cannot exercise FEvT.
+
+To keep the Uno run green, the runner discovers the connected build's
+instruction set once (via `^I`) and **skips** any case that declares a
+`requires=[...]` opcode the build lacks, instead of letting it hard-fail in the
+assembler. Skipped cases are reported on their own `SKIP` line and counted
+separately in the summary (`N passed, M failed, K skipped, T total`); they do
+not affect the exit code. See `cases_fevt.py` for the pattern.
+
 ## Hardware behavior
 
 Opening the serial port asserts DTR, which **resets the board** and
@@ -105,3 +124,7 @@ Notes:
 - Branch targets use labels (`name:` lines); see `cases_flow.py`.
 - `CmpXtoY` + `BranchIfLT`/`BranchIfGTorE` are intentionally inverted relative to
   their names — see `cases_compare.py`.
+- If a case uses a config-gated opcode that may be absent on some target
+  (e.g. FEvT on Uno-class builds), set `requires=["Mnemonic", ...]` so the
+  runner skips it on builds whose `^I` instruction set lacks that opcode,
+  instead of hard-failing. See `cases_fevt.py`.

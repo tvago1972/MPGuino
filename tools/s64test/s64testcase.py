@@ -56,6 +56,10 @@ class S64Case:
     expect_error: bool = False          # whether a SWEET64 error is expected
     subroutine: list = field(default_factory=list)  # Call/Jump: RAM subroutine lines
     override_index: int = 0             # program index redirected to the subroutine
+    requires: list = field(default_factory=list)  # opcode mnemonics this case needs; the
+                                        # case is skipped (not failed) if the connected
+                                        # build's instruction set lacks any of them, e.g.
+                                        # config-gated opcodes absent on smaller targets
 
 
 @dataclass

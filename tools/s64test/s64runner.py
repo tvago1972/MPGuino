@@ -8,17 +8,32 @@ board mid-suite.  Prints a per-case PASS/FAIL line and a summary.
 import sys
 from s64terminal import S64Terminal, S64TerminalError
 from s64testcase import run_case
+from s64instructions import fetch_instruction_set
 
 
 def run_suite(port, baud, cases):
     """Run all cases in a single session.  Returns (passed, failed)."""
     passed = 0
     failed = 0
+    skipped = 0
 
     with S64Terminal(port, baud) as term:
         term.wait_for_prompt()
 
+        # discover the connected build's instruction set once, so cases whose
+        # opcodes are config-gated out of this build (e.g. FEvT on Uno-class
+        # flash) are skipped rather than hard-failing in the assembler.
+        by_mnemonic, _ = fetch_instruction_set(term)
+        available = set(by_mnemonic)
+
         for case in cases:
+            missing = [m for m in case.requires if m not in available]
+            if missing:
+                skipped += 1
+                print('SKIP  {}  (build lacks: {})'.format(
+                    case.name, ', '.join(missing)))
+                continue
+
             result = run_case(term, case)
             if result.passed:
                 passed += 1
@@ -30,7 +45,8 @@ def run_suite(port, baud, cases):
                     print('        {}'.format(msg))
 
     print()
-    print('{} passed, {} failed, {} total'.format(passed, failed, passed + failed))
+    print('{} passed, {} failed, {} skipped, {} total'.format(
+        passed, failed, skipped, passed + failed + skipped))
     return passed, failed
 
 
