@@ -17,7 +17,7 @@ The core measurement model remains direct hardware capture:
 
 SWEET64 was introduced to reduce the flash cost of repeated 64-bit trip and display calculations. Earlier versions used separate AVR C/C++ routines for many calculations, which made each formula expensive in program memory.
 
-SWEET64 moved those formulas into compact bytecode programs backed by a small 64-bit interpreter. That made display calculations easier to share, inspect, and later test.
+SWEET64 moved those formulas into compact bytecode programs backed by a small interpreter capable of performing 64-bit arithmetic. That made display calculations easier to share, inspect, and later test.
 
 Important SWEET64 milestones include:
 
