@@ -889,9 +889,7 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 static const char terminalBCDformatNames[] PROGMEM = {
 	"bcdFormat10digit" tcEOS
-#if defined(useClockSupport)
 	"bcdFormatHHMMSS" tcEOS
-#endif // defined(useClockSupport)
 	"bcdFormatH9MMSS" tcEOS
 	"bcdFormatOverflow" tcEOS
 };
@@ -989,10 +987,11 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 #define nextAllowedValue 0
 static const uint8_t bcdFormat10digit =		nextAllowedValue;
 #define nextAllowedValue bcdFormat10digit + 1
-#if defined(useClockSupport)
+// HHMMSS is always compiled (not gated on useClockSupport) so the BCD format
+// indices stay stable across builds; the clock code that *uses* it is still
+// gated by useClockSupport.  Costs only the 7-byte descriptor below.
 static const uint8_t bcdFormatHHMMSS =		nextAllowedValue;
 #define nextAllowedValue bcdFormatHHMMSS + 1
-#endif // defined(useClockSupport)
 static const uint8_t bcdFormatH9MMSS =		nextAllowedValue;
 static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
 static const uint8_t bcdFormatCount =		bcdFormatOverflow + 1;
@@ -1008,8 +1007,7 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	100,		// 100000s and 1000000s
 	100,		// 10000000s and 100000000s
 
-#if defined(useClockSupport)
-	// hhmmss number format
+	// hhmmss number format (always compiled so format indices stay build-stable)
 	0x07,		// total entry length
 	'0',		// leading zero character
 	0x03,		// total BCD byte length / offset into 64-bit register for BCD LSB
@@ -1018,7 +1016,6 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	60,			// minutes
 	24,			// hours
 
-#endif // defined(useClockSupport)
 	// h9mmss number format
 	0x07,		// total entry length
 	'0',		// leading zero character
