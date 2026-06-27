@@ -4,9 +4,9 @@
 //#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
-#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
+//#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module
-//#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
+#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
 // the below output options may be chosen independently of any other MPGuino hardware
 //   - none of the below options require an LCD or TFT display
@@ -334,15 +334,21 @@
 #define useTFToutput true
 #define useILI9341 true
 #define useTouchScreenInput true
-#define useBluetooth true
-#define useBluetoothSerialPort1 true
-#define useBluetoothSerialBaudRate 9600
-#define useBluetoothBufferedOutput true
 #define useAlternatorVoltage true
-#undef useBluetoothSerialPort0
-#undef useBluetoothSerialPort2
-#undef useBluetoothSerialPort3
-#undef useBluetoothAdaFruitSPI
+// Bench bring-up: use the board's Serial1 header (USART1, pins 18/19) for the
+// SWEET64 debug terminal instead of a Bluetooth module. On the ATmega2560,
+// defining useDebugTerminal auto-enables the full monitor (help, labels,
+// SWEET64 listing/trace, RAM programs, iSqrt). Baud is useDebugTerminalSerialBaudRate (38400).
+#define useDebugTerminal true
+#undef useDebugTerminalSerialPort0
+#define useDebugTerminalSerialPort1 true
+// Bluetooth shares Serial1, so it is disabled during bring-up. To use a BT
+// module later, re-enable these and move the debug terminal off Serial1
+// (e.g. to Serial2/3) so they do not collide on the same UART.
+//#define useBluetooth true
+//#define useBluetoothSerialPort1 true
+//#define useBluetoothSerialBaudRate 9600
+//#define useBluetoothBufferedOutput true
 #endif // defined(useMPGuinoColourTouch)
 
 #if defined(useILI9341)
@@ -375,6 +381,17 @@
 #undef useScreenEditor
 #undef blankScreenOnMessage
 #undef useExpandedMainDisplay
+// LCD transports / core LCD output and clock display - no LCD on a TFT build
+#undef useSerialLCD
+#undef useTWI4BitLCD
+#undef usePort4BitLCD
+#undef use4BitLCD
+#undef useLCDoutput
+#undef useClockDisplay
+// features that render through the LCD/button display+menu layer, which the
+// TFT build does not have yet (no TFT display/menu layer). strip them like the
+// useSWEET64devMonitor build does, until a TFT presentation layer exists.
+#undef useDragRaceFunction
 #endif // defined(useTFToutput)
 
 #if defined(useTouchScreenInput)

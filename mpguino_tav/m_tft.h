@@ -17,6 +17,8 @@ namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
 	static void writeDataByte(uint8_t byt);
 	static void writeDataWord(uint16_t wrd);
 	static void writeDataByteString(const uint8_t * &str, uint8_t strLen);
+	static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+	static void fillScreen(uint16_t color);
 	static void setBrightness(uint8_t brightIdx);
 	static uint8_t isCSreleased(void);
 	static void releaseCS(void);
@@ -28,6 +30,13 @@ namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
 
 #define ILI9341_TFTWIDTH  240
 #define ILI9341_TFTHEIGHT 320
+
+// RGB565 colors (16-bit, MSB first) for the bring-up fill test
+static const uint16_t ILI9341_BLACK =		0x0000;
+static const uint16_t ILI9341_RED =			0xF800;
+static const uint16_t ILI9341_GREEN =		0x07E0;
+static const uint16_t ILI9341_BLUE =		0x001F;
+static const uint16_t ILI9341_WHITE =		0xFFFF;
 
 static const uint8_t ILI9341_NOP =			0x00;
 static const uint8_t ILI9341_SWRESET =		0x01;

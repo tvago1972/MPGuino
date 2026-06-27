@@ -17,7 +17,7 @@ namespace heart /* core MPGuino system support section prototype */
 	static uint32_t getCycle0Length(uint8_t lastCycleIdx);
 	static uint32_t cycles0(void);
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
-//	static void wait0(uint16_t ms);
+	static void wait0(uint16_t ms);
 	static void changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR);
 	static void performSleepMode(uint8_t sleepMode);
 #if defined(useTimer1Interrupt)
@@ -399,6 +399,10 @@ static const uint8_t v8SignalSimVSSstate =				v8SignalSimFIPidx + 1;					// simu
 static const uint8_t v8SignalSimFIPstate =				v8SignalSimVSSstate + 1;				// simulated fuel injector state
 #define nextAllowedValue v8SignalSimFIPstate + 1
 #endif // defined(useSimulatedFIandVSS)
+#endif // defined(useTimer1Interrupt)
+// the bluetooth status variables are not timer1-specific, so they are defined
+// outside the useTimer1Interrupt block (bluetooth can be enabled without it).
+// kept in their original order so the debug-terminal label list stays aligned.
 #if defined(useBluetooth)
 static const uint8_t v8btOutputStatusIdx =				nextAllowedValue;						// bluetooth output status flag
 #define nextAllowedValue v8btOutputStatusIdx + 1
@@ -407,7 +411,6 @@ static const uint8_t v8btOutputStatusIdx =				nextAllowedValue;						// bluetoot
 static const uint8_t v8BLEstatusIdx =					nextAllowedValue;						// AdaFruit BLEfriend condition flags
 #define nextAllowedValue v8BLEstatusIdx + 1
 #endif // defined(useBluetoothAdaFruitSPI)
-#endif // defined(useTimer1Interrupt)
 #if defined(useDragRaceFunction)
 static const uint8_t v8AccelerationFlagsIdx =			nextAllowedValue;						// acceleration test mode flags
 #define nextAllowedValue v8AccelerationFlagsIdx + 1

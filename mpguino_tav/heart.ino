@@ -2491,17 +2491,19 @@ static void heart::sleepModeIdle(uint8_t bmsk)
 #endif // defined(useDebugLEDactivity)
 }
 
-//static void heart::wait0(uint16_t ms)
-//{
-//
-//	uint8_t delay0Channel;
-//
-//	delay0Channel = delay0(ms, 0);
-//
-//	while (v08(v8Timer0DelayIdx) & delay0Channel) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-//
-//}
-//
+#include <util/delay.h>
+// blocking millisecond wait used during one-time hardware bring-up (e.g. the
+// TFT hardware reset). the old cooperative timer0 delay-channel mechanism was
+// removed, so this is a simple busy-wait, which is acceptable here because it
+// only runs at start-up before the cooperative main loop begins. _delay_ms()
+// needs a compile-time-constant argument, so spin one millisecond at a time.
+static void heart::wait0(uint16_t ms)
+{
+
+	while (ms--) _delay_ms(1);
+
+}
+
 // this function is needed since there is no way to perform an atomic bit change of an SRAM byte value
 // most MPGuino variables that are shared between main program and interrupt handlers should not need to
 //    be treated as atomic (!) because only one side or the other is supposed to change said variables

@@ -30,8 +30,21 @@ static void ILI9341::init(void)
 	// enable TFT brightness
 #if defined(__AVR_ATmega2560__)
 #if defined(useMPGuinoColourTouch)
-	DDRB |= (1 << DDB6);
-	DDRL |= (1 << DDL1);
+	DDRB |= (1 << DDB6); // backlight enable (PB6) as output
+	DDRL |= (1 << DDL1); // DC (PL1 / Arduino pin 48) as output
+	DDRC |= (1 << DDC7); // hardware /RESET (PC7 / Arduino pin 30) as output
+
+	// pulse the ILI9341 hardware reset. the controller ignores all SPI traffic
+	// until it is brought out of hardware reset, so this must happen before any
+	// commands are sent. RESET is on PC7 (Arduino pin 30) per the original
+	// abbalooga TFT_ILI9341 User_Setup.h; timing follows that library (5/20/150ms,
+	// rounded up here).
+	PORTC |= (1 << PORTC7); // /RESET high (inactive)
+	heart::wait0(5);
+	PORTC &= ~(1 << PORTC7); // assert /RESET (active low)
+	heart::wait0(20);
+	PORTC |= (1 << PORTC7); // release /RESET
+	heart::wait0(200); // wait for the controller to become ready
 #endif // defined(useMPGuinoColourTouch)
 #if defined(useSeeedStudioTFTtouchShield)
 	DDRH |= ((1 << DDH4) | (1 << DDH3));
@@ -54,19 +67,30 @@ static void ILI9341::init(void)
 
 			cmd = pgm_read_byte(str++);
 
-			if (cmd == ILI9341_SWRESET) heart::wait0(delay0Tick500ms);
+			if (cmd == ILI9341_SWRESET) heart::wait0(500);
 
 			writeCommandByte(cmd);
 
 			writeDataByteString(str, strLen - 1);
 
-			if (cmd == ILI9341_SWRESET) heart::wait0(delay0Tick200ms);
-			else if (cmd == ILI9341_SLPOUT) heart::wait0(delay0Tick200ms);
+			if (cmd == ILI9341_SWRESET) heart::wait0(200);
+			else if (cmd == ILI9341_SLPOUT) heart::wait0(200);
 
 		}
 
 	}
 	while (strLen);
+
+	// --- bring-up go/no-go test: cycle solid colors so a live panel is obvious
+	// and the R/G/B order can be verified. remove once the TFT UI layer exists.
+	fillScreen(ILI9341_RED);
+	heart::wait0(500);
+	fillScreen(ILI9341_GREEN);
+	heart::wait0(500);
+	fillScreen(ILI9341_BLUE);
+	heart::wait0(500);
+	fillScreen(ILI9341_BLACK);
+	// --- end bring-up test
 
 }
 
@@ -141,6 +165,51 @@ static void ILI9341::writeDataByteString(const uint8_t * &str, uint8_t strLen)
 		releaseCS();
 
 	}
+
+}
+
+// set the active drawing rectangle, then issue RAMWR so pixel data can stream
+static void ILI9341::setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+{
+
+	writeCommandByte(ILI9341_CASET); // column address set
+	writeDataByte(x0 >> 8);
+	writeDataByte(x0);
+	writeDataByte(x1 >> 8);
+	writeDataByte(x1);
+
+	writeCommandByte(ILI9341_PASET); // page (row) address set
+	writeDataByte(y0 >> 8);
+	writeDataByte(y0);
+	writeDataByte(y1 >> 8);
+	writeDataByte(y1);
+
+	writeCommandByte(ILI9341_RAMWR); // memory write
+
+}
+
+// fill the whole panel with one RGB565 color - a visible go/no-go bring-up test
+static void ILI9341::fillScreen(uint16_t color)
+{
+
+	union union_16 * c = (union union_16 *)(&color);
+	uint32_t pixels = (uint32_t)(ILI9341_TFTWIDTH) * (uint32_t)(ILI9341_TFTHEIGHT);
+
+	setAddrWindow(0, 0, ILI9341_TFTWIDTH - 1, ILI9341_TFTHEIGHT - 1);
+
+	// stream every pixel with CS held the whole time (MSB first)
+	dataMode();
+	assertCS();
+
+	while (pixels--)
+	{
+
+		spi::transfer(c->u08[1]);
+		spi::transfer(c->u08[0]);
+
+	}
+
+	releaseCS();
 
 }
 
