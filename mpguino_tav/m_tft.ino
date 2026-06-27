@@ -10,6 +10,8 @@ static void TFT::init(void)
 	tftScale = 2;
 	tftFGcolour = ILI9341_WHITE;
 	tftBGcolour = ILI9341_BLACK;
+	tftTextPadding = 0;
+	tftFieldStartX = 0;
 	TFT::setRotation(0);
 
 	// register the TFT as a text output device so text::stringOut/charOut/numberOut
@@ -38,13 +40,22 @@ static void TFT::chrOut(uint8_t chr)
 	switch (chr)
 	{
 
-		case 0x0D: // carriage return - back to left margin
+		case 0x0D: // carriage return - back to left margin (pad the field being left)
+			TFT::applyPadding();
 			tftCursorX = 0;
+			tftFieldStartX = 0;
 			break;
 
 		case 0x0A: // line feed - down one row, wrap to top at the bottom
 			tftCursorY += cellH;
 			if (tftCursorY + cellH > tftHeight) tftCursorY = 0;
+			break;
+
+		case 0x80 ... 0xCF: // text::gotoXY position char: 0x80 + row*20 + col (LCD-shaped: <=4 rows x 20 cols)
+			TFT::applyPadding();
+			tftCursorX = (uint16_t)((chr - 0x80) % 20) * cellW;
+			tftCursorY = (uint16_t)((chr - 0x80) / 20) * cellH;
+			tftFieldStartX = tftCursorX;
 			break;
 
 		default:
@@ -90,8 +101,50 @@ static void TFT::setTextColour(uint16_t fg, uint16_t bg)
 static void TFT::gotoXY(uint8_t col, uint8_t row)
 {
 
+	TFT::applyPadding();
 	tftCursorX = (uint16_t)(col) * (uint16_t)(TFT_CELL_W) * tftScale;
 	tftCursorY = (uint16_t)(row) * (uint16_t)(TFT_CELL_H) * tftScale;
+	tftFieldStartX = tftCursorX;
+
+}
+
+// pixel-precise cursor for absolute (abbalooga-style) layout
+static void TFT::setCursorPixel(uint16_t x, uint16_t y)
+{
+
+	TFT::applyPadding();
+	tftCursorX = x;
+	tftCursorY = y;
+	tftFieldStartX = x;
+
+}
+
+// set a fixed field width (pixels) starting at the current cursor. when the
+// cursor next leaves the field (reposition or CR), any gap from the end of the
+// drawn text out to the field width is cleared to the background, so a shorter
+// new value cleanly overwrites a longer old one. 0 disables padding.
+static void TFT::setTextPadding(uint16_t pixels)
+{
+
+	tftTextPadding = pixels;
+	tftFieldStartX = tftCursorX;
+
+}
+
+// fill the remainder of the current padded field with background (no-op if
+// padding is off or the text already filled/overran the field)
+static void TFT::applyPadding(void)
+{
+
+	uint16_t endX;
+
+	if (tftTextPadding)
+	{
+
+		endX = tftFieldStartX + tftTextPadding;
+		if (tftCursorX < endX) ILI9341::fillRect(tftCursorX, tftCursorY, endX - tftCursorX, (uint16_t)(TFT_CELL_H) * tftScale, tftBGcolour);
+
+	}
 
 }
 
@@ -142,6 +195,49 @@ static void TFT::setRotation(uint8_t rotation)
 	ILI9341::writeDataByte(madctl);
 
 	TFT::clearScreen(); // reset cursor and repaint the background in the new geometry
+
+}
+
+// dev test screen exercising the drawing primitives + padding. assumes the
+// screen was just cleared (the 'G' command calls this right after setRotation).
+static void TFT::drawTestScreen(void)
+{
+
+	uint16_t cellW = (uint16_t)(TFT_CELL_W) * tftScale;
+	uint16_t cellH = (uint16_t)(TFT_CELL_H) * tftScale;
+	uint16_t y;
+
+	// header bar (fillRect) with a title drawn white-on-blue
+	ILI9341::fillRect(0, 0, tftWidth, cellH + 4, ILI9341_BLUE);
+	TFT::setTextColour(ILI9341_WHITE, ILI9341_BLUE);
+	TFT::setCursorPixel(4, 2);
+	text::stringOut(m8DevTFTidx, PSTR("TFT test  rot "));
+	text::charOut(m8DevTFTidx, (uint8_t)('0' + tftRotation));
+	TFT::setTextColour(ILI9341_WHITE, ILI9341_BLACK);
+
+	// a horizontal divider and a diagonal (drawLine: fast H/V path + Bresenham)
+	y = cellH + 10;
+	ILI9341::drawLine(0, y, tftWidth - 1, y, ILI9341_GREEN);
+	ILI9341::drawLine(0, y + 6, 48, y + 54, ILI9341_RED);
+
+	// fillRect colour swatches in the top-right
+	ILI9341::fillRect(tftWidth - 58, y + 8, 16, 16, ILI9341_RED);
+	ILI9341::fillRect(tftWidth - 38, y + 8, 16, 16, ILI9341_GREEN);
+	ILI9341::fillRect(tftWidth - 18, y + 8, 16, 16, ILI9341_BLUE);
+
+	// padding demo: fill an 8-char field with X's, then overwrite with a short
+	// value. padding clears the stale tail, so the X's vanish without a clear.
+	y = y + 70;
+	TFT::setCursorPixel(4, y);
+	text::stringOut(m8DevTFTidx, PSTR("pad:"));
+	TFT::setTextPadding(8 * cellW);					// 8-char field starting after "pad:"
+	text::stringOut(m8DevTFTidx, PSTR("XXXXXXXX"));	// fill the field
+	heart::wait0(600);								// hold so the wide fill is visible
+	TFT::setCursorPixel(4 + 4 * cellW, y);			// back to the field start
+	TFT::setTextPadding(8 * cellW);					// re-arm padding for this field
+	text::stringOut(m8DevTFTidx, PSTR("ok"));		// short value
+	text::charOut(m8DevTFTidx, 0x0D);				// leaving the field clears its tail
+	TFT::setTextPadding(0);							// padding off
 
 }
 
@@ -370,6 +466,74 @@ static void ILI9341::drawChar(uint16_t x, uint16_t y, uint8_t c, uint16_t fg, ui
 			}
 
 	releaseCS();
+
+}
+
+// fill a rectangle with a solid RGB565 colour (one address window, MSB-first)
+static void ILI9341::fillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color)
+{
+
+	uint32_t pixels;
+	uint8_t hi = (uint8_t)(color >> 8), lo = (uint8_t)(color);
+
+	if ((w == 0) || (h == 0)) return;
+
+	pixels = (uint32_t)(w) * (uint32_t)(h);
+
+	setAddrWindow(x, y, x + w - 1, y + h - 1);
+	dataMode();
+	assertCS();
+
+	while (pixels--) { spi::transfer(hi); spi::transfer(lo); }
+
+	releaseCS();
+
+}
+
+// set a single pixel
+static void ILI9341::drawPixel(uint16_t x, uint16_t y, uint16_t color)
+{
+
+	setAddrWindow(x, y, x, y);
+	dataMode();
+	assertCS();
+
+	spi::transfer((uint8_t)(color >> 8));
+	spi::transfer((uint8_t)(color));
+
+	releaseCS();
+
+}
+
+// draw a line. horizontal/vertical lines stream as a 1px rect; diagonals use Bresenham.
+static void ILI9341::drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color)
+{
+
+	int16_t dx, dy, sx, sy, err, e2, cx, cy;
+
+	if (y0 == y1) { if (x1 >= x0) fillRect(x0, y0, x1 - x0 + 1, 1, color); else fillRect(x1, y0, x0 - x1 + 1, 1, color); return; }
+	if (x0 == x1) { if (y1 >= y0) fillRect(x0, y0, 1, y1 - y0 + 1, color); else fillRect(x0, y1, 1, y0 - y1 + 1, color); return; }
+
+	dx = (int16_t)(x1) - (int16_t)(x0);
+	dy = (int16_t)(y1) - (int16_t)(y0);
+	sx = (dx >= 0) ? 1 : -1;
+	sy = (dy >= 0) ? 1 : -1;
+	if (dx < 0) dx = -dx;
+	if (dy < 0) dy = -dy;
+	err = ((dx > dy) ? dx : -dy) / 2;
+	cx = (int16_t)(x0);
+	cy = (int16_t)(y0);
+
+	while (1)
+	{
+
+		drawPixel((uint16_t)(cx), (uint16_t)(cy), color);
+		if ((cx == (int16_t)(x1)) && (cy == (int16_t)(y1))) break;
+		e2 = err;
+		if (e2 > -dx) { err -= dy; cx += sx; }
+		if (e2 < dy) { err += dx; cy += sy; }
+
+	}
 
 }
 

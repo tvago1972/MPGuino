@@ -8,7 +8,11 @@ namespace TFT /* TFT device support section prototype */
 	static void clearScreen(void);
 	static void setTextColour(uint16_t fg, uint16_t bg);
 	static void gotoXY(uint8_t col, uint8_t row);
+	static void setCursorPixel(uint16_t x, uint16_t y);
+	static void setTextPadding(uint16_t pixels);
+	static void applyPadding(void);
 	static void setRotation(uint8_t rotation);
+	static void drawTestScreen(void);
 
 };
 
@@ -25,6 +29,9 @@ namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
 	static void setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
 	static void fillScreen(uint16_t color);
 	static void drawChar(uint16_t x, uint16_t y, uint8_t c, uint16_t fg, uint16_t bg, uint8_t scale);
+	static void drawPixel(uint16_t x, uint16_t y, uint16_t color);
+	static void drawLine(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t color);
+	static void fillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
 	static void setBrightness(uint8_t brightIdx);
 	static uint8_t isCSreleased(void);
 	static void releaseCS(void);
@@ -57,6 +64,8 @@ static uint8_t  tftScale;		// integer pixel scale per glyph cell
 static uint16_t tftWidth;		// active screen width  (depends on rotation)
 static uint16_t tftHeight;		// active screen height (depends on rotation)
 static uint8_t  tftRotation;	// current rotation 0..3 (0/2 portrait, 1/3 landscape)
+static uint16_t tftTextPadding;	// field width (px) for flicker-free value overwrite; 0 = off
+static uint16_t tftFieldStartX;	// x where the current padded field began
 
 // 5x7 font, ASCII printable range 0x20..0x7F. five column bytes per glyph,
 // bit 0 = top row. column-major, matching the classic glcd 5x7 font.
