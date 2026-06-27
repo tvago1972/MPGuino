@@ -5,12 +5,92 @@ static void TFT::init(void)
 
 	ILI9341::init();
 
+	// text-device defaults: 2x scale (20 cols x 20 rows on 240x320), white on black
+	tftScale = 2;
+	tftFGcolour = ILI9341_WHITE;
+	tftBGcolour = ILI9341_BLACK;
+	TFT::clearScreen();
+
+	// register the TFT as a text output device so text::stringOut/charOut/numberOut
+	// (and the rest of the text layer) can render to the screen
+	text::initDev(m8DevTFTidx, (odvFlagCRLF | odvFlagEnableOutput), TFT::chrOut);
+
+	// temporary first-light banner, proving the text pipeline end to end
+	text::stringOut(m8DevTFTidx, PSTR("MPGuino Colour Touch" tcCR "TFT text online" tcCR));
+
 }
 
 static void TFT::shutdown(void)
 {
 
 	ILI9341::shutdown();
+
+}
+
+// text output device callback: advance a pixel cursor, handle CR/LF and wrap.
+static void TFT::chrOut(uint8_t chr)
+{
+
+	uint16_t cellW = (uint16_t)(TFT_CELL_W) * tftScale;
+	uint16_t cellH = (uint16_t)(TFT_CELL_H) * tftScale;
+
+	switch (chr)
+	{
+
+		case 0x0D: // carriage return - back to left margin
+			tftCursorX = 0;
+			break;
+
+		case 0x0A: // line feed - down one row, wrap to top at the bottom
+			tftCursorY += cellH;
+			if (tftCursorY + cellH > ILI9341_TFTHEIGHT) tftCursorY = 0;
+			break;
+
+		default:
+			if ((chr >= 0x20) && (chr <= 0x7F))
+			{
+
+				if (tftCursorX + cellW > ILI9341_TFTWIDTH) // wrap at the right edge
+				{
+
+					tftCursorX = 0;
+					tftCursorY += cellH;
+					if (tftCursorY + cellH > ILI9341_TFTHEIGHT) tftCursorY = 0;
+
+				}
+
+				ILI9341::drawChar(tftCursorX, tftCursorY, chr, tftFGcolour, tftBGcolour, tftScale);
+				tftCursorX += cellW;
+
+			}
+			break;
+
+	}
+
+}
+
+static void TFT::clearScreen(void)
+{
+
+	ILI9341::fillScreen(tftBGcolour);
+	tftCursorX = 0;
+	tftCursorY = 0;
+
+}
+
+static void TFT::setTextColour(uint16_t fg, uint16_t bg)
+{
+
+	tftFGcolour = fg;
+	tftBGcolour = bg;
+
+}
+
+static void TFT::gotoXY(uint8_t col, uint8_t row)
+{
+
+	tftCursorX = (uint16_t)(col) * (uint16_t)(TFT_CELL_W) * tftScale;
+	tftCursorY = (uint16_t)(row) * (uint16_t)(TFT_CELL_H) * tftScale;
 
 }
 
@@ -80,17 +160,6 @@ static void ILI9341::init(void)
 
 	}
 	while (strLen);
-
-	// --- bring-up go/no-go test: cycle solid colors so a live panel is obvious
-	// and the R/G/B order can be verified. remove once the TFT UI layer exists.
-	fillScreen(ILI9341_RED);
-	heart::wait0(500);
-	fillScreen(ILI9341_GREEN);
-	heart::wait0(500);
-	fillScreen(ILI9341_BLUE);
-	heart::wait0(500);
-	fillScreen(ILI9341_BLACK);
-	// --- end bring-up test
 
 }
 
@@ -208,6 +277,46 @@ static void ILI9341::fillScreen(uint16_t color)
 		spi::transfer(c->u08[0]);
 
 	}
+
+	releaseCS();
+
+}
+
+// render one 5x7 glyph into a (6*scale x 8*scale) cell at pixel (x,y), streaming
+// foreground/background RGB565 per font bit. one address window, MSB-first.
+static void ILI9341::drawChar(uint16_t x, uint16_t y, uint8_t c, uint16_t fg, uint16_t bg, uint8_t scale)
+{
+
+	uint8_t glyph[TFT_GLYPH_W];
+	uint8_t fgHi = (uint8_t)(fg >> 8), fgLo = (uint8_t)(fg);
+	uint8_t bgHi = (uint8_t)(bg >> 8), bgLo = (uint8_t)(bg);
+	uint8_t row, col, sx, sy, colBits, on;
+
+	if ((c < 0x20) || (c > 0x7F)) c = 0x20; // out-of-range glyphs render as a space
+
+	for (col = 0; col < TFT_GLYPH_W; col++) glyph[(uint16_t)(col)] = pgm_read_byte(&ILI9341font5x7[(uint16_t)(c - 0x20) * TFT_GLYPH_W + col]);
+
+	setAddrWindow(x, y, x + (uint16_t)(TFT_CELL_W) * scale - 1, y + (uint16_t)(TFT_CELL_H) * scale - 1);
+
+	dataMode();
+	assertCS();
+
+	for (row = 0; row < TFT_CELL_H; row++) // rows top to bottom
+		for (sy = 0; sy < scale; sy++) // vertical scaling
+			for (col = 0; col < TFT_CELL_W; col++) // columns left to right (col 5 = spacing)
+			{
+
+				on = ((col < TFT_GLYPH_W) && (row < 7)) ? ((glyph[(uint16_t)(col)] >> row) & 0x01) : 0;
+
+				for (sx = 0; sx < scale; sx++) // horizontal scaling
+				{
+
+					if (on) { spi::transfer(fgHi); spi::transfer(fgLo); }
+					else { spi::transfer(bgHi); spi::transfer(bgLo); }
+
+				}
+
+			}
 
 	releaseCS();
 
