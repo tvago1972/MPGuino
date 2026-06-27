@@ -472,6 +472,10 @@ static const char terminalHelp[] PROGMEM = {
 	tcSP7 "[y].[x]T - list terminal trip variable values, optionally between [y] and [x]" tcCR tcEOSCR
 	"xT:y [y] [y]... - store one or more y values, starting at terminal trip variable x" tcCR tcEOSCR
 
+#if defined(useTFToutput)
+	tcSP7 "[x]G - cycle TFT display rotation, or with x (0..3) set a specific rotation" tcCR tcEOSCR
+
+#endif // defined(useTFToutput)
 #if defined(useDebugTerminalSWEET64)
 	tcSP11 "N - toggle SWEET64 error mute (suppress/unsuppress repeated error output)" tcCR tcEOSCR
 	tcSP6 "[y].[x]^E - list SWEET64 register contents" tcEOSCR

@@ -5,11 +5,12 @@ static void TFT::init(void)
 
 	ILI9341::init();
 
-	// text-device defaults: 2x scale (20 cols x 20 rows on 240x320), white on black
+	// text-device defaults: 2x scale, white on black. setRotation establishes the
+	// MADCTL + active width/height and clears the screen (default portrait).
 	tftScale = 2;
 	tftFGcolour = ILI9341_WHITE;
 	tftBGcolour = ILI9341_BLACK;
-	TFT::clearScreen();
+	TFT::setRotation(0);
 
 	// register the TFT as a text output device so text::stringOut/charOut/numberOut
 	// (and the rest of the text layer) can render to the screen
@@ -43,19 +44,19 @@ static void TFT::chrOut(uint8_t chr)
 
 		case 0x0A: // line feed - down one row, wrap to top at the bottom
 			tftCursorY += cellH;
-			if (tftCursorY + cellH > ILI9341_TFTHEIGHT) tftCursorY = 0;
+			if (tftCursorY + cellH > tftHeight) tftCursorY = 0;
 			break;
 
 		default:
 			if ((chr >= 0x20) && (chr <= 0x7F))
 			{
 
-				if (tftCursorX + cellW > ILI9341_TFTWIDTH) // wrap at the right edge
+				if (tftCursorX + cellW > tftWidth) // wrap at the right edge
 				{
 
 					tftCursorX = 0;
 					tftCursorY += cellH;
-					if (tftCursorY + cellH > ILI9341_TFTHEIGHT) tftCursorY = 0;
+					if (tftCursorY + cellH > tftHeight) tftCursorY = 0;
 
 				}
 
@@ -91,6 +92,56 @@ static void TFT::gotoXY(uint8_t col, uint8_t row)
 
 	tftCursorX = (uint16_t)(col) * (uint16_t)(TFT_CELL_W) * tftScale;
 	tftCursorY = (uint16_t)(row) * (uint16_t)(TFT_CELL_H) * tftScale;
+
+}
+
+// change display orientation on the fly: 0/2 = portrait (240x320), 1/3 =
+// landscape (320x240). writes MADCTL, updates the active width/height, and
+// clears the screen in the new geometry.
+// NOTE: rotation 0 keeps the known-good portrait MADCTL (0x08). The MX/MY on the
+// landscape/flipped entries are the conventional choice; if a rotation comes out
+// mirrored on this panel, swap MX<->MY on that entry.
+static void TFT::setRotation(uint8_t rotation)
+{
+
+	uint8_t madctl;
+
+	tftRotation = (rotation & 0x03);
+
+	switch (tftRotation)
+	{
+
+		case 1: // landscape
+			madctl = (ILI9341_MAD_MV | ILI9341_MAD_MX | ILI9341_MAD_BGR);
+			tftWidth = ILI9341_TFTHEIGHT;
+			tftHeight = ILI9341_TFTWIDTH;
+			break;
+
+		case 2: // portrait, rotated 180
+			madctl = (ILI9341_MAD_MX | ILI9341_MAD_MY | ILI9341_MAD_BGR);
+			tftWidth = ILI9341_TFTWIDTH;
+			tftHeight = ILI9341_TFTHEIGHT;
+			break;
+
+		case 3: // landscape, rotated 180
+			madctl = (ILI9341_MAD_MV | ILI9341_MAD_MY | ILI9341_MAD_BGR);
+			tftWidth = ILI9341_TFTHEIGHT;
+			tftHeight = ILI9341_TFTWIDTH;
+			break;
+
+		default: // case 0: portrait (known-good orientation)
+			madctl = (ILI9341_MAD_BGR);
+			tftWidth = ILI9341_TFTWIDTH;
+			tftHeight = ILI9341_TFTHEIGHT;
+			break;
+
+	}
+
+	spi::set(SPIconfigTFT);
+	ILI9341::writeCommandByte(ILI9341_MADCTL);
+	ILI9341::writeDataByte(madctl);
+
+	TFT::clearScreen(); // reset cursor and repaint the background in the new geometry
 
 }
 
@@ -262,9 +313,9 @@ static void ILI9341::fillScreen(uint16_t color)
 {
 
 	union union_16 * c = (union union_16 *)(&color);
-	uint32_t pixels = (uint32_t)(ILI9341_TFTWIDTH) * (uint32_t)(ILI9341_TFTHEIGHT);
+	uint32_t pixels = (uint32_t)(tftWidth) * (uint32_t)(tftHeight);
 
-	setAddrWindow(0, 0, ILI9341_TFTWIDTH - 1, ILI9341_TFTHEIGHT - 1);
+	setAddrWindow(0, 0, tftWidth - 1, tftHeight - 1);
 
 	// stream every pixel with CS held the whole time (MSB first)
 	dataMode();

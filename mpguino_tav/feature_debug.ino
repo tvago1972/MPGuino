@@ -2851,6 +2851,18 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useTFToutput)
+								case 'G':	// G: cycle TFT rotation; <0..3> G: set a specific rotation
+									if (terminalMode & tmTargetReadIn) TFT::setRotation(terminalTarget); // jump to rotation 0..3
+									else TFT::setRotation(tftRotation + 1); // no arg: advance to the next rotation
+									// setRotation clears the screen, so paint a test pattern to judge orientation
+									text::stringOut(m8DevTFTidx, PSTR("TFT rotation "));
+									text::charOut(m8DevTFTidx, (uint8_t)('0' + tftRotation));
+									text::stringOut(m8DevTFTidx, PSTR(tcCR "ABCDEFGHIJKLMNOPQRST" tcCR "0123456789  top-left" tcCR "bottom row marker .." tcCR));
+									terminalState = tsInitProcessing;
+									break;
+#endif // defined(useTFToutput)
+
 								case 'L':   // list available trip functions
 									if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 

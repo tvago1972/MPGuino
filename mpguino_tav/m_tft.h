@@ -8,6 +8,7 @@ namespace TFT /* TFT device support section prototype */
 	static void clearScreen(void);
 	static void setTextColour(uint16_t fg, uint16_t bg);
 	static void gotoXY(uint8_t col, uint8_t row);
+	static void setRotation(uint8_t rotation);
 
 };
 
@@ -53,6 +54,9 @@ static uint16_t tftCursorY;		// pixel y of the next glyph's top-left
 static uint16_t tftFGcolour;	// glyph foreground (RGB565)
 static uint16_t tftBGcolour;	// glyph background (RGB565)
 static uint8_t  tftScale;		// integer pixel scale per glyph cell
+static uint16_t tftWidth;		// active screen width  (depends on rotation)
+static uint16_t tftHeight;		// active screen height (depends on rotation)
+static uint8_t  tftRotation;	// current rotation 0..3 (0/2 portrait, 1/3 landscape)
 
 // 5x7 font, ASCII printable range 0x20..0x7F. five column bytes per glyph,
 // bit 0 = top row. column-major, matching the classic glcd 5x7 font.
@@ -185,6 +189,12 @@ static const uint8_t ILI9341_RAMRD =		0x2E;
 
 static const uint8_t ILI9341_PTLAR =		0x30;
 static const uint8_t ILI9341_MADCTL =		0x36;
+
+// MADCTL (memory access control) bits, used by TFT::setRotation
+static const uint8_t ILI9341_MAD_MY =		0x80;	// row address order
+static const uint8_t ILI9341_MAD_MX =		0x40;	// column address order
+static const uint8_t ILI9341_MAD_MV =		0x20;	// row/column exchange (landscape)
+static const uint8_t ILI9341_MAD_BGR =		0x08;	// BGR colour order (this panel)
 static const uint8_t ILI9341_IDMOFF =		0x38;
 static const uint8_t ILI9341_IDMON =		0x39;
 static const uint8_t ILI9341_PIXFMT =		0x3A;
