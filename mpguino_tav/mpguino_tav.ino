@@ -492,6 +492,7 @@ int main(void);
 //#include "m_usb.h"
 #include "m_lcd.h"
 #include "m_tft.h"
+#include "m_touch.h"
 #include "functions.h"
 #include "text.h"
 #include "feature_bluetooth.h"

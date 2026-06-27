@@ -2162,6 +2162,9 @@ static void heart::initHardware(void)
 #if defined(useTFToutput)
 	TFT::init();
 #endif // defined(useTFToutput)
+#if defined(useTouchScreenInput)
+	touch::init();
+#endif // defined(useTouchScreenInput)
 #if defined(useActivityLED)
 	activityLED::init();
 #endif // defined(useActivityLED)

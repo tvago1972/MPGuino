@@ -2861,6 +2861,13 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 #endif // defined(useTFToutput)
 
+#if defined(useTouchScreenInput) && defined(useTFToutput)
+								case 'H':	// H: touch-screen test (crosshair on the TFT, raw coords to terminal)
+									touch::testLoop();
+									terminalState = tsInitProcessing;
+									break;
+#endif // defined(useTouchScreenInput) && defined(useTFToutput)
+
 								case 'L':   // list available trip functions
 									if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 

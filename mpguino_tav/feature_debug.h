@@ -476,6 +476,10 @@ static const char terminalHelp[] PROGMEM = {
 	tcSP7 "[x]G - cycle TFT display rotation, or with x (0..3) set a specific rotation" tcCR tcEOSCR
 
 #endif // defined(useTFToutput)
+#if defined(useTouchScreenInput) && defined(useTFToutput)
+	tcSP7 "H - touch-screen test: crosshair on the TFT, raw touch coords to terminal" tcCR tcEOSCR
+
+#endif // defined(useTouchScreenInput) && defined(useTFToutput)
 #if defined(useDebugTerminalSWEET64)
 	tcSP11 "N - toggle SWEET64 error mute (suppress/unsuppress repeated error output)" tcCR tcEOSCR
 	tcSP6 "[y].[x]^E - list SWEET64 register contents" tcEOSCR
