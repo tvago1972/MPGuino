@@ -6,11 +6,55 @@ namespace touch /* XPT2046 resistive touch (software SPI) support section protot
 	static uint8_t pressed(void);
 	static uint8_t sample(uint16_t * rawX, uint16_t * rawY);
 	static uint8_t read(uint16_t * x, uint16_t * y);
+	static void loadCalibration(void);
+#if defined(useTFToutput)
+	static void calibrate(void);
+#endif // defined(useTFToutput)
 #if defined(useDebugTerminal) && defined(useTFToutput)
 	static void testLoop(void);
 #endif // defined(useDebugTerminal) && defined(useTFToutput)
 
 };
+
+#if defined(useTFToutput)
+namespace keypad /* on-screen numeric keypad (TFT draw + touch input) prototype */
+{
+
+	static uint8_t getNumber(uint32_t * value);
+	static void draw(void);
+	static void drawKey(uint8_t index, uint8_t highlight);
+	static void drawEntry(void);
+
+};
+
+// 4-row x 3-col layout. labels double as key codes: '0'..'9' are digits, 'C'
+// clears the entry, 'E' accepts it. (column-major reading of the grid below.)
+static const uint8_t keypadCols =		3;
+static const uint8_t keypadRows =		4;
+static const uint8_t keypadKeys =		(keypadCols * keypadRows);
+static const uint8_t keypadMaxDigits =	9;				// fits a uint32_t (<= 4294967295)
+static const uint8_t keypadLabelScale =	3;				// glyph scale for key labels / entry
+static const uint8_t keypadGap =		4;				// px between keys and around the grid
+static const uint8_t keypadActionGap =	8;				// extra px separating the C/0/E row from the digits
+static const uint16_t keypadIdleTimeout = 1500;			// poll ticks (~8ms each) before giving up
+
+// row-major key labels: 1-9 then Clear / 0 / Enter
+static const char keypadLabels[] PROGMEM = "123456789C0E";
+
+// RGB565 keypad palette
+static const uint16_t keypadKeyColour =		0x4208;		// key face (dark grey)
+static const uint16_t keypadKeyDownColour =	0x05BF;		// pressed key face (cyan-ish)
+static const uint16_t keypadBorderColour =	0xFFFF;		// key border / entry box border
+static const uint16_t keypadEntryColour =	0xFFE0;		// entry text (yellow) on black
+
+static uint16_t keypadKeyW;								// computed key width  (px)
+static uint16_t keypadKeyH;								// computed key height (px)
+static uint16_t keypadGridTop;							// y of the first key row
+static uint16_t keypadEntryH;							// height of the entry box at the top
+
+static char keypadEntry[keypadMaxDigits + 1];			// accumulated digit string (NUL terminated)
+static uint8_t keypadEntryLen;							// digits currently entered
+#endif // defined(useTFToutput)
 
 #if defined(useMPGuinoColourTouch)
 // XPT2046 wired to bit-banged GPIO on the MPGuino Colour Touch (ATmega2560):
@@ -33,11 +77,12 @@ static const uint8_t touchSamples =		8;				// averaged samples per read
 
 // raw ADC calibration (panel-fixed), measured at the screen corners in landscape
 // orientation 3: rawX runs along the long (320px) axis, rawY along the short (240px)
-// axis. tune these if a corner crosshair does not land under the finger.
-static const uint16_t touchRawXlo =		907;
-static const uint16_t touchRawXhi =		3453;
-static const uint16_t touchRawYlo =		743;
-static const uint16_t touchRawYhi =		2884;
+// axis. these are cached in RAM from the pTouchRaw* EEPROM parameters at touch::init
+// and rewritten by the 'J' corner-calibration routine; defaults live in params[].
+static uint16_t touchRawXlo;
+static uint16_t touchRawXhi;
+static uint16_t touchRawYlo;
+static uint16_t touchRawYhi;
 
 static uint16_t touchRawX;								// last averaged raw X (0..4095)
 static uint16_t touchRawY;								// last averaged raw Y (0..4095)

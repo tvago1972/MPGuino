@@ -2853,7 +2853,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useTFToutput)
 								case 'G':	// G: cycle TFT rotation; <0..3> G: set a specific rotation
-									if (terminalMode & tmTargetReadIn) TFT::setRotation(terminalTarget); // jump to rotation 0..3
+									if (terminalMode & tmByteReadIn) TFT::setRotation(terminalByte); // jump to rotation 0..3
 									else TFT::setRotation(tftRotation + 1); // no arg: advance to the next rotation
 									// setRotation cleared the screen; draw the primitives + padding test
 									TFT::drawTestScreen();
@@ -2864,6 +2864,32 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #if defined(useTouchScreenInput) && defined(useTFToutput)
 								case 'H':	// H: touch-screen test (crosshair on the TFT, raw coords to terminal)
 									touch::testLoop();
+									terminalState = tsInitProcessing;
+									break;
+
+								case 'J':	// J: 4-corner touch calibration (writes pTouchRaw* EEPROM params)
+									touch::calibrate();
+									TFT::clearScreen();
+									terminalState = tsInitProcessing;
+									break;
+
+								case 'K':	// K: on-screen numeric keypad test (entered value to terminal)
+									{
+
+										uint32_t kpValue;
+
+										if (keypad::getNumber(&kpValue))
+										{
+
+											text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad entered 0x"));
+											text::hexDWordOut(m8DevDebugTerminalIdx, kpValue);
+											text::newLine(m8DevDebugTerminalIdx);
+
+										}
+										else text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad cancelled" tcCR));
+
+									}
+									TFT::clearScreen();
 									terminalState = tsInitProcessing;
 									break;
 #endif // defined(useTouchScreenInput) && defined(useTFToutput)
