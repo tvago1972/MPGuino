@@ -38,6 +38,24 @@ static uint16_t tftSettingsRowHeight(void)
 
 }
 
+// option-label list for a boolean/enum parameter (value i -> i-th substring), or
+// 0 if the parameter is edited numerically with the keypad
+static const char * tftSettingsChoices(uint8_t parameterIdx)
+{
+
+	switch (parameterIdx)
+	{
+
+		case pMetricModeIdx:		return tftChoiceYesNo;
+		case pAlternateFEidx:		return tftChoiceYesNo;
+		case pInjEdgeTriggerIdx:	return tftChoiceInjTrigger;
+		default:					return 0;
+
+	}
+
+}
+
+
 // map a touch y to a list row: 0..count-1 for a row, 0xFF for the footer button,
 // 0xFE for the title bar / empty space (ignored)
 static uint8_t tftSettingsRowAt(uint16_t py, uint8_t count)
@@ -155,13 +173,28 @@ static uint8_t tftSettingsParamScreen(uint8_t group)
 	{
 
 		uint8_t p = pgm_read_byte(&tftSettingsParams[(uint16_t)(start + r)]);
+		const char * choices;
 		char * vp;
 
 		numberEditObj.parameterIdx = p;
 		parameterEdit::sharedFunctionCall(nesLoadInitial);	// pBuff = current value (space-padded digits)
 
-		vp = pBuff;
-		while (*vp == ' ') vp++;							// skip leading spaces
+		choices = tftSettingsChoices(p);
+
+		if (choices) // show the option label for the current value, not the raw number
+		{
+
+			strcpy_P(pBuff, findStr(choices, (uint8_t)(str2ull(pBuff))));
+			vp = pBuff;
+
+		}
+		else
+		{
+
+			vp = pBuff;
+			while (*vp == ' ') vp++;						// skip leading spaces
+
+		}
 
 		tftSettingsRow(r, findStr(tftSettingsLabels, start + r), vp);
 
@@ -181,26 +214,77 @@ static uint8_t tftSettingsParamScreen(uint8_t group)
 
 }
 
-// edit one parameter: seed the keypad with the current value, bound it by the
-// parameter's bit-width max, title it with the parameter's label, and on OK store
-// the new value with housekeeping
+// modal dropdown: list the options with the current one highlighted; return the
+// chosen index, or 0xFF on Cancel / idle timeout
+static uint8_t tftSettingsChoose(const char * title, const char * options, uint8_t count, uint8_t current)
+{
+
+	uint16_t px, py, rowH = tftSettingsRowHeight();
+	uint8_t i, hit;
+
+	tftSettingsFrame(title, PSTR("Cancel"));
+
+	for (i = 0; i < count; i++)
+	{
+
+		uint16_t y = tftSettingsTitleH + (uint16_t)(i) * rowH;
+		uint16_t bg = (i == current) ? tftSettingsSelBG : ILI9341_BLACK;	// highlight the current value
+
+		ILI9341::fillRect(0, y, tftWidth, rowH - 1, bg);
+		TFT::setTextColour(tftSettingsRowFG, bg);
+		TFT::setCursorPixel(6, y + (rowH - 16) / 2);
+		text::stringOut(m8DevTFTidx, findStr(options, i));
+		ILI9341::drawLine(0, y + rowH - 1, tftWidth - 1, y + rowH - 1, tftSettingsDivider);
+
+	}
+
+	while (1)
+	{
+
+		if (!tftSettingsTap(&px, &py)) return 0xFF;			// idle timeout -> cancel
+
+		hit = tftSettingsRowAt(py, count);
+
+		if (hit == 0xFF) return 0xFF;						// footer -> cancel
+		if (hit < count) return hit;
+
+	}
+
+}
+
+// edit one parameter: a boolean/enum parameter uses the dropdown of named options;
+// everything else uses the keypad (seeded with the current value, bounded by the
+// parameter's bit-width max). both are titled with the parameter's label. on a
+// confirmed change the new value is stored with the usual housekeeping.
 static void tftSettingsEdit(uint8_t parameterIdx, const char * label)
 {
 
 	uint32_t cur, maxValue, newValue;
+	const char * choices = tftSettingsChoices(parameterIdx);
 
 	numberEditObj.parameterIdx = parameterIdx;
 	parameterEdit::sharedFunctionCall(nesLoadInitial);		// pBuff = current value; reg 2 = value
 	cur = str2ull(pBuff);									// current value (also reloads reg 2)
-	maxValue = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), parameterIdx);
+	maxValue = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), parameterIdx);	// 2^bits - 1
 
-	if (keypad::getNumber(&newValue, maxValue, cur, label))
+	if (choices) // boolean / enum -> dropdown (option count is the value range, maxValue + 1)
 	{
 
-		SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), newValue);	// reg 2 = new value
-		EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), parameterIdx);			// store + housekeeping
+		uint8_t sel = tftSettingsChoose(label, choices, (uint8_t)(maxValue + 1), (uint8_t)(cur));
+
+		if (sel == 0xFF) return;							// cancelled
+		newValue = sel;
 
 	}
+	else // numeric -> keypad
+	{
+
+		if (!keypad::getNumber(&newValue, maxValue, cur, label)) return;	// cancelled
+
+	}
+
+	SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), newValue);	// reg 2 = new value
+	EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), parameterIdx);			// store + housekeeping
 
 }
 

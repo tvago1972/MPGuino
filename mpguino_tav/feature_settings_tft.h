@@ -33,7 +33,7 @@ static const uint8_t tftSettingsParams[] PROGMEM = {
 
 static const char tftSettingsLabels[] PROGMEM = {
 	"Metric mode" tcEOS "Alt FE format" tcEOS
-	"us per gallon" tcEOS "Inj edge trig" tcEOS "Inj delay us" tcEOS "Rev per inj" tcEOS "Min good RPM" tcEOS
+	"us per gallon" tcEOS "Inj edge" tcEOS "Inj delay us" tcEOS "Rev per inj" tcEOS "Min good RPM" tcEOS
 	"Pulses/dist" tcEOS "VSS pause ms" tcEOS "Min speed *1k" tcEOS
 	"Tank *1000" tcEOS "Bingo *1000" tcEOS
 	"Idle T/O s" tcEOS "EOC T/O s" tcEOS "Button T/O s" tcEOS "Park T/O s" tcEOS "Off T/O s" tcEOS
@@ -43,6 +43,11 @@ static const char tftSettingsLabels[] PROGMEM = {
 // group g spans tftSettingsParams[ start[g] .. start[g+1] )
 static const uint8_t tftSettingsGroupCount = 6;
 static const uint8_t tftSettingsGroupStart[tftSettingsGroupCount + 1] PROGMEM = { 0, 2, 7, 10, 12, 17, 18 };
+
+// option-label lists for boolean/enum parameters (value i -> i-th tcEOS substring).
+// tftSettingsChoices() maps a parameter to its list; a 0 return means "numeric".
+static const char tftChoiceYesNo[] PROGMEM = { "No" tcEOS "Yes" tcEOS };
+static const char tftChoiceInjTrigger[] PROGMEM = { "Sat Fall" tcEOS "Sat Rise" tcEOS "P&H Fall" tcEOS "P&H Rise" tcEOS };
 
 // layout (px); list rows sit between the title bar and the footer button. the row
 // height is orientation-dependent (taller, easier-to-tap rows in portrait, which
@@ -57,5 +62,6 @@ static const uint16_t tftSettingsTitleBG =	0x001F;		// blue
 static const uint16_t tftSettingsRowFG =	0xFFFF;		// white label
 static const uint16_t tftSettingsValFG =	0xFFE0;		// yellow value
 static const uint16_t tftSettingsDivider =	0x4208;		// grey row divider / footer face
+static const uint16_t tftSettingsSelBG =	0x001F;		// highlighted (current) dropdown option
 
 #endif // defined(useTFToutput) && defined(useTouchScreenInput)
