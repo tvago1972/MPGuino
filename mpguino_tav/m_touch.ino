@@ -442,14 +442,14 @@ static void keypad::drawEntry(void)
 	uint16_t y;
 	uint8_t i;
 
-	// box background + border
-	ILI9341::fillRect(keypadGap, keypadGap, innerW, keypadEntryH, ILI9341_BLACK);
-	ILI9341::drawLine(keypadGap, keypadGap, keypadGap + innerW - 1, keypadGap, keypadBorderColour);
-	ILI9341::drawLine(keypadGap, keypadGap + keypadEntryH - 1, keypadGap + innerW - 1, keypadGap + keypadEntryH - 1, keypadBorderColour);
-	ILI9341::drawLine(keypadGap, keypadGap, keypadGap, keypadGap + keypadEntryH - 1, keypadBorderColour);
-	ILI9341::drawLine(keypadGap + innerW - 1, keypadGap, keypadGap + innerW - 1, keypadGap + keypadEntryH - 1, keypadBorderColour);
+	// box background + border (positioned below the optional title band)
+	ILI9341::fillRect(keypadGap, keypadEntryTop, innerW, keypadEntryH, ILI9341_BLACK);
+	ILI9341::drawLine(keypadGap, keypadEntryTop, keypadGap + innerW - 1, keypadEntryTop, keypadBorderColour);
+	ILI9341::drawLine(keypadGap, keypadEntryTop + keypadEntryH - 1, keypadGap + innerW - 1, keypadEntryTop + keypadEntryH - 1, keypadBorderColour);
+	ILI9341::drawLine(keypadGap, keypadEntryTop, keypadGap, keypadEntryTop + keypadEntryH - 1, keypadBorderColour);
+	ILI9341::drawLine(keypadGap + innerW - 1, keypadEntryTop, keypadGap + innerW - 1, keypadEntryTop + keypadEntryH - 1, keypadBorderColour);
 
-	y = keypadGap + (keypadEntryH - cellH) / 2;
+	y = keypadEntryTop + (keypadEntryH - cellH) / 2;
 
 	for (i = 0; i < keypadEntryLen; i++) ILI9341::drawChar(x0 + (uint16_t)(i) * cellW, y, keypadEntry[i], keypadEntryColour, ILI9341_BLACK, keypadLabelScale);
 
@@ -463,13 +463,25 @@ static void keypad::draw(void)
 {
 
 	uint8_t i;
+	uint16_t titleCellH = (uint16_t)(TFT_CELL_H) * tftScale;	// title uses the text-device scale
+	uint16_t titleH = keypadTitle ? (titleCellH + 6) : 0;
 
 	TFT::clearScreen();
 
+	keypadEntryTop = keypadGap + titleH;
 	keypadEntryH = (uint16_t)(TFT_CELL_H) * keypadLabelScale + 8;
-	keypadGridTop = keypadGap + keypadEntryH + keypadGap;
+	keypadGridTop = keypadEntryTop + keypadEntryH + keypadGap;
 	keypadKeyW = (tftWidth - (uint16_t)(keypadCols + 1) * keypadGap) / keypadCols;
 	keypadKeyH = (tftHeight - keypadGridTop - (uint16_t)(keypadRows) * keypadGap - (uint16_t)(keypadActionGap)) / keypadRows;
+
+	if (keypadTitle) // parameter name (or whatever the caller set) above the entry box
+	{
+
+		TFT::setTextColour(keypadBorderColour, ILI9341_BLACK);
+		TFT::setCursorPixel(keypadGap + 2, keypadGap + (titleH - titleCellH) / 2);
+		text::stringOut(m8DevTFTidx, keypadTitle);
+
+	}
 
 	keypad::drawEntry();
 	for (i = 0; i < keypadKeys; i++) keypad::drawKey(i, 0);
@@ -477,12 +489,13 @@ static void keypad::draw(void)
 }
 
 // modal numeric entry: draw the keypad, then edit a digit string until OK is
-// pressed. returns 1 and stores the value (OK with >=1 digit), or 0 on cancel
-// (long-press DEL) or idle timeout. digits insert at the caret, which is moved
-// by tapping inside the entry box; a short DEL press deletes the digit to its
-// left. each inserted digit is checked against maxValue (computed over the whole
-// field in 64-bit, so the result is always in [0, maxValue], no uint32_t overflow).
-static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue)
+// pressed. the field is seeded with initialValue (shown empty when 0). returns 1
+// and stores the value (OK with >=1 digit), or 0 on cancel (long-press DEL) or
+// idle timeout. digits insert at the caret, which is moved by tapping inside the
+// entry box; a short DEL press deletes the digit to its left. each inserted digit
+// is checked against maxValue (computed over the whole field in 64-bit, so the
+// result is always in [0, maxValue], no uint32_t overflow).
+static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue, uint32_t initialValue, const char * title)
 {
 
 	uint16_t px, py, idle, held;
@@ -491,9 +504,22 @@ static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue)
 	uint16_t x0 = keypadEntryX0();
 	uint8_t hitRow, hitCol, hit, label, result = 0, done = 0, k;
 
+	keypadTitle = title;
+
+	// seed the field with initialValue's digits (no leading zeros; empty when 0)
 	keypadEntryLen = 0;
-	keypadEntry[0] = 0;
-	keypadCursor = 0;
+	if (initialValue)
+	{
+
+		char rev[keypadMaxDigits + 1];
+		uint8_t r = 0;
+
+		while (initialValue && (r < keypadMaxDigits)) { rev[(uint16_t)(r++)] = (char)('0' + (initialValue % 10)); initialValue /= 10; }
+		while (r) keypadEntry[(uint16_t)(keypadEntryLen++)] = rev[(uint16_t)(--r)];
+
+	}
+	keypadEntry[(uint16_t)(keypadEntryLen)] = 0;
+	keypadCursor = keypadEntryLen;
 	keypad::draw();
 
 	idle = 0;
@@ -506,7 +532,7 @@ static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue)
 		idle = 0;
 
 		// a tap inside the entry box positions the caret at the nearest cell boundary
-		if ((py >= keypadGap) && (py < keypadGap + keypadEntryH) && (px >= keypadGap) && (px < keypadGap + innerW))
+		if ((py >= keypadEntryTop) && (py < keypadEntryTop + keypadEntryH) && (px >= keypadGap) && (px < keypadGap + innerW))
 		{
 
 			int16_t pos = ((int16_t)(px) - (int16_t)(x0) + (int16_t)(cellW) / 2) / (int16_t)(cellW);

@@ -499,6 +499,7 @@ int main(void);
 #include "feature_outputpin.h"
 #include "feature_debug.h"
 #include "feature_settings.h"
+#include "feature_settings_tft.h"
 #include "feature_datalogging.h"
 #include "feature_bignum.h"
 #include "feature_bargraph.h"

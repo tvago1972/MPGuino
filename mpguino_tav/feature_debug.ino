@@ -2878,7 +2878,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 										uint32_t kpValue;
 
-										if (keypad::getNumber(&kpValue, 0xFFFFFFFFul))
+										if (keypad::getNumber(&kpValue, 0xFFFFFFFFul, 0, PSTR("Keypad test")))
 										{
 
 											text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad entered 0x"));
@@ -2890,6 +2890,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 									}
 									TFT::clearScreen();
+									terminalState = tsInitProcessing;
+									break;
+
+								case 'Q':	// Q: on-screen touch settings editor (grouped parameters)
+									tftSettings::run();
 									terminalState = tsInitProcessing;
 									break;
 #endif // defined(useTouchScreenInput) && defined(useTFToutput)

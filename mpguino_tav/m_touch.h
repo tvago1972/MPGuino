@@ -20,7 +20,7 @@ namespace touch /* XPT2046 resistive touch (software SPI) support section protot
 namespace keypad /* on-screen numeric keypad (TFT draw + touch input) prototype */
 {
 
-	static uint8_t getNumber(uint32_t * value, uint32_t maxValue);
+	static uint8_t getNumber(uint32_t * value, uint32_t maxValue, uint32_t initialValue, const char * title);
 	static void draw(void);
 	static void drawKey(uint8_t index, uint8_t highlight);
 	static void drawEntry(void);
@@ -52,7 +52,9 @@ static const uint16_t keypadEntryColour =	0xFFE0;		// entry text (yellow) on bla
 static uint16_t keypadKeyW;								// computed key width  (px)
 static uint16_t keypadKeyH;								// computed key height (px)
 static uint16_t keypadGridTop;							// y of the first key row
-static uint16_t keypadEntryH;							// height of the entry box at the top
+static uint16_t keypadEntryTop;							// y of the entry box (below the optional title)
+static uint16_t keypadEntryH;							// height of the entry box
+static const char * keypadTitle;						// optional PROGMEM title shown above the entry box (0 = none)
 
 static char keypadEntry[keypadMaxDigits + 1];			// edited digit string (NUL terminated)
 static uint8_t keypadEntryLen;							// digits currently entered
