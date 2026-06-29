@@ -448,12 +448,15 @@ static void keypad::draw(void)
 
 // modal numeric entry: draw the keypad, then collect digits until Enter is
 // pressed. returns 1 and stores the entered value (Enter), or 0 on idle timeout
-// (or Enter with no digits). digits are accumulated as a string and parsed once.
-static uint8_t keypad::getNumber(uint32_t * value)
+// (or Enter with no digits). a running value is kept so each digit is bounds-
+// checked against maxValue as it is typed: a digit that would exceed maxValue
+// (or overflow a uint32_t) is simply ignored, so the result is always in range.
+static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue)
 {
 
 	uint16_t px, py, idle;
-	uint8_t i, hitRow, hitCol, hit, label, result = 0, done = 0;
+	uint8_t hitRow, hitCol, hit, label, result = 0, done = 0;
+	uint32_t entered = 0;
 
 	keypadEntryLen = 0;
 	keypadEntry[0] = 0;
@@ -507,6 +510,7 @@ static uint8_t keypad::getNumber(uint32_t * value)
 				case 'C': // clear the entry
 					keypadEntryLen = 0;
 					keypadEntry[0] = 0;
+					entered = 0;
 					keypad::drawEntry();
 					break;
 
@@ -514,13 +518,22 @@ static uint8_t keypad::getNumber(uint32_t * value)
 					if (keypadEntryLen) done = result = 1;
 					break;
 
-				default: // a digit 0..9
-					if (keypadEntryLen < keypadMaxDigits)
+				default: // a digit 0..9 - accept only if it keeps the value within range
 					{
 
-						keypadEntry[keypadEntryLen++] = label;
-						keypadEntry[keypadEntryLen] = 0;
-						keypad::drawEntry();
+						// 64-bit candidate so the <= maxValue test is exact; because
+						// maxValue is a uint32_t this also rules out uint32_t overflow
+						uint64_t candidate = (uint64_t)(entered) * 10 + (uint32_t)(label - '0');
+
+						if ((keypadEntryLen < keypadMaxDigits) && (candidate <= (uint64_t)(maxValue)))
+						{
+
+							entered = (uint32_t)(candidate);
+							keypadEntry[keypadEntryLen++] = label;
+							keypadEntry[keypadEntryLen] = 0;
+							keypad::drawEntry();
+
+						}
 
 					}
 					break;
@@ -532,15 +545,7 @@ static uint8_t keypad::getNumber(uint32_t * value)
 
 	}
 
-	if (result)
-	{
-
-		uint32_t v = 0;
-
-		for (i = 0; i < keypadEntryLen; i++) v = v * 10 + (uint32_t)(keypadEntry[i] - '0');
-		*value = v;
-
-	}
+	if (result) *value = entered;
 
 	return result;
 

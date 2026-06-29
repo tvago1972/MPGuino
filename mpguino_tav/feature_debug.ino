@@ -2878,7 +2878,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 
 										uint32_t kpValue;
 
-										if (keypad::getNumber(&kpValue))
+										if (keypad::getNumber(&kpValue, 0xFFFFFFFFul))
 										{
 
 											text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad entered 0x"));
