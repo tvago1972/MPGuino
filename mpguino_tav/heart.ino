@@ -535,6 +535,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
+#if defined(useTouchScreenInput)
+	// the touch panel's pen-down line (PENIRQ) is just a pin read, so sample it every
+	// ISR tick rather than at the decimated button cadence - that catches brief taps
+	// that would otherwise fall in the gap between samples. a touch counts as user
+	// input: reset the activity timer so MPGuino stays awake (and wakes from idle
+	// sleep) while the screen is being touched. only the cheap pen-detect happens
+	// here - coordinate reads stay in the main-loop touch driver.
+	// (NOTE: cannot wake from full power-down - PENIRQ is on PH4, which has no
+	//  external/pin-change interrupt on the ATmega2560, and timer0 is stopped then.)
+	if (touch::pressed()) v08(v8Timer0CommandIdx) |= (t0cResetInputActivityTimer);
+
+#endif // defined(useTouchScreenInput)
 #if defined(useInterruptBasedTWI)
 	if (v08(v8TWIstatusIdx) & twiInterruptInUse)
 	{
