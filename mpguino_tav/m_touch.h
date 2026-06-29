@@ -28,17 +28,19 @@ namespace keypad /* on-screen numeric keypad (TFT draw + touch input) prototype 
 };
 
 // 4-row x 3-col layout. labels double as key codes: '0'..'9' are digits, 'C'
-// clears the entry, 'E' accepts it. (column-major reading of the grid below.)
+// short-press deletes the digit left of the caret / long-press cancels, 'E'
+// accepts. the caret is moved by tapping inside the entry box.
 static const uint8_t keypadCols =		3;
 static const uint8_t keypadRows =		4;
 static const uint8_t keypadKeys =		(keypadCols * keypadRows);
 static const uint8_t keypadMaxDigits =	10;				// full uint32_t width (4294967295); per-call maxValue clamps the range
 static const uint8_t keypadLabelScale =	3;				// glyph scale for key labels / entry
 static const uint8_t keypadGap =		4;				// px between keys and around the grid
-static const uint8_t keypadActionGap =	8;				// extra px separating the C/0/E row from the digits
+static const uint8_t keypadActionGap =	8;				// extra px separating the DEL/0/OK row from the digits
 static const uint16_t keypadIdleTimeout = 1500;			// poll ticks (~8ms each) before giving up
+static const uint16_t keypadLongPress =	75;				// held ticks (~8ms each, ~600ms) that turn a DEL press into cancel
 
-// row-major key labels: 1-9 then Clear / 0 / Enter
+// row-major key codes: 1-9, then Delete / 0 / Enter
 static const char keypadLabels[] PROGMEM = "123456789C0E";
 
 // RGB565 keypad palette
@@ -52,8 +54,9 @@ static uint16_t keypadKeyH;								// computed key height (px)
 static uint16_t keypadGridTop;							// y of the first key row
 static uint16_t keypadEntryH;							// height of the entry box at the top
 
-static char keypadEntry[keypadMaxDigits + 1];			// accumulated digit string (NUL terminated)
+static char keypadEntry[keypadMaxDigits + 1];			// edited digit string (NUL terminated)
 static uint8_t keypadEntryLen;							// digits currently entered
+static uint8_t keypadCursor;							// caret position (0..keypadEntryLen) for insert/backspace
 #endif // defined(useTFToutput)
 
 #if defined(useMPGuinoColourTouch)
