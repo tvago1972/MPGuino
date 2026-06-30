@@ -17,10 +17,13 @@ namespace touch /* XPT2046 resistive touch (software SPI) support section protot
 };
 
 #if defined(useTFToutput)
-namespace keypad /* on-screen numeric keypad (TFT draw + touch input) prototype */
+namespace keypad /* on-screen numeric keypad (non-blocking TFT screen state) prototype */
 {
 
-	static uint8_t getNumber(uint32_t * value, uint32_t maxValue, uint32_t initialValue, const char * title);
+	static void open(uint32_t maxValue, uint32_t initialValue, const char * title);	// set up + draw
+	static uint8_t tap(uint16_t px, uint16_t py);	// handle one tap; returns 1 when OK was tapped (value() ready)
+	static uint8_t longPress(uint16_t px, uint16_t py);	// handle a long-press; returns 1 if DEL-cancel
+	static uint32_t value(void);					// the entered value (after tap() returns 1)
 	static void draw(void);
 	static void drawKey(uint8_t index, uint8_t highlight);
 	static void drawEntry(void);
@@ -37,7 +40,6 @@ static const uint8_t keypadMaxDigits =	10;				// full uint32_t width (4294967295
 static const uint8_t keypadLabelScale =	3;				// glyph scale for key labels / entry
 static const uint8_t keypadGap =		4;				// px between keys and around the grid
 static const uint8_t keypadActionGap =	8;				// extra px separating the DEL/0/OK row from the digits
-static const uint16_t keypadLongPress =	75;				// held ticks (~8ms each, ~600ms) that turn a DEL press into cancel
 
 // row-major key codes: 1-9, then Delete / 0 / Enter
 static const char keypadLabels[] PROGMEM = "123456789C0E";
@@ -58,6 +60,7 @@ static const char * keypadTitle;						// optional PROGMEM title shown above the 
 static char keypadEntry[keypadMaxDigits + 1];			// edited digit string (NUL terminated)
 static uint8_t keypadEntryLen;							// digits currently entered
 static uint8_t keypadCursor;							// caret position (0..keypadEntryLen) for insert/backspace
+static uint32_t keypadMaxValue;							// upper bound; a digit that would exceed it is ignored
 #endif // defined(useTFToutput)
 
 #if defined(useMPGuinoColourTouch)

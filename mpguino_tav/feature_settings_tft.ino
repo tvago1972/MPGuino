@@ -218,22 +218,60 @@ static void tftSettingsOpenDropdown(uint8_t parameterIdx, const char * choices, 
 
 }
 
-// edit a numeric parameter with the keypad (seeded with the current value, bounded
-// by the bit-width max). still blocking - converted to a screen state in Stage 3b.
-static void tftSettingsEdit(uint8_t parameterIdx, const char * label)
+// the numeric parameter currently being edited on the keypad
+static uint8_t tftEditParam;
+
+// open the keypad for a numeric parameter (seeded with the current value, bounded by
+// its bit-width max). non-blocking: the coordinator drives keypad taps from here.
+static void tftSettingsOpenKeypad(uint8_t parameterIdx, const char * label)
 {
 
-	uint32_t cur, maxValue, newValue;
+	uint32_t cur, maxValue;
 
 	numberEditObj.parameterIdx = parameterIdx;
 	parameterEdit::sharedFunctionCall(nesLoadInitial);		// pBuff = current value; reg 2 = value
 	cur = str2ull(pBuff);									// current value (also reloads reg 2)
 	maxValue = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), parameterIdx);	// 2^bits - 1
 
-	if (!keypad::getNumber(&newValue, maxValue, cur, label)) return;	// cancelled
+	tftEditParam = parameterIdx;
+	keypad::open(maxValue, cur, label);
 
-	SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), newValue);	// reg 2 = new value
-	EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), parameterIdx);			// store + housekeeping
+}
+
+// keypad accepted: store the new value to the edited parameter (with housekeeping)
+static void tftSettings::storeEdited(uint32_t value)
+{
+
+	SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), value);	// reg 2 = new value
+	EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), tftEditParam);			// store + housekeeping
+	tftSettingsDrawParams();													// back to the parameter list
+
+}
+
+// keypad cancelled: nothing stored, just return to the parameter list
+static void tftSettings::cancelEdited(void)
+{
+
+	tftSettingsDrawParams();
+
+}
+
+// redraw the current settings sub-screen (used on wake to restore where you were)
+static void tftSettings::redraw(void)
+{
+
+	if (tftSettingsScreen == 0) tftSettingsDrawGroups();
+	else tftSettingsDrawParams();
+
+}
+
+// redraw the option dropdown, re-highlighting the parameter's current value
+static void tftSettings::redrawDropdown(void)
+{
+
+	numberEditObj.parameterIdx = tftDropParam;
+	parameterEdit::sharedFunctionCall(nesLoadInitial);	// pBuff = current value; reg 2 = value
+	tftSettingsDrawDropdown((uint8_t)(str2ull(pBuff)));
 
 }
 
@@ -292,8 +330,8 @@ static uint8_t tftSettings::tap(uint16_t px, uint16_t py)
 
 			}
 
-			tftSettingsEdit(p, findStr(tftSettingsLabels, j));	// numeric -> keypad (TEMP blocking, Stage 3b)
-			tftSettingsDrawParams();						// redraw with the (possibly) new value
+			tftSettingsOpenKeypad(p, findStr(tftSettingsLabels, j));	// numeric -> open the keypad (non-blocking)
+			return tftSettingsKeypad;
 
 		}
 

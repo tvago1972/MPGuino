@@ -745,7 +745,7 @@ int main(void)
 					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 #endif // defined(useButtonInput)
 #if defined(useTFToutput) && !defined(useButtonInput)
-					tftMain::init(); // repaint the whole main screen (incl. the gear) after the re-init
+					tftMain::repaint(); // repaint the screen the user was on (dashboard/settings/keypad), not forced back to the dashboard
 #endif // defined(useTFToutput) && !defined(useButtonInput)
 
 				}

@@ -9,6 +9,8 @@ static uint8_t tftGearHeld;			// the followed press is on the gear (main screen)
 static uint32_t tftGearHoldStart;	// cycles0() when the gear press began
 static uint16_t tftGearBarW;		// last progress-bar width drawn (avoid redundant fills)
 static uint16_t tftTapX, tftTapY;	// press-edge coords, dispatched as a tap on release (non-main screens)
+static uint8_t tftLongFired;		// a long-press has already been dispatched for the current press
+static uint8_t tftTouchSuppress;	// while blanked (and until the wake touch releases) ignore touch input
 
 // draw the settings gear (a small square cog with four teeth and a centre hole) in
 // the top-right corner, in the given colour. drawn in place every update() (no
@@ -35,9 +37,29 @@ static void tftMainBlitGear(uint16_t fg)
 static void tftMain::init(void)
 {
 
-	tftScreen = tftScreenMain;	// boot/wake/exit-settings always returns to the dashboard
+	tftScreen = tftScreenMain;	// boot / exit-settings: go to the dashboard
 	TFT::clearScreen();
 	tftMain::update();	// update() draws the gear too, so it survives any screen clear
+
+}
+
+// redraw whichever screen is current, without changing tftScreen. used on wake (after
+// the panel's full re-init) so a blank-from-inactivity returns to where the user was -
+// the dashboard, a settings list, the dropdown, or the keypad (entry preserved).
+static void tftMain::repaint(void)
+{
+
+	switch (tftScreen)
+	{
+
+#if defined(useTouchScreenInput)
+		case tftScreenSettings:	tftSettings::redraw();			break;
+		case tftScreenDropdown:	tftSettings::redrawDropdown();	break;
+		case tftScreenKeypad:	keypad::draw();					break;
+#endif // defined(useTouchScreenInput)
+		default:				tftMain::update();				break;	// dashboard (TFT::init already cleared the screen)
+
+	}
 
 }
 
@@ -117,6 +139,12 @@ static void tftMain::pollTouch(void)
 	uint16_t gx = tftWidth - 2 * tftGearR - tftGearMargin;
 	uint16_t barY = tftGearMargin + 2 * tftGearR + 2;
 
+	// while the screen is blanked from inactivity, a touch must only WAKE it (handled
+	// by the ISR activity hook + the wake repaint), not act as UI input - and once
+	// woken, ignore that same touch until it releases so it can't trigger an action.
+	if (v08(v8ActivityIdx) & afActivityTimeoutFlag) { tftTouchSuppress = 1; tftGearTracking = 0; return; }
+	if (tftTouchSuppress) { if (touch::pressed()) return; tftTouchSuppress = 0; }
+
 	if (tftScreen == tftScreenMain)	// dashboard: the gear must be HELD to open settings
 	{
 
@@ -177,13 +205,33 @@ static void tftMain::pollTouch(void)
 		}
 
 	}
-	else	// settings / dropdown (and later keypad): dispatch a tap on release, routed by screen
+	else	// settings / dropdown / keypad: a tap on release, plus a long-press for the keypad's DEL-cancel
 	{
 
 		if (touch::pressed())
 		{
 
-			if (!tftGearTracking) { tftGearTracking = 1; touch::read(&tftTapX, &tftTapY); }	// sample press-edge coords
+			if (!tftGearTracking)	// press edge: sample coords (retry until stable), start the hold timer
+			{
+
+				if (touch::read(&tftTapX, &tftTapY))
+				{
+
+					tftGearTracking = 1;
+					tftLongFired = 0;
+					tftGearHoldStart = heart::cycles0();
+
+				}
+
+			}
+			else if ((!tftLongFired) && (tftScreen == tftScreenKeypad) && (heart::cycles0() - tftGearHoldStart >= tftGearHoldCycles))
+			{
+
+				tftLongFired = 1;	// keypad DEL long-press -> cancel the edit
+
+				if (keypad::longPress(tftTapX, tftTapY)) { tftSettings::cancelEdited(); tftScreen = tftScreenSettings; }
+
+			}
 
 		}
 		else if (tftGearTracking)
@@ -191,19 +239,27 @@ static void tftMain::pollTouch(void)
 
 			tftGearTracking = 0;
 
-			if (tftScreen == tftScreenSettings)
+			if (tftLongFired) { } // a long-press already handled this press
+			else if (tftScreen == tftScreenSettings)
 			{
 
 				uint8_t r = tftSettings::tap(tftTapX, tftTapY);
 
-				if (r == tftSettingsExit) tftMain::init();					// Exit -> dashboard (init resets tftScreen)
+				if (r == tftSettingsExit) tftMain::init();						// Exit -> dashboard (init resets tftScreen)
 				else if (r == tftSettingsDropdown) tftScreen = tftScreenDropdown;	// a choice param opened the dropdown
+				else if (r == tftSettingsKeypad) tftScreen = tftScreenKeypad;		// a numeric param opened the keypad
 
 			}
 			else if (tftScreen == tftScreenDropdown)
 			{
 
-				if (!tftSettings::dropdownTap(tftTapX, tftTapY)) tftScreen = tftScreenSettings;	// done -> back to the parameter list (already redrawn)
+				if (!tftSettings::dropdownTap(tftTapX, tftTapY)) tftScreen = tftScreenSettings;	// done -> back to the parameter list
+
+			}
+			else if (tftScreen == tftScreenKeypad)
+			{
+
+				if (keypad::tap(tftTapX, tftTapY)) { tftSettings::storeEdited(keypad::value()); tftScreen = tftScreenSettings; }	// OK -> store + back to params
 
 			}
 

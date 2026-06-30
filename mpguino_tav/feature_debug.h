@@ -479,7 +479,6 @@ static const char terminalHelp[] PROGMEM = {
 #if defined(useTouchScreenInput) && defined(useTFToutput)
 	tcSP7 "H - touch-screen test: crosshair on the TFT, raw touch coords to terminal" tcCR tcEOSCR
 	tcSP7 "J - 4-corner touch calibration: tap each crosshair, stored to EEPROM" tcCR tcEOSCR
-	tcSP7 "K - on-screen numeric keypad test: entered value (hex) to terminal" tcCR tcEOSCR
 
 #endif // defined(useTouchScreenInput) && defined(useTFToutput)
 #if defined(useDebugTerminalSWEET64)

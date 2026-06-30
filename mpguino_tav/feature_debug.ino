@@ -2873,26 +2873,6 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									terminalState = tsInitProcessing;
 									break;
 
-								case 'K':	// K: on-screen numeric keypad test (entered value to terminal)
-									{
-
-										uint32_t kpValue;
-
-										if (keypad::getNumber(&kpValue, 0xFFFFFFFFul, 0, PSTR("Keypad test")))
-										{
-
-											text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad entered 0x"));
-											text::hexDWordOut(m8DevDebugTerminalIdx, kpValue);
-											text::newLine(m8DevDebugTerminalIdx);
-
-										}
-										else text::stringOut(m8DevDebugTerminalIdx, PSTR("keypad cancelled" tcCR));
-
-									}
-									TFT::clearScreen();
-									terminalState = tsInitProcessing;
-									break;
-
 #endif // defined(useTouchScreenInput) && defined(useTFToutput)
 
 								case 'L':   // list available trip functions

@@ -4,6 +4,7 @@ namespace tftMain /* TFT primary-display main screen prototype */
 
 	static void init(void);
 	static void update(void);
+	static void repaint(void);	// redraw whatever screen is current (used on wake, so it returns to where you were)
 #if defined(useTouchScreenInput)
 	static void pollTouch(void);
 #endif // defined(useTouchScreenInput)
@@ -15,6 +16,7 @@ namespace tftMain /* TFT primary-display main screen prototype */
 static const uint8_t tftScreenMain =		0;	// live instrument dashboard
 static const uint8_t tftScreenSettings =	1;	// settings editor (group menu / parameter list)
 static const uint8_t tftScreenDropdown =	2;	// option dropdown (editing a boolean/enum parameter)
+static const uint8_t tftScreenKeypad =		3;	// numeric keypad (editing a numeric parameter)
 static uint8_t tftScreen;
 
 #if defined(useTouchScreenInput)

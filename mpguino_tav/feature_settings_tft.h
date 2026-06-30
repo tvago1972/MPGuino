@@ -5,6 +5,10 @@ namespace tftSettings /* on-screen (touch) EEPROM settings editor prototype */
 	static void enter(void);						// draw the group menu (called when the gear opens settings)
 	static uint8_t tap(uint16_t px, uint16_t py);		// handle one tap on the group/param screen (returns a tftSettings* code)
 	static uint8_t dropdownTap(uint16_t px, uint16_t py);	// handle one tap on the option dropdown; 0 = done (back to params), 1 = stay
+	static void storeEdited(uint32_t value);			// keypad accepted: save the value to the param being edited, redraw params
+	static void cancelEdited(void);					// keypad cancelled: just redraw the param list
+	static void redraw(void);						// redraw the current settings sub-screen (group menu / param list), e.g. on wake
+	static void redrawDropdown(void);				// redraw the option dropdown with the current value highlighted, e.g. on wake
 
 };
 
@@ -12,6 +16,7 @@ namespace tftSettings /* on-screen (touch) EEPROM settings editor prototype */
 static const uint8_t tftSettingsExit =		0;	// leave settings -> main screen
 static const uint8_t tftSettingsStay =		1;	// stay on the current settings screen
 static const uint8_t tftSettingsDropdown =	2;	// a choice parameter was tapped -> dropdown opened
+static const uint8_t tftSettingsKeypad =	3;	// a numeric parameter was tapped -> keypad opened
 
 // Grouped, touch-friendly view of this build's editable parameters. The parameter
 // definitions in parameters.h remain the single source of truth; this is only a

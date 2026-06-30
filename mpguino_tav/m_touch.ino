@@ -496,22 +496,26 @@ static void keypad::draw(void)
 
 }
 
-// modal numeric entry: draw the keypad, then edit a digit string until OK is
-// pressed. the field is seeded with initialValue (shown empty when 0). returns 1
-// and stores the value (OK with >=1 digit), or 0 on cancel (long-press DEL). there
-// is no idle timeout. digits insert at the caret, which is moved by tapping inside the
-// entry box; a short DEL press deletes the digit to its left. each inserted digit
-// is checked against maxValue (computed over the whole field in 64-bit, so the
-// result is always in [0, maxValue], no uint32_t overflow).
-static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue, uint32_t initialValue, const char * title)
+// the entered value (parse the digit string); valid once tap() returns 1
+static uint32_t keypad::value(void)
 {
 
-	uint16_t px, py, held;
-	uint16_t cellW = (uint16_t)(TFT_CELL_W) * keypadLabelScale;
-	uint16_t innerW = tftWidth - 2 * keypadGap;
-	uint16_t x0 = keypadEntryX0();
-	uint8_t hitRow, hitCol, hit, label, result = 0, done = 0, k;
+	uint32_t v = 0;
+	uint8_t k;
 
+	for (k = 0; k < keypadEntryLen; k++) v = v * 10 + (uint32_t)(keypadEntry[(uint16_t)(k)] - '0');
+
+	return v;
+
+}
+
+// set up and draw the keypad as the current screen: seed the field with
+// initialValue (empty when 0), bound entry by maxValue, title it. non-blocking
+// from here - the coordinator feeds taps/long-presses; there is no idle timeout.
+static void keypad::open(uint32_t maxValue, uint32_t initialValue, const char * title)
+{
+
+	keypadMaxValue = maxValue;
 	keypadTitle = title;
 
 	// seed the field with initialValue's digits (no leading zeros; empty when 0)
@@ -530,137 +534,131 @@ static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue, uint32_t i
 	keypadCursor = keypadEntryLen;
 	keypad::draw();
 
-	// no idle timeout: the editor stays open until the user explicitly accepts (OK)
-	// or cancels (long-press DEL), like the LCD parameter editor - so pausing to
-	// recall a value never reverts the screen
-	while (!done)
+}
+
+// hit-test the key grid by explicit per-key bounds (so the inter-key and
+// control/action-row gaps reject cleanly). returns the key index, or keypadKeys if none
+static uint8_t keypadKeyAt(uint16_t px, uint16_t py)
+{
+
+	uint8_t hitRow, hitCol;
+
+	for (hitRow = 0; hitRow < keypadRows; hitRow++)
+		for (hitCol = 0; hitCol < keypadCols; hitCol++)
+		{
+
+			uint8_t idx = (uint8_t)(hitRow * keypadCols + hitCol);
+			uint16_t kx = keypadKeyX(idx);
+			uint16_t ky = keypadKeyY(idx);
+
+			if ((px >= kx) && (px < kx + keypadKeyW) && (py >= ky) && (py < ky + keypadKeyH)) return idx;
+
+		}
+
+	return keypadKeys;
+
+}
+
+// handle one tap. a tap in the entry box positions the caret; a digit inserts at
+// the caret (if it keeps the value <= maxValue); DEL backspaces; OK accepts.
+// returns 1 only when OK was tapped with at least one digit (value() is then ready).
+static uint8_t keypad::tap(uint16_t px, uint16_t py)
+{
+
+	uint16_t cellW = (uint16_t)(TFT_CELL_W) * keypadLabelScale;
+	uint16_t innerW = tftWidth - 2 * keypadGap;
+	uint16_t x0 = keypadEntryX0();
+	uint8_t hit, label, k;
+
+	// entry box: position the caret at the nearest cell boundary
+	if ((py >= keypadEntryTop) && (py < keypadEntryTop + keypadEntryH) && (px >= keypadGap) && (px < keypadGap + innerW))
 	{
 
-		if (!touch::read(&px, &py)) { heart::wait0(8); continue; }
+		int16_t pos = ((int16_t)(px) - (int16_t)(x0) + (int16_t)(cellW) / 2) / (int16_t)(cellW);
 
-		// a tap inside the entry box positions the caret at the nearest cell boundary
-		if ((py >= keypadEntryTop) && (py < keypadEntryTop + keypadEntryH) && (px >= keypadGap) && (px < keypadGap + innerW))
-		{
+		if (pos < 0) pos = 0;
+		if (pos > (int16_t)(keypadEntryLen)) pos = (int16_t)(keypadEntryLen);
+		keypadCursor = (uint8_t)(pos);
+		keypad::drawEntry();
+		return 0;
 
-			int16_t pos = ((int16_t)(px) - (int16_t)(x0) + (int16_t)(cellW) / 2) / (int16_t)(cellW);
+	}
 
-			if (pos < 0) pos = 0;
-			if (pos > (int16_t)(keypadEntryLen)) pos = (int16_t)(keypadEntryLen);
-			keypadCursor = (uint8_t)(pos);
+	hit = keypadKeyAt(px, py);
+	if (hit >= keypadKeys) return 0;	// between keys
 
-			while (touch::pressed()) heart::wait0(8);
-			keypad::drawEntry();
-			continue;
+	label = pgm_read_byte(&keypadLabels[hit]);
 
-		}
+	switch (label)
+	{
 
-		// hit-test the touch against the key grid by explicit per-key bounds, so
-		// the non-uniform control/action-row gaps (and inter-key gaps) reject cleanly
-		hit = keypadKeys; // sentinel: no key
-		for (hitRow = 0; (hit == keypadKeys) && (hitRow < keypadRows); hitRow++)
-			for (hitCol = 0; hitCol < keypadCols; hitCol++)
+		case 'C': // DEL (short tap): backspace the digit to the left of the caret
+			if (keypadCursor)
 			{
 
-				uint8_t idx = (uint8_t)(hitRow * keypadCols + hitCol);
-				uint16_t kx = keypadKeyX(idx);
-				uint16_t ky = keypadKeyY(idx);
-
-				if ((px >= kx) && (px < kx + keypadKeyW) && (py >= ky) && (py < ky + keypadKeyH)) { hit = idx; break; }
+				for (k = keypadCursor - 1; k < keypadEntryLen - 1; k++) keypadEntry[(uint16_t)(k)] = keypadEntry[(uint16_t)(k + 1)];
+				keypadEntryLen--;
+				keypadCursor--;
+				keypadEntry[(uint16_t)(keypadEntryLen)] = 0;
+				keypad::drawEntry();
 
 			}
+			return 0;
 
-		if (hit >= keypadKeys) { heart::wait0(8); continue; } // touched between keys; ignore
+		case 'E': // OK: accept if at least one digit was entered
+			return (keypadEntryLen != 0);
 
-		label = pgm_read_byte(&keypadLabels[hit]);
-
-		keypad::drawKey(hit, 1); // visual feedback while held
-
-		// debounce: one action per press, while timing the hold for long-press. when
-		// a DEL hold reaches the threshold, flash the key red so the user sees that
-		// releasing now cancels instead of deleting.
-		held = 0;
-		while (touch::pressed())
-		{
-
-			heart::wait0(8);
-
-			if (held < keypadLongPress)
+		default: // a digit: insert at the caret if it keeps the value within range
+			if (keypadEntryLen < keypadMaxDigits)
 			{
 
-				held++;
-				if ((held == keypadLongPress) && (label == 'C'))
-					ILI9341::fillRect(keypadKeyX(hit) + 1, keypadKeyY(hit) + 1, keypadKeyW - 2, keypadKeyH - 2, ILI9341_RED);
+				char tmp[keypadMaxDigits + 1];
+				uint8_t n = 0;
+				uint64_t v = 0;
 
-			}
+				for (k = 0; k < keypadCursor; k++) tmp[(uint16_t)(n++)] = keypadEntry[(uint16_t)(k)];
+				tmp[(uint16_t)(n++)] = label;
+				for (k = keypadCursor; k < keypadEntryLen; k++) tmp[(uint16_t)(n++)] = keypadEntry[(uint16_t)(k)];
+				tmp[(uint16_t)(n)] = 0;
 
-		}
+				for (k = 0; k < n; k++) v = v * 10 + (uint32_t)(tmp[(uint16_t)(k)] - '0');
 
-		keypad::drawKey(hit, 0);
-
-		switch (label)
-		{
-
-			case 'C': // short press: backspace (delete left of caret); long press: cancel
-				if (held >= keypadLongPress) done = 1; // result stays 0 -> cancelled
-				else if (keypadCursor)
+				if (v <= (uint64_t)(keypadMaxValue))
 				{
 
-					for (k = keypadCursor - 1; k < keypadEntryLen - 1; k++) keypadEntry[(uint16_t)(k)] = keypadEntry[(uint16_t)(k + 1)];
-					keypadEntryLen--;
-					keypadCursor--;
-					keypadEntry[(uint16_t)(keypadEntryLen)] = 0;
+					for (k = 0; k <= n; k++) keypadEntry[(uint16_t)(k)] = tmp[(uint16_t)(k)];
+					keypadEntryLen = n;
+					keypadCursor++;
 					keypad::drawEntry();
 
 				}
-				break;
 
-			case 'E': // accept (only if at least one digit was entered)
-				if (keypadEntryLen) done = result = 1;
-				break;
-
-			default: // a digit: insert at the caret if it keeps the value within range
-				if (keypadEntryLen < keypadMaxDigits)
-				{
-
-					char tmp[keypadMaxDigits + 1];
-					uint8_t n = 0;
-					uint64_t v = 0;
-
-					for (k = 0; k < keypadCursor; k++) tmp[(uint16_t)(n++)] = keypadEntry[(uint16_t)(k)];
-					tmp[(uint16_t)(n++)] = label;
-					for (k = keypadCursor; k < keypadEntryLen; k++) tmp[(uint16_t)(n++)] = keypadEntry[(uint16_t)(k)];
-					tmp[(uint16_t)(n)] = 0;
-
-					for (k = 0; k < n; k++) v = v * 10 + (uint32_t)(tmp[(uint16_t)(k)] - '0');
-
-					if (v <= (uint64_t)(maxValue))
-					{
-
-						for (k = 0; k <= n; k++) keypadEntry[(uint16_t)(k)] = tmp[(uint16_t)(k)];
-						keypadEntryLen = n;
-						keypadCursor++;
-						keypad::drawEntry();
-
-					}
-
-				}
-				break;
-
-		}
+			}
+			return 0;
 
 	}
 
-	if (result)
+	return 0;
+
+}
+
+// handle a long-press: a long-press on DEL cancels the edit (flash it red to
+// acknowledge). returns 1 if cancelled, 0 otherwise. (the coordinator times the
+// hold and calls this at the threshold.)
+static uint8_t keypad::longPress(uint16_t px, uint16_t py)
+{
+
+	uint8_t hit = keypadKeyAt(px, py);
+
+	if ((hit < keypadKeys) && (pgm_read_byte(&keypadLabels[hit]) == 'C'))
 	{
 
-		uint32_t v = 0;
-
-		for (k = 0; k < keypadEntryLen; k++) v = v * 10 + (uint32_t)(keypadEntry[(uint16_t)(k)] - '0');
-		*value = v;
+		ILI9341::fillRect(keypadKeyX(hit) + 1, keypadKeyY(hit) + 1, keypadKeyW - 2, keypadKeyH - 2, ILI9341_RED);
+		return 1;
 
 	}
 
-	return result;
+	return 0;
 
 }
 
