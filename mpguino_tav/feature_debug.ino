@@ -2893,10 +2893,6 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									terminalState = tsInitProcessing;
 									break;
 
-								case 'Q':	// Q: on-screen touch settings editor (grouped parameters)
-									tftSettings::run();
-									terminalState = tsInitProcessing;
-									break;
 #endif // defined(useTouchScreenInput) && defined(useTFToutput)
 
 								case 'L':   // list available trip functions

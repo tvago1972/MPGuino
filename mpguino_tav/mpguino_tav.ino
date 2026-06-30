@@ -1261,7 +1261,7 @@ int main(void)
 #endif // defined(useClockDisplay) && !defined(useDeepSleep)
 #endif // defined(useButtonInput)
 #if defined(useTFToutput) && !defined(useButtonInput)
-			tftMain::update(); // refresh the TFT main screen (input is polled per-pass, not here)
+			if (tftScreen == tftScreenMain) tftMain::update(); // refresh the dashboard; other screens draw on transitions (input is polled per-pass)
 #endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 

@@ -5,9 +5,10 @@
 // non-blocking settings-gear state (persists across pollTouch() calls); declared
 // here so update() can draw the gear in its current (idle/held) colour
 static uint8_t tftGearTracking;		// a press is being followed
-static uint8_t tftGearHeld;			// the followed press is on the gear
+static uint8_t tftGearHeld;			// the followed press is on the gear (main screen)
 static uint32_t tftGearHoldStart;	// cycles0() when the gear press began
 static uint16_t tftGearBarW;		// last progress-bar width drawn (avoid redundant fills)
+static uint16_t tftTapX, tftTapY;	// press-edge coords, dispatched as a tap on release (non-main screens)
 
 // draw the settings gear (a small square cog with four teeth and a centre hole) in
 // the top-right corner, in the given colour. drawn in place every update() (no
@@ -34,6 +35,7 @@ static void tftMainBlitGear(uint16_t fg)
 static void tftMain::init(void)
 {
 
+	tftScreen = tftScreenMain;	// boot/wake/exit-settings always returns to the dashboard
 	TFT::clearScreen();
 	tftMain::update();	// update() draws the gear too, so it survives any screen clear
 
@@ -115,59 +117,87 @@ static void tftMain::pollTouch(void)
 	uint16_t gx = tftWidth - 2 * tftGearR - tftGearMargin;
 	uint16_t barY = tftGearMargin + 2 * tftGearR + 2;
 
-	if (touch::pressed())	// finger down (cheap PENIRQ read)
+	if (tftScreen == tftScreenMain)	// dashboard: the gear must be HELD to open settings
 	{
 
-		if (!tftGearTracking)	// press edge: sample once, decide if it landed on the gear
+		if (touch::pressed())
 		{
 
-			tftGearTracking = 1;
-			tftGearHeld = (touch::read(&tx, &ty) && tftMainOnGear(tx, ty));
-
-			if (tftGearHeld)
+			if (!tftGearTracking)	// press edge: sample once, decide if it landed on the gear
 			{
 
-				tftGearHoldStart = heart::cycles0();
-				tftGearBarW = 0;
-				tftMainBlitGear(tftGearActiveFG);
+				tftGearTracking = 1;
+				tftGearHeld = (touch::read(&tx, &ty) && tftMainOnGear(tx, ty));
+
+				if (tftGearHeld)
+				{
+
+					tftGearHoldStart = heart::cycles0();
+					tftGearBarW = 0;
+					tftMainBlitGear(tftGearActiveFG);
+
+				}
+
+			}
+			else if (tftGearHeld)	// holding on the gear: grow the progress bar, confirm at threshold
+			{
+
+				uint32_t elapsed = heart::cycles0() - tftGearHoldStart;
+				uint16_t w = (elapsed >= tftGearHoldCycles) ? (2 * tftGearR) : (uint16_t)((uint32_t)(elapsed) * 2 * tftGearR / tftGearHoldCycles);
+
+				if (w != tftGearBarW) { ILI9341::fillRect(gx, barY, w, 3, tftGearProgressFG); tftGearBarW = w; }
+
+				if (elapsed >= tftGearHoldCycles)	// confirmed: switch to the settings screen
+				{
+
+					tftGearTracking = 0;
+					tftGearHeld = 0;
+					tftScreen = tftScreenSettings;
+					tftSettings::enter();			// draw the group menu (non-blocking from here on)
+
+				}
 
 			}
 
 		}
-		else if (tftGearHeld)	// holding on the gear: grow the progress bar, confirm at threshold
+		else	// finger up
 		{
 
-			uint32_t elapsed = heart::cycles0() - tftGearHoldStart;
-			uint16_t w = (elapsed >= tftGearHoldCycles) ? (2 * tftGearR) : (uint16_t)((uint32_t)(elapsed) * 2 * tftGearR / tftGearHoldCycles);
-
-			if (w != tftGearBarW) { ILI9341::fillRect(gx, barY, w, 3, tftGearProgressFG); tftGearBarW = w; }
-
-			if (elapsed >= tftGearHoldCycles)	// confirmed: open the settings editor
+			if (tftGearTracking && tftGearHeld)	// released before confirm: abort, restore the idle gear
 			{
 
-				tftGearTracking = 0;
-				tftGearHeld = 0;
-				tftSettings::run();				// TEMP: still blocking - converted to a screen state in the next stage
-				tftMain::init();				// settings cleared the screen: repaint everything (incl. gear)
+				ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);
+				tftMainBlitGear(tftGearFG);
 
 			}
+
+			tftGearTracking = 0;
+			tftGearHeld = 0;
 
 		}
 
 	}
-	else	// finger up
+	else	// settings (and later keypad/dropdown): dispatch a tap on release
 	{
 
-		if (tftGearTracking && tftGearHeld)	// released before confirm: abort, restore the idle gear
+		if (touch::pressed())
 		{
 
-			ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);
-			tftMainBlitGear(tftGearFG);
+			if (!tftGearTracking) { tftGearTracking = 1; touch::read(&tftTapX, &tftTapY); }	// sample press-edge coords
 
 		}
+		else
+		{
 
-		tftGearTracking = 0;
-		tftGearHeld = 0;
+			if (tftGearTracking)
+			{
+
+				tftGearTracking = 0;
+				if (!tftSettings::tap(tftTapX, tftTapY)) tftMain::init();	// tap returned "exit" -> back to the dashboard (init resets tftScreen)
+
+			}
+
+		}
 
 	}
 

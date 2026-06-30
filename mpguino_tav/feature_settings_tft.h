@@ -2,7 +2,8 @@
 namespace tftSettings /* on-screen (touch) EEPROM settings editor prototype */
 {
 
-	static void run(void);
+	static void enter(void);					// draw the group menu (called when the gear opens settings)
+	static uint8_t tap(uint16_t px, uint16_t py);	// handle one tap; returns 1 to stay, 0 to exit to the main screen
 
 };
 

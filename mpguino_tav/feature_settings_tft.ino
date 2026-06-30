@@ -134,42 +134,31 @@ static void tftSettingsRow(uint8_t r, const char * label, char * value)
 
 }
 
-// group selector: draw the group list, return the chosen group, or 0xFF to exit
-static uint8_t tftSettingsGroupScreen(void)
+// settings sub-state (the top-level Main/Settings screen is owned by feature_tftmain)
+static uint8_t tftSettingsScreen;	// 0 = group menu, 1 = parameter list
+static uint8_t tftSettingsGroup;	// selected group, for the parameter list
+
+// draw the group menu
+static void tftSettingsDrawGroups(void)
 {
 
-	uint16_t px, py;
-	uint8_t g, hit;
+	uint8_t g;
 
 	tftSettingsFrame(PSTR("Settings"), PSTR("Exit"));
 
 	for (g = 0; g < tftSettingsGroupCount; g++) tftSettingsRow(g, findStr(tftSettingsGroupNames, g), 0);
 
-	while (1)
-	{
-
-		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
-
-		hit = tftSettingsRowAt(py, tftSettingsGroupCount);
-
-		if (hit == 0xFF) return 0xFF;						// footer -> exit
-		if (hit < tftSettingsGroupCount) return hit;
-
-	}
-
 }
 
-// parameter list for a group: draw label + current value per row, return the
-// chosen row (0-based within the group), or 0xFF to go back
-static uint8_t tftSettingsParamScreen(uint8_t group)
+// draw the parameter list for the selected group (label + current value per row)
+static void tftSettingsDrawParams(void)
 {
 
-	uint16_t px, py;
-	uint8_t start = pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(group)]);
-	uint8_t count = (uint8_t)(pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(group + 1)]) - start);
-	uint8_t r, hit;
+	uint8_t start = pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(tftSettingsGroup)]);
+	uint8_t count = (uint8_t)(pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(tftSettingsGroup + 1)]) - start);
+	uint8_t r;
 
-	tftSettingsFrame(findStr(tftSettingsGroupNames, group), PSTR("Back"));
+	tftSettingsFrame(findStr(tftSettingsGroupNames, tftSettingsGroup), PSTR("Back"));
 
 	for (r = 0; r < count; r++)
 	{
@@ -199,18 +188,6 @@ static uint8_t tftSettingsParamScreen(uint8_t group)
 		}
 
 		tftSettingsRow(r, findStr(tftSettingsLabels, start + r), vp);
-
-	}
-
-	while (1)
-	{
-
-		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
-
-		hit = tftSettingsRowAt(py, count);
-
-		if (hit == 0xFF) return 0xFF;						// footer -> back
-		if (hit < count) return hit;
 
 	}
 
@@ -290,34 +267,59 @@ static void tftSettingsEdit(uint8_t parameterIdx, const char * label)
 
 }
 
-// modal settings editor: group menu -> parameter list -> edit, until Exit/timeout
-static void tftSettings::run(void)
+// open the settings editor at the group menu (the coordinator switches to the
+// Settings screen and calls this; the main loop keeps running throughout)
+static void tftSettings::enter(void)
 {
 
-	uint8_t group, row;
+	tftSettingsScreen = 0;
+	tftSettingsDrawGroups();
 
-	while (1)
+}
+
+// handle one tap on the current settings screen. returns 1 to stay in settings,
+// 0 to exit back to the main screen. (parameter editing still uses the blocking
+// keypad/dropdown for now - converted to screen states in the next stage.)
+static uint8_t tftSettings::tap(uint16_t px, uint16_t py)
+{
+
+	if (tftSettingsScreen == 0)	// group menu
 	{
 
-		group = tftSettingsGroupScreen();
-		if (group == 0xFF) break;
+		uint8_t hit = tftSettingsRowAt(py, tftSettingsGroupCount);
 
-		while (1)
+		if (hit == 0xFF) return 0;							// Exit -> main screen
+		if (hit < tftSettingsGroupCount)					// pick a group -> parameter list
 		{
 
-			uint8_t j;
+			tftSettingsGroup = hit;
+			tftSettingsScreen = 1;
+			tftSettingsDrawParams();
 
-			row = tftSettingsParamScreen(group);
-			if (row == 0xFF) break;
+		}
 
-			j = pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(group)]) + row;	// flat index of the chosen param
-			tftSettingsEdit(pgm_read_byte(&tftSettingsParams[(uint16_t)(j)]), findStr(tftSettingsLabels, j));
+	}
+	else						// parameter list
+	{
+
+		uint8_t start = pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(tftSettingsGroup)]);
+		uint8_t count = (uint8_t)(pgm_read_byte(&tftSettingsGroupStart[(uint16_t)(tftSettingsGroup + 1)]) - start);
+		uint8_t hit = tftSettingsRowAt(py, count);
+
+		if (hit == 0xFF) { tftSettingsScreen = 0; tftSettingsDrawGroups(); }	// Back -> group menu
+		else if (hit < count)								// pick a parameter -> edit it
+		{
+
+			uint8_t j = start + hit;
+
+			tftSettingsEdit(pgm_read_byte(&tftSettingsParams[(uint16_t)(j)]), findStr(tftSettingsLabels, j));	// TEMP: blocking keypad/dropdown (Stage 3)
+			tftSettingsDrawParams();						// redraw with the (possibly) new value
 
 		}
 
 	}
 
-	TFT::clearScreen();
+	return 1;
 
 }
 
