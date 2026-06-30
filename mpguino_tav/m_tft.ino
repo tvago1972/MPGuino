@@ -15,11 +15,9 @@ static void TFT::init(void)
 	TFT::setRotation(0);
 
 	// register the TFT as a text output device so text::stringOut/charOut/numberOut
-	// (and the rest of the text layer) can render to the screen
+	// (and the rest of the text layer) can render to the screen. the startup splash
+	// (title + date) is drawn by main() so it can be held for the normal display delay.
 	text::initDev(m8DevTFTidx, (odvFlagCRLF | odvFlagEnableOutput), TFT::chrOut);
-
-	// temporary first-light banner, proving the text pipeline end to end
-	text::stringOut(m8DevTFTidx, PSTR("MPGuino Colour Touch" tcCR "TFT text online" tcCR));
 
 }
 
@@ -27,6 +25,15 @@ static void TFT::shutdown(void)
 {
 
 	ILI9341::shutdown();
+
+}
+
+// light wake from TFT::shutdown(): the controller kept VCC, so no reset/re-init is
+// needed - just undo shutdown(). (the boot and deep-sleep paths still use init().)
+static void TFT::resume(void)
+{
+
+	ILI9341::resume();
 
 }
 
@@ -313,6 +320,13 @@ static void ILI9341::init(void)
 static void ILI9341::shutdown(void)
 {
 
+	// blank the panel and put the controller to sleep for lower power draw (GRAM is
+	// retained, so resume() can light it back up without a full re-init). this is done
+	// while the DC pin is still an output, before it is released below.
+	spi::set(SPIconfigTFT);
+	writeCommandByte(ILI9341_DISPOFF);
+	writeCommandByte(ILI9341_SLPIN);
+
 	setBrightness(0);
 
 	// disable TFT brightness
@@ -326,6 +340,33 @@ static void ILI9341::shutdown(void)
 #endif // defined(useSeeedStudioTFTtouchShield)
 
 #endif // defined(__AVR_ATmega2560__)
+}
+
+// reverse ILI9341::shutdown(): restore the released pins, wake the controller out of
+// sleep, and re-enable the backlight. the controller kept VCC and its configuration
+// (and GRAM), so the last image returns - no reset or command-table re-init needed.
+static void ILI9341::resume(void)
+{
+
+	// restore the pins shutdown() released (DC must be an output before any command)
+#if defined(__AVR_ATmega2560__)
+#if defined(useMPGuinoColourTouch)
+	DDRB |= (1 << DDB6);
+	DDRL |= (1 << DDL1);
+#endif // defined(useMPGuinoColourTouch)
+#if defined(useSeeedStudioTFTtouchShield)
+	DDRH |= ((1 << DDH4) | (1 << DDH3));
+#endif // defined(useSeeedStudioTFTtouchShield)
+
+#endif // defined(__AVR_ATmega2560__)
+
+	spi::set(SPIconfigTFT);
+	writeCommandByte(ILI9341_SLPOUT);
+	heart::wait0(150);						// datasheet: wait >= 120ms after sleep-out
+	writeCommandByte(ILI9341_DISPON);
+
+	setBrightness(1);
+
 }
 
 static void ILI9341::writeCommandByte(uint8_t byt)

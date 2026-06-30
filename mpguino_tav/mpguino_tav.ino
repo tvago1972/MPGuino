@@ -506,6 +506,7 @@ int main(void);
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 #include "feature_base.h"
+#include "feature_tftmain.h"
 #include "m_button.h"
 
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
@@ -544,6 +545,16 @@ int main(void)
 	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 #endif // defined(useLCDoutput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+	// startup splash: standard MPGuino title + date, held for the normal display
+	// delay (counted down by the timer ISR), then the main screen takes over below
+	text::gotoXY(m8DevTFTidx, 0, 0);
+	text::stringOut(m8DevTFTidx, titleMPGuino);
+	text::stringOut(m8DevTFTidx, dateMPGuino);
+
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
+
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(outputLoggingSplash)
 	text::stringOut(m8DevLogOutputIdx, titleMPGuino);
 	text::stringOut(m8DevLogOutputIdx, dateMPGuino);
@@ -576,16 +587,19 @@ int main(void)
 	i = tripSave::doAutoAction(taaModeRead);
 
 #endif // defined(useSavedTrips)
-#if defined(useLCDoutput)
-	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+#if defined(useLCDoutput) || (defined(useTFToutput) && !defined(useButtonInput))
+	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // hold the splash for the display delay
 
-#endif // defined(useLCDoutput)
+#endif // defined(useLCDoutput) || (defined(useTFToutput) && !defined(useButtonInput))
 
 #if defined(useButtonInput)
 	// call working display index initialization function
 	cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx);
 
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+	tftMain::init(); // splash delay elapsed: bring up the main screen
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(useSavedTrips)
 #if defined(useLCDoutput)
 	if (i) text::statusOut(m8DevLCDidx, PSTR("AutoRestore Done"));
@@ -725,7 +739,11 @@ int main(void)
 					LCD::init(); // re-initialize LCD device
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-					TFT::init(); // re-initialize TFT device
+#if defined(useDeepSleep)
+					TFT::init(); // woke from power-down: full re-initialization
+#else // defined(useDeepSleep)
+					TFT::resume(); // controller kept VCC: light wake (no full re-init)
+#endif // defined(useDeepSleep)
 #endif // defined(useTFToutput)
 #if defined(useButtonInput)
 					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
@@ -1240,6 +1258,9 @@ int main(void)
 
 #endif // defined(useClockDisplay) && !defined(useDeepSleep)
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+			tftMain::update(); // refresh the TFT main screen
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 
 #if defined(useActivityLED)

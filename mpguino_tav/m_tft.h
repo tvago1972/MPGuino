@@ -4,6 +4,7 @@ namespace TFT /* TFT device support section prototype */
 
 	static void init(void);
 	static void shutdown(void);
+	static void resume(void);
 	static void chrOut(uint8_t chr);
 	static void clearScreen(void);
 	static void setTextColour(uint16_t fg, uint16_t bg);
@@ -22,6 +23,7 @@ namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
 
 	static void init(void);
 	static void shutdown(void);
+	static void resume(void);
 	static void writeCommandByte(uint8_t byt);
 	static void writeDataByte(uint8_t byt);
 	static void writeDataWord(uint16_t wrd);
