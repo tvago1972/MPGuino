@@ -177,7 +177,7 @@ static void tftMain::pollTouch(void)
 		}
 
 	}
-	else	// settings (and later keypad/dropdown): dispatch a tap on release
+	else	// settings / dropdown (and later keypad): dispatch a tap on release, routed by screen
 	{
 
 		if (touch::pressed())
@@ -186,14 +186,24 @@ static void tftMain::pollTouch(void)
 			if (!tftGearTracking) { tftGearTracking = 1; touch::read(&tftTapX, &tftTapY); }	// sample press-edge coords
 
 		}
-		else
+		else if (tftGearTracking)
 		{
 
-			if (tftGearTracking)
+			tftGearTracking = 0;
+
+			if (tftScreen == tftScreenSettings)
 			{
 
-				tftGearTracking = 0;
-				if (!tftSettings::tap(tftTapX, tftTapY)) tftMain::init();	// tap returned "exit" -> back to the dashboard (init resets tftScreen)
+				uint8_t r = tftSettings::tap(tftTapX, tftTapY);
+
+				if (r == tftSettingsExit) tftMain::init();					// Exit -> dashboard (init resets tftScreen)
+				else if (r == tftSettingsDropdown) tftScreen = tftScreenDropdown;	// a choice param opened the dropdown
+
+			}
+			else if (tftScreen == tftScreenDropdown)
+			{
+
+				if (!tftSettings::dropdownTap(tftTapX, tftTapY)) tftScreen = tftScreenSettings;	// done -> back to the parameter list (already redrawn)
 
 			}
 

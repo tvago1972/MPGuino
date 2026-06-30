@@ -1,32 +1,6 @@
 #if defined(useTFToutput) && defined(useTouchScreenInput)
-/* on-screen (touch) EEPROM settings editor */
-
-// wait for one debounced tap and return its press coords. there is no idle timeout:
-// the settings screens stay open until the user taps a row or the Back/Exit footer
-// (like the LCD settings menu), so pausing to recall a value never reverts the screen.
-static void tftSettingsTap(uint16_t * px, uint16_t * py)
-{
-
-	uint16_t x, y;
-
-	while (1)
-	{
-
-		if (touch::read(&x, &y))
-		{
-
-			*px = x;
-			*py = y;
-			while (touch::pressed()) heart::wait0(8);	// wait for release
-			return;
-
-		}
-
-		heart::wait0(8);
-
-	}
-
-}
+/* on-screen (touch) EEPROM settings editor (driven non-blocking by the main loop:
+   the coordinator detects taps and calls tftSettings::tap/dropdownTap) */
 
 // list row height for the current orientation (taller in portrait for easier taps)
 static uint16_t tftSettingsRowHeight(void)
@@ -193,17 +167,22 @@ static void tftSettingsDrawParams(void)
 
 }
 
-// modal dropdown: list the options with the current one highlighted; return the
-// chosen index, or 0xFF on Cancel / idle timeout
-static uint8_t tftSettingsChoose(const char * title, const char * options, uint8_t count, uint8_t current)
+// dropdown (choice parameter) edit context, set when a choice param is tapped
+static uint8_t tftDropParam;			// the parameter being chosen
+static const char * tftDropOptions;		// its option-label list
+static uint8_t tftDropCount;			// number of options (= value range)
+static uint8_t tftDropLabelIdx;			// label index (for the dropdown title)
+
+// draw the option dropdown: the options with `current` highlighted, Cancel footer
+static void tftSettingsDrawDropdown(uint8_t current)
 {
 
-	uint16_t px, py, rowH = tftSettingsRowHeight();
-	uint8_t i, hit;
+	uint16_t rowH = tftSettingsRowHeight();
+	uint8_t i;
 
-	tftSettingsFrame(title, PSTR("Cancel"));
+	tftSettingsFrame(findStr(tftSettingsLabels, tftDropLabelIdx), PSTR("Cancel"));
 
-	for (i = 0; i < count; i++)
+	for (i = 0; i < tftDropCount; i++)
 	{
 
 		uint16_t y = tftSettingsTitleH + (uint16_t)(i) * rowH;
@@ -212,55 +191,46 @@ static uint8_t tftSettingsChoose(const char * title, const char * options, uint8
 		ILI9341::fillRect(0, y, tftWidth, rowH - 1, bg);
 		TFT::setTextColour(tftSettingsRowFG, bg);
 		TFT::setCursorPixel(6, y + (rowH - 16) / 2);
-		text::stringOut(m8DevTFTidx, findStr(options, i));
+		text::stringOut(m8DevTFTidx, findStr(tftDropOptions, i));
 		ILI9341::drawLine(0, y + rowH - 1, tftWidth - 1, y + rowH - 1, tftSettingsDivider);
-
-	}
-
-	while (1)
-	{
-
-		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
-
-		hit = tftSettingsRowAt(py, count);
-
-		if (hit == 0xFF) return 0xFF;						// footer -> cancel
-		if (hit < count) return hit;
 
 	}
 
 }
 
-// edit one parameter: a boolean/enum parameter uses the dropdown of named options;
-// everything else uses the keypad (seeded with the current value, bounded by the
-// parameter's bit-width max). both are titled with the parameter's label. on a
-// confirmed change the new value is stored with the usual housekeeping.
+// set up and draw the dropdown for a choice parameter (current value highlighted)
+static void tftSettingsOpenDropdown(uint8_t parameterIdx, const char * choices, uint8_t labelIdx)
+{
+
+	uint32_t cur, maxValue;
+
+	numberEditObj.parameterIdx = parameterIdx;
+	parameterEdit::sharedFunctionCall(nesLoadInitial);		// pBuff = current value; reg 2 = value
+	cur = str2ull(pBuff);
+	maxValue = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), parameterIdx);	// 2^bits - 1
+
+	tftDropParam = parameterIdx;
+	tftDropOptions = choices;
+	tftDropCount = (uint8_t)(maxValue + 1);
+	tftDropLabelIdx = labelIdx;
+
+	tftSettingsDrawDropdown((uint8_t)(cur));
+
+}
+
+// edit a numeric parameter with the keypad (seeded with the current value, bounded
+// by the bit-width max). still blocking - converted to a screen state in Stage 3b.
 static void tftSettingsEdit(uint8_t parameterIdx, const char * label)
 {
 
 	uint32_t cur, maxValue, newValue;
-	const char * choices = tftSettingsChoices(parameterIdx);
 
 	numberEditObj.parameterIdx = parameterIdx;
 	parameterEdit::sharedFunctionCall(nesLoadInitial);		// pBuff = current value; reg 2 = value
 	cur = str2ull(pBuff);									// current value (also reloads reg 2)
 	maxValue = SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchMaximumParamValue), parameterIdx);	// 2^bits - 1
 
-	if (choices) // boolean / enum -> dropdown (option count is the value range, maxValue + 1)
-	{
-
-		uint8_t sel = tftSettingsChoose(label, choices, (uint8_t)(maxValue + 1), (uint8_t)(cur));
-
-		if (sel == 0xFF) return;							// cancelled
-		newValue = sel;
-
-	}
-	else // numeric -> keypad
-	{
-
-		if (!keypad::getNumber(&newValue, maxValue, cur, label)) return;	// cancelled
-
-	}
+	if (!keypad::getNumber(&newValue, maxValue, cur, label)) return;	// cancelled
 
 	SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), newValue);	// reg 2 = new value
 	EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), parameterIdx);			// store + housekeeping
@@ -277,9 +247,9 @@ static void tftSettings::enter(void)
 
 }
 
-// handle one tap on the current settings screen. returns 1 to stay in settings,
-// 0 to exit back to the main screen. (parameter editing still uses the blocking
-// keypad/dropdown for now - converted to screen states in the next stage.)
+// handle one tap on the group menu / parameter list. returns a tftSettings* code
+// the coordinator acts on. a choice parameter opens the dropdown (returns Dropdown);
+// a numeric parameter still uses the blocking keypad for now (Stage 3b).
 static uint8_t tftSettings::tap(uint16_t px, uint16_t py)
 {
 
@@ -288,7 +258,7 @@ static uint8_t tftSettings::tap(uint16_t px, uint16_t py)
 
 		uint8_t hit = tftSettingsRowAt(py, tftSettingsGroupCount);
 
-		if (hit == 0xFF) return 0;							// Exit -> main screen
+		if (hit == 0xFF) return tftSettingsExit;			// Exit -> main screen
 		if (hit < tftSettingsGroupCount)					// pick a group -> parameter list
 		{
 
@@ -311,15 +281,47 @@ static uint8_t tftSettings::tap(uint16_t px, uint16_t py)
 		{
 
 			uint8_t j = start + hit;
+			uint8_t p = pgm_read_byte(&tftSettingsParams[(uint16_t)(j)]);
+			const char * choices = tftSettingsChoices(p);
 
-			tftSettingsEdit(pgm_read_byte(&tftSettingsParams[(uint16_t)(j)]), findStr(tftSettingsLabels, j));	// TEMP: blocking keypad/dropdown (Stage 3)
+			if (choices)									// boolean/enum -> open the dropdown (non-blocking)
+			{
+
+				tftSettingsOpenDropdown(p, choices, j);
+				return tftSettingsDropdown;
+
+			}
+
+			tftSettingsEdit(p, findStr(tftSettingsLabels, j));	// numeric -> keypad (TEMP blocking, Stage 3b)
 			tftSettingsDrawParams();						// redraw with the (possibly) new value
 
 		}
 
 	}
 
-	return 1;
+	return tftSettingsStay;
+
+}
+
+// handle one tap on the option dropdown: a tap on an option stores it; the Cancel
+// footer discards. either way return to the parameter list (redrawn). returns
+// 0 = done (back to the parameter list), 1 = stay (tap missed an option/footer).
+static uint8_t tftSettings::dropdownTap(uint16_t px, uint16_t py)
+{
+
+	uint8_t hit = tftSettingsRowAt(py, tftDropCount);
+
+	if (hit < tftDropCount)	// selected an option -> store it with housekeeping
+	{
+
+		SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), (uint32_t)(hit));
+		EEPROM::onChange(S64_PRGM_PTR(prgmWriteParameterValue), tftDropParam);
+
+	}
+	else if (hit != 0xFF) return 1;	// tap landed on the title/gap -> ignore, stay in the dropdown
+
+	tftSettingsDrawParams();		// option chosen or Cancel: back to the parameter list
+	return 0;
 
 }
 

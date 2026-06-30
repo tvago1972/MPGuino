@@ -14,6 +14,7 @@ namespace tftMain /* TFT primary-display main screen prototype */
 // workingDisplayIdx), so the main loop never blocks regardless of what's shown
 static const uint8_t tftScreenMain =		0;	// live instrument dashboard
 static const uint8_t tftScreenSettings =	1;	// settings editor (group menu / parameter list)
+static const uint8_t tftScreenDropdown =	2;	// option dropdown (editing a boolean/enum parameter)
 static uint8_t tftScreen;
 
 #if defined(useTouchScreenInput)
