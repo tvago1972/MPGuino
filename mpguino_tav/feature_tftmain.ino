@@ -54,6 +54,21 @@ static void tftMain::update(void)
 	TFT::applyPadding();	// flush the final field's padding
 	TFT::setTextPadding(0);
 
+	// sleep-countdown bar along the very bottom (clear of the quadrant text): the
+	// active (grey) portion shrinks as the activity timeout runs down; the elapsed
+	// portion is cleared to background. any activity resets the countdown -> full bar.
+	{
+
+		uint16_t total = v16(v16ActivityTimeoutIdx);
+		uint16_t remaining = v16(v16ActivityRemainingIdx);
+		uint16_t barW = total ? (uint16_t)((uint32_t)(remaining) * tftWidth / total) : tftWidth;
+		uint16_t barY = tftHeight - tftSleepBarH;
+
+		if (barW) ILI9341::fillRect(0, barY, barW, tftSleepBarH, tftSleepBarFG);
+		if (barW < tftWidth) ILI9341::fillRect(barW, barY, tftWidth - barW, tftSleepBarH, tftMainBG);
+
+	}
+
 }
 
 #endif // defined(useTFToutput) && !defined(useButtonInput)

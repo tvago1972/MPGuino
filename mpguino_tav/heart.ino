@@ -965,6 +965,10 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	// reset park timeout watchdog if any of the fuel injector or VSS pulse flags have changed
 	if (previousActivity & afNotParkedFlags) parkTimeoutCount = v16(v16ParkTimeoutIdx);
 
+#if defined(useTFToutput) && !defined(useButtonInput)
+	v16(v16ActivityRemainingIdx) = activityTimeoutCount; // expose the countdown for the TFT sleep bar
+#endif // defined(useTFToutput) && !defined(useButtonInput)
+
 	previousActivity = (v08(v8ActivityIdx) & afValidFlags); // save for next timer0 tick
 
 #if defined(useAnalogRead)

@@ -87,4 +87,9 @@ static const uint16_t tftMainLabelFG =	0x07FF;		// cyan label
 static const uint16_t tftMainValueFG =	0xFFFF;		// white value
 static const uint16_t tftMainBG =		0x0000;		// black
 
+// sleep-countdown bar along the bottom: full width when active, shrinking toward
+// zero as the activity timeout approaches (any activity, incl. a touch, resets it)
+static const uint16_t tftSleepBarH =	4;			// bar height (px)
+static const uint16_t tftSleepBarFG =	0x4208;		// grey active portion
+
 #endif // defined(useTFToutput) && !defined(useButtonInput)

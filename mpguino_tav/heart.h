@@ -571,6 +571,10 @@ static const uint8_t v16DisplayDelayCountIdx =			v16DetectEngineOffIdx + 1;				/
 static const uint8_t v16WatchdogInjectorCountIdx =		v16DisplayDelayCountIdx + 1;			// watchdog counter for minimum good engine speed / engine off activity timeout
 static const uint8_t v16WatchdogVSScountIdx =			v16WatchdogInjectorCountIdx + 1;		// watchdog counter for minimum good vehicle speed / vehicle stopped activity timeout
 #define nextAllowedValue v16WatchdogVSScountIdx + 1
+#if defined(useTFToutput) && !defined(useButtonInput)
+static const uint8_t v16ActivityRemainingIdx =			nextAllowedValue;						// activity timeout countdown remaining (timer0 ticks), for the TFT sleep bar
+#define nextAllowedValue v16ActivityRemainingIdx + 1
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 #if defined(useAnalogRead)
 static const uint8_t v16AnalogStartIdx =				nextAllowedValue;						// start of analog value storage
@@ -1086,6 +1090,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v16DisplayDelayCountIdx" tcEOS				// timer0
 	"v16WatchdogInjectorCountIdx" tcEOS			// fi / timer0
 	"v16WatchdogVSScountIdx" tcEOS				// vss / timer0
+#if defined(useTFToutput) && !defined(useButtonInput)
+	"v16ActivityRemainingIdx" tcEOS				// timer0 / TFT sleep bar
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(useAnalogRead)
 	"v16Analog0Idx" tcEOS						// analog
 	"v16Analog1Idx" tcEOS						// analog
