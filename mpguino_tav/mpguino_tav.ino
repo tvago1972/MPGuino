@@ -1262,6 +1262,9 @@ int main(void)
 #endif // defined(useButtonInput)
 #if defined(useTFToutput) && !defined(useButtonInput)
 			if (tftScreen == tftScreenMain) tftMain::update(); // refresh the dashboard; other screens draw on transitions (input is polled per-pass)
+#if defined(useTFTsleepBarEverywhere)
+			else TFT::drawActivityBar(); // keep the sleep bar live on the settings/dropdown/keypad screens (they reserve the bottom strip)
+#endif // defined(useTFTsleepBarEverywhere)
 #endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 

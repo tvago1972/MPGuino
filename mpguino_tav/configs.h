@@ -355,11 +355,12 @@
 #define useHardwareSPI true
 #endif // defined(useILI9341)
 
-// optionally draw the activity/sleep bar on the settings/keypad screens too. left
-// off: those screens have no idle timeout (they don't self-close), so a countdown
-// bar there would be misleading. uncomment to extend the bar to them anyway.
+// draw the activity/sleep bar on the settings/dropdown/keypad screens too. now that
+// these are non-blocking screen states, the global activity timeout applies to them
+// just like the dashboard (the loop keeps running and will blank/sleep any screen),
+// so the countdown is accurate everywhere. comment out to keep the bar dashboard-only.
 #if defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
-//#define useTFTsleepBarEverywhere true
+#define useTFTsleepBarEverywhere true
 #endif // defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
 
 #if defined(useTFToutput)
