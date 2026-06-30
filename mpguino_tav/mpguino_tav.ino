@@ -1131,6 +1131,9 @@ int main(void)
 		if (v08(v8ButtonStatusIdx) & btnStatusButtonRead) cursor::doCommand(); // if any buttons were pressed, go perform button action
 
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput) && defined(useTouchScreenInput)
+		tftMain::pollTouch(); // non-blocking touch input (settings gear); runs every pass so the loop never stalls
+#endif // defined(useTFToutput) && !defined(useButtonInput) && defined(useTouchScreenInput)
 #if defined(useDragRaceFunction)
 		if (v08(v8Timer0Status1Idx) & t0sbAccelTestFlag)
 		{
@@ -1258,10 +1261,7 @@ int main(void)
 #endif // defined(useClockDisplay) && !defined(useDeepSleep)
 #endif // defined(useButtonInput)
 #if defined(useTFToutput) && !defined(useButtonInput)
-			tftMain::update(); // refresh the TFT main screen
-#if defined(useTouchScreenInput)
-			tftMain::pollTouch(); // settings gear: hold to enter the settings editor
-#endif // defined(useTouchScreenInput)
+			tftMain::update(); // refresh the TFT main screen (input is polled per-pass, not here)
 #endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 

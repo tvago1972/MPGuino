@@ -2,6 +2,13 @@
 /* TFT primary-display main screen (reuses the first LCD page's functions) */
 
 #if defined(useTouchScreenInput)
+// non-blocking settings-gear state (persists across pollTouch() calls); declared
+// here so update() can draw the gear in its current (idle/held) colour
+static uint8_t tftGearTracking;		// a press is being followed
+static uint8_t tftGearHeld;			// the followed press is on the gear
+static uint32_t tftGearHoldStart;	// cycles0() when the gear press began
+static uint16_t tftGearBarW;		// last progress-bar width drawn (avoid redundant fills)
+
 // draw the settings gear (a small square cog with four teeth and a centre hole) in
 // the top-right corner, in the given colour. drawn in place every update() (no
 // leading footprint-clear, so it doesn't flicker) - the corner is already cleared
@@ -81,7 +88,7 @@ static void tftMain::update(void)
 	TFT::drawActivityBar();
 
 #if defined(useTouchScreenInput)
-	tftMainBlitGear(tftGearFG);	// settings gear (redrawn every frame so it survives screen clears)
+	tftMainBlitGear(tftGearHeld ? tftGearActiveFG : tftGearFG);	// gear, in its current state (redrawn each frame so it survives screen clears)
 #endif // defined(useTouchScreenInput)
 
 }
@@ -95,45 +102,72 @@ static uint8_t tftMainOnGear(uint16_t tx, uint16_t ty)
 
 }
 
-// poll the settings gear: a touch on it must be HELD (not tapped) to open the
-// settings editor, so it can't be triggered by accident. while held, a green bar
-// under the gear fills; releasing or sliding off before the threshold aborts.
+// non-blocking settings-gear poll, called every main-loop pass (so the loop keeps
+// running - trip processing, datalogging, etc. - while the user interacts). a touch
+// on the gear must be HELD (not tapped) to open the settings editor, so it can't be
+// triggered by accident; a green bar under the gear fills as the hold accrues, and
+// releasing/sliding off before the threshold aborts. state persists across calls;
+// the hold is timed with cycles0() so it doesn't depend on the loop rate.
 static void tftMain::pollTouch(void)
 {
 
-	uint16_t tx, ty, held;
+	uint16_t tx, ty;
 	uint16_t gx = tftWidth - 2 * tftGearR - tftGearMargin;
 	uint16_t barY = tftGearMargin + 2 * tftGearR + 2;
 
-	if (!touch::read(&tx, &ty)) return;				// not touched (cheap when idle), or no stable sample
-	if (!tftMainOnGear(tx, ty)) return;				// touch elsewhere: ignored on the main screen
-
-	tftMainBlitGear(tftGearActiveFG);				// acknowledge the press
-
-	for (held = 0; held < tftGearHoldTicks; held++)
+	if (touch::pressed())	// finger down (cheap PENIRQ read)
 	{
 
-		if (!touch::read(&tx, &ty)) break;			// released / unstable -> abort
-		if (!tftMainOnGear(tx, ty)) break;			// slid off the gear -> abort
+		if (!tftGearTracking)	// press edge: sample once, decide if it landed on the gear
+		{
 
-		ILI9341::fillRect(gx, barY, (uint16_t)((uint32_t)(held + 1) * 2 * tftGearR / tftGearHoldTicks), 3, tftGearProgressFG);
+			tftGearTracking = 1;
+			tftGearHeld = (touch::read(&tx, &ty) && tftMainOnGear(tx, ty));
 
-		heart::wait0(8);
+			if (tftGearHeld)
+			{
+
+				tftGearHoldStart = heart::cycles0();
+				tftGearBarW = 0;
+				tftMainBlitGear(tftGearActiveFG);
+
+			}
+
+		}
+		else if (tftGearHeld)	// holding on the gear: grow the progress bar, confirm at threshold
+		{
+
+			uint32_t elapsed = heart::cycles0() - tftGearHoldStart;
+			uint16_t w = (elapsed >= tftGearHoldCycles) ? (2 * tftGearR) : (uint16_t)((uint32_t)(elapsed) * 2 * tftGearR / tftGearHoldCycles);
+
+			if (w != tftGearBarW) { ILI9341::fillRect(gx, barY, w, 3, tftGearProgressFG); tftGearBarW = w; }
+
+			if (elapsed >= tftGearHoldCycles)	// confirmed: open the settings editor
+			{
+
+				tftGearTracking = 0;
+				tftGearHeld = 0;
+				tftSettings::run();				// TEMP: still blocking - converted to a screen state in the next stage
+				tftMain::init();				// settings cleared the screen: repaint everything (incl. gear)
+
+			}
+
+		}
 
 	}
-
-	if (held >= tftGearHoldTicks)					// confirmed: open the settings editor
+	else	// finger up
 	{
 
-		tftSettings::run();
-		tftMain::init();							// settings cleared the screen: repaint everything (incl. gear)
+		if (tftGearTracking && tftGearHeld)	// released before confirm: abort, restore the idle gear
+		{
 
-	}
-	else											// aborted: erase the progress bar and restore the idle gear
-	{
+			ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);
+			tftMainBlitGear(tftGearFG);
 
-		ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);
-		tftMainBlitGear(tftGearFG);
+		}
+
+		tftGearTracking = 0;
+		tftGearHeld = 0;
 
 	}
 

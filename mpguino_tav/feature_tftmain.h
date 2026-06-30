@@ -17,7 +17,7 @@ namespace tftMain /* TFT primary-display main screen prototype */
 static const uint16_t tftGearR =			10;			// gear half-size (footprint 2R x 2R px)
 static const uint16_t tftGearMargin =		4;			// inset from the top-right corner
 static const uint16_t tftGearHitSize =		28;			// touch target (top-right corner square); kept clear of the value field
-static const uint16_t tftGearHoldTicks =	90;			// hold ticks (~8ms each, ~720ms) to confirm entry
+static const uint32_t tftGearHoldCycles = ((uint32_t)(t0CyclesPerSecond) * 3) / 4;	// ~750ms hold (timer0 cycles) to confirm entry
 static const uint16_t tftGearFG =			0x8410;		// idle gear (grey)
 static const uint16_t tftGearActiveFG =		0x07FF;		// gear while held (cyan)
 static const uint16_t tftGearProgressFG =	0x07E0;		// hold progress bar (green)
