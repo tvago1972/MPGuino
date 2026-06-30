@@ -37,7 +37,6 @@ static const uint8_t keypadMaxDigits =	10;				// full uint32_t width (4294967295
 static const uint8_t keypadLabelScale =	3;				// glyph scale for key labels / entry
 static const uint8_t keypadGap =		4;				// px between keys and around the grid
 static const uint8_t keypadActionGap =	8;				// extra px separating the DEL/0/OK row from the digits
-static const uint16_t keypadIdleTimeout = 1500;			// poll ticks (~8ms each) before giving up
 static const uint16_t keypadLongPress =	75;				// held ticks (~8ms each, ~600ms) that turn a DEL press into cancel
 
 // row-major key codes: 1-9, then Delete / 0 / Enter

@@ -355,6 +355,13 @@
 #define useHardwareSPI true
 #endif // defined(useILI9341)
 
+// optionally draw the activity/sleep bar on the settings/keypad screens too. left
+// off: those screens have no idle timeout (they don't self-close), so a countdown
+// bar there would be misleading. uncomment to extend the bar to them anyway.
+#if defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
+//#define useTFTsleepBarEverywhere true
+#endif // defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
+
 #if defined(useTFToutput)
 #undef useLegacyLCD
 #undef useDFR0009LCD

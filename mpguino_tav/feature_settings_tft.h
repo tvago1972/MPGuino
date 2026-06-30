@@ -54,6 +54,11 @@ static const char tftChoiceInjTrigger[] PROGMEM = { "Sat Fall" tcEOS "Sat Rise" 
 // has the spare vertical room) - see tftSettingsRowHeight().
 static const uint16_t tftSettingsTitleH =	22;
 static const uint16_t tftSettingsFooterH =	26;
+#if defined(useTFTsleepBarEverywhere)
+static const uint16_t tftSettingsBottomReserve = tftSleepBarH;	// bottom strip kept for the activity bar
+#else // defined(useTFTsleepBarEverywhere)
+static const uint16_t tftSettingsBottomReserve = 0;
+#endif // defined(useTFTsleepBarEverywhere)
 static const uint16_t tftSettingsRowHportrait =		44;
 static const uint16_t tftSettingsRowHlandscape =	28;
 

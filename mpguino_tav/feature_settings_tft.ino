@@ -1,14 +1,15 @@
 #if defined(useTFToutput) && defined(useTouchScreenInput)
 /* on-screen (touch) EEPROM settings editor */
 
-// wait for one debounced tap; returns 1 with the press coords, 0 on idle timeout
-static uint8_t tftSettingsTap(uint16_t * px, uint16_t * py)
+// wait for one debounced tap and return its press coords. there is no idle timeout:
+// the settings screens stay open until the user taps a row or the Back/Exit footer
+// (like the LCD settings menu), so pausing to recall a value never reverts the screen.
+static void tftSettingsTap(uint16_t * px, uint16_t * py)
 {
 
-	uint16_t idle = 0;
 	uint16_t x, y;
 
-	while (idle < keypadIdleTimeout)
+	while (1)
 	{
 
 		if (touch::read(&x, &y))
@@ -17,16 +18,13 @@ static uint8_t tftSettingsTap(uint16_t * px, uint16_t * py)
 			*px = x;
 			*py = y;
 			while (touch::pressed()) heart::wait0(8);	// wait for release
-			return 1;
+			return;
 
 		}
 
 		heart::wait0(8);
-		idle++;
 
 	}
-
-	return 0;
 
 }
 
@@ -63,7 +61,7 @@ static uint8_t tftSettingsRowAt(uint16_t py, uint8_t count)
 
 	uint8_t r;
 
-	if (py >= tftHeight - tftSettingsFooterH) return 0xFF;	// footer (back / exit)
+	if (py >= tftHeight - tftSettingsFooterH - tftSettingsBottomReserve) return 0xFF;	// footer (back / exit)
 	if (py < tftSettingsTitleH) return 0xFE;				// title bar
 
 	r = (uint8_t)((py - tftSettingsTitleH) / tftSettingsRowHeight());
@@ -76,7 +74,7 @@ static uint8_t tftSettingsRowAt(uint16_t py, uint8_t count)
 static void tftSettingsFrame(const char * title, const char * footer)
 {
 
-	uint16_t fy = tftHeight - tftSettingsFooterH;
+	uint16_t fy = tftHeight - tftSettingsFooterH - tftSettingsBottomReserve;
 
 	ILI9341::fillRect(0, 0, tftWidth, tftSettingsTitleH, tftSettingsTitleBG);
 	TFT::setTextColour(tftSettingsRowFG, tftSettingsTitleBG);
@@ -96,6 +94,10 @@ static void tftSettingsFrame(const char * title, const char * footer)
 	TFT::setTextColour(tftSettingsRowFG, tftSettingsDivider);
 	TFT::setCursorPixel(fx, fy + (tftSettingsFooterH - 16) / 2);
 	text::stringOut(m8DevTFTidx, footer);
+
+#if defined(useTFTsleepBarEverywhere)
+	TFT::drawActivityBar();	// activity/sleep bar in the reserved bottom strip
+#endif // defined(useTFTsleepBarEverywhere)
 
 }
 
@@ -146,7 +148,7 @@ static uint8_t tftSettingsGroupScreen(void)
 	while (1)
 	{
 
-		if (!tftSettingsTap(&px, &py)) return 0xFF;			// idle timeout -> exit
+		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
 
 		hit = tftSettingsRowAt(py, tftSettingsGroupCount);
 
@@ -203,7 +205,7 @@ static uint8_t tftSettingsParamScreen(uint8_t group)
 	while (1)
 	{
 
-		if (!tftSettingsTap(&px, &py)) return 0xFF;			// idle timeout -> back
+		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
 
 		hit = tftSettingsRowAt(py, count);
 
@@ -241,7 +243,7 @@ static uint8_t tftSettingsChoose(const char * title, const char * options, uint8
 	while (1)
 	{
 
-		if (!tftSettingsTap(&px, &py)) return 0xFF;			// idle timeout -> cancel
+		tftSettingsTap(&px, &py);							// wait for a tap (no timeout)
 
 		hit = tftSettingsRowAt(py, count);
 

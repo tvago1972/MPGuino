@@ -28,15 +28,6 @@ static void TFT::shutdown(void)
 
 }
 
-// light wake from TFT::shutdown(): the controller kept VCC, so no reset/re-init is
-// needed - just undo shutdown(). (the boot and deep-sleep paths still use init().)
-static void TFT::resume(void)
-{
-
-	ILI9341::resume();
-
-}
-
 // text output device callback: advance a pixel cursor, handle CR/LF and wrap.
 static void TFT::chrOut(uint8_t chr)
 {
@@ -248,6 +239,24 @@ static void TFT::drawTestScreen(void)
 
 }
 
+#if defined(useTFToutput) && !defined(useButtonInput)
+// draw the activity/sleep countdown bar across the very bottom: the grey active
+// portion = remaining/total of the activity timeout; the elapsed portion is cleared.
+// any activity (incl. a touch) resets the countdown -> full bar.
+static void TFT::drawActivityBar(void)
+{
+
+	uint16_t total = v16(v16ActivityTimeoutIdx);
+	uint16_t remaining = v16(v16ActivityRemainingIdx);
+	uint16_t barW = total ? (uint16_t)((uint32_t)(remaining) * tftWidth / total) : tftWidth;
+	uint16_t barY = tftHeight - tftSleepBarH;
+
+	if (barW) ILI9341::fillRect(0, barY, barW, tftSleepBarH, tftSleepBarFG);
+	if (barW < tftWidth) ILI9341::fillRect(barW, barY, tftWidth - barW, tftSleepBarH, tftBGcolour);
+
+}
+
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(useILI9341)
 /* ILI9341 TFT hardware support section */
 
@@ -320,9 +329,10 @@ static void ILI9341::init(void)
 static void ILI9341::shutdown(void)
 {
 
-	// blank the panel and put the controller to sleep for lower power draw (GRAM is
-	// retained, so resume() can light it back up without a full re-init). this is done
-	// while the DC pin is still an output, before it is released below.
+	// blank the panel and put the controller to sleep for lower power draw, while the
+	// DC pin is still an output (before it is released below). the wake path does a
+	// full TFT::init() (hardware reset + re-config), so nothing here needs to be
+	// reversible - this clone panel does not reliably retain GRAM/config through sleep.
 	spi::set(SPIconfigTFT);
 	writeCommandByte(ILI9341_DISPOFF);
 	writeCommandByte(ILI9341_SLPIN);
@@ -340,33 +350,6 @@ static void ILI9341::shutdown(void)
 #endif // defined(useSeeedStudioTFTtouchShield)
 
 #endif // defined(__AVR_ATmega2560__)
-}
-
-// reverse ILI9341::shutdown(): restore the released pins, wake the controller out of
-// sleep, and re-enable the backlight. the controller kept VCC and its configuration
-// (and GRAM), so the last image returns - no reset or command-table re-init needed.
-static void ILI9341::resume(void)
-{
-
-	// restore the pins shutdown() released (DC must be an output before any command)
-#if defined(__AVR_ATmega2560__)
-#if defined(useMPGuinoColourTouch)
-	DDRB |= (1 << DDB6);
-	DDRL |= (1 << DDL1);
-#endif // defined(useMPGuinoColourTouch)
-#if defined(useSeeedStudioTFTtouchShield)
-	DDRH |= ((1 << DDH4) | (1 << DDH3));
-#endif // defined(useSeeedStudioTFTtouchShield)
-
-#endif // defined(__AVR_ATmega2560__)
-
-	spi::set(SPIconfigTFT);
-	writeCommandByte(ILI9341_SLPOUT);
-	heart::wait0(150);						// datasheet: wait >= 120ms after sleep-out
-	writeCommandByte(ILI9341_DISPON);
-
-	setBrightness(1);
-
 }
 
 static void ILI9341::writeCommandByte(uint8_t byt)

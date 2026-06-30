@@ -4,8 +4,24 @@ namespace tftMain /* TFT primary-display main screen prototype */
 
 	static void init(void);
 	static void update(void);
+#if defined(useTouchScreenInput)
+	static void pollTouch(void);
+#endif // defined(useTouchScreenInput)
 
 };
+
+#if defined(useTouchScreenInput)
+// settings gear in the top-right corner: a sustained hold (not a tap) opens the
+// settings editor, so it can't be triggered accidentally. a progress bar under the
+// gear fills as the hold counts up.
+static const uint16_t tftGearR =			10;			// gear half-size (footprint 2R x 2R px)
+static const uint16_t tftGearMargin =		4;			// inset from the top-right corner
+static const uint16_t tftGearHitSize =		28;			// touch target (top-right corner square); kept clear of the value field
+static const uint16_t tftGearHoldTicks =	90;			// hold ticks (~8ms each, ~720ms) to confirm entry
+static const uint16_t tftGearFG =			0x8410;		// idle gear (grey)
+static const uint16_t tftGearActiveFG =		0x07FF;		// gear while held (cyan)
+static const uint16_t tftGearProgressFG =	0x07E0;		// hold progress bar (green)
+#endif // defined(useTouchScreenInput)
 
 // the four functions of the first ("Instrument") LCD display page, reused here:
 // instant speed, engine RPM (or battery voltage), fuel rate, fuel economy. these
@@ -86,10 +102,5 @@ static const uint8_t tftMainWindow =	7;			// value field width (chars) per quadr
 static const uint16_t tftMainLabelFG =	0x07FF;		// cyan label
 static const uint16_t tftMainValueFG =	0xFFFF;		// white value
 static const uint16_t tftMainBG =		0x0000;		// black
-
-// sleep-countdown bar along the bottom: full width when active, shrinking toward
-// zero as the activity timeout approaches (any activity, incl. a touch, resets it)
-static const uint16_t tftSleepBarH =	4;			// bar height (px)
-static const uint16_t tftSleepBarFG =	0x4208;		// grey active portion
 
 #endif // defined(useTFToutput) && !defined(useButtonInput)

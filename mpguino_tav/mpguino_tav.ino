@@ -739,15 +739,14 @@ int main(void)
 					LCD::init(); // re-initialize LCD device
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-#if defined(useDeepSleep)
-					TFT::init(); // woke from power-down: full re-initialization
-#else // defined(useDeepSleep)
-					TFT::resume(); // controller kept VCC: light wake (no full re-init)
-#endif // defined(useDeepSleep)
+					TFT::init(); // full re-init on wake (this panel does not reliably retain GRAM/config through SLPIN sleep)
 #endif // defined(useTFToutput)
 #if defined(useButtonInput)
 					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+					tftMain::init(); // repaint the whole main screen (incl. the gear) after the re-init
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 				}
 
@@ -1260,6 +1259,9 @@ int main(void)
 #endif // defined(useButtonInput)
 #if defined(useTFToutput) && !defined(useButtonInput)
 			tftMain::update(); // refresh the TFT main screen
+#if defined(useTouchScreenInput)
+			tftMain::pollTouch(); // settings gear: hold to enter the settings editor
+#endif // defined(useTouchScreenInput)
 #endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 

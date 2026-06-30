@@ -465,6 +465,10 @@ static void keypad::draw(void)
 	uint8_t i;
 	uint16_t titleCellH = (uint16_t)(TFT_CELL_H) * tftScale;	// title uses the text-device scale
 	uint16_t titleH = keypadTitle ? (titleCellH + 6) : 0;
+	uint16_t usableH = tftHeight;
+#if defined(useTFTsleepBarEverywhere)
+	usableH -= tftSleepBarH;									// leave the bottom strip for the activity bar
+#endif // defined(useTFTsleepBarEverywhere)
 
 	TFT::clearScreen();
 
@@ -472,7 +476,7 @@ static void keypad::draw(void)
 	keypadEntryH = (uint16_t)(TFT_CELL_H) * keypadLabelScale + 8;
 	keypadGridTop = keypadEntryTop + keypadEntryH + keypadGap;
 	keypadKeyW = (tftWidth - (uint16_t)(keypadCols + 1) * keypadGap) / keypadCols;
-	keypadKeyH = (tftHeight - keypadGridTop - (uint16_t)(keypadRows) * keypadGap - (uint16_t)(keypadActionGap)) / keypadRows;
+	keypadKeyH = (usableH - keypadGridTop - (uint16_t)(keypadRows) * keypadGap - (uint16_t)(keypadActionGap)) / keypadRows;
 
 	if (keypadTitle) // parameter name (or whatever the caller set) above the entry box
 	{
@@ -486,19 +490,23 @@ static void keypad::draw(void)
 	keypad::drawEntry();
 	for (i = 0; i < keypadKeys; i++) keypad::drawKey(i, 0);
 
+#if defined(useTFTsleepBarEverywhere)
+	TFT::drawActivityBar();
+#endif // defined(useTFTsleepBarEverywhere)
+
 }
 
 // modal numeric entry: draw the keypad, then edit a digit string until OK is
 // pressed. the field is seeded with initialValue (shown empty when 0). returns 1
-// and stores the value (OK with >=1 digit), or 0 on cancel (long-press DEL) or
-// idle timeout. digits insert at the caret, which is moved by tapping inside the
+// and stores the value (OK with >=1 digit), or 0 on cancel (long-press DEL). there
+// is no idle timeout. digits insert at the caret, which is moved by tapping inside the
 // entry box; a short DEL press deletes the digit to its left. each inserted digit
 // is checked against maxValue (computed over the whole field in 64-bit, so the
 // result is always in [0, maxValue], no uint32_t overflow).
 static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue, uint32_t initialValue, const char * title)
 {
 
-	uint16_t px, py, idle, held;
+	uint16_t px, py, held;
 	uint16_t cellW = (uint16_t)(TFT_CELL_W) * keypadLabelScale;
 	uint16_t innerW = tftWidth - 2 * keypadGap;
 	uint16_t x0 = keypadEntryX0();
@@ -522,14 +530,13 @@ static uint8_t keypad::getNumber(uint32_t * value, uint32_t maxValue, uint32_t i
 	keypadCursor = keypadEntryLen;
 	keypad::draw();
 
-	idle = 0;
-
-	while ((!done) && (idle < keypadIdleTimeout))
+	// no idle timeout: the editor stays open until the user explicitly accepts (OK)
+	// or cancels (long-press DEL), like the LCD parameter editor - so pausing to
+	// recall a value never reverts the screen
+	while (!done)
 	{
 
-		if (!touch::read(&px, &py)) { idle++; heart::wait0(8); continue; }
-
-		idle = 0;
+		if (!touch::read(&px, &py)) { heart::wait0(8); continue; }
 
 		// a tap inside the entry box positions the caret at the nearest cell boundary
 		if ((py >= keypadEntryTop) && (py < keypadEntryTop + keypadEntryH) && (px >= keypadGap) && (px < keypadGap + innerW))

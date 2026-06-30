@@ -4,7 +4,6 @@ namespace TFT /* TFT device support section prototype */
 
 	static void init(void);
 	static void shutdown(void);
-	static void resume(void);
 	static void chrOut(uint8_t chr);
 	static void clearScreen(void);
 	static void setTextColour(uint16_t fg, uint16_t bg);
@@ -14,8 +13,20 @@ namespace TFT /* TFT device support section prototype */
 	static void applyPadding(void);
 	static void setRotation(uint8_t rotation);
 	static void drawTestScreen(void);
+#if defined(useTFToutput) && !defined(useButtonInput)
+	static void drawActivityBar(void);
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 };
+
+#if defined(useTFToutput) && !defined(useButtonInput)
+// activity/sleep countdown bar, drawn along the very bottom of the screen by
+// TFT::drawActivityBar(): full width when active, shrinking as the activity timeout
+// runs down. shared so the main screen (and optionally the settings/keypad screens,
+// via useTFTsleepBarEverywhere) can all show it.
+static const uint16_t tftSleepBarH =	4;			// bar height (px)
+static const uint16_t tftSleepBarFG =	0x4208;		// grey active portion
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 #if defined(useILI9341)
 namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
@@ -23,7 +34,6 @@ namespace ILI9341 /* ILI9341 TFT hardware support section prototype */
 
 	static void init(void);
 	static void shutdown(void);
-	static void resume(void);
 	static void writeCommandByte(uint8_t byt);
 	static void writeDataByte(uint8_t byt);
 	static void writeDataWord(uint16_t wrd);
