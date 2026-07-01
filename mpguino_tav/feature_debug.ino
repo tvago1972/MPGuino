@@ -2868,7 +2868,8 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 
 								case 'J':	// J: 4-corner touch calibration (writes pTouchRaw* EEPROM params)
-									touch::calibrate();
+									touch::calibEnter();
+									while (!touch::calibPoll()) heart::wait0(8);
 									TFT::clearScreen();
 									terminalState = tsInitProcessing;
 									break;

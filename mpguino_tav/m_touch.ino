@@ -280,79 +280,105 @@ static void touchDrawCrosshair(uint16_t x, uint16_t y, uint16_t colour)
 
 }
 
-// interactive 4-corner touch calibration. forces landscape orientation 3 (the
-// raw->pixel maps for every rotation derive from it), draws a crosshair at each
-// corner, samples the raw ADC where the user taps, then derives and stores the
-// pTouchRaw* edge parameters. the panel is sampled raw here, so the existing
+// interactive 4-corner touch calibration state (non-blocking: fed one pass at a
+// time by calibPoll()). forces landscape orientation 3 (the raw->pixel maps for
+// every rotation derive from it); the panel is sampled raw, so the existing
 // (possibly bad) calibration does not affect the result.
-static void touch::calibrate(void)
+static uint8_t calibCorner;			// corner currently being captured (0=TL,1=TR,2=BL,3=BR)
+static uint8_t calibArmed;			// the touch has released since the last capture/entry - ready to arm the next tap
+static uint16_t calibRawX[4], calibRawY[4];
+static uint8_t calibPrevRotation;
+
+static const uint8_t touchCalibInset = 8;		// corner target offset from the edge (px)
+
+static void touchCalibCornerXY(uint8_t c, uint16_t * cx, uint16_t * cy)
 {
 
-	static const uint8_t inset = 8;					// corner target offset from the edge (px)
-	uint16_t rawXatCorner[4];						// 0=TL, 1=TR, 2=BL, 3=BR
-	uint16_t rawYatCorner[4];
-	uint16_t cornerX, cornerY, rx, ry;
-	uint8_t c, prevRotation, got;
+	*cx = (c & 1) ? (tftWidth - 1 - touchCalibInset) : touchCalibInset;		// TR/BR on the right
+	*cy = (c & 2) ? (tftHeight - 1 - touchCalibInset) : touchCalibInset;	// BL/BR on the bottom
 
-	prevRotation = tftRotation;
-	TFT::setRotation(3);							// calibration reference orientation
+}
 
-	text::stringOut(m8DevDebugTerminalIdx, PSTR("touch calibration: tap each crosshair (orientation 3)" tcCR));
+static void touchCalibDrawCorner(uint8_t c)
+{
 
-	for (c = 0; c < 4; c++)
+	uint16_t cornerX, cornerY;
+
+	touchCalibCornerXY(c, &cornerX, &cornerY);
+
+	TFT::clearScreen();
+	text::stringOut(m8DevTFTidx, PSTR("Touch calibration" tcCR "tap the crosshair"));
+	touchDrawCrosshair(cornerX, cornerY, ILI9341_GREEN);
+
+}
+
+// begin calibration: set the reference orientation and draw the first crosshair.
+// calibArmed starts false, so any touch already down (e.g. the long-press that
+// opened this screen) must release before the first corner can be captured.
+static void touch::calibEnter(void)
+{
+
+	calibPrevRotation = tftRotation;
+	TFT::setRotation(3);
+	calibCorner = 0;
+	calibArmed = 0;
+	touchCalibDrawCorner(0);
+
+}
+
+// handle one pass of calibration. returns 1 once all 4 corners are captured and
+// the pTouchRaw* EEPROM params are stored (and the reference orientation restored).
+static uint8_t touch::calibPoll(void)
+{
+
+	uint16_t rx, ry;
+
+	if (!calibArmed)						// require a release before accepting a capture press
 	{
 
-		cornerX = (c & 1) ? (tftWidth - 1 - inset) : inset;		// TR/BR on the right
-		cornerY = (c & 2) ? (tftHeight - 1 - inset) : inset;	// BL/BR on the bottom
-
-		TFT::clearScreen();
-		text::stringOut(m8DevTFTidx, PSTR("Touch calibration" tcCR "tap the crosshair"));
-		touchDrawCrosshair(cornerX, cornerY, ILI9341_GREEN);
-
-		while (touch::pressed()) heart::wait0(8);	// wait for any prior touch to release
-
-		got = 0;
-		while (!got) { if (touch::sample(&rx, &ry)) got = 1; else heart::wait0(8); }
-
-		rawXatCorner[c] = rx;
-		rawYatCorner[c] = ry;
-
-		touchDrawCrosshair(cornerX, cornerY, ILI9341_RED);	// acknowledge the capture
-
-		text::stringOut(m8DevDebugTerminalIdx, PSTR("corner "));
-		text::charOut(m8DevDebugTerminalIdx, (uint8_t)('1' + c));
-		text::stringOut(m8DevDebugTerminalIdx, PSTR(": raw x=0x"));
-		text::hexWordOut(m8DevDebugTerminalIdx, rx);
-		text::stringOut(m8DevDebugTerminalIdx, PSTR(" y=0x"));
-		text::hexWordOut(m8DevDebugTerminalIdx, ry);
-		text::newLine(m8DevDebugTerminalIdx);
-
-		while (touch::pressed()) heart::wait0(8);	// wait for release before the next corner
+		if (!touch::pressed()) calibArmed = 1;
+		return 0;
 
 	}
 
-	// left edge = TL & BL, right edge = TR & BR; top = TL & TR, bottom = BL & BR
-	touchRawXlo = (uint16_t)(((uint32_t)(rawXatCorner[0]) + rawXatCorner[2]) / 2);
-	touchRawXhi = (uint16_t)(((uint32_t)(rawXatCorner[1]) + rawXatCorner[3]) / 2);
-	touchRawYlo = (uint16_t)(((uint32_t)(rawYatCorner[0]) + rawYatCorner[1]) / 2);
-	touchRawYhi = (uint16_t)(((uint32_t)(rawYatCorner[2]) + rawYatCorner[3]) / 2);
+	if (touch::pressed() && touch::sample(&rx, &ry))
+	{
 
-	touchWriteWordParam(pTouchRawXloIdx, touchRawXlo);
-	touchWriteWordParam(pTouchRawXhiIdx, touchRawXhi);
-	touchWriteWordParam(pTouchRawYloIdx, touchRawYlo);
-	touchWriteWordParam(pTouchRawYhiIdx, touchRawYhi);
+		uint16_t cornerX, cornerY;
 
-	text::stringOut(m8DevDebugTerminalIdx, PSTR("stored Xlo=0x"));
-	text::hexWordOut(m8DevDebugTerminalIdx, touchRawXlo);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" Xhi=0x"));
-	text::hexWordOut(m8DevDebugTerminalIdx, touchRawXhi);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" Ylo=0x"));
-	text::hexWordOut(m8DevDebugTerminalIdx, touchRawYlo);
-	text::stringOut(m8DevDebugTerminalIdx, PSTR(" Yhi=0x"));
-	text::hexWordOut(m8DevDebugTerminalIdx, touchRawYhi);
-	text::newLine(m8DevDebugTerminalIdx);
+		calibRawX[(uint16_t)(calibCorner)] = rx;
+		calibRawY[(uint16_t)(calibCorner)] = ry;
 
-	TFT::setRotation(prevRotation);
+		touchCalibCornerXY(calibCorner, &cornerX, &cornerY);
+		touchDrawCrosshair(cornerX, cornerY, ILI9341_RED);	// acknowledge the capture
+
+		calibArmed = 0;	// require release before the next corner
+		calibCorner++;
+
+		if (calibCorner >= 4)
+		{
+
+			// left edge = TL & BL, right edge = TR & BR; top = TL & TR, bottom = BL & BR
+			touchRawXlo = (uint16_t)(((uint32_t)(calibRawX[0]) + calibRawX[2]) / 2);
+			touchRawXhi = (uint16_t)(((uint32_t)(calibRawX[1]) + calibRawX[3]) / 2);
+			touchRawYlo = (uint16_t)(((uint32_t)(calibRawY[0]) + calibRawY[1]) / 2);
+			touchRawYhi = (uint16_t)(((uint32_t)(calibRawY[2]) + calibRawY[3]) / 2);
+
+			touchWriteWordParam(pTouchRawXloIdx, touchRawXlo);
+			touchWriteWordParam(pTouchRawXhiIdx, touchRawXhi);
+			touchWriteWordParam(pTouchRawYloIdx, touchRawYlo);
+			touchWriteWordParam(pTouchRawYhiIdx, touchRawYhi);
+
+			TFT::setRotation(calibPrevRotation);
+			return 1;
+
+		}
+
+		touchCalibDrawCorner(calibCorner);
+
+	}
+
+	return 0;
 
 }
 

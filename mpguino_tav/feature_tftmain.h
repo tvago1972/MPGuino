@@ -17,19 +17,24 @@ static const uint8_t tftScreenMain =		0;	// live instrument dashboard
 static const uint8_t tftScreenSettings =	1;	// settings editor (group menu / parameter list)
 static const uint8_t tftScreenDropdown =	2;	// option dropdown (editing a boolean/enum parameter)
 static const uint8_t tftScreenKeypad =		3;	// numeric keypad (editing a numeric parameter)
+static const uint8_t tftScreenCalibrate =	4;	// 4-corner touch calibration (gear long-press from the dashboard)
 static uint8_t tftScreen;
 
 #if defined(useTouchScreenInput)
-// settings gear in the top-right corner: a sustained hold (not a tap) opens the
-// settings editor, so it can't be triggered accidentally. a progress bar under the
-// gear fills as the hold counts up.
+// settings gear in the top-right corner: a double-tap opens the settings editor
+// (two quick taps, so a single accidental tap can't trigger it); a sustained hold
+// instead opens touch calibration (rarer/more consequential, so it needs a deliberate
+// hold, not just a tap pair) - a progress bar under the gear fills as the hold counts up.
 static const uint16_t tftGearR =			10;			// gear half-size (footprint 2R x 2R px)
 static const uint16_t tftGearMargin =		4;			// inset from the top-right corner
 static const uint16_t tftGearHitSize =		28;			// touch target (top-right corner square); kept clear of the value field
-static const uint32_t tftGearHoldCycles = ((uint32_t)(t0CyclesPerSecond) * 3) / 4;	// ~750ms hold (timer0 cycles) to confirm entry
+static const uint32_t tftGearTapMaxCycles = ((uint32_t)(t0CyclesPerSecond) * 2) / 5;	// <=~400ms press = a tap; longer starts a hold (partial holds in between are ignored)
+static const uint32_t tftGearHoldCycles = ((uint32_t)(t0CyclesPerSecond) * 3) / 4;	// ~750ms hold (timer0 cycles) to confirm calibration
+static const uint32_t tftGearDoubleTapCycles = ((uint32_t)(t0CyclesPerSecond) * 3) / 5;	// ~600ms max gap (tap release -> tap release) to count as a double-tap
+static const uint32_t tftGearReleaseDebounce = ((uint32_t)(t0CyclesPerSecond)) / 25;	// ~40ms a not-pressed reading must persist before it counts as a release
 static const uint16_t tftGearFG =			0x8410;		// idle gear (grey)
 static const uint16_t tftGearActiveFG =		0x07FF;		// gear while held (cyan)
-static const uint16_t tftGearProgressFG =	0x07E0;		// hold progress bar (green)
+static const uint16_t tftGearProgressFG =	0xFBE0;		// calibration hold progress bar (orange - a more consequential action)
 #endif // defined(useTouchScreenInput)
 
 // the four functions of the first ("Instrument") LCD display page, reused here:

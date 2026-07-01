@@ -8,7 +8,8 @@ namespace touch /* XPT2046 resistive touch (software SPI) support section protot
 	static uint8_t read(uint16_t * x, uint16_t * y);
 	static void loadCalibration(void);
 #if defined(useTFToutput)
-	static void calibrate(void);
+	static void calibEnter(void);	// start (non-blocking) 4-corner calibration: set orientation, draw the first crosshair
+	static uint8_t calibPoll(void);	// call every pass while calibrating; returns 1 once all 4 corners are captured + stored
 #endif // defined(useTFToutput)
 #if defined(useDebugTerminal) && defined(useTFToutput)
 	static void testLoop(void);

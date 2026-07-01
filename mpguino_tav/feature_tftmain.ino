@@ -6,11 +6,15 @@
 // here so update() can draw the gear in its current (idle/held) colour
 static uint8_t tftGearTracking;		// a press is being followed
 static uint8_t tftGearHeld;			// the followed press is on the gear (main screen)
+static uint8_t tftGearResolved;		// gearHeld has been determined for the current press (a read succeeded)
 static uint32_t tftGearHoldStart;	// cycles0() when the gear press began
 static uint16_t tftGearBarW;		// last progress-bar width drawn (avoid redundant fills)
 static uint16_t tftTapX, tftTapY;	// press-edge coords, dispatched as a tap on release (non-main screens)
 static uint8_t tftLongFired;		// a long-press has already been dispatched for the current press
 static uint8_t tftTouchSuppress;	// while blanked (and until the wake touch releases) ignore touch input
+static uint32_t tftGearLastTapCycles;	// cycles0() of the last un-paired gear tap release (0 = none pending)
+static uint8_t tftGearReleasePending;	// a not-pressed reading is being debounced before it counts as a release
+static uint32_t tftGearReleaseStart;	// cycles0() when the pending release began
 
 // draw the settings gear (a small square cog with four teeth and a centre hole) in
 // the top-right corner, in the given colour. drawn in place every update() (no
@@ -56,6 +60,10 @@ static void tftMain::repaint(void)
 		case tftScreenSettings:	tftSettings::redraw();			break;
 		case tftScreenDropdown:	tftSettings::redrawDropdown();	break;
 		case tftScreenKeypad:	keypad::draw();					break;
+		// TFT::init() (full wake re-init) always resets rotation to 0, wiping the
+		// orientation-3 reference calibration was using mid-capture - resuming would
+		// silently corrupt the result, so abort back to the dashboard instead.
+		case tftScreenCalibrate:	tftMain::init();				break;
 #endif // defined(useTouchScreenInput)
 		default:				tftMain::update();				break;	// dashboard (TFT::init already cleared the screen)
 
@@ -145,64 +153,113 @@ static void tftMain::pollTouch(void)
 	if (v08(v8ActivityIdx) & afActivityTimeoutFlag) { tftTouchSuppress = 1; tftGearTracking = 0; return; }
 	if (tftTouchSuppress) { if (touch::pressed()) return; tftTouchSuppress = 0; }
 
-	if (tftScreen == tftScreenMain)	// dashboard: the gear must be HELD to open settings
+	if (tftScreen == tftScreenMain)	// dashboard: double-tap the gear -> settings; HOLD the gear -> calibration
 	{
 
 		if (touch::pressed())
 		{
 
-			if (!tftGearTracking)	// press edge: sample once, decide if it landed on the gear
+			tftGearReleasePending = 0;	// still (or again) down: cancel any pending release (PENIRQ can glitch high mid-press)
+
+			if (!tftGearTracking)	// press edge: not yet resolved whether it landed on the gear
 			{
 
 				tftGearTracking = 1;
-				tftGearHeld = (touch::read(&tx, &ty) && tftMainOnGear(tx, ty));
+				tftGearResolved = 0;
+				tftGearHeld = 0;						// stale from a prior press otherwise, since it's only set once resolved
+				tftGearHoldStart = heart::cycles0();	// start the hold clock at the press edge, not once resolved
 
-				if (tftGearHeld)
+			}
+
+			if (!tftGearResolved)	// keep sampling each pass until a read succeeds (the first sample right at
+			{						// contact is often unstable) or the finger lifts before one does
+
+				if (touch::read(&tx, &ty))
 				{
 
-					tftGearHoldStart = heart::cycles0();
+					tftGearResolved = 1;
+					tftGearHeld = tftMainOnGear(tx, ty);
 					tftGearBarW = 0;
-					tftMainBlitGear(tftGearActiveFG);
+
+					if (tftGearHeld) tftMainBlitGear(tftGearActiveFG);	// acknowledge the touch immediately (cyan)
 
 				}
 
 			}
-			else if (tftGearHeld)	// holding on the gear: grow the progress bar, confirm at threshold
+			else if (tftGearHeld)	// on-gear press: once it outlasts a tap, grow the hold bar; confirm calibration at the threshold
 			{
 
 				uint32_t elapsed = heart::cycles0() - tftGearHoldStart;
-				uint16_t w = (elapsed >= tftGearHoldCycles) ? (2 * tftGearR) : (uint16_t)((uint32_t)(elapsed) * 2 * tftGearR / tftGearHoldCycles);
 
-				if (w != tftGearBarW) { ILI9341::fillRect(gx, barY, w, 3, tftGearProgressFG); tftGearBarW = w; }
+				if (elapsed >= tftGearTapMaxCycles)	// past tap territory: this is a deliberate hold, show progress
+				{
 
-				if (elapsed >= tftGearHoldCycles)	// confirmed: switch to the settings screen
+					uint16_t span = tftGearHoldCycles - tftGearTapMaxCycles;
+					uint16_t w = (elapsed >= tftGearHoldCycles) ? (2 * tftGearR) : (uint16_t)((uint32_t)(elapsed - tftGearTapMaxCycles) * 2 * tftGearR / span);
+
+					if (w != tftGearBarW) { ILI9341::fillRect(gx, barY, w, 3, tftGearProgressFG); tftGearBarW = w; }
+
+				}
+
+				if (elapsed >= tftGearHoldCycles)	// confirmed hold: switch to touch calibration (finger still down)
 				{
 
 					tftGearTracking = 0;
 					tftGearHeld = 0;
-					tftScreen = tftScreenSettings;
-					tftSettings::enter();			// draw the group menu (non-blocking from here on)
+					tftGearResolved = 0;
+					tftGearLastTapCycles = 0;		// this gesture is consumed; don't let it also complete as a double-tap
+					ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);	// clear the hold bar
+					tftScreen = tftScreenCalibrate;
+					touch::calibEnter();			// draw the first crosshair (non-blocking from here on)
 
 				}
 
 			}
 
 		}
-		else	// finger up
+		else if (tftGearTracking)	// finger reads up - but debounce it: PENIRQ glitches high mid-press (esp. after a read)
 		{
 
-			if (tftGearTracking && tftGearHeld)	// released before confirm: abort, restore the idle gear
+			if (!tftGearReleasePending) { tftGearReleasePending = 1; tftGearReleaseStart = heart::cycles0(); }
+			else if (heart::cycles0() - tftGearReleaseStart >= tftGearReleaseDebounce)	// release confirmed (stayed up)
 			{
 
-				ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);
-				tftMainBlitGear(tftGearFG);
+				// timings use the finger-lift instant (tftGearReleaseStart), not now, so the
+				// debounce wait doesn't inflate the measured press/gap durations.
+				// a short press on the gear is a tap (counts toward the double-tap); a press that
+				// outlasted a tap but never reached the hold threshold is an aborted hold - ignored,
+				// so a partial hold can't be mistaken for a settings tap.
+				if (tftGearHeld && (tftGearReleaseStart - tftGearHoldStart <= tftGearTapMaxCycles))
+				{
+
+					if (tftGearLastTapCycles && (tftGearReleaseStart - tftGearLastTapCycles <= tftGearDoubleTapCycles))
+					{
+
+						tftGearLastTapCycles = 0;
+						tftScreen = tftScreenSettings;
+						tftSettings::enter();		// draw the group menu (non-blocking from here on)
+
+					}
+					else tftGearLastTapCycles = tftGearReleaseStart;	// arm: a second tap within the window completes the double-tap
+
+				}
+
+				ILI9341::fillRect(gx, barY, 2 * tftGearR, 3, tftMainBG);	// clear any hold bar
+				if (tftGearHeld) tftMainBlitGear(tftGearFG);			// restore the idle gear (cyan -> grey)
+				tftGearTracking = 0;
+				tftGearHeld = 0;
+				tftGearResolved = 0;
+				tftGearReleasePending = 0;
 
 			}
 
-			tftGearTracking = 0;
-			tftGearHeld = 0;
-
 		}
+
+	}
+	else if (tftScreen == tftScreenCalibrate)	// touch calibration: fed one pass at a time, owns its own press/release logic
+	{
+
+		if (touch::calibPoll()) tftMain::init();	// all 4 corners captured + stored -> back to the dashboard
 
 	}
 	else	// settings / dropdown / keypad: a tap on release, plus a long-press for the keypad's DEL-cancel
