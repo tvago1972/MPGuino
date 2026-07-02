@@ -1,10 +1,10 @@
 // the following options sets preconfigured board settings, which determine hardware port usage, hardware support checking, and processor speed
 // if all of the below preconfigured board "#define"s are commented out, code will compile for an AVR microprocessor specified in either the Arduino IDE or the avr toolchain
 //
-//#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
+#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
-#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
+//#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module
 //#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
