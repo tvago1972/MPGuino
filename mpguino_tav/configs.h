@@ -4,9 +4,9 @@
 //#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
-//#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
+#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module
-#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
+//#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
 // the below output options may be chosen independently of any other MPGuino hardware
 //   - none of the below options require an LCD or TFT display

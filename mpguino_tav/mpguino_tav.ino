@@ -506,6 +506,7 @@ int main(void);
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 #include "feature_base.h"
+#include "feature_lcdmain.h"
 #include "feature_tftmain.h"
 #include "m_button.h"
 
