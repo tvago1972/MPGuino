@@ -29,6 +29,7 @@
 - [Appendix B: Key `configs.h` Flags for Developers](#appendix-b-key-configsh-flags-for-developers)
 - [Appendix C: SWEET64 Dev Monitor (`useSWEET64devMonitor`)](#appendix-c-sweet64-dev-monitor-usesweet64devmonitor)
 - [Appendix D: Second Arduino Uno as External Signal Generator](#appendix-d-second-arduino-uno-as-external-signal-generator)
+- [Appendix E: SWEET64 Regression Test Harness](#appendix-e-sweet64-regression-test-harness)
 
 ---
 
@@ -1224,6 +1225,40 @@ A common ground between the two boards is required.
 ### D.4 Generator Sketch
 
 A minimal generator sketch uses `tone()` or Timer1 to produce the VSS square wave, and a separate timer or `analogWrite()` channel for the injector pulse train. The exact frequencies needed depend on the VSS pulses-per-mile parameter stored in MPGuino's EEPROM and the injector flow rate parameter — set these in the MPGuino EEPROM via the `P` command first, then size the generator frequencies to produce the desired simulated speed and fuel flow.
+
+---
+
+## Appendix E: SWEET64 Regression Test Harness
+
+A Python regression test harness lives under [`tools/s64test/`](tools/s64test/). It drives the debug-terminal serial interface (Appendix C) to assemble, run, and verify SWEET64 programs **on real hardware**, catching regressions in the SWEET64 pseudo-processor (opcodes, ALU flags, branches, addressing modes) as the firmware changes. See [`tools/s64test/README.md`](tools/s64test/README.md) for the full reference; this appendix is the overview.
+
+### E.1 What it does
+
+- **Full opcode coverage.** ~22 case tables (`cases_arithmetic.py`, `cases_branch.py`, `cases_compare.py`, `cases_shiftmuldiv.py`, `cases_bcd.py`, `cases_eeprom.py`, `cases_trip.py`, `cases_isqrt.py`, `cases_memarith.py`, … see `run_tests.py`) exercise the instruction set through the `!` RAM assembler (§13) and `^T` trace/run (§12.5), checking result registers, flags, and error codes.
+- **Differential validation.** The same suite is run against both the **assembly-primitive** and **C-primitive** interpreter builds and confirmed to agree, so a divergence between the hand-written assembly and its C reference is caught. This is how the `iSqrt` bug for inputs ≥ 2³¹ (a signed compare where the C reference is unsigned) was found — see `cases_isqrt.py` and §5.9.
+- **Performance baseline.** `perf_report.py` reports per-instruction execution cycles (quantifying the assembly primitives' advantage — e.g. ~12× for 64-bit divide) and serves as a performance-regression baseline.
+
+### E.2 Compile-time requirements
+
+The target firmware must be built with `useSWEET64RAMprograms`, `useDebugTerminalSWEET64`, and `useDebugTerminalLabels`. All three are on by default in the `useSWEET64devMonitor` build (Appendix C), so that build is the intended target. Labels are mandatory: the harness resolves program variables, EEPROM parameters, constants, and trip slots **by name** (a program-variable index is not stable across builds/configs), so test programs never hardcode indices.
+
+### E.3 Coverage vs. board
+
+A few opcodes are config-gated — most notably `LdRegTripFEvTindexed` (`useFEvTdata`), which is force-enabled on the **ATmega2560** dev monitor but dropped from the **Uno-class (328P)** build for flash budget. **Full opcode coverage therefore requires the ATmega2560 `useSWEET64devMonitor` build.** The runner discovers the connected build's instruction set once (via `^I`) and **skips** any case whose `requires=[...]` opcode the build lacks (reported on a `SKIP` line, counted separately, not a failure), so the Uno build still runs green.
+
+### E.4 Hardware / session behavior
+
+Opening the serial port asserts DTR, which **resets the board** and reinitializes all SWEET64 registers. The runner therefore opens the port **once** and runs the entire suite in that single session; each case re-establishes its own baseline (zeroing registers, seeding inputs) rather than relying on prior state.
+
+### E.5 Running it
+
+```
+python run_tests.py <port> <baud>
+# example:
+python run_tests.py COM3 38400
+```
+
+Summary line: `N passed, M failed, K skipped, T total` (skips do not affect the exit code). Helper tools in the same directory: `test_connectivity.py` (smoke-test the serial link), `raw_command.py` (send one terminal command), `perf_report.py` (cycle instrumentation), and `mock_terminal.py` (run the harness's own unit tests without hardware).
 
 ---
 
