@@ -711,12 +711,12 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 			default:
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
 				branchFlag = true;
 				break;
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 		}
 
 		if (branchFlag)
@@ -845,7 +845,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				}
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
 				if (operand >= bgDataSize) operand = 0; // shift index
 				operand++;
@@ -854,7 +854,7 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				if (operand >= bgDataSize) operand -= bgDataSize; // perform wrap-around if required
 
 				operand += FEvsTimePeriodIdx; // shift back into trip index space
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			case i18:	// load rX with trip variable
 				if (operand < tripSlotCount)
 				{
@@ -1263,40 +1263,11 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				case e18:	// instrTestIndex
 					break;
 
-				case e17:	// instrTraceDone
-#if defined(useDebugTerminalSWEET64)
-					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
-					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#endif // defined(useDebugTerminalSWEET64)
 				case e16:	// instrDone
 					if (prgmReg8[(uint16_t)(si64reg8spnt)]--) prgmPtr = prgmStack[(uint16_t)(prgmReg8[(uint16_t)(si64reg8spnt)])];
 					else isValid = 0;
 					break;
 
-				case e19:	// instrTraceRestore
-#if defined(useDebugTerminalSWEET64)
-					if (SWEET64processorFlags & SWEET64traceSaveFlag) SWEET64processorFlags |= (SWEET64traceCommandFlag);
-					else SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e20:	// instrTraceOn
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags |= (SWEET64traceCommandFlag | SWEET64traceSaveFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e22:	// instrTraceOff
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags &= ~(SWEET64traceCommandFlag | SWEET64traceSaveFlag);
-					break;
-
-#endif // defined(useDebugTerminalSWEET64)
-				case e21:	// instrTraceSave
-#if defined(useDebugTerminalSWEET64)
-					SWEET64processorFlags &= ~(SWEET64traceCommandFlag);
-#endif // defined(useDebugTerminalSWEET64)
-					break;
 
 				case e23:	// load index
 					prgmReg8[(uint16_t)(si64reg8trip)] = operand;
@@ -2318,7 +2289,7 @@ static uint32_t iSqrt(uint32_t input)
 		"	cpc		%B1, r5			\n"
 		"	cpc		%C1, r6			\n"
 		"	cpc		%D1, r7			\n"
-		"	brlt	sq64_cont%=		\n" 	// if input reg < test reg, skip
+		"	brlo	sq64_cont%=		\n" 	// if input reg < test reg (unsigned), skip
 
 		"	mov		r8, r4			\n"		// save new (x ^ 2) reg
 		"	mov		r9, r5			\n"

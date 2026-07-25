@@ -125,12 +125,12 @@ static const uint8_t tFormatToNumber =				tCalculateSpeed + 1;
 static const uint8_t tLoadTrip =					tFormatToNumber + 1;
 static const uint8_t tSaveTrip =					tLoadTrip + 1;
 #define nextAllowedValue tSaveTrip + 1
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t tFEvTgetDistance =				nextAllowedValue;
 static const uint8_t tFEvTgetConsumedFuel =			tFEvTgetDistance + 1;
 static const uint8_t tFEvTgetFuelEconomy =			tFEvTgetConsumedFuel + 1;
 #define nextAllowedValue tFEvTgetFuelEconomy + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t tFEvSgetDistance =				nextAllowedValue;
 static const uint8_t tFEvSgetConsumedFuel =			tFEvSgetDistance + 1;
@@ -223,11 +223,11 @@ static const char terminalTripFuncNames[] PROGMEM = {
 	"tFormatToNumber" tcEOS
 	"tLoadTrip" tcEOS
 	"tSaveTrip" tcEOS
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"tFEvTgetDistance" tcEOS
 	"tFEvTgetConsumedFuel" tcEOS
 	"tFEvTgetFuelEconomy" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	"tFEvSgetDistance" tcEOS
 	"tFEvSgetConsumedFuel" tcEOS
@@ -815,7 +815,7 @@ static const uint8_t prgmSaveTrip[] PROGMEM = {
 	instrDone											// exit to caller
 };
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t prgmFEvTgetDistance[] PROGMEM = {
 	instrLdRegTripFEvTindexed, 0x02, rvVSSpulseIdx,		// load indexed VSS pulses from fuel econ vs time trip variable bank
 	instrClearFlag, SWEET64overflowFlag,				// Z flag is set on data, and V flag is clear
@@ -861,7 +861,7 @@ static const uint8_t prgmFEvTgetFuelEconomy[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t prgmFEvSgetDistance[] PROGMEM = {
 	instrLdRegTripVarOffset, 0x02, FEvsSpeedIdx, rvVSSpulseIdx,	// load indexed VSS pulses from fuel econ vs speed trip variable bank
@@ -1113,14 +1113,14 @@ static const uint8_t prgmAccelTestTime[] PROGMEM = {
 	X(tLoadTrip, prgmLoadTrip) \
 	X(tSaveTrip, prgmSaveTrip)
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 #define S64_INTERNAL_BFEVT_ENTRIES(X) \
 	X(tFEvTgetDistance, prgmFEvTgetDistance) \
 	X(tFEvTgetConsumedFuel, prgmFEvTgetConsumedFuel) \
 	X(tFEvTgetFuelEconomy, prgmFEvTgetFuelEconomy)
-#else // defined(useBarFuelEconVsTime)
+#else // defined(useFEvTdata)
 #define S64_INTERNAL_BFEVT_ENTRIES(X)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 
 #if defined(useBarFuelEconVsSpeed)
 #define S64_INTERNAL_BFEVS_ENTRIES(X) \

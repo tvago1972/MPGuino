@@ -467,7 +467,7 @@ Logging Output / Debug Monitor I/O
 
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <avr/EEPROM.h>
+#include <avr/eeprom.h>
 #include <avr/sleep.h>
 
 static const char titleMPGuino[] PROGMEM = {
@@ -492,18 +492,22 @@ int main(void);
 //#include "m_usb.h"
 #include "m_lcd.h"
 #include "m_tft.h"
+#include "m_touch.h"
 #include "functions.h"
 #include "text.h"
 #include "feature_bluetooth.h"
 #include "feature_outputpin.h"
 #include "feature_debug.h"
 #include "feature_settings.h"
+#include "feature_settings_tft.h"
 #include "feature_datalogging.h"
 #include "feature_bignum.h"
 #include "feature_bargraph.h"
 #include "feature_dragrace.h"
 #include "feature_coastdown.h"
 #include "feature_base.h"
+#include "feature_lcdmain.h"
+#include "feature_tftmain.h"
 #include "m_button.h"
 
 // primary MPGuino processing routine - overwrites Arduino sketch main if compiled in Arduino IDE
@@ -542,6 +546,16 @@ int main(void)
 	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
 
 #endif // defined(useLCDoutput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+	// startup splash: standard MPGuino title + date, held for the normal display
+	// delay (counted down by the timer ISR), then the main screen takes over below
+	text::gotoXY(m8DevTFTidx, 0, 0);
+	text::stringOut(m8DevTFTidx, titleMPGuino);
+	text::stringOut(m8DevTFTidx, dateMPGuino);
+
+	heart::changeBitFlagBits(v8Timer0Status0Idx, 0, t0saDisplayDelayFlags);
+
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(outputLoggingSplash)
 	text::stringOut(m8DevLogOutputIdx, titleMPGuino);
 	text::stringOut(m8DevLogOutputIdx, dateMPGuino);
@@ -574,16 +588,19 @@ int main(void)
 	i = tripSave::doAutoAction(taaModeRead);
 
 #endif // defined(useSavedTrips)
-#if defined(useLCDoutput)
-	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
+#if defined(useLCDoutput) || (defined(useTFToutput) && !defined(useButtonInput))
+	while (v08(v8Timer0Status0Idx) & t0saDisplayDelayFlags) heart::performSleepMode(SLEEP_MODE_IDLE); // hold the splash for the display delay
 
-#endif // defined(useLCDoutput)
+#endif // defined(useLCDoutput) || (defined(useTFToutput) && !defined(useButtonInput))
 
 #if defined(useButtonInput)
 	// call working display index initialization function
 	cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx);
 
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+	tftMain::init(); // splash delay elapsed: bring up the main screen
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(useSavedTrips)
 #if defined(useLCDoutput)
 	if (i) text::statusOut(m8DevLCDidx, PSTR("AutoRestore Done"));
@@ -723,11 +740,14 @@ int main(void)
 					LCD::init(); // re-initialize LCD device
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-					TFT::init(); // re-initialize TFT device
+					TFT::init(); // full re-init on wake (this panel does not reliably retain GRAM/config through SLPIN sleep)
 #endif // defined(useTFToutput)
 #if defined(useButtonInput)
 					cursor::updateDisplay(workingDisplayIdx, displayInitialEntryIdx); // call indexed support section screen initialization function
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+					tftMain::repaint(); // repaint the screen the user was on (dashboard/settings/keypad), not forced back to the dashboard
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 				}
 
@@ -847,7 +867,7 @@ int main(void)
 
 			SREG = oldSREG; // restore interrupt flag status
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			if (v08(v8Timer0Status1Idx) & t0sbResetFEvsTimeTrip) 
 			{
 
@@ -863,7 +883,7 @@ int main(void)
 
 			}
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			for (uint8_t x = 0; x < tripUpdateListSize; x++)
 			{
 
@@ -1112,6 +1132,9 @@ int main(void)
 		if (v08(v8ButtonStatusIdx) & btnStatusButtonRead) cursor::doCommand(); // if any buttons were pressed, go perform button action
 
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput) && defined(useTouchScreenInput)
+		tftMain::pollTouch(); // non-blocking touch input (settings gear); runs every pass so the loop never stalls
+#endif // defined(useTFToutput) && !defined(useButtonInput) && defined(useTouchScreenInput)
 #if defined(useDragRaceFunction)
 		if (v08(v8Timer0Status1Idx) & t0sbAccelTestFlag)
 		{
@@ -1238,6 +1261,12 @@ int main(void)
 
 #endif // defined(useClockDisplay) && !defined(useDeepSleep)
 #endif // defined(useButtonInput)
+#if defined(useTFToutput) && !defined(useButtonInput)
+			if (tftScreen == tftScreenMain) tftMain::update(); // refresh the dashboard; other screens draw on transitions (input is polled per-pass)
+#if defined(useTFTsleepBarEverywhere)
+			else TFT::drawActivityBar(); // keep the sleep bar live on the settings/dropdown/keypad screens (they reserve the bottom strip)
+#endif // defined(useTFTsleepBarEverywhere)
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 		}
 
 #if defined(useActivityLED)

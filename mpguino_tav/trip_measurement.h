@@ -92,10 +92,10 @@ static const uint8_t windowTripFilterIdx =		nextAllowedValue;
 
 static const uint8_t tripSlotFullCount =		nextAllowedValue;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t FEvsTimePeriodIdx =		nextAllowedValue;
 #define nextAllowedValue FEvsTimePeriodIdx + bgDataSize
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t FEvsSpeedIdx =				nextAllowedValue;
@@ -151,7 +151,7 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 	'W',
 	'W',
 #endif // defined(useWindowTripFilter)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	'P',					// ensure there are as many of these as is specified in bgDataSize
 	'P',
 	'P',
@@ -167,7 +167,7 @@ static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = 
 	'P',
 	'P',
 	'P',
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	'0',					// ensure there are as many of these as is specified in bgDataSize
 	'1',
@@ -307,7 +307,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"windowTripFilterIdx[02]" tcEOS
 	"windowTripFilterIdx[03]" tcEOS
 #endif // defined(useWindowTripFilter)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"FEvsTimePeriodIdx[00]" tcEOS
 	"FEvsTimePeriodIdx[01]" tcEOS
 	"FEvsTimePeriodIdx[02]" tcEOS
@@ -323,7 +323,7 @@ static const char terminalTripVarNames[] PROGMEM = {
 	"FEvsTimePeriodIdx[12]" tcEOS
 	"FEvsTimePeriodIdx[13]" tcEOS
 	"FEvsTimePeriodIdx[14]" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	"FEvsSpeedIdx[00]" tcEOS
 	"FEvsSpeedIdx[01]" tcEOS
@@ -378,9 +378,9 @@ static const uint8_t tripUpdateListSize = 2				// base trip update count
 #else // defined(useWindowTripFilter)
 	+ 1													// count of instant trips to be updated
 #endif // defined(useWindowTripFilter)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	+ 1													// count of fuel econ vs time bargraph trips to be updated
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	+ 1													// count of fuel econ vs speed bargraph trips to be updated
 #endif // defined(useBarFuelEconVsSpeed)
@@ -420,9 +420,9 @@ static const uint8_t tripUpdateList[(uint16_t)(tripUpdateListSize)][2] PROGMEM =
 #endif // defined(useWindowTripFilter)
 	{0x7F						,currentIdx},				// update current trip with old raw trip
 	{0x7F						,tankIdx},					// update tank trip with old raw trip
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	{0x7F						,0x7C},						// update fuel econ vs time bargraph trip with old raw trip
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	{0x7F						,0x7B},						// update fuel econ vs speed bargraph trip with old raw trip
 #endif // defined(useBarFuelEconVsSpeed)

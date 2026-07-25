@@ -196,6 +196,13 @@ static const uint8_t pSizeParkTimeout =					8;					// pParkTimeoutIdx
 static const uint8_t pSizeActivityTimeout =				8;					// pActivityTimeoutIdx
 static const uint8_t pSizeScratchpad =					32;					// pScratchpadIdx
 
+#if defined(useTouchScreenInput)
+static const uint8_t pSizeTouchRawXlo =					16;					// pTouchRawXloIdx
+static const uint8_t pSizeTouchRawXhi =					16;					// pTouchRawXhiIdx
+static const uint8_t pSizeTouchRawYlo =					16;					// pTouchRawYloIdx
+static const uint8_t pSizeTouchRawYhi =					16;					// pTouchRawYhiIdx
+#endif // defined(useTouchScreenInput)
+
 #if defined(useButtonInput)
 static const uint8_t pSizeWakeupResetCurrentOnEngine =	1;					// pWakeupResetCurrentOnEngineIdx
 static const uint8_t pSizeWakeupResetCurrentOnMove =	1;					// pWakeupResetCurrentOnMoveIdx
@@ -233,9 +240,9 @@ static const uint8_t pSizeJSONoutput =					1;					// pJSONoutputIdx
 #if defined(useBluetooth)
 static const uint8_t pSizeBluetoothOutput =				1;					// pBluetoothOutputIdx
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t pSizeFEvsTime =					16;					// pFEvsTimeIdx
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t pSizeBarLowSpeedCutoff =			24;					// pBarLowSpeedCutoffIdx
 static const uint8_t pSizeBarSpeedQuantumIdx =			24;					// pBarSpeedQuantumIdx
@@ -354,6 +361,14 @@ static const uint16_t pAddressActivityTimeout =				pAddressParkTimeout + byteSiz
 static const uint16_t pAddressScratchpad =					pAddressActivityTimeout + byteSize(pSizeActivityTimeout);	// pScratchpadIdx
 #define nextAllowedValue pAddressScratchpad + byteSize(pSizeScratchpad)
 
+#if defined(useTouchScreenInput)
+static const uint16_t pAddressTouchRawXlo =					nextAllowedValue;	// pTouchRawXloIdx
+static const uint16_t pAddressTouchRawXhi =					pAddressTouchRawXlo + byteSize(pSizeTouchRawXlo);	// pTouchRawXhiIdx
+static const uint16_t pAddressTouchRawYlo =					pAddressTouchRawXhi + byteSize(pSizeTouchRawXhi);	// pTouchRawYloIdx
+static const uint16_t pAddressTouchRawYhi =					pAddressTouchRawYlo + byteSize(pSizeTouchRawYlo);	// pTouchRawYhiIdx
+#define nextAllowedValue pAddressTouchRawYhi + byteSize(pSizeTouchRawYhi)
+#endif // defined(useTouchScreenInput)
+
 #if defined(useButtonInput)
 static const uint16_t pAddressWakeupResetCurrentOnEngine =	nextAllowedValue;	// pWakeupResetCurrentOnEngineIdx
 static const uint16_t pAddressWakeupResetCurrentOnMove =	pAddressWakeupResetCurrentOnEngine + byteSize(pSizeWakeupResetCurrentOnEngine);	// pWakeupResetCurrentOnMoveIdx
@@ -397,10 +412,10 @@ static const uint16_t pAddressJSONoutput =					nextAllowedValue;	// pJSONoutputI
 static const uint16_t pAddressBluetoothOutput =				nextAllowedValue;	// pBluetoothOutputIdx
 #define nextAllowedValue pAddressBluetoothOutput + byteSize(pSizeBluetoothOutput)
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint16_t pAddressFEvsTime =					nextAllowedValue;	// pFEvsTimeIdx
 #define nextAllowedValue pAddressFEvsTime + byteSize(pSizeFEvsTime)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint16_t pAddressBarLowSpeedCutoff =			nextAllowedValue;	// pBarLowSpeedCutoffIdx
 static const uint16_t pAddressBarSpeedQuantumIdx =			pAddressBarLowSpeedCutoff + byteSize(pSizeBarLowSpeedCutoff);	// pBarSpeedQuantumIdx
@@ -553,6 +568,14 @@ static const uint8_t pActivityTimeoutIdx =				pParkTimeoutIdx + 1;
 static const uint8_t pScratchpadIdx =					pActivityTimeoutIdx + 1;
 #define nextAllowedValue pScratchpadIdx + 1
 
+#if defined(useTouchScreenInput)
+static const uint8_t pTouchRawXloIdx =					nextAllowedValue;
+static const uint8_t pTouchRawXhiIdx =					pTouchRawXloIdx + 1;
+static const uint8_t pTouchRawYloIdx =					pTouchRawXhiIdx + 1;
+static const uint8_t pTouchRawYhiIdx =					pTouchRawYloIdx + 1;
+#define nextAllowedValue pTouchRawYhiIdx + 1
+#endif // defined(useTouchScreenInput)
+
 #if defined(useButtonInput)
 static const uint8_t pWakeupResetCurrentOnEngineIdx =	nextAllowedValue;
 static const uint8_t pWakeupResetCurrentOnMoveIdx =		pWakeupResetCurrentOnEngineIdx + 1;
@@ -596,10 +619,10 @@ static const uint8_t pJSONoutputIdx =					nextAllowedValue;
 static const uint8_t pBluetoothOutputIdx =				nextAllowedValue;
 #define nextAllowedValue pBluetoothOutputIdx + 1
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t pFEvsTimeIdx =						nextAllowedValue;
 #define nextAllowedValue pFEvsTimeIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 static const uint8_t pBarLowSpeedCutoffIdx =			nextAllowedValue;
 static const uint8_t pBarSpeedQuantumIdx =				pBarLowSpeedCutoffIdx + 1;
@@ -767,6 +790,12 @@ static const char terminalParameterNames[] PROGMEM = {
 	"pParkTimeoutIdx" tcEOS
 	"pActivityTimeoutIdx" tcEOS
 	"pScratchpadIdx" tcEOS
+#if defined(useTouchScreenInput)
+	"pTouchRawXloIdx" tcEOS
+	"pTouchRawXhiIdx" tcEOS
+	"pTouchRawYloIdx" tcEOS
+	"pTouchRawYhiIdx" tcEOS
+#endif // defined(useTouchScreenInput)
 #if defined(useButtonInput)
 	"pWakeupResetCurrentOnEngineIdx" tcEOS
 	"pWakeupResetCurrentOnMoveIdx" tcEOS
@@ -800,9 +829,9 @@ static const char terminalParameterNames[] PROGMEM = {
 #if defined(useBluetooth)
 	"pBluetoothOutputIdx" tcEOS
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"pFEvsTimeIdx" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	"pBarLowSpeedCutoffIdx" tcEOS
 	"pBarSpeedQuantumIdx" tcEOS
@@ -1128,6 +1157,12 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	(pSizeParkTimeout & 0x07) | pfHardwareInitMPGuino,							// pParkTimeoutIdx
 	(pSizeActivityTimeout & 0x07) | pfHardwareInitMPGuino,						// pActivityTimeoutIdx
 	(pSizeScratchpad & 0x07),													// pScratchpadIdx
+#if defined(useTouchScreenInput)
+	(pSizeTouchRawXlo & 0x07),													// pTouchRawXloIdx
+	(pSizeTouchRawXhi & 0x07),													// pTouchRawXhiIdx
+	(pSizeTouchRawYlo & 0x07),													// pTouchRawYloIdx
+	(pSizeTouchRawYhi & 0x07),													// pTouchRawYhiIdx
+#endif // defined(useTouchScreenInput)
 #if defined(useButtonInput)
 	(pSizeWakeupResetCurrentOnEngine & 0x07),									// pWakeupResetCurrentOnEngineIdx
 	(pSizeWakeupResetCurrentOnMove & 0x07),										// pWakeupResetCurrentOnMoveIdx
@@ -1161,9 +1196,9 @@ static const uint8_t paramsLength[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useBluetooth)
 	(pSizeBluetoothOutput & 0x07),												// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	(pSizeFEvsTime & 0x07) | pfHardwareInitMPGuino,								// Period Of FE over Time BarGraph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	(pSizeBarLowSpeedCutoff & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph lower speed
 	(pSizeBarSpeedQuantumIdx & 0x07) | pfSWresetAndBFEvSreset,					// FE vs Speed Bargraph speed bar size
@@ -1281,6 +1316,12 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 	pAddressParkTimeout,				// pParkTimeoutIdx
 	pAddressActivityTimeout,			// pActivityTimeoutIdx
 	pAddressScratchpad,					// pScratchpadIdx
+#if defined(useTouchScreenInput)
+	pAddressTouchRawXlo,				// pTouchRawXloIdx
+	pAddressTouchRawXhi,				// pTouchRawXhiIdx
+	pAddressTouchRawYlo,				// pTouchRawYloIdx
+	pAddressTouchRawYhi,				// pTouchRawYhiIdx
+#endif // defined(useTouchScreenInput)
 #if defined(useButtonInput)
 	pAddressWakeupResetCurrentOnEngine,	// pWakeupResetCurrentOnEngineIdx
 	pAddressWakeupResetCurrentOnMove,	// pWakeupResetCurrentOnMoveIdx
@@ -1314,9 +1355,9 @@ static const uint16_t paramAddrs[(uint16_t)(eePtrStorageEnd)] PROGMEM = {
 #if defined(useBluetooth)
 	pAddressBluetoothOutput,			// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	pAddressFEvsTime,					// Period Of FE over Time Bar Graph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	pAddressBarLowSpeedCutoff,			// FE vs Speed Bargraph lower speed
 	pAddressBarSpeedQuantumIdx,			// FE vs Speed Bargraph speed bar size
@@ -1433,6 +1474,12 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 	120,				// pActivityTimeoutIdx				Activity (engine off, no movement, no button press) Timeout (s)
 	0,					// pScratchpadIdx					Scratchpad Memory
 
+#if defined(useTouchScreenInput)
+	907,				// pTouchRawXloIdx					Touch panel raw ADC X at left edge (orientation 3)
+	3453,				// pTouchRawXhiIdx					Touch panel raw ADC X at right edge (orientation 3)
+	620,				// pTouchRawYloIdx					Touch panel raw ADC Y at top edge (orientation 3)
+	3150,				// pTouchRawYhiIdx					Touch panel raw ADC Y at bottom edge (orientation 3)
+#endif // defined(useTouchScreenInput)
 #if defined(useButtonInput)
 	1,					// pWakeupResetCurrentOnEngineIdx	Enable current trip reset upon wakeup due to engine running
 	0,					// pWakeupResetCurrentOnMoveIdx		Enable current trip reset upon wakeup due to button press
@@ -1470,9 +1517,9 @@ static const uint32_t params[(uint16_t)(pSettingsIdxLen)] PROGMEM = {
 #if defined(useBluetooth)
 	1,					// Bluetooth output Enable
 #endif // defined(useBluetooth)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	60,					// Length Of BarGraph Bar (s)
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useBarFuelEconVsSpeed)
 	25000,				// FE vs Speed Bargraph lower speed
 	5000,				// FE vs Speed Bargraph speed bar size

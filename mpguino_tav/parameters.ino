@@ -129,7 +129,7 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 	instrStRegVariable, 0x02, v32InjectorCorrectionIdx,	// save initial injector correction index for pressure differential calculation
 
 #endif	// defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	instrLdRegEEPROM, 0x02, pFEvsTimeIdx,				// load fuel econ vs time period stored parameter
 	instrMul2byRdOnly, idxTicks0PerSecond,				// multiply by timer0 ticks / second term
 	instrStRegVariable, 0x02, v32FEvsTimePeriodTickIdx,	// store fuel econ vs time period timer ticks value
@@ -137,7 +137,7 @@ static const uint8_t prgmInitMPGuinoHardware[] PROGMEM = {
 	instrStRegVariable, 0x02, v8FEvTimeTripIdx,			// reset fuel econ vs time period current trip value
 	instrStRegVariable, 0x02, v32FEvsTimePeriodCountIdx,	// reset fuel econ vs time period timer countdown
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useDragRaceFunction)
 	instrLdRegVariable, 0x02, m32SpeedFactorIdx,		// load speed factor in (2 * timer0 cycle * unit distance * decimal format) / (pulse * hour)
 	instrDiv2byEEPROM, pDragSpeedIdx,					// divide speed factor by (unit distance * decimal format) / (hour)

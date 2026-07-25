@@ -1689,9 +1689,9 @@ static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t forma
 				operandLabelIdx = dslIdxProgramVariable;
 				break;
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 			case i17:	// load rX with FEvT trip variable
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 			case i18:	// load rX with trip variable
 			case i19:	// store trip variable rX
 				operandLabelIdx = dslIdxTripVariable;
@@ -2851,6 +2851,31 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									break;
 
 #endif // defined(useDebugTerminalSWEET64)
+#if defined(useTFToutput)
+								case 'G':	// G: cycle TFT rotation; <0..3> G: set a specific rotation
+									if (terminalMode & tmByteReadIn) TFT::setRotation(terminalByte); // jump to rotation 0..3
+									else TFT::setRotation(tftRotation + 1); // no arg: advance to the next rotation
+									// setRotation cleared the screen; draw the primitives + padding test
+									TFT::drawTestScreen();
+									terminalState = tsInitProcessing;
+									break;
+#endif // defined(useTFToutput)
+
+#if defined(useTouchScreenInput) && defined(useTFToutput)
+								case 'H':	// H: touch-screen test (crosshair on the TFT, raw coords to terminal)
+									touch::testLoop();
+									terminalState = tsInitProcessing;
+									break;
+
+								case 'J':	// J: 4-corner touch calibration (writes pTouchRaw* EEPROM params)
+									touch::calibEnter();
+									while (!touch::calibPoll()) heart::wait0(8);
+									TFT::clearScreen();
+									terminalState = tsInitProcessing;
+									break;
+
+#endif // defined(useTouchScreenInput) && defined(useTFToutput)
+
 								case 'L':   // list available trip functions
 									if (terminalMode & tmTargetReadIn) decWindow = terminalTarget; // if decimal window specified, save it
 
@@ -3074,6 +3099,11 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									}
 									if (terminalMode & tmByteReadIn) maxLine = terminalByte;
 									else maxLine = 1;
+
+#if defined(useDebugCPUreading)
+									m32(m32S64programCyclesIdx) = 0; // reset per-run execution counters
+									m32(m32S64programInstrIdx) = 0;
+#endif // defined(useDebugCPUreading)
 
 									if (SWEET64::isProgramValid(terminalExecSched)) terminalState = tsTraceSWEET64line;
 									else errIdx = tseIdxBadSWEET64addr;
@@ -3343,7 +3373,14 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 				if (terminalS64reg8[(uint16_t)(si64reg8valid)])
 				{
 
+#if defined(useDebugCPUreading)
+					uint32_t s64execStartCycle = heart::cycles0(); // measure execution cycles only, excluding trace output
+#endif // defined(useDebugCPUreading)
 					SWEET64::executeInstruction(iLW, terminalExecSched, terminalStack, terminalS64reg64, terminalS64reg8); // execute instruction
+#if defined(useDebugCPUreading)
+					m32(m32S64programCyclesIdx) += (heart::cycles0() - s64execStartCycle);
+					m32(m32S64programInstrIdx)++;
+#endif // defined(useDebugCPUreading)
 
 					if (terminalS64reg8[(uint16_t)(si64reg8valid)] == 0)
 					{

@@ -1,19 +1,5 @@
-#if defined(useBarGraph)
-#if defined(useBarFuelEconVsSpeed)
-/* fuel economy over speed histograph support section */
-
-static void bgFEvsSsupport::reset(void)
-{
-
-	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
-
-	m08(m8FEvSpeedTripIdx) = 255;
-
-}
-
-#endif // defined(useBarFuelEconVsSpeed)
-#if defined(useBarFuelEconVsTime)
-/* fuel economy over time histograph support section */
+#if defined(useFEvTdata)
+/* fuel economy over time histograph data support section */
 
 static uint8_t bgFEvsTsupport::getFEvTimeIdx(void)
 {
@@ -34,7 +20,21 @@ static uint8_t bgFEvsTsupport::getFEvTimeIdx(void)
 
 }
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
+#if defined(useBarGraph)
+#if defined(useBarFuelEconVsSpeed)
+/* fuel economy over speed histograph support section */
+
+static void bgFEvsSsupport::reset(void)
+{
+
+	for (uint8_t x = 0; x < bgDataSize; x++) tripVar::reset(FEvsSpeedIdx + x);
+
+	m08(m8FEvSpeedTripIdx) = 255;
+
+}
+
+#endif // defined(useBarFuelEconVsSpeed)
 /* Bar Graph support section */
 
 static const uint8_t prgmGenerateHistographData[] PROGMEM = {

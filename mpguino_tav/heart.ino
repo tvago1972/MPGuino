@@ -445,7 +445,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useSimulatedFIandVSS)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	if (v32(v32FEvsTimePeriodCountIdx)) v32(v32FEvsTimePeriodCountIdx)--;
 	else
 	{
@@ -457,7 +457,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useCoastDownCalculator)
 	if (v08(v8CoastdownStatusIdx) & cdTestTriggered) // if coastdown test has been requested
 	{
@@ -535,6 +535,18 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #endif // defined(useTWIbuttons) || defined(useAnalogButtons)
+#if defined(useTouchScreenInput)
+	// the touch panel's pen-down line (PENIRQ) is just a pin read, so sample it every
+	// ISR tick rather than at the decimated button cadence - that catches brief taps
+	// that would otherwise fall in the gap between samples. a touch counts as user
+	// input: reset the activity timer so MPGuino stays awake (and wakes from idle
+	// sleep) while the screen is being touched. only the cheap pen-detect happens
+	// here - coordinate reads stay in the main-loop touch driver.
+	// (NOTE: cannot wake from full power-down - PENIRQ is on PH4, which has no
+	//  external/pin-change interrupt on the ATmega2560, and timer0 is stopped then.)
+	if (touch::pressed()) v08(v8Timer0CommandIdx) |= (t0cResetInputActivityTimer);
+
+#endif // defined(useTouchScreenInput)
 #if defined(useInterruptBasedTWI)
 	if (v08(v8TWIstatusIdx) & twiInterruptInUse)
 	{
@@ -952,6 +964,10 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	// reset park timeout watchdog if any of the fuel injector or VSS pulse flags have changed
 	if (previousActivity & afNotParkedFlags) parkTimeoutCount = v16(v16ParkTimeoutIdx);
+
+#if defined(useTFToutput) && !defined(useButtonInput)
+	v16(v16ActivityRemainingIdx) = activityTimeoutCount; // expose the countdown for the TFT sleep bar
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 	previousActivity = (v08(v8ActivityIdx) & afValidFlags); // save for next timer0 tick
 
@@ -2162,6 +2178,9 @@ static void heart::initHardware(void)
 #if defined(useTFToutput)
 	TFT::init();
 #endif // defined(useTFToutput)
+#if defined(useTouchScreenInput)
+	touch::init();
+#endif // defined(useTouchScreenInput)
 #if defined(useActivityLED)
 	activityLED::init();
 #endif // defined(useActivityLED)
@@ -2491,17 +2510,19 @@ static void heart::sleepModeIdle(uint8_t bmsk)
 #endif // defined(useDebugLEDactivity)
 }
 
-//static void heart::wait0(uint16_t ms)
-//{
-//
-//	uint8_t delay0Channel;
-//
-//	delay0Channel = delay0(ms, 0);
-//
-//	while (v08(v8Timer0DelayIdx) & delay0Channel) heart::performSleepMode(SLEEP_MODE_IDLE); // go perform idle sleep mode
-//
-//}
-//
+#include <util/delay.h>
+// blocking millisecond wait used during one-time hardware bring-up (e.g. the
+// TFT hardware reset). the old cooperative timer0 delay-channel mechanism was
+// removed, so this is a simple busy-wait, which is acceptable here because it
+// only runs at start-up before the cooperative main loop begins. _delay_ms()
+// needs a compile-time-constant argument, so spin one millisecond at a time.
+static void heart::wait0(uint16_t ms)
+{
+
+	while (ms--) _delay_ms(1);
+
+}
+
 // this function is needed since there is no way to perform an atomic bit change of an SRAM byte value
 // most MPGuino variables that are shared between main program and interrupt handlers should not need to
 //    be treated as atomic (!) because only one side or the other is supposed to change said variables

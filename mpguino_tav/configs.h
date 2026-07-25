@@ -1,10 +1,10 @@
 // the following options sets preconfigured board settings, which determine hardware port usage, hardware support checking, and processor speed
 // if all of the below preconfigured board "#define"s are commented out, code will compile for an AVR microprocessor specified in either the Arduino IDE or the avr toolchain
 //
-//#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
+#define useLegacyBoard true					// sets LCD and button configuration for the original MPGuino circuit
 //#define useJellyBeanDriverBoard true		// sets LCD and button configuration for the JBD version of MPGuino
 //#define useArduinoMega2560 true			// sets specific LCD configuration for Arduino Mega2560 board
-#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
+//#define useAdafruitRGBLCDshield true		// sets specific LCD and button configurations for AdaFruit RGB LCD shield
 //#define useTinkerkitLCDmodule true		// sets specific LCD configuration for TinkerKit! LCD module
 //#define useMPGuinoColourTouch true			// sets hardware configuration for MPGuino Colour Touch
 
@@ -18,8 +18,8 @@
 //
 //#define useDataLoggingOutput true			// output 5 basic trip functions to a data logger or SD card, once every refresh period (0.5 second)
 //#define useJSONoutput true					// skybolt added to enable and call JSON out routine
-#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino - recommended for use with Mega2560
-#define useAtMega328debugMonitor true		// PC-only Arduino UNO R3 debugging terminal interface between PC and MPGuino
+//#define useDebugTerminal true				// debugging terminal interface between PC and MPGuino - recommended for use with Mega2560
+#define useSWEET64devMonitor true			// serial SWEET64 development monitor for small AVR boards
 //#define useBluetooth true					// bluetooth interface with Android phone
 
 // logging output port options
@@ -93,7 +93,7 @@
 //#define useDebugButtonInjection true		// ability to inject button presses into MPGuino
 //#define useDebugCPUreading true				// Show enhanced CPU loading
 //#define useDebugTerminalSWEET64 true		// support for listing and tracing indexed SWEET64-defined functions
-#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
+//#define useSWEET64RAMprograms true			// allows the creation of SWEET64 program code which can then be pasted into a .ino SWEET64 program definition
 
 // only one of the below LCD options may be chosen - choosing more than one will cause a compilation error to occur
 //
@@ -164,7 +164,7 @@
 #define useBigFE true						// Show big fuel economy displays
 #define useBigDTE true						// Show big distance-to-empty displays
 #define useBigTTE true						// Show big time-to-empty displays
-#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
+//#define useBarFuelEconVsTime true			// Show Fuel Economy over Time bar graph
 #define useBarFuelEconVsSpeed true			// Show Fuel Economy vs Speed, Fuel Used vs Speed bar graphs
 #define useStatusMeter true					// displays a graphical meter for use with MPG display
 #define useSpiffyTripLabels true			// Ability to use enhanced trip labels on main display screens
@@ -200,7 +200,7 @@
 // do not mess with them, or compilation errors will occur
 //
 
-#if defined(useAtMega328debugMonitor)
+#if defined(useSWEET64devMonitor)
 #if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
 #undef useSimulatedFIandVSS
 #define useDebugTerminal true
@@ -208,6 +208,12 @@
 #define useDebugTerminalLabels true
 #define useDebugTerminalSWEET64 true
 #define useSWEET64RAMprograms true
+#define useIsqrt true						// regression-test the Isqrt SWEET64 opcode
+#if defined(__AVR_ATmega2560__)
+#define useFEvTdata true					// FEvT SWEET64 data/opcode (ATmega2560 dev monitor only; the FEvT slots + opcode do not fit the Uno-class build)
+#else // defined(__AVR_ATmega2560__)
+#undef useFEvTdata							// Uno-class dev monitor: drop FEvT to fit flash/RAM; cover the FEvT opcode on the ATmega2560 monitor build
+#endif // defined(__AVR_ATmega2560__)
 #define useDebugTerminalSerialPort0 true
 #undef useDebugTerminalSerialPort1
 #undef useDebugTerminalSerialPort2
@@ -281,9 +287,9 @@
 #define useDebugCPUreading true
 #endif // defined(__AVR_ATmega2560__)
 #else // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
-#undef useAtMega328debugMonitor
+#undef useSWEET64devMonitor
 #endif // defined(__AVR_ATmega328P__) || defined(__AVR_ATmega2560__)
-#endif // defined(useAtMega328debugMonitor)
+#endif // defined(useSWEET64devMonitor)
 
 #if ( defined(useLegacyBoard) + defined(useJellyBeanDriverBoard) + defined(useArduinoMega2560) + defined(useTinkerkitLCDmodule) + defined(useMPGuinoColourTouch) ) > 1
 #error *** Pre-defined MPGuino board conflict exists!!! ***
@@ -328,20 +334,34 @@
 #define useTFToutput true
 #define useILI9341 true
 #define useTouchScreenInput true
-#define useBluetooth true
-#define useBluetoothSerialPort1 true
-#define useBluetoothSerialBaudRate 9600
-#define useBluetoothBufferedOutput true
 #define useAlternatorVoltage true
-#undef useBluetoothSerialPort0
-#undef useBluetoothSerialPort2
-#undef useBluetoothSerialPort3
-#undef useBluetoothAdaFruitSPI
+// Bench bring-up: use the board's Serial1 header (USART1, pins 18/19) for the
+// SWEET64 debug terminal instead of a Bluetooth module. On the ATmega2560,
+// defining useDebugTerminal auto-enables the full monitor (help, labels,
+// SWEET64 listing/trace, RAM programs, iSqrt). Baud is useDebugTerminalSerialBaudRate (38400).
+#define useDebugTerminal true
+#undef useDebugTerminalSerialPort0
+#define useDebugTerminalSerialPort1 true
+// Bluetooth shares Serial1, so it is disabled during bring-up. To use a BT
+// module later, re-enable these and move the debug terminal off Serial1
+// (e.g. to Serial2/3) so they do not collide on the same UART.
+//#define useBluetooth true
+//#define useBluetoothSerialPort1 true
+//#define useBluetoothSerialBaudRate 9600
+//#define useBluetoothBufferedOutput true
 #endif // defined(useMPGuinoColourTouch)
 
 #if defined(useILI9341)
 #define useHardwareSPI true
 #endif // defined(useILI9341)
+
+// draw the activity/sleep bar on the settings/dropdown/keypad screens too. now that
+// these are non-blocking screen states, the global activity timeout applies to them
+// just like the dashboard (the loop keeps running and will blank/sleep any screen),
+// so the countdown is accurate everywhere. comment out to keep the bar dashboard-only.
+#if defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
+#define useTFTsleepBarEverywhere true
+#endif // defined(useTFToutput) && defined(useTouchScreenInput) && !defined(useButtonInput)
 
 #if defined(useTFToutput)
 #undef useLegacyLCD
@@ -369,6 +389,17 @@
 #undef useScreenEditor
 #undef blankScreenOnMessage
 #undef useExpandedMainDisplay
+// LCD transports / core LCD output and clock display - no LCD on a TFT build
+#undef useSerialLCD
+#undef useTWI4BitLCD
+#undef usePort4BitLCD
+#undef use4BitLCD
+#undef useLCDoutput
+#undef useClockDisplay
+// features that render through the LCD/button display+menu layer, which the
+// TFT build does not have yet (no TFT display/menu layer). strip them like the
+// useSWEET64devMonitor build does, until a TFT presentation layer exists.
+#undef useDragRaceFunction
 #endif // defined(useTFToutput)
 
 #if defined(useTouchScreenInput)
@@ -648,9 +679,9 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #undef useJSONserialBufferedOutput
 #endif // defined(useJSONoutput)
 
-#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
+#if defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useSWEET64devMonitor)
 #undef useDebugTerminal
-#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useAtMega328debugMonitor)
+#endif // defined(useDebugTerminal) && defined(__AVR_ATmega328P__) && !defined(useSWEET64devMonitor)
 
 #if defined(useDebugTerminal)
 #if ( defined(useDebugTerminalSerialPort0) + defined(useDebugTerminalSerialPort1) + defined(useDebugTerminalSerialPort2) + defined(useDebugTerminalSerialPort3) + defined(useDebugTerminalSerialUSB) ) != 1
@@ -1214,6 +1245,10 @@ static const uint8_t TWIaddressRTC = addressTWIRTC;
 #if defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
 #define useBigDigitDisplay true
 #endif // defined(useBigTimeDisplay) || defined(useBigNumberDisplay)
+
+#if defined(useBarFuelEconVsTime)
+#define useFEvTdata true					// the FEvT display implies the FEvT SWEET64 data/opcode
+#endif // defined(useBarFuelEconVsTime)
 
 #if defined(useBarFuelEconVsSpeed) || defined(useBarFuelEconVsTime)
 #define useBarGraph true

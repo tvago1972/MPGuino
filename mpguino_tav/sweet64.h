@@ -133,13 +133,8 @@ static const uint8_t e15 =	e14 + 1;			// branch always
 static const uint8_t eMaxBranchInstrIdx =	nextAllowedValue;
 
 static const uint8_t e16 =	nextAllowedValue;	// return
-static const uint8_t e17 =	e16 + 1;			// return and restore trace flag
-static const uint8_t e18 =	e17 + 1;			// test index
-static const uint8_t e19 =	e18 + 1;			// trace restore
-static const uint8_t e20 =	e19 + 1;			// trace on
-static const uint8_t e21 =	e20 + 1;			// trace save
-static const uint8_t e22 =	e21 + 1;			// trace off
-static const uint8_t e23 =	e22 + 1;			// load index
+static const uint8_t e18 =	e16 + 1;			// test index
+static const uint8_t e23 =	e18 + 1;			// load index
 static const uint8_t e24 =	e23 + 1;			// load index EEPROM
 static const uint8_t e25 =	e24 + 1;			// compare index
 static const uint8_t e26 =	e25 + 1;			// load index EEPROM parameter length
@@ -211,7 +206,6 @@ static const uint8_t SWEET64minusFlag =			0b00000100;			// this is set for arith
 static const uint8_t SWEET64overflowFlag =		0b00001000;			// this is set for arithmetic and branch test operations
 static const uint8_t SWEET64errorFlag =			0b00010000;			// this is set when the SWEET64 engine detects malformed program flow or operands
 
-static const uint8_t SWEET64traceSaveFlag =		0b00100000;			// last known trace state (for calls to SWEET64-based mul64 / div64)
 static const uint8_t SWEET64traceCommandFlag =	0b01000000;			// commands whether trace mode is on or off
 static const uint8_t SWEET64traceFlag =			0b10000000;
 
@@ -222,7 +216,7 @@ static const char SWEET64processorFlagMarkers[] PROGMEM = {
 	" S64status" tcEOS
 	"T" tcEOS
 	"TC" tcEOS
-	"TS" tcEOS
+	"0" tcEOS
 	"E" tcEOS
 	"OVF" tcEOS
 	"N" tcEOS
@@ -446,12 +440,7 @@ static const uint8_t instrDiv2byByte =				instrDiv2byTripVarIndexed + 1;			// di
 static const uint8_t instrShiftRegLeft =			instrDiv2byByte + 1;					// shift 64-bit register X one bit left
 static const uint8_t instrShiftRegRight =			instrShiftRegLeft + 1;					// shift 64-bit register X one bit right
 static const uint8_t instrAddIndex =				instrShiftRegRight + 1;					// add immediate byte value to primary index register
-static const uint8_t instrTraceOn =					instrAddIndex + 1;						// turn on SWEET64 trace
-static const uint8_t instrTraceOff =				instrTraceOn + 1;						// turn off SWEET64 trace
-static const uint8_t instrTraceSave =				instrTraceOff + 1;						// save status of SWEET64 trace, then turn off
-static const uint8_t instrTraceRestore =			instrTraceSave + 1;						// restore status of SWEET64 trace
-static const uint8_t instrTraceDone =				instrTraceRestore + 1;					// restore status of SWEET64 trace, then return to caller
-static const uint8_t instrLdJumpReg =				instrTraceDone + 1;						// load jump register with routine index value
+static const uint8_t instrLdJumpReg =				instrAddIndex + 1;						// load jump register with routine index value
 static const uint8_t instrClearFlag =				instrLdJumpReg + 1;						// clear SWEET64 status flag
 static const uint8_t instrSetFlag =					instrClearFlag + 1;						// set SWEET64 status flag
 #define nextAllowedValue instrSetFlag + 1
@@ -461,10 +450,10 @@ static const uint8_t instrIsqrt =					nextAllowedValue;						// perform integer 
 #define nextAllowedValue instrIsqrt + 1
 #endif // defined(useIsqrt)
 
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t instrLdRegTripFEvTindexed =	nextAllowedValue;						// load trip index from fuel econ vs time trip array
 #define nextAllowedValue instrLdRegTripFEvTindexed + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 
 #if defined(useMatrixMath)
 static const uint8_t instrLdRegXColIndexedRow =		nextAllowedValue;						// load 64-bit register X with contents of Matrix X indexed row specified column
@@ -565,20 +554,15 @@ static const char opCodeList[] PROGMEM = {
 	"ShiftRegLeft" tcEOS
 	"ShiftRegRight" tcEOS
 	"AddIndex" tcEOS
-	"TraceOn" tcEOS
-	"TraceOff" tcEOS
-	"TraceSave" tcEOS
-	"TraceRestore" tcEOS
-	"TraceDone" tcEOS
 	"LdJumpReg" tcEOS
 	"ClearFlag" tcEOS
 	"SetFlag" tcEOS
 #if defined(useIsqrt)
 	"Isqrt" tcEOS
 #endif // defined(useIsqrt)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"LdRegTripFEvTindexed" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useMatrixMath)
 	"LdRegXColIndexedRow" tcEOS
 	"StRegXColIndexedRow" tcEOS
@@ -684,20 +668,15 @@ static const uint16_t opcodeFetchWord[(uint16_t)(maxValidSWEET64instr)] PROGMEM 
 	(((r01 | p00 | s00) << 8) |			(m00 | i29)),			// instrShiftRegLeft
 	(((r01 | p00 | s00) << 8) |			(m00 | i30)),			// instrShiftRegRight
 	(((r00 | p03 | s00) << 8) |			(e23)),					// instrAddIndex
-	(((r00 | p00 | s00) << 8) |			(e20)),					// instrTraceOn
-	(((r00 | p00 | s00) << 8) |			(e22)),					// instrTraceOff
-	(((r00 | p00 | s00) << 8) |			(e21)),					// instrTraceSave
-	(((r00 | p00 | s00) << 8) |			(e19)),					// instrTraceRestore
-	(((r00 | p00 | s00) << 8) |			(e17)),					// instrTraceDone
 	(((r00 | p02 | s00) << 8) |			(e29)),					// instrLdJumpReg
 	(((r00 | p01 | s00) << 8) |			(e30)),					// instrClearFlag
 	(((r00 | p01 | s00) << 8) |			(e31)),					// instrSetFlag
 #if defined(useIsqrt)
 	(((r01 | p00 | s00) << 8) |			(m00 | i28)),			// instrIsqrt
 #endif // defined(useIsqrt)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	(((r04 | p02 | s01) << 8) |			(m04 | i17)),			// instrLdRegTripFEvTindexed
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useMatrixMath)
 	(((r01 | p01 | s02) << 8) |			(m00 | i20)),			// instrLdRegXColIndexedRow
 	(((r01 | p01 | s02) << 8) |			(m00 | i21)),			// instrStRegXColIndexedRow
@@ -910,9 +889,7 @@ static const char terminalConstIdxNames[] PROGMEM = {
 
 static const char terminalBCDformatNames[] PROGMEM = {
 	"bcdFormat10digit" tcEOS
-#if defined(useClockSupport)
 	"bcdFormatHHMMSS" tcEOS
-#endif // defined(useClockSupport)
 	"bcdFormatH9MMSS" tcEOS
 	"bcdFormatOverflow" tcEOS
 };
@@ -1010,10 +987,11 @@ static const uint32_t constantNumberList[(uint16_t)(idxConstantLength)] PROGMEM 
 #define nextAllowedValue 0
 static const uint8_t bcdFormat10digit =		nextAllowedValue;
 #define nextAllowedValue bcdFormat10digit + 1
-#if defined(useClockSupport)
+// HHMMSS is always compiled (not gated on useClockSupport) so the BCD format
+// indices stay stable across builds; the clock code that *uses* it is still
+// gated by useClockSupport.  Costs only the 7-byte descriptor below.
 static const uint8_t bcdFormatHHMMSS =		nextAllowedValue;
 #define nextAllowedValue bcdFormatHHMMSS + 1
-#endif // defined(useClockSupport)
 static const uint8_t bcdFormatH9MMSS =		nextAllowedValue;
 static const uint8_t bcdFormatOverflow =	bcdFormatH9MMSS + 1;
 static const uint8_t bcdFormatCount =		bcdFormatOverflow + 1;
@@ -1029,8 +1007,7 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	100,		// 100000s and 1000000s
 	100,		// 10000000s and 100000000s
 
-#if defined(useClockSupport)
-	// hhmmss number format
+	// hhmmss number format (always compiled so format indices stay build-stable)
 	0x07,		// total entry length
 	'0',		// leading zero character
 	0x03,		// total BCD byte length / offset into 64-bit register for BCD LSB
@@ -1039,7 +1016,6 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 	60,			// minutes
 	24,			// hours
 
-#endif // defined(useClockSupport)
 	// h9mmss number format
 	0x07,		// total entry length
 	'0',		// leading zero character

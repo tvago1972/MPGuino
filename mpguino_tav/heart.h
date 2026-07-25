@@ -17,7 +17,7 @@ namespace heart /* core MPGuino system support section prototype */
 	static uint32_t getCycle0Length(uint8_t lastCycleIdx);
 	static uint32_t cycles0(void);
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
-//	static void wait0(uint16_t ms);
+	static void wait0(uint16_t ms);
 	static void changeBitFlagBits(uint8_t bitFlagIdx, uint8_t maskAND, uint8_t maskOR);
 	static void performSleepMode(uint8_t sleepMode);
 #if defined(useTimer1Interrupt)
@@ -259,10 +259,10 @@ static const FIFO_storage_t ringBufferDefList[(uint16_t)(rbIdxCount)] PROGMEM = 
 };
 
 #endif // defined(useBuffering)
-#if defined(useBarGraph)
-static const uint8_t bgDataSize = 15;
+#if defined(useBarGraph) || defined(useFEvTdata) || defined(useBarFuelEconVsSpeed)
+static const uint8_t bgDataSize = 15; // bar-graph dataset dimension; needed by the FEvT/FEvsSpeed trip data even when the bar-graph display is absent
 
-#endif // defined(useBarGraph)
+#endif // defined(useBarGraph) || defined(useFEvTdata) || defined(useBarFuelEconVsSpeed)
 typedef struct
 {
 
@@ -399,6 +399,10 @@ static const uint8_t v8SignalSimVSSstate =				v8SignalSimFIPidx + 1;					// simu
 static const uint8_t v8SignalSimFIPstate =				v8SignalSimVSSstate + 1;				// simulated fuel injector state
 #define nextAllowedValue v8SignalSimFIPstate + 1
 #endif // defined(useSimulatedFIandVSS)
+#endif // defined(useTimer1Interrupt)
+// the bluetooth status variables are not timer1-specific, so they are defined
+// outside the useTimer1Interrupt block (bluetooth can be enabled without it).
+// kept in their original order so the debug-terminal label list stays aligned.
 #if defined(useBluetooth)
 static const uint8_t v8btOutputStatusIdx =				nextAllowedValue;						// bluetooth output status flag
 #define nextAllowedValue v8btOutputStatusIdx + 1
@@ -407,7 +411,6 @@ static const uint8_t v8btOutputStatusIdx =				nextAllowedValue;						// bluetoot
 static const uint8_t v8BLEstatusIdx =					nextAllowedValue;						// AdaFruit BLEfriend condition flags
 #define nextAllowedValue v8BLEstatusIdx + 1
 #endif // defined(useBluetoothAdaFruitSPI)
-#endif // defined(useTimer1Interrupt)
 #if defined(useDragRaceFunction)
 static const uint8_t v8AccelerationFlagsIdx =			nextAllowedValue;						// acceleration test mode flags
 #define nextAllowedValue v8AccelerationFlagsIdx + 1
@@ -432,10 +435,10 @@ static const uint8_t v8Serial2StatusIdx =				nextAllowedValue;
 static const uint8_t v8Serial3StatusIdx =				nextAllowedValue;
 #define nextAllowedValue v8Serial3StatusIdx + 1
 #endif // defined(useSerial3Port)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t v8FEvTimeTripIdx =					nextAllowedValue;
 #define nextAllowedValue v8FEvTimeTripIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useJSONoutput)
 static const uint8_t v8Subtitle1Idx =					nextAllowedValue;
 #define nextAllowedValue v8Subtitle1Idx + 1
@@ -568,6 +571,10 @@ static const uint8_t v16DisplayDelayCountIdx =			v16DetectEngineOffIdx + 1;				/
 static const uint8_t v16WatchdogInjectorCountIdx =		v16DisplayDelayCountIdx + 1;			// watchdog counter for minimum good engine speed / engine off activity timeout
 static const uint8_t v16WatchdogVSScountIdx =			v16WatchdogInjectorCountIdx + 1;		// watchdog counter for minimum good vehicle speed / vehicle stopped activity timeout
 #define nextAllowedValue v16WatchdogVSScountIdx + 1
+#if defined(useTFToutput) && !defined(useButtonInput)
+static const uint8_t v16ActivityRemainingIdx =			nextAllowedValue;						// activity timeout countdown remaining (timer0 ticks), for the TFT sleep bar
+#define nextAllowedValue v16ActivityRemainingIdx + 1
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 
 #if defined(useAnalogRead)
 static const uint8_t v16AnalogStartIdx =				nextAllowedValue;						// start of analog value storage
@@ -648,11 +655,11 @@ static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software c
 static const uint8_t v32InjectorCorrectionIdx =			nextAllowedValue;						// Chrysler fuel injector correction value
 #define nextAllowedValue v32InjectorCorrectionIdx + 1
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 static const uint8_t v32FEvsTimePeriodTickIdx =			nextAllowedValue;						// time period for fuel economy vs time bargraph
 static const uint8_t v32FEvsTimePeriodCountIdx =		v32FEvsTimePeriodTickIdx + 1;			// timer0 countdown timer for fuel economy vs time bargraph
 #define nextAllowedValue v32FEvsTimePeriodCountIdx + 1
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useDebugCPUreading)
 static const uint8_t v32WorkingTimer0Idx =				nextAllowedValue;						// timer0 overflow interrupt handler stopwatch direct measurement
 #define nextAllowedValue v32WorkingTimer0Idx + 1
@@ -869,6 +876,11 @@ static const uint8_t m32DebugAccS64sqrtIdx =			nextAllowedValue;
 static const uint8_t m32DebugCountS64sqrtIdx =			m32DebugAccS64sqrtIdx + 1;
 #define nextAllowedValue m32DebugCountS64sqrtIdx + 1
 #endif // defined(useIsqrt)
+#if defined(useDebugTerminalSWEET64)
+static const uint8_t m32S64programCyclesIdx =			nextAllowedValue;						// timer0 cycles executed in the last ^T trace run
+static const uint8_t m32S64programInstrIdx =			m32S64programCyclesIdx + 1;				// instructions executed in the last ^T trace run
+#define nextAllowedValue m32S64programInstrIdx + 1
+#endif // defined(useDebugTerminalSWEET64)
 #endif // defined(useDebugCPUreading)
 
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
@@ -978,9 +990,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useSerial3Port)
 	"v8Serial3StatusIdx" tcEOS
 #endif // defined(useSerial3Port)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"v8FEvTimeTripIdx" tcEOS
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useJSONoutput)
 	"v8Subtitle1Idx" tcEOS
 #if defined(useDragRaceFunction)
@@ -1078,6 +1090,9 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"v16DisplayDelayCountIdx" tcEOS				// timer0
 	"v16WatchdogInjectorCountIdx" tcEOS			// fi / timer0
 	"v16WatchdogVSScountIdx" tcEOS				// vss / timer0
+#if defined(useTFToutput) && !defined(useButtonInput)
+	"v16ActivityRemainingIdx" tcEOS				// timer0 / TFT sleep bar
+#endif // defined(useTFToutput) && !defined(useButtonInput)
 #if defined(useAnalogRead)
 	"v16Analog0Idx" tcEOS						// analog
 	"v16Analog1Idx" tcEOS						// analog
@@ -1134,10 +1149,10 @@ static const char terminalVariableLabels[] PROGMEM = {
 #if defined(useChryslerMAPCorrection)
 	"v32InjectorCorrectionIdx" tcEOS			// fi close
 #endif // defined(useChryslerMAPCorrection)
-#if defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
 	"v32FEvsTimePeriodTickIdx" tcEOS			// timer0
 	"v32FEvsTimePeriodCountIdx" tcEOS			// timer0
-#endif // defined(useBarFuelEconVsTime)
+#endif // defined(useFEvTdata)
 #if defined(useDebugCPUreading)
 	"v32WorkingTimer0Idx" tcEOS					// timer0 overflow interrupt handler
 #if defined(useTimer1Interrupt)
@@ -1178,8 +1193,8 @@ static const char terminalVariableLabels[] PROGMEM = {
 #endif // defined(useSerial3Port)
 
 #endif // defined(useDebugCPUreading)
-#if defined(useBarFuelEconVsTime)
-#endif // defined(useBarFuelEconVsTime)
+#if defined(useFEvTdata)
+#endif // defined(useFEvTdata)
 #if defined(useDragRaceFunction)
 	"v32DragRawTopSpeedIdx" tcEOS				// timer0
 	"v32DragRawTrapSpeedIdx" tcEOS				// timer0
@@ -1299,6 +1314,10 @@ static const char terminalVariableLabels[] PROGMEM = {
 	"m32DebugAccS64sqrtIdx" tcEOS
 	"m32DebugCountS64sqrtIdx" tcEOS
 #endif // defined(useIsqrt)
+#if defined(useDebugTerminalSWEET64)
+	"m32S64programCyclesIdx" tcEOS
+	"m32S64programInstrIdx" tcEOS
+#endif // defined(useDebugTerminalSWEET64)
 #endif // defined(useDebugCPUreading)
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useBluetooth)
@@ -1381,7 +1400,7 @@ static const char timer0Status0FlagMarkers[] PROGMEM = {
 static const uint8_t t0sbSampleBLEfriend =			0b10000000;		// useBluetoothAdaFruitSPI
 static const uint8_t t0sbReadRTC =					0b01000000;		// useRealTimeClockModule
 static const uint8_t t0sbErrorRTC =					0b00100000;		// useRealTimeClockModule
-static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useBarFuelEconVsTime
+static const uint8_t t0sbResetFEvsTimeTrip =		0b00010000;		// useFEvTdata
 static const uint8_t t0sbAccelTestFlag =			0b00001000;		// useDragRaceFunction
 static const uint8_t t0sbCoastdownTestFlag =		0b00000100;		// useCoastDownCalculator
 
