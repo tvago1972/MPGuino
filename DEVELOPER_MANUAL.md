@@ -1277,7 +1277,7 @@ A Python EEPROM regression harness lives under [`tools/eepromtest/`](tools/eepro
 ### F.1 What it does
 
 - Parses the `P` listing, including displayed value, flag byte, bit length, EEPROM address, raw byte field, and parameter label.
-- Discovers monitor pseudo-ranges for settings, saved trips, display pages, display cursor, and menu height.
+- Reads the full `P` listing once and derives host-side groups for settings, saved trips, display pages, display cursor, and menu height.
 - Groups parameters by exposed action flags such as hardware init, software init, display change, fuel calculation, and metric mode conversion.
 - Runs storage round-trips across representative parameter bit widths by comparing raw bytes rather than display-formatted decimal text.
 - Exercises timeout, hardware-init, and software-init side effects by reading corresponding `V` variables after a parameter update.

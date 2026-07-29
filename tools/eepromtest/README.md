@@ -26,7 +26,7 @@ python run_tests.py COM3 38400
 
 ## Current Coverage
 
-- Parses `P` listing metadata: value, flags, bit length, EEPROM address, label.
+- Parses `P` listing metadata: value, flags, bit length, EEPROM address, raw byte field, label.
 - Reads the full `P` listing once, then derives host-side groups for:
   - saved trip EEPROM parameters
   - display page pseudo-parameters
