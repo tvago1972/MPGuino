@@ -1,7 +1,7 @@
-"""SWEET64 const / read-only instruction regression cases.
+"""SWEET64 constant instruction regression cases.
 
-LdRegRdOnly loads register X from a program constant; AddConstToX adds one to
-register X; Mul2byRdOnly / Div2byRdOnly multiply / divide reg2 by one.  The
+LdRegConst loads register X from a program constant; AddConstToX adds one to
+register X; Mul2byConst / Div2byConst multiply / divide reg2 by one.  The
 constant-index operand is written as '%name' and the harness resolves it to
 the (build-specific) index by alias via the O command.
 
@@ -10,27 +10,27 @@ Results are checked against the KNOWN, build-stable constant values
 so verification does not depend on the monitor's own constant readout.
 
 Operand notes:
-  LdRegRdOnly: 'reg-byte const' (X=low nibble) -> 'LdRegRdOnly 11 %idxTen'
+  LdRegConst: 'reg-byte const' (X=low nibble) -> 'LdRegConst 11 %idxTen'
   AddConstToX: single register (low nibble) -> 'AddConstToX 1 %idxOneHundred'
-  Mul2byRdOnly / Div2byRdOnly: operate on reg2, one operand (the constant)
+  Mul2byConst / Div2byConst: operate on reg2, one operand (the constant)
 """
 
 from s64testcase import S64Case
 
 CASES = [
     S64Case(
-        name="LdRegRdOnly: load idxTen (10) into reg1",
-        program=["LdRegRdOnly 11 %idxTen", "Done"],
+        name="LdRegConst: load idxTen (10) into reg1",
+        program=["LdRegConst 11 %idxTen", "Done"],
         expect={1: 0x0A},
     ),
     S64Case(
-        name="LdRegRdOnly: load idxOneThousand (1000) into reg1",
-        program=["LdRegRdOnly 11 %idxOneThousand", "Done"],
+        name="LdRegConst: load idxOneThousand (1000) into reg1",
+        program=["LdRegConst 11 %idxOneThousand", "Done"],
         expect={1: 0x3E8},
     ),
     S64Case(
-        name="LdRegRdOnly via idxDecimalPoint alias (1000)",
-        program=["LdRegRdOnly 11 %idxDecimalPoint", "Done"],
+        name="LdRegConst via idxDecimalPoint alias (1000)",
+        program=["LdRegConst 11 %idxDecimalPoint", "Done"],
         expect={1: 0x3E8},
     ),
     S64Case(
@@ -39,13 +39,13 @@ CASES = [
         expect={1: 0x69},
     ),
     S64Case(
-        name="Mul2byRdOnly: 3 * idxOneThousand (1000) = 3000",
-        program=["LdRegByte 22 03", "Mul2byRdOnly %idxOneThousand", "Done"],
+        name="Mul2byConst: 3 * idxOneThousand (1000) = 3000",
+        program=["LdRegByte 22 03", "Mul2byConst %idxOneThousand", "Done"],
         expect={2: 0xBB8},
     ),
     S64Case(
-        name="Div2byRdOnly: 5000 / idxOneThousand (1000) = 5 r0",
-        program=["Div2byRdOnly %idxOneThousand", "Done"],
+        name="Div2byConst: 5000 / idxOneThousand (1000) = 5 r0",
+        program=["Div2byConst %idxOneThousand", "Done"],
         inputs={2: 5000},
         expect={2: 0x05, 1: 0x00},
     ),

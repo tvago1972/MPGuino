@@ -1,6 +1,6 @@
 """Program-constant access via the debug monitor's O command.
 
-'1<O' lists the read-only program constants in the same line format as ^E/V:
+'O' lists the program constants in the same line format as ^E/V:
   'INDEX: <hex32> - <decimal> - <LABEL>'
 where LABEL may be several aliases joined by '/', e.g.
   '24: 000003E8 - 1000 - idxOneThousand/idxDecimalPoint'
@@ -20,7 +20,7 @@ known, build-stable constant values (idxTen=10, idxOneThousand=1000, ...) via
 import re
 
 # '1' selects the constant range; '<' sets it as the list target.
-CMD_LIST_CONSTANTS = '1<O'
+CMD_LIST_CONSTANTS = 'O'
 
 _CTRL_ECHO_RE = re.compile(r'^\^[A-Z]$')
 _CONST_RE = re.compile(
@@ -53,7 +53,7 @@ def _parse_line(line):
 
 
 def read_constants(term):
-    """Issue '1<O' and return (by_index, by_alias)."""
+    """Issue 'O' and return (by_index, by_alias)."""
     lines = term.send_command(CMD_LIST_CONSTANTS)
     by_index = []
     by_alias = {}

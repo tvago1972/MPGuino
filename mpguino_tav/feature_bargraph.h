@@ -70,8 +70,8 @@ static const uint8_t prgmFEvsSpeed[] PROGMEM = {
 	instrBranchIfZero, 15,								// if zero, then speed is also zero
 	instrLdReg, 0x21,									// save denominator term for later
 	instrLdRegTripVarIndexed, 0x02, rvVSSpulseIdx,		// load VSS pulse count
-	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
-	instrMul2byRdOnly, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
+	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
+	instrMul2byConst, idxCycles0PerSecond,				// set up to convert VSS cycle value to time in seconds
 	instrDiv2by1,										// divide to obtain vehicle speed
 
 //cont:

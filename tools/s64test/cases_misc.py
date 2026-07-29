@@ -2,7 +2,7 @@
 
 Covers the opcodes not exercised elsewhere:
   TestReg, BranchIfCclear, LdReg, LdRegByteFromIndex, AdjustQuotient,
-  LdRegRdOnlyMetric, LxdIEEPROM, LxdIEEPROMoffset, LxdIParamLength,
+  LdRegConstMetric, LxdIEEPROM, LxdIEEPROMoffset, LxdIParamLength,
   LxdIParamLengthIndexed, LdRegVariableOffset, StRegVariableIndexed,
   StRegVariableOffset, LdRegTripVarOffset.
 
@@ -83,20 +83,20 @@ CASES = [
         expect={2: 0x02},
     ),
 
-    # --- LdRegRdOnlyMetric: const routed to reg X (SAE) or Y (metric) ---
+    # --- LdRegConstMetric: const routed to reg X (SAE) or Y (metric) ---
     S64Case(
-        name="LdRegRdOnlyMetric SAE: const -> reg1 (X)",
+        name="LdRegConstMetric SAE: const -> reg1 (X)",
         program=[
             "LdRegByte 22 00", "StRegVariable 22 {}".format(VAR),   # SAE mode
-            "LdRegRdOnlyMetric 21 %idxOneThousand", "Done",
+            "LdRegConstMetric 21 %idxOneThousand", "Done",
         ],
         expect={1: 0x3E8},
     ),
     S64Case(
-        name="LdRegRdOnlyMetric metric: const -> reg2 (Y)",
+        name="LdRegConstMetric metric: const -> reg2 (Y)",
         program=[
             "LdRegByte 22 01", "StRegVariable 22 {}".format(VAR),   # metric mode
-            "LdRegRdOnlyMetric 21 %idxOneThousand", "Done",
+            "LdRegConstMetric 21 %idxOneThousand", "Done",
         ],
         expect={2: 0x3E8},
     ),

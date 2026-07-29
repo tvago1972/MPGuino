@@ -30,6 +30,8 @@
 - [Appendix C: SWEET64 Dev Monitor (`useSWEET64devMonitor`)](#appendix-c-sweet64-dev-monitor-usesweet64devmonitor)
 - [Appendix D: Second Arduino Uno as External Signal Generator](#appendix-d-second-arduino-uno-as-external-signal-generator)
 - [Appendix E: SWEET64 Regression Test Harness](#appendix-e-sweet64-regression-test-harness)
+- [Appendix F: EEPROM Regression Test Harness](#appendix-f-eeprom-regression-test-harness)
+- [Appendix G: Trip Function Regression Test Harness](#appendix-g-trip-function-regression-test-harness)
 
 ---
 
@@ -148,7 +150,7 @@ Each trip slot holds up to five fields (`trip_measurement.h`):
 
 #### Trip slot indices
 
-Slots are allocated at compile time via a `#define nextAllowedValue` chain. The three slots used by almost all display programs:
+Slots are allocated at compile time in the trip slot enum in `trip_measurement.h`. The three slots used by almost all display programs:
 
 | Slot | Meaning |
 |---|---|
@@ -190,7 +192,7 @@ Normal programs live in flash as `PROGMEM` byte arrays:
 ```cpp
 static const uint8_t prgmMyCalc[] PROGMEM = {
     instrLdRegTripVar, 0x02, tripIdx, rvInjCycleIdx, // r2 = inj cycle time
-    instrMul2byRdOnly, idxDecimalPoint,               // r2 *= 1000
+    instrMul2byConst, idxDecimalPoint,               // r2 *= 1000
     instrDiv2byVariable, v32SystemCycleIdx,            // r2 /= elapsed cycles
     instrDone
 };
@@ -387,14 +389,16 @@ Program variables are `uint32_t` values in the main `v32xxx` / `m32xxx` global a
 | `instrStRegVariableIndexed` | `0xX0` | variable[index] ← r[X] |
 | `instrStRegVariableOffset` | `0xX0`, varIdx | variable[index + varIdx] ← r[X] |
 
-### 5.8 Read-only Constant Access
+### 5.8 Constant Access
 
 | Instruction | Operands | Description |
 |---|---|---|
-| `instrLdRegRdOnly` | `0xX0`, constIdx | r[X] ← constant table entry |
-| `instrLdRegRdOnlyIndexed` | `0xX0` | r[X] ← constant[index] |
-| `instrLdRegRdOnlyOffset` | `0xX0`, constIdx | r[X] ← constant[index + constIdx] |
-| `instrLdRegRdOnlyMetric` | `0xX0`, saeIdx | r[X] ← constant[saeIdx] (or [saeIdx+1] if metric) |
+| `instrLdRegConst` | `0xX0`, constIdx | r[X] ← constant table entry |
+| `instrLdRegConstIndexed` | `0xX0` | r[X] ← constant[index] |
+| `instrLdRegConstOffset` | `0xX0`, constIdx | r[X] ← constant[index + constIdx] |
+| `instrLdRegConstMetric` | `0xX0`, saeIdx | r[X] ← constant[saeIdx] (or [saeIdx+1] if metric) |
+
+The former `instrLdRegRdOnly`, `instrLdRegRdOnlyIndexed`, `instrLdRegRdOnlyOffset`, `instrLdRegRdOnlyMetric`, `instrMul2byRdOnly`, and `instrDiv2byRdOnly` source names remain as compatibility aliases for existing programs. New source should use the `Const` names.
 
 ### 5.9 Arithmetic
 
@@ -411,12 +415,12 @@ Program variables are `uint32_t` values in the main `v32xxx` / `m32xxx` global a
 | `instrSubVariableFromX` | r[X] -= program variable |
 | `instrMul2by1` | r2 *= r1 (64-bit, result in r2) |
 | `instrMul2byByte` | r2 *= immediate byte |
-| `instrMul2byRdOnly` | r2 *= constant table value |
+| `instrMul2byConst` | r2 *= constant table value |
 | `instrMul2byEEPROM` | r2 *= EEPROM parameter |
 | `instrMul2byVariable` | r2 *= program variable |
 | `instrMul2byTripVarIndexed` | r2 *= trip[index].rv[rvIdx] |
 | `instrDiv2by1` | r2 /= r1; remainder → r1 |
-| `instrDiv2byRdOnly` | r2 /= constant table value |
+| `instrDiv2byConst` | r2 /= constant table value |
 | `instrDiv2byEEPROM` | r2 /= EEPROM parameter |
 | `instrDiv2byVariable` | r2 /= program variable |
 | `instrDiv2byTripVarIndexed` | r2 /= trip[index].rv[rvIdx] |
@@ -491,7 +495,7 @@ The result in `r[Z]` is then passed to `ull2str()` which walks the BCD bytes and
 
 ## 7. Constant Table
 
-The constant table `constantNumberList[]` is indexed by `idxXxx` constants. These are "read-only" values loaded by `instrLdRegRdOnly` and the `Mul2byRdOnly` / `Div2byRdOnly` family.
+The constant table `constantNumberList[]` is indexed by `idxXxx` constants. These values are loaded by `instrLdRegConst` and used by the `Mul2byConst` / `Div2byConst` family.
 
 Selected entries:
 
@@ -514,7 +518,7 @@ Selected entries:
 | `idxPowerFactor` | 22,840 | Vehicle power estimation factor (228.4 × 100 internal) |
 | `idxCorrectionFactor` | 4,096 | Fuel pressure correction intermediate scale |
 
-> **SAE/Metric pairs:** `instrLdRegRdOnlyMetric` loads `constant[saeIdx]` in imperial mode and `constant[saeIdx+1]` in metric mode. This is how a single program handles both unit systems: place the SAE value at an even index and the metric value immediately after it.
+> **SAE/Metric pairs:** `instrLdRegConstMetric` loads `constant[saeIdx]` in imperial mode and `constant[saeIdx+1]` in metric mode. This is how a single program handles both unit systems: place the SAE value at an even index and the metric value immediately after it.
 
 ---
 
@@ -526,11 +530,11 @@ Selected entries:
 static const uint8_t prgmCalculateFuelEconomy[] PROGMEM = {
     // r2 = distance (VSS cycles × numerator constant)
     instrLdRegTripVar, 0x02, tripIdx, rvVSSpulseIdx,  // r2 ← VSS pulses
-    instrMul2byRdOnly, idxNumerDistance,               // r2 *= 1,609,344 (mi→km)
+    instrMul2byConst, idxNumerDistance,               // r2 *= 1,609,344 (mi→km)
 
     // branch if metric
     instrBranchIfSAEmode, 4,                           // if SAE, skip next 4 bytes
-    instrDiv2byRdOnly, idxDenomDistance,               // r2 /= 1,000,000
+    instrDiv2byConst, idxDenomDistance,               // r2 /= 1,000,000
 
     // r1 = fuel used (injector cycles)
     instrLdRegTripVar, 0x01, tripIdx, rvInjCycleIdx,   // r1 ← injector open time
@@ -556,13 +560,13 @@ static const uint8_t prgmCalculateFuelEconomy[] PROGMEM = {
 ```cpp
 instrBranchIfSAEmode, <offset_to_skip_metric_conversion>,
 // metric path
-instrMul2byRdOnly, idxNumerDistance,
-instrDiv2byRdOnly, idxDenomDistance,
+instrMul2byConst, idxNumerDistance,
+instrDiv2byConst, idxDenomDistance,
 // falls through to...
 instrDone
 
-// or use instrLdRegRdOnlyMetric to load SAE/metric pair in one instruction:
-instrLdRegRdOnlyMetric, 0x01, idxNumerDistance,  // r1 = 1,609,344 (metric) or 1 (SAE)
+// or use instrLdRegConstMetric to load SAE/metric pair in one instruction:
+instrLdRegConstMetric, 0x01, idxNumerDistance,  // r1 = 1,609,344 (metric) or 1 (SAE)
 ```
 
 **Subroutine call:**
@@ -584,9 +588,10 @@ instrBranchIfZero, <offset_to_overflow_return>,   // bail if zero
 ### 8.3 Registering a New Program
 
 1. Define the `static const uint8_t prgmMyCalc[] PROGMEM = { ... }` array.
-2. Add a `tMyCalc` index constant to the `#define nextAllowedValue` chain in `functions.h`.
-3. Add a `tMyCalc` entry to the `S64_PROGRAM_ENTRIES(S64_PROGRAM_CASE)` macro expansion (also in `functions.h` or `functions.ino`).
-4. Add a display label string to `calcFormatLabels[]` and a format entry to `calcFormatList[]` / `calcFormatDecimalPlaces[]`.
+2. Add a `tMyCalc` index to the function index enum in `functions.h`, in the matching group for trip-backed display functions, display-only functions, Bluetooth helpers, internal helpers, or optional feature helpers.
+3. Add a `tMyCalc` entry to the matching `S64_*_ENTRIES(X)` macro in `functions.h` so `S64programList[]` and, when enabled, `S64programLengthList[]` stay aligned with the enum.
+4. If debug terminal labels are enabled for the new function category, add the display/debug name to `terminalTripFuncNames[]`.
+5. For displayable functions, add the format entry to `calcFormatList[]`. Add or reuse the matching calculation format definition, label, decimal-place entry, and CGRAM entry as needed.
 
 ---
 
@@ -896,7 +901,7 @@ Enters the interactive line assembler starting at RAM address `x`. The assembler
 ```
 0!
 00: LdRegTripVar 0x02 currentIdx rvInjCycleIdx
-04: Mul2byRdOnly idxDecimalPoint
+04: Mul2byConst idxDecimalPoint
 07: Div2byVariable v32SystemCycleIdx
 10: Done
 11:
@@ -1259,6 +1264,69 @@ python run_tests.py COM3 38400
 ```
 
 Summary line: `N passed, M failed, K skipped, T total` (skips do not affect the exit code). Helper tools in the same directory: `test_connectivity.py` (smoke-test the serial link), `raw_command.py` (send one terminal command), `perf_report.py` (cycle instrumentation), and `mock_terminal.py` (run the harness's own unit tests without hardware).
+
+---
+
+## Appendix F: EEPROM Regression Test Harness
+
+A Python EEPROM regression harness lives under [`tools/eepromtest/`](tools/eepromtest/). It drives the debug-terminal parameter, variable, and constant listings on real hardware, writes selected EEPROM-backed values, checks readback, verifies selected derived program variables, and restores the original EEPROM contents. See [`tools/eepromtest/README.md`](tools/eepromtest/README.md) for the current case list.
+
+### F.1 What it does
+
+- Parses the `P` listing, including displayed value, flag byte, bit length, EEPROM address, raw byte field, and parameter label.
+- Discovers monitor pseudo-ranges for settings, saved trips, display pages, display cursor, and menu height.
+- Groups parameters by exposed action flags such as hardware init, software init, display change, fuel calculation, and metric mode conversion.
+- Runs storage round-trips across representative parameter bit widths by comparing raw bytes rather than display-formatted decimal text.
+- Exercises timeout, hardware-init, and software-init side effects by reading corresponding `V` variables after a parameter update.
+- Restores every parameter it changes before exiting.
+
+### F.2 Compile-time requirements
+
+The target firmware must include `useDebugTerminalLabels`. The harness resolves parameters, constants, and variables by name because numeric indexes move between builds and feature selections.
+
+### F.3 Running it
+
+```
+python run_tests.py <port> <baud>
+# example:
+python run_tests.py COM3 38400
+
+python run_tests.py <port> <baud> --discover-only
+```
+
+The discovery mode prints the parsed ranges and flag groups without running write cases. The full run prints a summary line: `N passed, M failed, T total`.
+
+---
+
+## Appendix G: Trip Function Regression Test Harness
+
+A Python trip-function harness lives under [`tools/triptest/`](tools/triptest/). It uses the debug terminal to write known raw measurements into the terminal trip block with `T`, reads calculated trip-function output with `L`, and verifies that display-visible trip functions still evaluate after index, format, or SWEET64 program-list changes. See [`tools/triptest/README.md`](tools/triptest/README.md) for the current case list.
+
+### G.1 What it does
+
+- Parses terminal trip measurements from `T`.
+- Writes known values to the raw terminal trip fields: VSS pulses, VSS cycles, injector pulses, injector cycles, and engine cycles.
+- Checks the terminal trip measurement round-trip.
+- Checks selected direct function outputs exactly, including `tInjectorPulseCount` and `tVSSpulseEdgeCount`.
+- Evaluates every trip function exposed by `L` and requires each one to produce a parseable numeric display value.
+
+The broad `L` sweep intentionally exercises display-visible functions. Helper-only SWEET64 functions are covered indirectly when visible functions call them with the firmware-managed index context.
+
+### G.2 Compile-time requirements
+
+The target firmware must include `useDebugTerminalLabels`. Labels are mandatory because the harness resolves trip fields and function outputs by name.
+
+### G.3 Running it
+
+```
+python run_tests.py <port> <baud>
+# example:
+python run_tests.py COM3 38400
+
+python run_tests.py <port> <baud> --discover-only
+```
+
+The full run prints a summary line: `N passed, M failed, T total`.
 
 ---
 

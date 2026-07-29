@@ -8,7 +8,7 @@ static const uint8_t prgmRoundOffNumber[] PROGMEM = {
 	instrBranchIfE, 12,									// if 2 right hand digits were specified, round to nearest 100th
 	instrCmpIndex, 1,									// check if 0 or 1 right-hand digits were specified
 	instrBranchIfE, 4,									// if 1 right hand digit was specified, round to nearest 10th
-	instrDiv2byRdOnly, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
+	instrDiv2byConst, idxDecimalPoint,					// shift number right 3 digits to round to nearest whole digit
 	instrSkip, 6,										// skip to adjustment
 
 //to10ths:

@@ -99,23 +99,28 @@ static const uint8_t displayCountSettingsVSS = 3;
 static const uint8_t displayCountSettingsTank = 2;
 static const uint8_t displayCountSettingsMisc = 1;
 
-#define nextAllowedValue 0
-static const uint8_t displayStartSettingsDisplay = nextAllowedValue;
-static const uint8_t displayStartSettingsFuel = displayStartSettingsDisplay + displayCountSettingsDisplay;
-static const uint8_t displayStartSettingsVSS = displayStartSettingsFuel + displayCountSettingsFuel;
-static const uint8_t displayStartSettingsTank = displayStartSettingsVSS + displayCountSettingsVSS;
-#define nextAllowedValue displayStartSettingsTank + displayCountSettingsTank
+enum {
+	displayStartSettingsDisplay = 0,
+	displayStartSettingsFuel = displayStartSettingsDisplay + displayCountSettingsDisplay,
+	displayStartSettingsVSS = displayStartSettingsFuel + displayCountSettingsFuel,
+	displayStartSettingsTank = displayStartSettingsVSS + displayCountSettingsVSS,
+	displaySettingsTankEnd = displayStartSettingsTank + displayCountSettingsTank,
 #if defined(useChryslerMAPCorrection)
-static const uint8_t displayStartSettingsCRFIC = nextAllowedValue;
-#define nextAllowedValue displayStartSettingsCRFIC + displayCountSettingsCRFIC
+	displayStartSettingsCRFIC = displaySettingsTankEnd,
+	displaySettingsCRFICEnd = displayStartSettingsCRFIC + displayCountSettingsCRFIC,
+#else // defined(useChryslerMAPCorrection)
+	displaySettingsCRFICEnd = displaySettingsTankEnd,
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useVehicleParameters)
-static const uint8_t displayStartSettingsVehicle = nextAllowedValue;
-#define nextAllowedValue displayStartSettingsVehicle + displayCountSettingsVehicle
+	displayStartSettingsVehicle = displaySettingsCRFICEnd,
+	displaySettingsVehicleEnd = displayStartSettingsVehicle + displayCountSettingsVehicle,
+#else // defined(useVehicleParameters)
+	displaySettingsVehicleEnd = displaySettingsCRFICEnd,
 #endif // defined(useVehicleParameters)
-static const uint8_t displayStartSettingsTimeout = nextAllowedValue;
-static const uint8_t displayStartSettingsMisc = displayStartSettingsTimeout + displayCountSettingsTimeout;
-#define nextAllowedValue displayStartSettingsMisc + displayCountSettingsMisc
+	displayStartSettingsTimeout = displaySettingsVehicleEnd,
+	displayStartSettingsMisc = displayStartSettingsTimeout + displayCountSettingsTimeout,
+	displaySettingsEnd = displayStartSettingsMisc + displayCountSettingsMisc
+};
 
 static const char settingsSubMenuTitles[] PROGMEM = {	// each title must be no longer than 15 characters
 
@@ -300,7 +305,7 @@ static const char settingsParameterList[] PROGMEM = {
 #if defined(useFuelPressure)
 	pSysFuelPressureIdx,
 #endif // defined(useFuelPressure)
-#ifdef useCalculatedFuelFactor,
+#ifdef useCalculatedFuelFactor
 	pRefFuelPressureIdx,
 	pInjectorCountIdx,
 	pInjectorSizeIdx,

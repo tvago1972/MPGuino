@@ -115,7 +115,7 @@ static void activityLED::output(void)
 static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
 	instrLdRegVariable, 0x02, m32CPUsampledMainProcessIdx,
 	instrMul2byByte, 100,
-	instrMul2byRdOnly, idxDecimalPoint,
+	instrMul2byConst, idxDecimalPoint,
 	instrDiv2byVariable, m32CPUsampledMainLoopIdx,
 	instrDone											// exit to caller
 };
@@ -123,7 +123,7 @@ static const uint8_t prgmFindCPUutilPercent[] PROGMEM = {
 #endif // defined(useCPUreading) && defined(useButtonInput)
 static const uint8_t prgmOutputOperatingTime[] PROGMEM = {
 	instrLdRegVariable, 0x02, v32SystemCycleIdx,
-	instrDiv2byRdOnly, idxTicks0PerSecond,
+	instrDiv2byConst, idxTicks0PerSecond,
 	instrLdReg, 0x21,									// move time in seconds into register 1
 	instrDoBCDadjust, 0x12, bcdFormatH9MMSS,			// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
@@ -131,7 +131,7 @@ static const uint8_t prgmOutputOperatingTime[] PROGMEM = {
 
 static const uint8_t prgmOutputAvailableRAM[] PROGMEM = {
 	instrLdRegVariable, 0x02, m32AvailableRAMidx,
-	instrMul2byRdOnly, idxDecimalPoint,
+	instrMul2byConst, idxDecimalPoint,
 	instrDone											// exit to caller
 };
 
@@ -390,7 +390,7 @@ static const uint8_t prgmParseHexDigit[] PROGMEM = {
 };
 
 static const uint8_t prgmFetchConstantValue[] PROGMEM = {
-	instrLdRegRdOnlyIndexed, 0x02,
+	instrLdRegConstIndexed, 0x02,
 	instrDone											// exit to caller
 };
 
@@ -586,14 +586,9 @@ static void terminal::outputConstantValue(uint8_t lineNumber)
 	switch (lineNumber)
 	{
 
-		case (idxConstantStart) ... (idxConstantEnd - 1):
+		case (0) ... (idxConstantEnd - 1):
 			labelList = terminalConstIdxNames;
-			labelListOffset = idxConstantStart;
-			break;
-
-		case (pSettingsIdxStart) ... (pSettingsIdxEnd - 1):
-			labelList = terminalParameterNames;
-			labelListOffset = pSettingsIdxStart;
+			labelListOffset = 0;
 			break;
 
 	}
@@ -646,16 +641,7 @@ static void terminal::outputParameterExtra(uint8_t lineNumber)
 	text::hexByteOut(m8DevDebugTerminalIdx, i);
 	text::charOut(m8DevDebugTerminalIdx, '-');
 	text::hexWordOut(m8DevDebugTerminalIdx, EEPROM::getAddress(lineNumber));
-	if (lineNumber < pSettingsIdxEnd)
-	{
-
-		text::stringOut(m8DevDebugTerminalIdx, PSTR(" (orig "));
-		SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchInitialParamValue), lineNumber);
-		text::stringOut(m8DevDebugTerminalIdx, ull2str(nBuff, 0, S64_PRGM_PTR(prgmFormatToNumber)));
-		text::stringOut(m8DevDebugTerminalIdx, PSTR(")"));
-
-	}
-	else if (lineNumber < eePtrEnd)
+	if (lineNumber < eePtrEnd)
 	{
 
 		if (i & 0x07) i += 0x08;
@@ -806,7 +792,7 @@ static void terminal::outputFlagStatusGroup(const char * flagGroup, uint8_t flag
 		}
 
 		flags <<= 1;
-		
+
 	}
 
 	if (foundFlag == 0) text::stringOut(m8DevDebugTerminalIdx, PSTR("none"));
@@ -1676,7 +1662,7 @@ static void terminal::getSWEET64operandLabelIndexes(uint8_t instr, uint8_t forma
 		{
 
 			case i14:	// load rX with const
-				operandLabelIdx = dslIdxConst;
+				operandLabelIdx = dslIdxConstSWEET64;
 				break;
 
 			case i03:	// load rX with EEPROM
@@ -2900,13 +2886,8 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 											switch (terminalTarget)
 											{
 
-												case 0:	// select all initial stored parameter settings
-													terminalSource = pSettingsIdxStart;
-													terminalByte = pSettingsIdxEnd - 1;
-													break;
-
-												case 1:	// select all program constants
-													terminalSource = idxConstantStart;
+												case 0:	// select all program constants
+													terminalSource = 0;
 													terminalByte = idxConstantEnd - 1;
 													break;
 
@@ -2919,8 +2900,16 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 										}
 
 									}
+									else if ((terminalMode & (tmSourceReadIn | tmByteReadIn)) == 0)
+									{
 
-									maxLine = idxMaxConstant;
+										terminalMode |= (tmSourceReadIn | tmByteReadIn);
+										terminalSource = 0;
+										terminalByte = idxConstantEnd - 1;
+
+									}
+
+									maxLine = idxConstantEnd;
 									primaryFunc = terminal::outputConstantValue;
 									extraFunc = terminal::outputConstantExtra;
 									terminalState = tsInitListReadOnly; // this command could print a lot of different lines, so handle this command one iteration at a time

@@ -268,7 +268,7 @@ static void parameterEdit::findRight(void)
 static void parameterEdit::readInitial(void)
 {
 
-	SWEET64::runPrgm(S64_PRGM_PTR(prgmFetchInitialParamValue), numberEditObj.parameterIdx);
+	SWEET64::init64((union union_64 *)(&s64reg[(uint16_t)(s64reg64_2)]), EEPROM::getDefault(numberEditObj.parameterIdx));
 	sharedFunctionCall(nesLoadValue);
 
 }

@@ -166,56 +166,45 @@ static uint8_t USBoutputData[USBoutputDataSize];
 static uint8_t USBinputData[USBinputDataSize];
 #endif // defined(__AVR_ATmega32U4__)
 
-#define nextAllowedValue 0
+enum {
 #if defined(useBufferedSerial0Port)
-static const uint8_t rbIdxSerial0Out =		nextAllowedValue;		// serial0Buffer
-#define nextAllowedValue rbIdxSerial0Out + 1;
+	rbIdxSerial0Out,			// serial0Buffer
 #endif // defined(useBufferedSerial0Port)
 #if defined(useSerial0PortInput)
-static const uint8_t rbIdxSerial0In =		nextAllowedValue;		// serial0InputBuffer
-#define nextAllowedValue rbIdxSerial0In + 1;
+	rbIdxSerial0In,				// serial0InputBuffer
 #endif // defined(useSerial0PortInput)
 #if defined(useBufferedSerial1Port)
-static const uint8_t rbIdxSerial1Out =		nextAllowedValue;		// serial1Buffer
-#define nextAllowedValue rbIdxSerial1Out + 1;
-#endif // defined(useBufferedSerial0Port)
+	rbIdxSerial1Out,			// serial1Buffer
+#endif // defined(useBufferedSerial1Port)
 #if defined(useSerial1PortInput)
-static const uint8_t rbIdxSerial1In =		nextAllowedValue;		// serial1InputBuffer
-#define nextAllowedValue rbIdxSerial1In + 1;
+	rbIdxSerial1In,				// serial1InputBuffer
 #endif // defined(useSerial1PortInput)
 #if defined(useBufferedSerial2Port)
-static const uint8_t rbIdxSerial2Out =		nextAllowedValue;		// serial2Buffer
-#define nextAllowedValue rbIdxSerial2Out + 1;
+	rbIdxSerial2Out,			// serial2Buffer
 #endif // defined(useBufferedSerial2Port)
 #if defined(useSerial2PortInput)
-static const uint8_t rbIdxSerial2In =		nextAllowedValue;		// serial2InputBuffer
-#define nextAllowedValue rbIdxSerial2In + 1;
+	rbIdxSerial2In,				// serial2InputBuffer
 #endif // defined(useSerial2PortInput)
 #if defined(useBufferedSerial3Port)
-static const uint8_t rbIdxSerial3Out =		nextAllowedValue;		// serial3Buffer
-#define nextAllowedValue rbIdxSerial3Out + 1;
+	rbIdxSerial3Out,			// serial3Buffer
 #endif // defined(useBufferedSerial3Port)
 #if defined(useSerial3PortInput)
-static const uint8_t rbIdxSerial3In =		nextAllowedValue;		// serial3InputBuffer
-#define nextAllowedValue rbIdxSerial3In + 1;
+	rbIdxSerial3In,				// serial3InputBuffer
 #endif // defined(useSerial3PortInput)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t rbIdxBLEfriendOut =	nextAllowedValue;		// btSPIoutputBuffer
-static const uint8_t rbIdxBLEfriendIn =		rbIdxBLEfriendOut + 1;	// btSPIinputBuffer
-static const uint8_t rbIdxBluetoothIn =		rbIdxBLEfriendIn + 1;	// btInputBuffer
-#define nextAllowedValue rbIdxBluetoothIn + 1;
+	rbIdxBLEfriendOut,			// btSPIoutputBuffer
+	rbIdxBLEfriendIn,			// btSPIinputBuffer
+	rbIdxBluetoothIn,			// btInputBuffer
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDebugTerminal)
-static const uint8_t rbIdxTerminal =		nextAllowedValue;		// terminalBuffer
-#define nextAllowedValue rbIdxTerminal + 1;
+	rbIdxTerminal,				// terminalBuffer
 #endif // defined(useDebugTerminal)
 #if defined(__AVR_ATmega32U4__)
-static const uint8_t rbIdxUSBout =			nextAllowedValue;		// USBoutputBuffer
-static const uint8_t rbIdxUSBin =			rbIdxUSBout + 1;		// USBinputBuffer
-#define nextAllowedValue rbIdxUSBin + 1;
-#endif defined(__AVR_ATmega32U4__)
-
-static const uint8_t rbIdxCount =			nextAllowedValue;
+	rbIdxUSBout,				// USBoutputBuffer
+	rbIdxUSBin,					// USBinputBuffer
+#endif // defined(__AVR_ATmega32U4__)
+	rbIdxCount
+};
 
 static FIFO_t ringBufferDef[(uint16_t)(rbIdxCount)];
 
@@ -228,7 +217,7 @@ static const FIFO_storage_t ringBufferDefList[(uint16_t)(rbIdxCount)] PROGMEM = 
 #endif // defined(useSerial0PortInput)
 #if defined(useBufferedSerial1Port)
 	{serial1Data,		serial1DataSize},
-#endif // defined(useBufferedSerial0Port)
+#endif // defined(useBufferedSerial1Port)
 #if defined(useSerial1PortInput)
 	{serial1InputData,	serial1InputDataSize},
 #endif // defined(useSerial1PortInput)
@@ -344,566 +333,487 @@ static const uint16_t delay1Tick75us =			(uint16_t)(ceil)((double)( 75ul * t1Cyc
 static const uint16_t delay1Tick40us =			(uint16_t)(ceil)((double)( 40ul * t1CyclesPerSecond) / (double)(510ul * 1000000ul)); // normal LCD character transmission delay
 
 #endif // defined(useTimer1Interrupt)
-#define nextAllowedValue 0
-
-// 8-bit volatile variable array index values - these may be referenced inside an interrupt service routine
-
-static const uint8_t v8VariableStartIdx =				nextAllowedValue;						// start of 8-bit volatile variable storage
-
-static const uint8_t v8Timer0CommandIdx =				nextAllowedValue;						// timer0 command flags
-static const uint8_t v8Timer0Status0Idx =				v8Timer0CommandIdx + 1;					// timer0 status flags
-static const uint8_t v8Timer0Status1Idx =				v8Timer0Status0Idx + 1;					// more timer0 status flags
-static const uint8_t v8DirtyInjectorIdx =				v8Timer0Status1Idx + 1;					// MPGuino FI dirty (processing) flags
-static const uint8_t v8DirtyVSSIdx =					v8DirtyInjectorIdx + 1;					// MPGuino VSS dirty (processing) flags
-static const uint8_t v8AwakeIdx =						v8DirtyVSSIdx + 1;						// MPGuino awake flags
-static const uint8_t v8ActivityIdx =					v8AwakeIdx + 1;							// MPGuino activity flags
-static const uint8_t v8ActivityChangeIdx =				v8ActivityIdx + 1;						// MPGuino activity change detection flags
-static const uint8_t v8HeartbeatBitmaskIdx =			v8ActivityChangeIdx + 1;				// Sample loop-driven heartbeat bitmask
-static const uint8_t v8VSSdebounceTickIdx =				v8HeartbeatBitmaskIdx + 1;				// MPGuino VSS sample timeout initial setting
-static const uint8_t v8VSSsampleCountIdx =				v8VSSdebounceTickIdx + 1;				// MPGuino VSS sample timeout counter
-static const uint8_t v8InjectorSampleCountIdx =			v8VSSsampleCountIdx + 1;				// MPGuino fuel injector sample timeout counter
-#define nextAllowedValue v8InjectorSampleCountIdx + 1
+enum {
+	// 8-bit volatile variable array index values - these may be referenced inside an interrupt service routine
+	v8VariableStartIdx = 0,					// start of 8-bit volatile variable storage
+	v8Timer0CommandIdx = v8VariableStartIdx,	// timer0 command flags
+	v8Timer0Status0Idx,						// timer0 status flags
+	v8Timer0Status1Idx,						// more timer0 status flags
+	v8DirtyInjectorIdx,						// MPGuino FI dirty (processing) flags
+	v8DirtyVSSIdx,							// MPGuino VSS dirty (processing) flags
+	v8AwakeIdx,								// MPGuino awake flags
+	v8ActivityIdx,							// MPGuino activity flags
+	v8ActivityChangeIdx,					// MPGuino activity change detection flags
+	v8HeartbeatBitmaskIdx,					// Sample loop-driven heartbeat bitmask
+	v8VSSdebounceTickIdx,					// MPGuino VSS sample timeout initial setting
+	v8VSSsampleCountIdx,					// MPGuino VSS sample timeout counter
+	v8InjectorSampleCountIdx,				// MPGuino fuel injector sample timeout counter
 #if defined(useTWI4BitLCD)
-static const uint8_t v8LCDportByteIdx =					nextAllowedValue;						// LCD port register expander byte
-#define nextAllowedValue v8LCDportByteIdx + 1
+	v8LCDportByteIdx,						// LCD port register expander byte
 #if defined(useAdafruitRGBLCDdisplay)
-static const uint8_t v8SwitchPortByteIdx =				nextAllowedValue;						// contains two out of the three LCD backlighting LED pins
-#define nextAllowedValue v8SwitchPortByteIdx + 1
+	v8SwitchPortByteIdx,					// contains two out of the three LCD backlighting LED pins
 #endif // defined(useAdafruitRGBLCDdisplay)
 #endif // defined(useTWI4BitLCD)
 #if defined(useButtonInput)
-static const uint8_t v8ButtonStatusIdx =				nextAllowedValue;
-static const uint8_t v8ThisButtonStateIdx =				v8ButtonStatusIdx + 1;
-static const uint8_t v8LastButtonStateIdx =				v8ThisButtonStateIdx + 1;
-static const uint8_t v8ButtonPressIdx =					v8LastButtonStateIdx + 1;
-#define nextAllowedValue v8ButtonPressIdx + 1
+	v8ButtonStatusIdx,
+	v8ThisButtonStateIdx,
+	v8LastButtonStateIdx,
+	v8ButtonPressIdx,
 #endif // defined(useButtonInput)
 #if defined(useAnalogRead)
-static const uint8_t v8AnalogCommandIdx =				nextAllowedValue;						// analog command flags
-static const uint8_t v8AnalogStatusIdx =				v8AnalogCommandIdx + 1;					// analog status flags
-#define nextAllowedValue v8AnalogStatusIdx + 1
+	v8AnalogCommandIdx,						// analog command flags
+	v8AnalogStatusIdx,						// analog status flags
 #endif // defined(useAnalogRead)
 #if defined(useHardwareTWI)
-static const uint8_t v8TWIstatusIdx =					nextAllowedValue;						// TWI status flags
-static const uint8_t v8TWIerrorIdx =					v8TWIstatusIdx + 1;						// TWI error flags
-#define nextAllowedValue v8TWIerrorIdx + 1
+	v8TWIstatusIdx,							// TWI status flags
+	v8TWIerrorIdx,							// TWI error flags
 #endif // defined(useHardwareTWI)
 #if defined(useTimer1Interrupt)
-static const uint8_t v8Timer1CommandIdx =				nextAllowedValue;						// timer1 command flags
-#define nextAllowedValue v8Timer1CommandIdx + 1
+	v8Timer1CommandIdx,						// timer1 command flags
 #if defined(useSimulatedFIandVSS)
-static const uint8_t v8SignalSimModeIdx =				nextAllowedValue;						// simulated FI/VSS mode flags
-static const uint8_t v8SignalSimVSSidx =				v8SignalSimModeIdx + 1;					// simulated VSS value index
-static const uint8_t v8SignalSimFIPidx =				v8SignalSimVSSidx + 1;					// simulated fuel injector value index
-static const uint8_t v8SignalSimVSSstate =				v8SignalSimFIPidx + 1;					// simulated VSS state
-static const uint8_t v8SignalSimFIPstate =				v8SignalSimVSSstate + 1;				// simulated fuel injector state
-#define nextAllowedValue v8SignalSimFIPstate + 1
+	v8SignalSimModeIdx,						// simulated FI/VSS mode flags
+	v8SignalSimVSSidx,						// simulated VSS value index
+	v8SignalSimFIPidx,						// simulated fuel injector value index
+	v8SignalSimVSSstate,					// simulated VSS state
+	v8SignalSimFIPstate,					// simulated fuel injector state
 #endif // defined(useSimulatedFIandVSS)
 #endif // defined(useTimer1Interrupt)
-// the bluetooth status variables are not timer1-specific, so they are defined
-// outside the useTimer1Interrupt block (bluetooth can be enabled without it).
-// kept in their original order so the debug-terminal label list stays aligned.
+	// Bluetooth status variables are kept in their original order so the debug-terminal label list stays aligned.
 #if defined(useBluetooth)
-static const uint8_t v8btOutputStatusIdx =				nextAllowedValue;						// bluetooth output status flag
-#define nextAllowedValue v8btOutputStatusIdx + 1
+	v8btOutputStatusIdx,					// bluetooth output status flag
 #endif // defined(useBluetooth)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t v8BLEstatusIdx =					nextAllowedValue;						// AdaFruit BLEfriend condition flags
-#define nextAllowedValue v8BLEstatusIdx + 1
+	v8BLEstatusIdx,							// AdaFruit BLEfriend condition flags
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(useDragRaceFunction)
-static const uint8_t v8AccelerationFlagsIdx =			nextAllowedValue;						// acceleration test mode flags
-#define nextAllowedValue v8AccelerationFlagsIdx + 1
+	v8AccelerationFlagsIdx,					// acceleration test mode flags
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-static const uint8_t v8CoastdownStatusIdx =				nextAllowedValue;						// coastdown status flags
-#define nextAllowedValue v8CoastdownStatusIdx + 1
+	v8CoastdownStatusIdx,					// coastdown status flags
 #endif // defined(useCoastDownCalculator)
 #if defined(useSerial0Port)
-static const uint8_t v8Serial0StatusIdx =				nextAllowedValue;
-#define nextAllowedValue v8Serial0StatusIdx + 1
+	v8Serial0StatusIdx,
 #endif // defined(useSerial0Port)
 #if defined(useSerial1Port)
-static const uint8_t v8Serial1StatusIdx =				nextAllowedValue;
-#define nextAllowedValue v8Serial1StatusIdx + 1
+	v8Serial1StatusIdx,
 #endif // defined(useSerial1Port)
 #if defined(useSerial2Port)
-static const uint8_t v8Serial2StatusIdx =				nextAllowedValue;
-#define nextAllowedValue v8Serial2StatusIdx + 1
+	v8Serial2StatusIdx,
 #endif // defined(useSerial2Port)
 #if defined(useSerial3Port)
-static const uint8_t v8Serial3StatusIdx =				nextAllowedValue;
-#define nextAllowedValue v8Serial3StatusIdx + 1
+	v8Serial3StatusIdx,
 #endif // defined(useSerial3Port)
 #if defined(useFEvTdata)
-static const uint8_t v8FEvTimeTripIdx =					nextAllowedValue;
-#define nextAllowedValue v8FEvTimeTripIdx + 1
+	v8FEvTimeTripIdx,
 #endif // defined(useFEvTdata)
 #if defined(useJSONoutput)
-static const uint8_t v8Subtitle1Idx =					nextAllowedValue;
-#define nextAllowedValue v8Subtitle1Idx + 1
+	v8Subtitle1Idx,
 #if defined(useDragRaceFunction)
-static const uint8_t v8Subtitle2Idx =					nextAllowedValue;
-#define nextAllowedValue v8Subtitle2Idx + 1
+	v8Subtitle2Idx,
 #endif // defined(useDragRaceFunction)
 #endif // defined(useJSONoutput)
 #if defined(useDS1307clock)
-static const uint8_t v8RTCsecondIdx =					nextAllowedValue;
-static const uint8_t v8RTCminuteIdx =					v8RTCsecondIdx + 1;
-static const uint8_t v8RTChourIdx =						v8RTCminuteIdx + 1;
-static const uint8_t v8RTCdayOfWeekIdx =				v8RTChourIdx + 1;
-static const uint8_t v8RTCdayIdx =						v8RTCdayOfWeekIdx + 1;
-static const uint8_t v8RTCmonthIdx =					v8RTCdayIdx + 1;
-static const uint8_t v8RTCyearIdx =						v8RTCmonthIdx + 1;
-static const uint8_t v8RTCcontrolIdx =					v8RTCyearIdx + 1;
-#define nextAllowedValue v8RTCcontrolIdx + 1
+	v8RTCsecondIdx,
+	v8RTCminuteIdx,
+	v8RTChourIdx,
+	v8RTCdayOfWeekIdx,
+	v8RTCdayIdx,
+	v8RTCmonthIdx,
+	v8RTCyearIdx,
+	v8RTCcontrolIdx,
 #endif // defined(useDS1307clock)
+	v8VariableEndIdx,						// end of 8-bit volatile variable storage
+	v8VariableLength = v8VariableEndIdx - v8VariableStartIdx,
 
-static const uint8_t v8VariableEndIdx =					nextAllowedValue;						// end of 8-bit volatile variable storage
-static const uint8_t v8VariableLength =					v8VariableEndIdx - v8VariableStartIdx;
-
-// 8-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
-
-static const uint8_t m8VariableStartIdx =				nextAllowedValue;						// start of 8-bit main program variable storage
-
-static const uint8_t m8MetricModeFlags =				nextAllowedValue;						// metric mode flags
-static const uint8_t m8EEPROMchangeStatus =				m8MetricModeFlags + 1;					// EEPROM change status flags
-#define nextAllowedValue m8EEPROMchangeStatus + 1
-
-static const uint8_t m8DevStartIdx =					nextAllowedValue;
-
+	// 8-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
+	m8VariableStartIdx = v8VariableEndIdx,	// start of 8-bit main program variable storage
+	m8MetricModeFlags = m8VariableStartIdx,	// metric mode flags
+	m8EEPROMchangeStatus,					// EEPROM change status flags
+	m8DevStartIdx,
 #if defined(useLCDoutput)
-static const uint8_t m8DevLCDidx =						nextAllowedValue;
-#define nextAllowedValue m8DevLCDidx + 1
+	m8DevLCDidx = m8DevStartIdx,
+	m8AfterDevLCDIdx,
+#else // defined(useLCDoutput)
+	m8AfterDevLCDIdx = m8DevStartIdx,
 #endif // defined(useLCDoutput)
 #if defined(useTFToutput)
-static const uint8_t m8DevTFTidx =						nextAllowedValue;
-#define nextAllowedValue m8DevTFTidx + 1
+	m8DevTFTidx = m8AfterDevLCDIdx,
+	m8AfterDevTFTIdx,
+#else // defined(useTFToutput)
+	m8AfterDevTFTIdx = m8AfterDevLCDIdx,
 #endif // defined(useTFToutput)
 #if defined(useSerial0Port)
-static const uint8_t m8DevSerial0idx =					nextAllowedValue;
-#define nextAllowedValue m8DevSerial0idx + 1
+	m8DevSerial0idx = m8AfterDevTFTIdx,
+	m8AfterDevSerial0Idx,
+#else // defined(useSerial0Port)
+	m8AfterDevSerial0Idx = m8AfterDevTFTIdx,
 #endif // defined(useSerial0Port)
 #if defined(useSerial1Port)
-static const uint8_t m8DevSerial1idx =					nextAllowedValue;
-#define nextAllowedValue m8DevSerial1idx + 1
+	m8DevSerial1idx = m8AfterDevSerial0Idx,
+	m8AfterDevSerial1Idx,
+#else // defined(useSerial1Port)
+	m8AfterDevSerial1Idx = m8AfterDevSerial0Idx,
 #endif // defined(useSerial1Port)
 #if defined(useSerial2Port)
-static const uint8_t m8DevSerial2idx =					nextAllowedValue;
-#define nextAllowedValue m8DevSerial2idx + 1
+	m8DevSerial2idx = m8AfterDevSerial1Idx,
+	m8AfterDevSerial2Idx,
+#else // defined(useSerial2Port)
+	m8AfterDevSerial2Idx = m8AfterDevSerial1Idx,
 #endif // defined(useSerial2Port)
 #if defined(useSerial3Port)
-static const uint8_t m8DevSerial3idx =					nextAllowedValue;
-#define nextAllowedValue m8DevSerial3idx + 1
+	m8DevSerial3idx = m8AfterDevSerial2Idx,
+	m8AfterDevSerial3Idx,
+#else // defined(useSerial3Port)
+	m8AfterDevSerial3Idx = m8AfterDevSerial2Idx,
 #endif // defined(useSerial3Port)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t m8DevBLEfriendIdx =				nextAllowedValue;
-static const uint8_t m8DevBluetoothIdx =				m8DevBLEfriendIdx + 1;
-#define nextAllowedValue m8DevBluetoothIdx + 1
+	m8DevBLEfriendIdx = m8AfterDevSerial3Idx,
+	m8DevBluetoothIdx,
+	m8AfterDevBluetoothIdx,
+#else // defined(useBluetoothAdaFruitSPI)
+	m8AfterDevBluetoothIdx = m8AfterDevSerial3Idx,
 #endif // defined(useBluetoothAdaFruitSPI)
 #if defined(__AVR_ATmega32U4__)
-static const uint8_t m8DevUSBidx =						nextAllowedValue;
-#define nextAllowedValue m8DevUSBidx + 1
+	m8DevUSBidx = m8AfterDevBluetoothIdx,
+	m8AfterDevUSBIdx,
+#else // defined(__AVR_ATmega32U4__)
+	m8AfterDevUSBIdx = m8AfterDevBluetoothIdx,
 #endif // defined(__AVR_ATmega32U4__)
-
-static const uint8_t m8DevEndIdx =						nextAllowedValue;
-static const uint8_t m8DevLength =						m8DevEndIdx - m8DevStartIdx;
-
+	m8DevEndIdx = m8AfterDevUSBIdx,
+	m8DevLength = m8DevEndIdx - m8DevStartIdx,
 #if defined(useClockSupport)
-static const uint8_t m8SecondIdx =						nextAllowedValue;
-static const uint8_t m8MinuteIdx =						m8SecondIdx + 1;
-static const uint8_t m8HourIdx =						m8MinuteIdx + 1;
-#define nextAllowedValue m8HourIdx + 1
-
+	m8SecondIdx = m8DevEndIdx,
+	m8MinuteIdx,
+	m8HourIdx,
+	m8AfterClockIdx,
+#else // defined(useClockSupport)
+	m8AfterClockIdx = m8DevEndIdx,
 #endif // defined(useClockSupport)
 #if defined(useBluetooth)
-static const uint8_t m8btInputStateIdx =				nextAllowedValue;						// bluetooth input status flag
-#define nextAllowedValue m8btInputStateIdx + 1
-
+	m8btInputStateIdx = m8AfterClockIdx,		// bluetooth input status flag
+	m8AfterBluetoothIdx,
+#else // defined(useBluetooth)
+	m8AfterBluetoothIdx = m8AfterClockIdx,
 #endif // defined(useBluetooth)
 #if defined(useActivityLED)
-static const uint8_t m8ActivityStatusIdx =				nextAllowedValue;
-static const uint8_t m8ActivityOutputIdx =				m8ActivityStatusIdx + 1;
-#define nextAllowedValue m8ActivityOutputIdx + 1
-
+	m8ActivityStatusIdx = m8AfterBluetoothIdx,
+	m8ActivityOutputIdx,
+	m8AfterActivityLEDIdx,
+#else // defined(useActivityLED)
+	m8AfterActivityLEDIdx = m8AfterBluetoothIdx,
 #endif // defined(useActivityLED)
 #if defined(useWindowTripFilter)
-static const uint8_t m8CurrentWindowTripIdx =			nextAllowedValue;
-#define nextAllowedValue m8CurrentWindowTripIdx + 1
-
+	m8CurrentWindowTripIdx = m8AfterActivityLEDIdx,
+	m8AfterWindowTripFilterIdx,
+#else // defined(useWindowTripFilter)
+	m8AfterWindowTripFilterIdx = m8AfterActivityLEDIdx,
 #endif // defined(useWindowTripFilter)
 #if defined(useBarFuelEconVsSpeed)
-static const uint8_t m8FEvSpeedTripIdx =				nextAllowedValue;
-#define nextAllowedValue m8FEvSpeedTripIdx + 1
-
+	m8FEvSpeedTripIdx = m8AfterWindowTripFilterIdx,
+	m8AfterFEvSpeedIdx,
+#else // defined(useBarFuelEconVsSpeed)
+	m8AfterFEvSpeedIdx = m8AfterWindowTripFilterIdx,
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useBarGraph)
-static const uint8_t m8BarGraphIdx =					nextAllowedValue;
-#define nextAllowedValue m8BarGraphIdx + bgDataSize
-
+	m8BarGraphIdx = m8AfterFEvSpeedIdx,
+	m8BarGraphLastIdx = m8BarGraphIdx + bgDataSize - 1,
+	m8AfterBarGraphIdx = m8BarGraphIdx + bgDataSize,
+#else // defined(useBarGraph)
+	m8AfterBarGraphIdx = m8AfterFEvSpeedIdx,
 #endif // defined(useBarGraph)
 #if defined(useMCP23017portExpander)
-static const uint8_t m8MCP23017statusFlags =			nextAllowedValue;						// MCP23017 status flags
-#define nextAllowedValue m8MCP23017statusFlags + 1
-
+	m8MCP23017statusFlags = m8AfterBarGraphIdx,
+	m8AfterMCP23017Idx,
+#else // defined(useMCP23017portExpander)
+	m8AfterMCP23017Idx = m8AfterBarGraphIdx,
 #endif // defined(useMCP23017portExpander)
 #if defined(useDebugTerminal)
-static const uint8_t m8ButtonFlags =					nextAllowedValue;						// debug terminal button injection flags
-static const uint8_t m8PeekFlags =						m8ButtonFlags + 1;						// debug terminal peek (echo to terminal) flags
-#define nextAllowedValue m8PeekFlags + 1
-
+	m8ButtonFlags = m8AfterMCP23017Idx,		// debug terminal button injection flags
+	m8PeekFlags,							// debug terminal peek (echo to terminal) flags
+	m8AfterDebugTerminalIdx,
+#else // defined(useDebugTerminal)
+	m8AfterDebugTerminalIdx = m8AfterMCP23017Idx,
 #endif // defined(useDebugTerminal)
-static const uint8_t m8VariableEndIdx =					nextAllowedValue;						// end of 8-bit main program variable storage
-static const uint8_t m8VariableLength =					m8VariableEndIdx - m8VariableStartIdx;
+	m8VariableEndIdx = m8AfterDebugTerminalIdx,	// end of 8-bit main program variable storage
+	m8VariableLength = m8VariableEndIdx - m8VariableStartIdx,
 
-// 16-bit volatile variable array index values - these may be referenced inside an interrupt service routine
-
-static const uint8_t v16VariableStartIdx =				nextAllowedValue;						// start of 16-bit volatile variable storage
-
-static const uint8_t v16VehicleStopTimeoutIdx =			nextAllowedValue;						// engine idle timeout value in timer0 ticks
-static const uint8_t v16EngineOffTimeoutIdx =			v16VehicleStopTimeoutIdx + 1;			// engine off coasting timeout value in timer0 ticks
-static const uint8_t v16InputTimeoutIdx =				v16EngineOffTimeoutIdx + 1;				// button press timeout value in timer0 ticks
-static const uint8_t v16ParkTimeoutIdx =				v16InputTimeoutIdx + 1;					// vehicle park (engine off and vehicle stopped) timeout value in timer0 ticks
-static const uint8_t v16ActivityTimeoutIdx =			v16ParkTimeoutIdx + 1;					// total activity (vehicle park and no button press) timeout value in timer0 ticks
-static const uint8_t v16DetectVehicleStopIdx =			v16ActivityTimeoutIdx + 1;				// minimum good vehicle speed in timer0 ticks
-static const uint8_t v16DetectEngineOffIdx =			v16DetectVehicleStopIdx + 1;			// minimum good engine speed in timer0 ticks
-static const uint8_t v16DisplayDelayCountIdx =			v16DetectEngineOffIdx + 1;				// dedicated display delay timer countdown in timer0 ticks
-static const uint8_t v16WatchdogInjectorCountIdx =		v16DisplayDelayCountIdx + 1;			// watchdog counter for minimum good engine speed / engine off activity timeout
-static const uint8_t v16WatchdogVSScountIdx =			v16WatchdogInjectorCountIdx + 1;		// watchdog counter for minimum good vehicle speed / vehicle stopped activity timeout
-#define nextAllowedValue v16WatchdogVSScountIdx + 1
+	// 16-bit volatile variable array index values - these may be referenced inside an interrupt service routine
+	v16VariableStartIdx = m8VariableEndIdx,	// start of 16-bit volatile variable storage
+	v16VehicleStopTimeoutIdx = v16VariableStartIdx,	// engine idle timeout value in timer0 ticks
+	v16EngineOffTimeoutIdx,					// engine off coasting timeout value in timer0 ticks
+	v16InputTimeoutIdx,						// button press timeout value in timer0 ticks
+	v16ParkTimeoutIdx,						// vehicle park (engine off and vehicle stopped) timeout value in timer0 ticks
+	v16ActivityTimeoutIdx,					// total activity (vehicle park and no button press) timeout value in timer0 ticks
+	v16DetectVehicleStopIdx,				// minimum good vehicle speed in timer0 ticks
+	v16DetectEngineOffIdx,					// minimum good engine speed in timer0 ticks
+	v16DisplayDelayCountIdx,				// dedicated display delay timer countdown in timer0 ticks
+	v16WatchdogInjectorCountIdx,			// watchdog counter for minimum good engine speed / engine off activity timeout
+	v16WatchdogVSScountIdx,					// watchdog counter for minimum good vehicle speed / vehicle stopped activity timeout
 #if defined(useTFToutput) && !defined(useButtonInput)
-static const uint8_t v16ActivityRemainingIdx =			nextAllowedValue;						// activity timeout countdown remaining (timer0 ticks), for the TFT sleep bar
-#define nextAllowedValue v16ActivityRemainingIdx + 1
+	v16ActivityRemainingIdx,				// activity timeout countdown remaining (timer0 ticks), for the TFT sleep bar
+	v16AfterActivityRemainingIdx,
+#else // defined(useTFToutput) && !defined(useButtonInput)
+	v16AfterActivityRemainingIdx = v16WatchdogVSScountIdx + 1,
 #endif // defined(useTFToutput) && !defined(useButtonInput)
-
 #if defined(useAnalogRead)
-static const uint8_t v16AnalogStartIdx =				nextAllowedValue;						// start of analog value storage
-
-static const uint8_t v16Analog0Idx =					nextAllowedValue;						// highest priority analog channel
-static const uint8_t v16Analog1Idx =					v16Analog0Idx + 1;
-static const uint8_t v16Analog2Idx =					v16Analog1Idx + 1;
-static const uint8_t v16Analog3Idx =					v16Analog2Idx + 1;
-static const uint8_t v16Analog4Idx =					v16Analog3Idx + 1;
-static const uint8_t v16Analog5Idx =					v16Analog4Idx + 1;						// lowest priority analog channel
-static const uint8_t v16AnalogGroundIdx =				v16Analog5Idx + 1;						// analog ground
-#define nextAllowedValue v16AnalogGroundIdx + 1
-
-static const uint8_t v16AnalogEndIdx =					nextAllowedValue;						// end of analog value storage
-static const uint8_t v16AnalogLength =					v16AnalogEndIdx - v16AnalogStartIdx;
-
+	v16AnalogStartIdx = v16AfterActivityRemainingIdx,
+	v16Analog0Idx = v16AnalogStartIdx,		// highest priority analog channel
+	v16Analog1Idx,
+	v16Analog2Idx,
+	v16Analog3Idx,
+	v16Analog4Idx,
+	v16Analog5Idx,							// lowest priority analog channel
+	v16AnalogGroundIdx,						// analog ground
+	v16AnalogEndIdx,
+	v16AnalogLength = v16AnalogEndIdx - v16AnalogStartIdx,
+	v16AfterAnalogIdx = v16AnalogEndIdx,
+#else // defined(useAnalogRead)
+	v16AfterAnalogIdx = v16AfterActivityRemainingIdx,
 #endif // defined(useAnalogRead)
 #if defined(useJSONoutput)
-static const uint8_t v16JSONsubtitleCount =				nextAllowedValue;
-#define nextAllowedValue v16JSONsubtitleCount + 1
-
+	v16JSONsubtitleCount = v16AfterAnalogIdx,
+	v16AfterJSONIdx,
+#else // defined(useJSONoutput)
+	v16AfterJSONIdx = v16AfterAnalogIdx,
 #endif // defined(useJSONoutput)
 #if defined(useBluetooth)
-static const uint8_t v16BluetoothDelayCount =			nextAllowedValue;
-#define nextAllowedValue v16BluetoothDelayCount + 1
-
+	v16BluetoothDelayCount = v16AfterJSONIdx,
+	v16AfterBluetoothIdx,
+#else // defined(useBluetooth)
+	v16AfterBluetoothIdx = v16AfterJSONIdx,
 #endif // defined(useBluetooth)
 #if defined(useSimulatedFIandVSS)
-static const uint8_t v16SignalSimVSStickIdx =			nextAllowedValue;
-static const uint8_t v16SignalSimFIPtickIdx =			v16SignalSimVSStickIdx + 1;
-static const uint8_t v16SignalSimFIPWtickIdx =			v16SignalSimFIPtickIdx + 1;
-static const uint8_t v16SignalSimVSScountIdx =			v16SignalSimFIPWtickIdx + 1;
-static const uint8_t v16SignalSimFIPcountIdx =			v16SignalSimVSScountIdx + 1;
-static const uint8_t v16SignalSimFIPWcountIdx =			v16SignalSimFIPcountIdx + 1;
-static const uint8_t v16SignalSimVSScycleCountIdx =		v16SignalSimFIPWcountIdx + 1;
-static const uint8_t v16SignalSimFIPcycleCountIdx =		v16SignalSimVSScycleCountIdx + 1;
-static const uint8_t v16SignalSimPeakPeriodIdx =		v16SignalSimFIPcycleCountIdx + 1;
-static const uint8_t v16SignalSimPeakActiveIdx =		v16SignalSimPeakPeriodIdx + 1;
-static const uint8_t v16SignalSimPeakPeriodCountIdx =	v16SignalSimPeakActiveIdx + 1;
-static const uint8_t v16SignalSimPeakActiveCountIdx =	v16SignalSimPeakPeriodCountIdx + 1;
-#define nextAllowedValue v16SignalSimPeakActiveCountIdx + 1
-
+	v16SignalSimVSStickIdx = v16AfterBluetoothIdx,
+	v16SignalSimFIPtickIdx,
+	v16SignalSimFIPWtickIdx,
+	v16SignalSimVSScountIdx,
+	v16SignalSimFIPcountIdx,
+	v16SignalSimFIPWcountIdx,
+	v16SignalSimVSScycleCountIdx,
+	v16SignalSimFIPcycleCountIdx,
+	v16SignalSimPeakPeriodIdx,
+	v16SignalSimPeakActiveIdx,
+	v16SignalSimPeakPeriodCountIdx,
+	v16SignalSimPeakActiveCountIdx,
+	v16AfterSignalSimIdx,
+#else // defined(useSimulatedFIandVSS)
+	v16AfterSignalSimIdx = v16AfterBluetoothIdx,
 #endif // defined(useSimulatedFIandVSS)
-static const uint8_t v16VariableEndIdx =				nextAllowedValue;						// end of 16-bit volatile variable storage
-static const uint8_t v16VariableLength =				v16VariableEndIdx - v16VariableStartIdx;
+	v16VariableEndIdx = v16AfterSignalSimIdx,	// end of 16-bit volatile variable storage
+	v16VariableLength = v16VariableEndIdx - v16VariableStartIdx,
 
-// 32-bit volatile variable array index values - these may be referenced inside an interrupt service routine
-
-static const uint8_t v32VariableStartIdx =				nextAllowedValue;						// start of 32-bit volatile variable storage
-
-static const uint8_t v32Timer0OverflowCountIdx =		nextAllowedValue;
-static const uint8_t v32ThisInjectorOpenCycleIdx =		v32Timer0OverflowCountIdx + 1;
-static const uint8_t v32LastInjectorOpenCycleIdx =		v32ThisInjectorOpenCycleIdx + 1;
-static const uint8_t v32ThisInjectorCloseCycleIdx =		v32LastInjectorOpenCycleIdx + 1;
-static const uint8_t v32LastInjectorCloseCycleIdx =		v32ThisInjectorCloseCycleIdx + 1;
-static const uint8_t v32EngineCycleAccumulatorIdx =		v32LastInjectorCloseCycleIdx + 1;
-static const uint8_t v32EnginePeriodIdx =				v32EngineCycleAccumulatorIdx + 1;
-static const uint8_t v32InjectorAccumulatorIdx =		v32EnginePeriodIdx + 1;
-static const uint8_t v32ThisVSSpulseCycleIdx =			v32InjectorAccumulatorIdx + 1;
-static const uint8_t v32LastVSSpulseCycleIdx =			v32ThisVSSpulseCycleIdx + 1;
-static const uint8_t v32VSSpulseWidth0Idx =				v32LastVSSpulseCycleIdx + 1;
-static const uint8_t v32VSSpulseWidth1Idx =				v32VSSpulseWidth0Idx + 1;
-static const uint8_t v32VSSperiodIdx =					v32VSSpulseWidth1Idx + 1;
-static const uint8_t v32MaximumVSSperiodIdx =			v32VSSperiodIdx + 1;				// maximum good VSS period in timer0 cycles
-static const uint8_t v32MaximumEnginePeriodIdx =		v32MaximumVSSperiodIdx + 1;				// maximum good engine period in timer0 cycles
-static const uint8_t v32InjectorOpenDelayIdx =			v32MaximumEnginePeriodIdx + 1;			// injector settle time in timer0 cycles
-static const uint8_t v32InjectorValidMaxWidthIdx =		v32InjectorOpenDelayIdx + 1;			// maximum valid fuel injector pulse width in timer0 cycles
-#define nextAllowedValue v32InjectorValidMaxWidthIdx + 1
+	// 32-bit volatile variable array index values - these may be referenced inside an interrupt service routine
+	v32VariableStartIdx = v16VariableEndIdx,	// start of 32-bit volatile variable storage
+	v32Timer0OverflowCountIdx = v32VariableStartIdx,
+	v32ThisInjectorOpenCycleIdx,
+	v32LastInjectorOpenCycleIdx,
+	v32ThisInjectorCloseCycleIdx,
+	v32LastInjectorCloseCycleIdx,
+	v32EngineCycleAccumulatorIdx,
+	v32EnginePeriodIdx,
+	v32InjectorAccumulatorIdx,
+	v32ThisVSSpulseCycleIdx,
+	v32LastVSSpulseCycleIdx,
+	v32VSSpulseWidth0Idx,
+	v32VSSpulseWidth1Idx,
+	v32VSSperiodIdx,
+	v32MaximumVSSperiodIdx,					// maximum good VSS period in timer0 cycles
+	v32MaximumEnginePeriodIdx,				// maximum good engine period in timer0 cycles
+	v32InjectorOpenDelayIdx,					// injector settle time in timer0 cycles
+	v32InjectorValidMaxWidthIdx,				// maximum valid fuel injector pulse width in timer0 cycles
 #if defined(useCPUreading) || defined(useDebugCPUreading)
-static const uint8_t v32SystemCycleIdx =				nextAllowedValue;						// system timer tick count
-#define nextAllowedValue v32SystemCycleIdx + 1
+	v32SystemCycleIdx,						// system timer tick count
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useClockSupport)
-static const uint8_t v32ClockCycleIdx =					nextAllowedValue;						// software clock tick count
-#define nextAllowedValue v32ClockCycleIdx + 1
+	v32ClockCycleIdx,						// software clock tick count
 #endif // defined(useClockSupport)
 #if defined(useChryslerMAPCorrection)
-static const uint8_t v32InjectorCorrectionIdx =			nextAllowedValue;						// Chrysler fuel injector correction value
-#define nextAllowedValue v32InjectorCorrectionIdx + 1
+	v32InjectorCorrectionIdx,				// Chrysler fuel injector correction value
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useFEvTdata)
-static const uint8_t v32FEvsTimePeriodTickIdx =			nextAllowedValue;						// time period for fuel economy vs time bargraph
-static const uint8_t v32FEvsTimePeriodCountIdx =		v32FEvsTimePeriodTickIdx + 1;			// timer0 countdown timer for fuel economy vs time bargraph
-#define nextAllowedValue v32FEvsTimePeriodCountIdx + 1
+	v32FEvsTimePeriodTickIdx,				// time period for fuel economy vs time bargraph
+	v32FEvsTimePeriodCountIdx,				// timer0 countdown timer for fuel economy vs time bargraph
 #endif // defined(useFEvTdata)
 #if defined(useDebugCPUreading)
-static const uint8_t v32WorkingTimer0Idx =				nextAllowedValue;						// timer0 overflow interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingTimer0Idx + 1
+	v32WorkingTimer0Idx,					// timer0 overflow interrupt handler stopwatch direct measurement
 #if defined(useTimer1Interrupt)
-static const uint8_t v32WorkingTimer1Idx =				nextAllowedValue;						// timer1 overflow interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingTimer1Idx + 1
+	v32WorkingTimer1Idx,					// timer1 overflow interrupt handler stopwatch direct measurement
 #endif // defined(useTimer1Interrupt)
-static const uint8_t v32WorkingInjectorOpenIdx =		nextAllowedValue;						// injector open interrupt handler stopwatch direct measurement
-static const uint8_t v32WorkingInjectorCloseIdx =		v32WorkingInjectorOpenIdx + 1;			// injector close interrupt handler stopwatch direct measurement
-static const uint8_t v32WorkingVSSpulseIdx =			v32WorkingInjectorCloseIdx + 1;			// VSS pulse interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingVSSpulseIdx + 1
+	v32WorkingInjectorOpenIdx,				// injector open interrupt handler stopwatch direct measurement
+	v32WorkingInjectorCloseIdx,				// injector close interrupt handler stopwatch direct measurement
+	v32WorkingVSSpulseIdx,					// VSS pulse interrupt handler stopwatch direct measurement
 #if defined(useAnalogRead)
-static const uint8_t v32WorkingAnalogIdx =				nextAllowedValue;						// analog read interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingAnalogIdx + 1
+	v32WorkingAnalogIdx,					// analog read interrupt handler stopwatch direct measurement
 #endif // defined(useAnalogRead)
 #if defined(useHardwareTWI)
-static const uint8_t v32WorkingTwoWireIdx =				nextAllowedValue;						// two-wire interface interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingTwoWireIdx + 1
+	v32WorkingTwoWireIdx,					// two-wire interface interrupt handler stopwatch direct measurement
 #endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
-static const uint8_t v32WorkingSerial0Idx =				nextAllowedValue;						// UART0 output interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial0Idx + 1
+	v32WorkingSerial0Idx,					// UART0 output interrupt handler stopwatch direct measurement
 #if defined(useSerial0PortInput)
-static const uint8_t v32WorkingSerial0InputIdx =		nextAllowedValue;						// UART0 input interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial0InputIdx + 1
+	v32WorkingSerial0InputIdx,				// UART0 input interrupt handler stopwatch direct measurement
 #endif // defined(useSerial0PortInput)
 #endif // defined(useSerial0Port)
 #if defined(useSerial1Port)
-static const uint8_t v32WorkingSerial1Idx =				nextAllowedValue;						// UART1 output interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial1Idx + 1
+	v32WorkingSerial1Idx,					// UART1 output interrupt handler stopwatch direct measurement
 #if defined(useSerial1PortInput)
-static const uint8_t v32WorkingSerial1InputIdx =		nextAllowedValue;						// UART1 input interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial1InputIdx + 1
+	v32WorkingSerial1InputIdx,				// UART1 input interrupt handler stopwatch direct measurement
 #endif // defined(useSerial1PortInput)
 #endif // defined(useSerial1Port)
 #if defined(useSerial2Port)
-static const uint8_t v32WorkingSerial2Idx =				nextAllowedValue;						// UART2 output interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial2Idx + 1
+	v32WorkingSerial2Idx,					// UART2 output interrupt handler stopwatch direct measurement
 #if defined(useSerial2PortInput)
-static const uint8_t v32WorkingSerial2InputIdx =		nextAllowedValue;						// UART2 input interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial2InputIdx + 1
+	v32WorkingSerial2InputIdx,				// UART2 input interrupt handler stopwatch direct measurement
 #endif // defined(useSerial2PortInput)
 #endif // defined(useSerial2Port)
 #if defined(useSerial3Port)
-static const uint8_t v32WorkingSerial3Idx =				nextAllowedValue;						// UART3 output interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial3Idx + 1
+	v32WorkingSerial3Idx,					// UART3 output interrupt handler stopwatch direct measurement
 #if defined(useSerial3PortInput)
-static const uint8_t v32WorkingSerial3InputIdx =		nextAllowedValue;						// UART3 input interrupt handler stopwatch direct measurement
-#define nextAllowedValue v32WorkingSerial3InputIdx + 1
+	v32WorkingSerial3InputIdx,				// UART3 input interrupt handler stopwatch direct measurement
 #endif // defined(useSerial3PortInput)
 #endif // defined(useSerial3Port)
-
 #endif // defined(useDebugCPUreading)
 #if defined(useDragRaceFunction)
-static const uint8_t v32DragRawTopSpeedIdx =			nextAllowedValue;
-static const uint8_t v32DragRawTrapSpeedIdx =			v32DragRawTopSpeedIdx + 1;
-static const uint8_t v32AccelHalfPeriodIdx =			v32DragRawTrapSpeedIdx + 1;
-static const uint8_t v32AccelFullPeriodIdx =			v32AccelHalfPeriodIdx + 1;
-static const uint8_t v32AccelDistanceValueIdx =			v32AccelFullPeriodIdx + 1;
-static const uint8_t v32AccelDistanceCountIdx =			v32AccelDistanceValueIdx + 1;
-#define nextAllowedValue v32AccelDistanceCountIdx + 1
+	v32DragRawTopSpeedIdx,
+	v32DragRawTrapSpeedIdx,
+	v32AccelHalfPeriodIdx,
+	v32AccelFullPeriodIdx,
+	v32AccelDistanceValueIdx,
+	v32AccelDistanceCountIdx,
 #endif // defined(useDragRaceFunction)
 #if defined(useCoastDownCalculator)
-static const uint8_t v32CoastdownMeasurement1Idx =		nextAllowedValue;
-static const uint8_t v32CoastdownMeasurement2Idx =		v32CoastdownMeasurement1Idx + 1;
-static const uint8_t v32CoastdownMeasurement3Idx =		v32CoastdownMeasurement2Idx + 1;
-static const uint8_t v32CoastdownMeasurement4Idx =		v32CoastdownMeasurement3Idx + 1;
-static const uint8_t v32CoastdownPeriodIdx =			v32CoastdownMeasurement4Idx + 1;
-#define nextAllowedValue v32CoastdownPeriodIdx + 1
+	v32CoastdownMeasurement1Idx,
+	v32CoastdownMeasurement2Idx,
+	v32CoastdownMeasurement3Idx,
+	v32CoastdownMeasurement4Idx,
+	v32CoastdownPeriodIdx,
 #endif // defined(useCoastDownCalculator)
+	v32VariableEndIdx,						// end of 32-bit volatile variable storage
+	v32VariableLength = v32VariableEndIdx - v32VariableStartIdx,
 
-static const uint8_t v32VariableEndIdx =				nextAllowedValue;						// end of 32-bit volatile variable storage
-static const uint8_t v32VariableLength =				v32VariableEndIdx - v32VariableStartIdx;
-
-// 32-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
-
-static const uint8_t m32VariableStartIdx =				nextAllowedValue;						// start of 32-bit main program variable storage
-
-static const uint8_t m32CyclesPerVolumeIdx =			nextAllowedValue;						// injector conversion factor of unit volume per timer0 cycle
-static const uint8_t m32SpeedFactorIdx =				m32CyclesPerVolumeIdx + 1;				// (timer0 cycles * unit distance * decimal format)/(pulses * hour)
-#define nextAllowedValue m32SpeedFactorIdx + 1
-
+	// 32-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
+	m32VariableStartIdx = v32VariableEndIdx,	// start of 32-bit main program variable storage
+	m32CyclesPerVolumeIdx = m32VariableStartIdx,	// injector conversion factor of unit volume per timer0 cycle
+	m32SpeedFactorIdx,						// (timer0 cycles * unit distance * decimal format)/(pulses * hour)
 #if defined(useDragRaceFunction)
-static const uint8_t m32DragTopSpeedIdx =				nextAllowedValue;
-static const uint8_t m32DragTrapSpeedIdx =				m32DragTopSpeedIdx + 1;
-#define nextAllowedValue m32DragTrapSpeedIdx + 1
-
+	m32DragTopSpeedIdx,
+	m32DragTrapSpeedIdx,
 #endif // defined(useDragRaceFunction)
 #if defined(useChryslerMAPCorrection)
-static const uint8_t m32MAPpressureIdx =				nextAllowedValue;
-static const uint8_t m32BaroPressureIdx =				m32MAPpressureIdx + 1;
-static const uint8_t m32FuelPressureIdx =				m32BaroPressureIdx + 1;
-static const uint8_t m32InjPressureIdx =				m32FuelPressureIdx + 1;
-static const uint8_t m32AnalogMAPfloorIdx =				m32InjPressureIdx + 1;
-static const uint8_t m32AnalogMAPnumerIdx =				m32AnalogMAPfloorIdx + 1;
-static const uint8_t m32AnalogMAPdenomIdx =				m32AnalogMAPnumerIdx + 1;
-#define nextAllowedValue m32AnalogMAPdenomIdx + 1
+	m32MAPpressureIdx,
+	m32BaroPressureIdx,
+	m32FuelPressureIdx,
+	m32InjPressureIdx,
+	m32AnalogMAPfloorIdx,
+	m32AnalogMAPnumerIdx,
+	m32AnalogMAPdenomIdx,
 #if defined(useChryslerBaroSensor)
-static const uint8_t m32AnalogBaroFloorIdx =			nextAllowedValue;
-static const uint8_t m32AnalogBaroNumerIdx =			m32AnalogBaroFloorIdx + 1;
-static const uint8_t m32AnalogBaroDenomIdx =			m32AnalogBaroNumerIdx + 1;
-#define nextAllowedValue m32AnalogBaroDenomIdx + 1
+	m32AnalogBaroFloorIdx,
+	m32AnalogBaroNumerIdx,
+	m32AnalogBaroDenomIdx,
 #endif // defined(useChryslerBaroSensor)
-
 #endif // defined(useChryslerMAPCorrection)
 #if defined(useBarFuelEconVsSpeed)
-static const uint8_t m32FEvsSpeedMinThresholdIdx =		nextAllowedValue;						// minimum speed for fuel econ vs speed bargraph
-static const uint8_t m32FEvsSpeedQuantumIdx =			m32FEvsSpeedMinThresholdIdx + 1;		// speed quantum for each bar in fuel econ vs speed bargraph
-#define nextAllowedValue m32FEvsSpeedQuantumIdx + 1
-
+	m32FEvsSpeedMinThresholdIdx,				// minimum speed for fuel econ vs speed bargraph
+	m32FEvsSpeedQuantumIdx,					// speed quantum for each bar in fuel econ vs speed bargraph
 #endif // defined(useBarFuelEconVsSpeed)
 #if defined(useCPUreading) || defined(useDebugCPUreading)
-static const uint8_t m32AvailableRAMidx =				nextAllowedValue;						// amount of remaining free RAM
-#define nextAllowedValue m32AvailableRAMidx + 1
-
-#endif // defined(useCPUreading) || defined(useDebugCPUreading)
-#if defined(useCPUreading) || defined(useDebugCPUreading)
-static const uint8_t m32CPUworkingLoopStartIdx =		nextAllowedValue;
-static const uint8_t m32CPUworkingMainStartIdx =		m32CPUworkingLoopStartIdx + 1;
-static const uint8_t m32CPUworkingIdleStartIdx =		m32CPUworkingMainStartIdx + 1;
-static const uint8_t m32DbgWorkingMainStartIdx =		m32CPUworkingIdleStartIdx + 1;
-#define nextAllowedValue m32DbgWorkingMainStartIdx + 1
+	m32AvailableRAMidx,						// amount of remaining free RAM
+	m32CPUworkingLoopStartIdx,
+	m32CPUworkingMainStartIdx,
+	m32CPUworkingIdleStartIdx,
+	m32DbgWorkingMainStartIdx,
 #if defined(useDebugCPUreading)
-static const uint8_t m32DbgWorkingS64StartIdx =			nextAllowedValue;
-static const uint8_t m32DbgWorkingMathStartIdx =		m32DbgWorkingS64StartIdx + 1;
-#define nextAllowedValue m32DbgWorkingMathStartIdx + 1
+	m32DbgWorkingS64StartIdx,
+	m32DbgWorkingMathStartIdx,
 #endif // defined(useDebugCPUreading)
-
-static const uint8_t m32CPUworkingMainLoopIdx =			nextAllowedValue;
-static const uint8_t m32CPUworkingMainProcessIdx =		m32CPUworkingMainLoopIdx + 1;
-static const uint8_t m32CPUworkingIdleProcessIdx =		m32CPUworkingMainProcessIdx + 1;
-#define nextAllowedValue m32CPUworkingIdleProcessIdx + 1
+	m32CPUworkingMainLoopIdx,
+	m32CPUworkingMainProcessIdx,
+	m32CPUworkingIdleProcessIdx,
 #if defined(useDebugCPUreading)
-static const uint8_t m32DbgWorkingMainDevicesIdx =		nextAllowedValue;
-static const uint8_t m32DbgWorkingMainActivityIdx =		m32DbgWorkingMainDevicesIdx + 1;
-static const uint8_t m32DbgWorkingMainSampleIdx =		m32DbgWorkingMainActivityIdx + 1;
-static const uint8_t m32DbgWorkingMainOutputIdx =		m32DbgWorkingMainSampleIdx + 1;
-static const uint8_t m32DbgWorkingMainOtherIdx =		m32DbgWorkingMainOutputIdx + 1;
-static const uint8_t m32DbgWorkingS64processIdx =		m32DbgWorkingMainOtherIdx + 1;
-#define nextAllowedValue m32DbgWorkingS64processIdx + 1
+	m32DbgWorkingMainDevicesIdx,
+	m32DbgWorkingMainActivityIdx,
+	m32DbgWorkingMainSampleIdx,
+	m32DbgWorkingMainOutputIdx,
+	m32DbgWorkingMainOtherIdx,
+	m32DbgWorkingS64processIdx,
 #endif // defined(useDebugCPUreading)
-
-static const uint8_t m32CPUsampledMainLoopIdx =			nextAllowedValue;
-static const uint8_t m32CPUsampledMainProcessIdx =		m32CPUsampledMainLoopIdx + 1;
-static const uint8_t m32CPUsampledIdleProcessIdx =		m32CPUsampledMainProcessIdx + 1;
-#define nextAllowedValue m32CPUsampledIdleProcessIdx + 1
+	m32CPUsampledMainLoopIdx,
+	m32CPUsampledMainProcessIdx,
+	m32CPUsampledIdleProcessIdx,
 #if defined(useDebugCPUreading)
-
-static const uint8_t m32DbgSampledMainDevicesIdx =		nextAllowedValue;
-static const uint8_t m32DbgSampledMainActivityIdx =		m32DbgSampledMainDevicesIdx + 1;
-static const uint8_t m32DbgSampledMainSampleIdx =		m32DbgSampledMainActivityIdx + 1;
-static const uint8_t m32DbgSampledMainOutputIdx =		m32DbgSampledMainSampleIdx + 1;
-static const uint8_t m32DbgSampledMainOtherIdx =		m32DbgSampledMainOutputIdx + 1;
-static const uint8_t m32DbgSampledS64processIdx =		m32DbgSampledMainOtherIdx + 1;
-static const uint8_t m32DbgSampledInterruptProcessIdx =	m32DbgSampledS64processIdx + 1;
-static const uint8_t m32DbgSampledTimer0Idx =			m32DbgSampledInterruptProcessIdx + 1;
-#define nextAllowedValue m32DbgSampledTimer0Idx + 1
+	m32DbgSampledMainDevicesIdx,
+	m32DbgSampledMainActivityIdx,
+	m32DbgSampledMainSampleIdx,
+	m32DbgSampledMainOutputIdx,
+	m32DbgSampledMainOtherIdx,
+	m32DbgSampledS64processIdx,
+	m32DbgSampledInterruptProcessIdx,
+	m32DbgSampledTimer0Idx,
 #if defined(useTimer1Interrupt)
-static const uint8_t m32DbgSampledTimer1Idx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledTimer1Idx + 1
+	m32DbgSampledTimer1Idx,
 #endif // defined(useTimer1Interrupt)
-static const uint8_t m32DbgSampledInjectorOpenIdx =		nextAllowedValue;
-static const uint8_t m32DbgSampledInjectorCloseIdx =	m32DbgSampledInjectorOpenIdx + 1;
-static const uint8_t m32DbgSampledVSSpulseIdx =			m32DbgSampledInjectorCloseIdx + 1;
-#define nextAllowedValue m32DbgSampledVSSpulseIdx + 1
+	m32DbgSampledInjectorOpenIdx,
+	m32DbgSampledInjectorCloseIdx,
+	m32DbgSampledVSSpulseIdx,
 #if defined(useAnalogRead)
-static const uint8_t m32DbgSampledAnalogIdx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledAnalogIdx + 1
+	m32DbgSampledAnalogIdx,
 #endif // defined(useAnalogRead)
 #if defined(useHardwareTWI)
-static const uint8_t m32DbgSampledTwoWireIdx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledTwoWireIdx + 1
+	m32DbgSampledTwoWireIdx,
 #endif // defined(useHardwareTWI)
 #if defined(useSerial0Port)
-static const uint8_t m32DbgSampledSerial0Idx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial0Idx + 1
+	m32DbgSampledSerial0Idx,
 #if defined(useSerial0PortInput)
-static const uint8_t m32DbgSampledSerial0InputIdx =		nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial0InputIdx + 1
+	m32DbgSampledSerial0InputIdx,
 #endif // defined(useSerial0PortInput)
 #endif // defined(useSerial0Port)
 #if defined(useSerial1Port)
-static const uint8_t m32DbgSampledSerial1Idx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial1Idx + 1
+	m32DbgSampledSerial1Idx,
 #if defined(useSerial1PortInput)
-static const uint8_t m32DbgSampledSerial1InputIdx =		nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial1InputIdx + 1
+	m32DbgSampledSerial1InputIdx,
 #endif // defined(useSerial1PortInput)
 #endif // defined(useSerial1Port)
 #if defined(useSerial2Port)
-static const uint8_t m32DbgSampledSerial2Idx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial2Idx + 1
+	m32DbgSampledSerial2Idx,
 #if defined(useSerial2PortInput)
-static const uint8_t m32DbgSampledSerial2InputIdx =		nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial2InputIdx + 1
+	m32DbgSampledSerial2InputIdx,
 #endif // defined(useSerial2PortInput)
 #endif // defined(useSerial2Port)
 #if defined(useSerial3Port)
-static const uint8_t m32DbgSampledSerial3Idx =			nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial3Idx + 1
+	m32DbgSampledSerial3Idx,
 #if defined(useSerial3PortInput)
-static const uint8_t m32DbgSampledSerial3InputIdx =		nextAllowedValue;
-#define nextAllowedValue m32DbgSampledSerial3InputIdx + 1
+	m32DbgSampledSerial3InputIdx,
 #endif // defined(useSerial3PortInput)
 #endif // defined(useSerial3Port)
-
-static const uint8_t m32DebugAccS64multIdx =			nextAllowedValue;
-static const uint8_t m32DebugCountS64multIdx =			m32DebugAccS64multIdx + 1;
-static const uint8_t m32DebugAccS64divIdx =				m32DebugCountS64multIdx + 1;
-static const uint8_t m32DebugCountS64divIdx =			m32DebugAccS64divIdx + 1;
-#define nextAllowedValue m32DebugCountS64divIdx + 1
+	m32DebugAccS64multIdx,
+	m32DebugCountS64multIdx,
+	m32DebugAccS64divIdx,
+	m32DebugCountS64divIdx,
 #if defined(useIsqrt)
-static const uint8_t m32DebugAccS64sqrtIdx =			nextAllowedValue;
-static const uint8_t m32DebugCountS64sqrtIdx =			m32DebugAccS64sqrtIdx + 1;
-#define nextAllowedValue m32DebugCountS64sqrtIdx + 1
+	m32DebugAccS64sqrtIdx,
+	m32DebugCountS64sqrtIdx,
 #endif // defined(useIsqrt)
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t m32S64programCyclesIdx =			nextAllowedValue;						// timer0 cycles executed in the last ^T trace run
-static const uint8_t m32S64programInstrIdx =			m32S64programCyclesIdx + 1;				// instructions executed in the last ^T trace run
-#define nextAllowedValue m32S64programInstrIdx + 1
+	m32S64programCyclesIdx,					// timer0 cycles executed in the last ^T trace run
+	m32S64programInstrIdx,					// instructions executed in the last ^T trace run
 #endif // defined(useDebugTerminalSWEET64)
 #endif // defined(useDebugCPUreading)
-
 #endif // defined(useCPUreading) || defined(useDebugCPUreading)
 #if defined(useBluetooth)
-static const uint8_t m32BluetoothMainValue =			nextAllowedValue;						// default string value after '!' read-in character
-#define nextAllowedValue m32BluetoothMainValue + 1
-
+	m32BluetoothMainValue,					// default string value after '!' read-in character
 #endif // defined(useBluetooth)
-static const uint8_t m32VariableEndIdx =				nextAllowedValue;						// end of 32-bit main program variable storage
-static const uint8_t m32VariableLength =				m32VariableEndIdx - m32VariableStartIdx;
+	m32VariableEndIdx,						// end of 32-bit main program variable storage
+	m32VariableLength = m32VariableEndIdx - m32VariableStartIdx,
 
-// 64-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
-
-static const uint8_t m64VariableStartIdx =				nextAllowedValue;						// start of 64-bit main program variable storage
-
-static const uint8_t m64TankSizeIdx =					nextAllowedValue;						// tank quantity in timer0 cycles
-static const uint8_t m64BingoTankSizeIdx =				m64TankSizeIdx + 1;						// bingo fuel quantity in timer0 cycles
-#define nextAllowedValue m64BingoTankSizeIdx + 1
-
-static const uint8_t m64VariableEndIdx =				nextAllowedValue;						// end of 64-bit main program variable storage
-static const uint8_t m64VariableLength =				m64VariableEndIdx - m64VariableStartIdx;
-
-static const uint8_t programVariableMaxIdx =			nextAllowedValue;
+	// 64-bit main program variable array index values - these should NEVER be referenced inside an interrupt service routine
+	m64VariableStartIdx = m32VariableEndIdx,	// start of 64-bit main program variable storage
+	m64TankSizeIdx = m64VariableStartIdx,	// tank quantity in timer0 cycles
+	m64BingoTankSizeIdx,					// bingo fuel quantity in timer0 cycles
+	m64VariableEndIdx,						// end of 64-bit main program variable storage
+	m64VariableLength = m64VariableEndIdx - m64VariableStartIdx,
+	programVariableMaxIdx = m64VariableEndIdx
+};
 
 static device_t deviceDefs[(uint16_t)(m8DevLength)];
 

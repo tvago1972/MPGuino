@@ -1,7 +1,7 @@
 # MPGuino v1.95tav — User Manual
 
-**Version:** 1.95tav  
-**Date:** 2026-06-02  
+**Version:** 1.95tav
+**Date:** 2026-06-02
 **License:** GPL — personal use freely permitted; mass production rights reserved by opengauge.org
 
 ---
@@ -119,6 +119,8 @@ On power-up, MPGuino:
 3. Restores the last-used display screen and cursor positions from EEPROM.
 4. Restores saved trips from EEPROM (if Auto-Save is enabled).
 5. Enters the main display loop.
+
+Firmware builds that change the EEPROM storage layout intentionally use a different hidden layout version/signature. After flashing one of those builds, MPGuino will reset stored settings to defaults on first boot; review calibration and display settings afterward.
 
 ---
 

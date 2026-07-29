@@ -239,6 +239,9 @@ namespace bigDigit /* Big Digit output support section prototype */
 	static uint8_t displayHandler(uint8_t cmd, uint8_t cursorPos);
 #if defined(useBigNumberDisplay)
 	static void outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str);
+#if defined(useBigFE)
+	static void outputFuelEconomy(uint8_t tripIdx, uint8_t cursorPos);
+#endif // defined(useBigFE)
 #endif // defined(useBigNumberDisplay)
 #if defined(useBigTimeDisplay)
 	static void outputTime(uint8_t hPos, char * val, uint8_t blinkFlag, uint8_t blinkPos, uint8_t cursorPos, const char * str);

@@ -3,6 +3,14 @@ from s64terminal import S64Terminal, S64TerminalError
 
 # control character echoes look like '^X' — skip them silently
 _CTRL_ECHO_RE = re.compile(r'^\^[A-Z]$')
+_MONITOR_NOISE_RE = re.compile(
+    r'^(?:'
+    r'decimalFlags='
+    r'|='
+    r'|\]?\^[A-Z]$'
+    r')',
+    re.IGNORECASE
+)
 
 # Ctrl+I triggers the ^I instruction list command
 CMD_LIST_INSTRUCTIONS = '\x09'
@@ -88,7 +96,8 @@ def fetch_instruction_set(term):
     skipped     = []
 
     for line in lines:
-        if _CTRL_ECHO_RE.match(line.strip()):
+        s = line.strip()
+        if _CTRL_ECHO_RE.match(s) or _MONITOR_NOISE_RE.match(s):
             continue
         if 'INVALID' in line:
             by_opcode.append(None)

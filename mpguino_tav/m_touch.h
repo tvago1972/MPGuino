@@ -86,7 +86,7 @@ static const uint8_t touchSamples =		8;				// averaged samples per read
 // raw ADC calibration (panel-fixed), measured at the screen corners in landscape
 // orientation 3: rawX runs along the long (320px) axis, rawY along the short (240px)
 // axis. these are cached in RAM from the pTouchRaw* EEPROM parameters at touch::init
-// and rewritten by the 'J' corner-calibration routine; defaults live in params[].
+// and rewritten by the 'J' corner-calibration routine; defaults live in parameterDefaults[].
 static uint16_t touchRawXlo;
 static uint16_t touchRawXhi;
 static uint16_t touchRawYlo;
