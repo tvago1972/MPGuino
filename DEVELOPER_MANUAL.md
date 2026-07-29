@@ -676,7 +676,10 @@ Numeric input is **hexadecimal by default**. Use `\` to switch the current numbe
 |---|---|
 | `P` | List all EEPROM parameters |
 | `y.xP` | List parameters from index `y` to `x` |
+| `x<P` | List a predefined EEPROM storage-width range |
 | `xP:v1 v2 ...` | Write value(s) starting at parameter index `x` |
+
+Predefined `x<P` ranges are storage-width groups: `0<P` lists all EEPROM-backed parameters, `1<P` lists byte-backed parameters (logical 1/2/3/4/8-bit values), `2<P` lists 12-bit parameters, `3<P` lists 16-bit parameters, `4<P` lists 18-bit parameters, `5<P` lists 20-bit parameters, `6<P` lists 24-bit parameters, `7<P` lists 32-bit parameters, and `8<P` lists 64-bit parameters.
 
 Output columns: index, symbolic name (if `useDebugTerminalLabels`), current raw value, formatted value.
 

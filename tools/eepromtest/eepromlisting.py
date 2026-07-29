@@ -9,21 +9,15 @@ import re
 
 CMD_PARAMETERS = 'P'
 
-PF_DO_NOTHING = 0x00
-PF_SOFTWARE_INIT = 0x01
-PF_HARDWARE_INIT = 0x02
-PF_METRIC_MODE = 0x03
-PF_CHANGE_DISPLAY = 0x04
-PF_CALCULATE_FUEL = 0x05
-PF_HW_BFEVS_RESET = 0x06
-PF_SW_BFEVS_RESET = 0x07
-PF_HW_FUEL_CALC = 0x08
+ECS_SOFTWARE_INIT = 0x80
+ECS_HARDWARE_INIT = 0x40
+ECS_METRIC_MODE = 0x20
+ECS_CHANGE_DISPLAY = 0x10
+ECS_CALCULATE_FUEL = 0x08
+ECS_RESET_BFEVS = 0x04
 
 RANGE_ALL_SETTINGS = None
-RANGE_SAVED_TRIPS = 1
-RANGE_DISPLAY_PAGES = 2
-RANGE_DISPLAY_CURSOR = 3
-RANGE_MENU_HEIGHT = 4
+_DISPLAY_PAGE_LABEL_RE = re.compile(r'^P[0-9A-Fa-f]{2}F[0-9A-Fa-f]{2}$')
 
 _CTRL_ECHO_RE = re.compile(r'^(?:\])?(?:\^[A-Z]|[0-9A-Fa-f]*<?[A-Z])$')
 _IGNORED_RE = re.compile(r'^(?:syntax\x07?|decimalFlags=.*|=.*)$')
@@ -159,21 +153,40 @@ def read_parameter(term, index):
 
 
 def read_all_parameter_ranges(term):
-    ranges = [
-        ('settings', RANGE_ALL_SETTINGS),
-        ('saved_trips', RANGE_SAVED_TRIPS),
-        ('display_pages', RANGE_DISPLAY_PAGES),
-        ('display_cursor', RANGE_DISPLAY_CURSOR),
-        ('menu_height', RANGE_MENU_HEIGHT),
-    ]
     params = {}
     unparsed = {}
-    for name, range_id in ranges:
-        _, by_label, skipped = read_parameters(term, range_id)
-        if by_label:
-            params[name] = by_label
-        if skipped:
-            unparsed[name] = skipped
+    _, by_label, skipped = read_parameters(term, RANGE_ALL_SETTINGS)
+    if by_label:
+        params['settings'] = by_label
+    if skipped:
+        unparsed['settings'] = skipped
+    if 'settings' in params:
+        params['saved_trips'] = {
+            label: param
+            for label, param in params['settings'].items()
+            if (
+                label.startswith('pCurrTrip')
+                or label.startswith('pTankTrip')
+                or label.startswith('pCurrIEOC')
+                or label.startswith('pTankIEOC')
+                or label == 'pRefuelSaveSizeIdx'
+            )
+        }
+        params['display_pages'] = {
+            label: param
+            for label, param in params['settings'].items()
+            if _DISPLAY_PAGE_LABEL_RE.match(label)
+        }
+        params['display_cursor'] = {
+            label: param
+            for label, param in params['settings'].items()
+            if (('DisplayIdx' in label) or ('displayIdx' in label)) and not label.startswith('p')
+        }
+        params['menu_height'] = {
+            label: param
+            for label, param in params['settings'].items()
+            if label.endswith('MenuIdx')
+        }
     return params, unparsed
 
 
@@ -193,15 +206,15 @@ def parameter_groups(params):
         'metric_mode': [],
     }
     for param in sorted(params, key=lambda p: p.index if p.index is not None else 0x100):
-        action = param.action
-        if action in (PF_HARDWARE_INIT, PF_HW_BFEVS_RESET, PF_HW_FUEL_CALC):
+        flags = param.flags
+        if flags & ECS_HARDWARE_INIT:
             groups['hardware_init'].append(param)
-        if action in (PF_SOFTWARE_INIT, PF_SW_BFEVS_RESET):
+        if flags & ECS_SOFTWARE_INIT:
             groups['software_init'].append(param)
-        if action in (PF_CALCULATE_FUEL, PF_HW_FUEL_CALC):
+        if flags & ECS_CALCULATE_FUEL:
             groups['fuel_calc'].append(param)
-        if action == PF_CHANGE_DISPLAY:
+        if flags & ECS_CHANGE_DISPLAY:
             groups['display_change'].append(param)
-        if action == PF_METRIC_MODE:
+        if flags & ECS_METRIC_MODE:
             groups['metric_mode'].append(param)
     return groups

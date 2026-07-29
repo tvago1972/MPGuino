@@ -71,16 +71,18 @@ static const uint8_t s64vExtraIndexed =				0b00000100;
 static const uint8_t s64vExtraJump =				0b00000010;
 static const uint8_t s64vRelativeOperand =			0b00000001;
 
-static const uint8_t s64errNone =					0;
-static const uint8_t s64errBadProgramCounter =		s64errNone + 1;
-static const uint8_t s64errBadOpcode =				s64errBadProgramCounter + 1;
-static const uint8_t s64errBadRegisterOperand =		s64errBadOpcode + 1;
-static const uint8_t s64errMissingRegisterOperand =	s64errBadRegisterOperand + 1;
-static const uint8_t s64errMissingPrimaryOperand =	s64errMissingRegisterOperand + 1;
-static const uint8_t s64errMissingExtraOperand =	s64errMissingPrimaryOperand + 1;
-static const uint8_t s64errBadExpandedOpcode =		s64errMissingExtraOperand + 1;
-static const uint8_t s64errStackOverflow =			s64errBadExpandedOpcode + 1;
-static const uint8_t s64errBadOperand =				s64errStackOverflow + 1;
+enum {
+	s64errNone,
+	s64errBadProgramCounter,
+	s64errBadOpcode,
+	s64errBadRegisterOperand,
+	s64errMissingRegisterOperand,
+	s64errMissingPrimaryOperand,
+	s64errMissingExtraOperand,
+	s64errBadExpandedOpcode,
+	s64errStackOverflow,
+	s64errBadOperand
+};
 
 static const uint8_t r00 =	0;			// do not fetch register operand
 static const uint8_t r01 =	r00 + 32;	// fetch rX and rY from program
@@ -1014,4 +1016,3 @@ const uint8_t s64BCDformatList[] PROGMEM = {
 
 	0x00,		// total entry length == 0 for end of list
 };
-

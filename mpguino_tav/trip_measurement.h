@@ -548,8 +548,10 @@ static uint8_t topScreenLevel;
 
 #endif // defined(useSavedTrips) || defined(usePartialRefuel)
 #if defined(useSavedTrips)
-static const uint8_t taaModeWrite =			0;
-static const uint8_t taaModeRead =			taaModeWrite + 1;
+enum {
+	taaModeWrite,
+	taaModeRead
+};
 
 const uint8_t tripSignatureList[] PROGMEM = {
 	pCurrTripSignatureIdx,

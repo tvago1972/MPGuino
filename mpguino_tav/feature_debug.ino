@@ -619,11 +619,6 @@ static void terminal::outputParameterValue(uint8_t lineNumber)
 			labelListOffset = pSettingsIdxStart;
 			break;
 
-		case (pExpandedSettingsIdxStart) ... (pExpandedSettingsIdxEnd - 1):
-			labelList = terminalExpandedParameterNames;
-			labelListOffset = pExpandedSettingsIdxStart;
-			break;
-
 	}
 
 #endif // defined(useDebugTerminalLabels)
@@ -3167,40 +3162,62 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 											switch (terminalTarget)
 											{
 
-												case 0:
+												case 0:	// select all EEPROM-backed parameters
 													terminalSource = pSettingsIdxStart;
-													terminalByte = pSettingsIdxEnd - 1;
+													terminalByte = pSettingsIdxEnd;
 													break;
 
-#if defined(useEEPROMtripStorage)
-												case 1:	// select all saved trip information parameters
-													terminalSource = eePtrSavedTripsStart;
-													terminalByte = eePtrSavedTripsEnd - 1;
+												case 1:	// select all byte-backed parameters
+													terminalSource = pSettingsByteIdxStart;
+													terminalByte = pSettingsByteIdxEnd;
 													break;
 
-#endif // defined(useEEPROMtripStorage)
-#if defined(useScreenEditor)
-												case 2:	// select all user-editable main display format parameters
-													terminalSource = eePtrDisplayPagesStart;
-													terminalByte = eePtrDisplayPagesEnd - 1;
+												case 2:	// select all 12-bit parameters
+													terminalSource = pSettings12BitIdxStart;
+													terminalByte = pSettings12BitIdxEnd;
 													break;
 
-#endif // defined(useScreenEditor)
-#if defined(useButtonInput)
-												case 3:	// select all screen cursor parameters
-													terminalSource = eePtrDisplayCursorStart;
-													terminalByte = eePtrDisplayCursorEnd - 1;
+												case 3:	// select all 16-bit parameters
+													terminalSource = pSettings16BitIdxStart;
+													terminalByte = pSettings16BitIdxEnd;
 													break;
 
-												case 4:	// select all menu height position parameters
-													terminalSource = eePtrMenuHeightStart;
-													terminalByte = eePtrMenuHeightEnd - 1;
+												case 4:	// select all 18-bit parameters
+													terminalSource = pSettings18BitIdxStart;
+													terminalByte = pSettings18BitIdxEnd;
 													break;
 
-#endif // defined(useButtonInput)
+												case 5:	// select all 20-bit parameters
+													terminalSource = pSettings20BitIdxStart;
+													terminalByte = pSettings20BitIdxEnd;
+													break;
+
+												case 6:	// select all 24-bit parameters
+													terminalSource = pSettings24BitIdxStart;
+													terminalByte = pSettings24BitIdxEnd;
+													break;
+
+												case 7:	// select all 32-bit parameters
+													terminalSource = pSettings32BitIdxStart;
+													terminalByte = pSettings32BitIdxEnd;
+													break;
+
+												case 8:	// select all 64-bit parameters
+													terminalSource = pSettings64BitIdxStart;
+													terminalByte = pSettings64BitIdxEnd;
+													break;
+
 												default:
 													errIdx = tseIdxSyntax;
 													break;
+
+											}
+
+											if (errIdx == 0)
+											{
+
+												if (terminalSource >= terminalByte) errIdx = tseIdxSyntax;
+												else terminalByte--;
 
 											}
 

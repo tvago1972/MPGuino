@@ -24,14 +24,12 @@ TIMEOUT_VAR_CASES = [
     ('pActivityTimeoutIdx', 'v16ActivityTimeoutIdx'),
 ]
 
-ACTION_NAMES = {
-    0x01: 'software-init',
-    0x02: 'hardware-init',
-    0x05: 'fuel-calc',
-    0x06: 'hardware-init-bargraph',
-    0x07: 'software-init-bargraph',
-    0x08: 'hardware-init-fuel-calc',
-}
+ACTION_NAMES = (
+    (0x40, 'hardware-init'),
+    (0x80, 'software-init'),
+    (0x08, 'fuel-calc'),
+    (0x04, 'bargraph-reset'),
+)
 
 
 def _round_div(numer, denom):
@@ -250,7 +248,7 @@ def build_storage_cases(params):
     """Return one write/readback case per bit-length bucket."""
     by_bits = {}
     for param in params:
-        if param.label == 'pSignatureIdx':
+        if param.label in ('pEEPROMlayoutVersionIdx', 'pSignatureIdx'):
             continue
         by_bits.setdefault(param.bit_length, param)
 
@@ -272,8 +270,12 @@ def build_action_cases(params, params_by_label=None, constants_by_alias=None):
     constants_by_alias = constants_by_alias or {}
     cases = []
     for param in sorted(params, key=lambda p: p.index if p.index is not None else 0x100):
-        action_name = ACTION_NAMES.get(param.action)
+        action_name = '-'.join(
+            name for flag, name in ACTION_NAMES
+            if param.flags & flag)
         if action_name is None:
+            continue
+        if not action_name:
             continue
         if param.label == 'pSignatureIdx':
             continue

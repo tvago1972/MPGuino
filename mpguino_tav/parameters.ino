@@ -511,7 +511,7 @@ static const uint8_t prgmDoEEPROMmetricConversion[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-#ifdef useCalculatedFuelFactor
+#if defined(useCalculatedFuelFactor)
 static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
 	instrLdRegConst, 0x02, idxCorrectionFactor2,		// obtain reference correction factor
 	instrMul2byEEPROM, pSysFuelPressureIdx,				// multiply by this vehicle's stored fuel system absolute pressure
@@ -521,7 +521,7 @@ static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
 	instrMul2byEEPROM, pInjectorSizeIdx,				// multiply by injector size in cc/minute * decimal formatting factor (L/min * decimal formatting factor * 1000)
 	instrLdReg, 0x21,									// save denominator term for later
 	instrLdRegByte, 0x02, 60,							// load seconds per minute into register 2
-	instrMul2byConst, idxMicroSecondsPerSecond,		// multiply by microseconds per second into register 1
+	instrMul2byConst, idxMicroSecondsPerSecond,			// multiply by microseconds per second into register 1
 	instrMul2byConst, idxOneThousand,					// multiply by number of cc's per liter into register 1
 	instrMul2byConst, idxDecimalPoint,					// set numerator up to cancel reference correction factor in denominator
 	instrMul2byConst, idxCorrectionFactor,				// set numerator up to cancel reference correction factor in denominator
@@ -534,68 +534,35 @@ static const uint8_t prgmCalculateFuelFactor[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-
-#endif // useCalculatedFuelFactor
-static uint8_t EEPROM::initEEPROM(void)
+#endif // defined(useCalculatedFuelFactor)
+static uint8_t EEPROM::powerUpCheck(void)
 {
 
 	uint8_t retVal;
 	uint8_t eePtr;
-	uint64_t val;
-	union union_64 * vee = (union union_64 *) &val;
 
-	retVal = 0;
+	retVal = 0; // assume EEPROM initialization isn't needed
 
 	for (uint8_t x = 0; x < parameterDefaultInitCheckCount; x++)
 	{
 
-		eePtr = pgm_read_byte(&parameterDefaults[(uint16_t)(x)].parameterIdx);
-		if (readVal(eePtr) != pgm_read_dword(&parameterDefaults[(uint16_t)(x)].value))
-			retVal = 1;
+		eePtr = pgm_read_byte(&parameterDefaults[(uint16_t)(x)].parameterIdx); // get parameter index of EEPROM check value
+		if (readVal(eePtr) != pgm_read_dword(&parameterDefaults[(uint16_t)(x)].value)) // check against correct check value in flash
+			retVal = 1; // signal EEPROM initialization is needed if EEPROM check value doesn't match flash check value
 
 	}
 
 	if (retVal)
 	{
 
-		for (uint8_t x = 0; x < parameterDefaultsCount; x++)
-		{
-
-			eePtr = pgm_read_byte(&parameterDefaults[(uint16_t)(x)].parameterIdx);
-			writeVal(eePtr, pgm_read_dword(&parameterDefaults[(uint16_t)(x)].value));
-
-		}
-
-		SWEET64::init64byt(vee, 0);
-		for (eePtr = pSettingsIdxEnd; eePtr < eePtrEnd; eePtr++) write64(vee, eePtr);
+		for (eePtr = pSettingsIdxStart; eePtr < eePtrEnd; eePtr++) writeVal(eePtr, getDefault(eePtr));
 
 	}
 
-	return retVal;
-
-}
-
-static uint8_t EEPROM::powerUpCheck(void)
-{
-
-	uint8_t b;
-
-	b = initEEPROM(); // perform EEPROM initialization if required, and cause MPGuino initialization when done
-
-#if defined(useScreenEditor)
-	if (b)
-	{
-
-		uint8_t t = eePtrDisplayPagesStart;
-		for (uint8_t x = 0; x < mainDisplayFormatSize; x++) writeVal(t++, (uint32_t)(pgm_read_word(&mainDisplayPageFormats[(uint16_t)(x)])));
-
-	}
-
-#endif // defined(useScreenEditor)
 	initGuinoHardware();
 	initGuinoSoftware();
 
-	return b;
+	return retVal;
 
 }
 
@@ -723,11 +690,11 @@ static uint8_t EEPROM::onChange(s64prgm_ptr_t sched, uint8_t parameterIdx)
 
 	SWEET64::runPrgm(sched, parameterIdx); // perform initial SWEET64 call to store EEPROM parameter
 
-#ifdef useCalculatedFuelFactor
+#if defined(useCalculatedFuelFactor)
 	// calculate and store microseconds per US gallon factor (this will trigger ecsDoMPGuinoInitSoftware)
 	if (m08(m8EEPROMchangeStatus) & ecsCalculateFuelParam) SWEET64::runPrgm(S64_PRGM_PTR(prgmCalculateFuelFactor), 0);
 
-#endif // useCalculatedFuelFactor
+#endif // defined(useCalculatedFuelFactor)
 	// perform conversion between metric mode and SAE mode (this will trigger ecsDoMPGuinoInitSoftware)
 	if (m08(m8EEPROMchangeStatus) & ecsDoMetricConversion) SWEET64::runPrgm(S64_PRGM_PTR(prgmDoEEPROMmetricConversion), 0);
 
@@ -738,9 +705,9 @@ static uint8_t EEPROM::onChange(s64prgm_ptr_t sched, uint8_t parameterIdx)
 
 #if defined(useButtonInput)
 #if LCDcharHeight == 4
-		if ((parameterIdx == pSizeDisplayIdx) || (parameterIdx == pSizeBottomDisplayIdx))
+		if ((parameterIdx == pDisplayIdx) || (parameterIdx == pBottomDisplayIdx))
 #else // LCDcharHeight == 4
-		if (parameterIdx == pSizeDisplayIdx)
+		if (parameterIdx == pDisplayIdx)
 #endif // LCDcharHeight == 4
 		{
 
@@ -848,17 +815,29 @@ static uint32_t EEPROM::getDefault(uint8_t eePtr)
 
 	retVal = 0;
 
-	for (uint8_t x = 0; x < (sizeof(parameterDefaults) / sizeof(parameterDefaults[0])); x++)
+	switch (eePtr)
 	{
 
-		parameterIdx = pgm_read_byte(&parameterDefaults[(uint16_t)(x)].parameterIdx);
-		if (parameterIdx == eePtr)
-		{
-
-			retVal = pgm_read_dword(&parameterDefaults[(uint16_t)(x)].value);
+#if defined(useScreenEditor)
+		case (eePtrDisplayPagesStart)...(eePtrDisplayPagesEnd - 1):
+			retVal = (uint32_t)(pgm_read_word(&mainDisplayPageFormats[(uint16_t)(eePtr - eePtrDisplayPagesStart)]));
 			break;
 
-		}
+#endif // defined(useScreenEditor)
+		default:
+			for (uint8_t x = 0; x < (sizeof(parameterDefaults) / sizeof(parameterDefaults[0])); x++)
+			{
+
+				parameterIdx = pgm_read_byte(&parameterDefaults[(uint16_t)(x)].parameterIdx);
+				if (parameterIdx == eePtr)
+				{
+
+					retVal = pgm_read_dword(&parameterDefaults[(uint16_t)(x)].value);
+					break;
+
+				}
+
+			}
 
 	}
 
@@ -894,7 +873,6 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 	uint16_t t;
 	uint16_t u;
 	uint8_t l;
-	uint8_t b;
 	uint8_t eByt;
 	uint8_t rByt;
 
@@ -905,8 +883,6 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 	oldSREG = SREG; // save interrupt flag status
 	cli(); // disable interrupts to make the next operations atomic
 
-	b = 0;
-
 	for (uint16_t x = t; x < u; x++)
 	{
 
@@ -916,7 +892,7 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 		{
 
 			m08(m8EEPROMchangeStatus) |= (ecsEEPROMchangeDetected);
-			b = 1;
+			m08(m8EEPROMchangeStatus) |= l;
 			eeprom_write_byte((uint8_t *)(x), rByt);
 
 		}
@@ -925,50 +901,6 @@ static void EEPROM::write64(union union_64 * an, uint8_t parameterIdx)
 
 	SREG = oldSREG; // restore interrupt flag status
 
-	if (b)
-	{
-
-		switch (l)
-		{
-
-			case pfSoftwareInitMPGuino:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitSoftware);
-				break;
-
-			case pfHardwareInitMPGuino:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware);
-				break;
-
-			case pfDoMetricModeConversion:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMetricConversion);
-				break;
-
-			case pfChangeDisplay:
-				m08(m8EEPROMchangeStatus) |= (ecsChangeDisplay);
-				break;
-
-			case pfCalculateFuelParams:
-				m08(m8EEPROMchangeStatus) |= (ecsCalculateFuelParam);
-				break;
-
-#if defined(useBarFuelEconVsSpeed)
-			case pfHWresetAndBFEvSreset:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware);
-			case pfSWresetAndBFEvSreset:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitSoftware | ecsResetBarFEvsSpeed);
-				break;
-
-#endif // defined(useBarFuelEconVsSpeed)
-#if defined(useChryslerMAPCorrection)
-			case pfHWresetAndFuelParamCalc:
-				m08(m8EEPROMchangeStatus) |= (ecsDoMPGuinoInitHardware | ecsCalculateFuelParam);
-				break;
-
-#endif // defined(useChryslerMAPCorrection)
-		}
-
-	}
-
 }
 
 static uint16_t EEPROM::getAddress(uint8_t eePtr)
@@ -976,37 +908,14 @@ static uint16_t EEPROM::getAddress(uint8_t eePtr)
 
 	if (eePtr >= eePtrEnd) return eeAdrStorageEnd;
 
-	if (eePtr < pSettings2BitIdxStart) return eeAdrSettings1BitStart + (eePtr - pSettings1BitIdxStart);
-	if (eePtr < pSettings3BitIdxStart) return eeAdrSettings2BitStart + (eePtr - pSettings2BitIdxStart);
-	if (eePtr < pSettings4BitIdxStart) return eeAdrSettings3BitStart + (eePtr - pSettings3BitIdxStart);
-	if (eePtr < pSettings8BitIdxStart) return eeAdrSettings4BitStart + (eePtr - pSettings4BitIdxStart);
-	if (eePtr < pSettings12BitIdxStart) return eeAdrSettings8BitStart + (eePtr - pSettings8BitIdxStart);
+	if (eePtr < pSettings12BitIdxStart) return eeAdrSettingsByteStart + (eePtr - pSettingsByteIdxStart);
 	if (eePtr < pSettings16BitIdxStart) return eeAdrSettings12BitStart + 2 * (eePtr - pSettings12BitIdxStart);
 	if (eePtr < pSettings18BitIdxStart) return eeAdrSettings16BitStart + 2 * (eePtr - pSettings16BitIdxStart);
 	if (eePtr < pSettings20BitIdxStart) return eeAdrSettings18BitStart + 3 * (eePtr - pSettings18BitIdxStart);
 	if (eePtr < pSettings24BitIdxStart) return eeAdrSettings20BitStart + 3 * (eePtr - pSettings20BitIdxStart);
 	if (eePtr < pSettings32BitIdxStart) return eeAdrSettings24BitStart + 3 * (eePtr - pSettings24BitIdxStart);
-	if (eePtr < pSettingsIdxEnd) return eeAdrSettings32BitStart + 4 * (eePtr - pSettings32BitIdxStart);
-
-#if defined(useButtonInput) && (LCDcharHeight == 4)
-	if (eePtr < pExpanded8BitIdxEnd) return eeAdrExpanded8BitStart + (eePtr - pExpanded8BitIdxStart);
-#endif // defined(useButtonInput) && (LCDcharHeight == 4)
-
-#if defined(useEEPROMtripStorage)
-	if (eePtr < pSavedTrips8BitIdxEnd) return eeAdrSavedTrips8BitStart + (eePtr - pSavedTrips8BitIdxStart);
-	if (eePtr < pSavedTrips24BitIdxEnd) return eeAdrSavedTrips24BitStart + 3 * (eePtr - pSavedTrips24BitIdxStart);
-	if (eePtr < pSavedTrips32BitIdxEnd) return eeAdrSavedTrips32BitStart + 4 * (eePtr - pSavedTrips32BitIdxStart);
-	if (eePtr < pSavedTrips64BitIdxEnd) return eeAdrSavedTrips64BitStart + 8 * (eePtr - pSavedTrips64BitIdxStart);
-#endif // defined(useEEPROMtripStorage)
-
-#if defined(useScreenEditor)
-	if ((eePtr >= eePtrDisplayPagesStart) && (eePtr < eePtrDisplayPagesEnd)) return eeAdrScreensStart + 2 * (eePtr - eePtrDisplayPagesStart);
-#endif // defined(useScreenEditor)
-#if defined(useButtonInput)
-	if ((eePtr >= eePtrDisplayCursorStart) && (eePtr < eePtrDisplayCursorEnd)) return eeAdrDisplayCursorStart + (eePtr - eePtrDisplayCursorStart);
-	if ((eePtr >= eePtrMenuHeightStart) && (eePtr < eePtrMenuHeightEnd)) return eeAdrMenuCursorStart + (eePtr - eePtrMenuHeightStart);
-#endif // defined(useButtonInput)
-
+	if (eePtr < pSettings64BitIdxStart) return eeAdrSettings32BitStart + 4 * (eePtr - pSettings32BitIdxStart);
+	if (eePtr < pSettingsIdxEnd) return eeAdrSettings64BitStart + 8 * (eePtr - pSettings64BitIdxStart);
 	return eeAdrStorageEnd;
 
 }
@@ -1023,167 +932,110 @@ static uint8_t EEPROM::getParameterFlags(uint8_t eePtr)
 	switch (eePtr)
 	{
 
-		case pSignatureIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pMetricModeIdx:
-			t = pfDoMetricModeConversion;
-			break;
-		case pAlternateFEidx:
-			t = pfChangeDisplay;
-			break;
-		case pMicroSecondsPerGallonIdx:
-			t = pfSoftwareInitMPGuino;
-			break;
-		case pInjEdgeTriggerIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pInjectorSettleTimeIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pInjPer2CrankRevIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pMinGoodRPMidx:
-			t = pfHardwareInitMPGuino;
-			break;
-#if defined(useBarFuelEconVsSpeed)
+#if !defined(useBarFuelEconVsSpeed)
 		case pPulseEdgePerDistanceIdx:
-			t = pfHWresetAndBFEvSreset;
-			break;
-#else // defined(useBarFuelEconVsSpeed)
-		case pPulseEdgePerDistanceIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-#endif // defined(useBarFuelEconVsSpeed)
-		case pVSSpauseIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pMinGoodSpeedidx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pTankSizeIdx:
-			t = pfSoftwareInitMPGuino;
-			break;
-		case pTankBingoSizeIdx:
-			t = pfSoftwareInitMPGuino;
-			break;
-		case pIdleTimeoutIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pEOCtimeoutIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pButtonTimeoutIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pParkTimeoutIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pActivityTimeoutIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-#if defined(useLCDoutput)
-		case pBrightnessIdx:
-			t = pfChangeDisplay;
-			break;
-#if defined(useLCDcontrast)
-		case pContrastIdx:
-			t = pfChangeDisplay;
-			break;
-#endif // defined(useLCDcontrast)
-#if defined(useAdafruitRGBLCDdisplay)
-		case pLCDcolorIdx:
-			t = pfChangeDisplay;
-			break;
-#endif // defined(useAdafruitRGBLCDdisplay)
-#endif // defined(useLCDoutput)
-#if defined(useFuelPressure)
-#if defined(useChryslerMAPCorrection)
-		case pSysFuelPressureIdx:
-			t = pfHWresetAndFuelParamCalc;
-			break;
-#else // defined(useChryslerMAPCorrection)
-		case pSysFuelPressureIdx:
-			t = pfCalculateFuelParams;
-			break;
-#endif // defined(useChryslerMAPCorrection)
-#endif // defined(useFuelPressure)
-#ifdef useCalculatedFuelFactor
-		case pRefFuelPressureIdx:
-			t = pfCalculateFuelParams;
-			break;
-		case pInjectorCountIdx:
-			t = pfCalculateFuelParams;
-			break;
-		case pInjectorSizeIdx:
-			t = pfCalculateFuelParams;
-			break;
-#endif // useCalculatedFuelFactor
-#if defined(useChryslerMAPCorrection)
-		case pMAPsensorFloorIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pMAPsensorCeilingIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pMAPsensorRangeIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-#if defined(useChryslerBaroSensor)
-		case pBaroSensorFloorIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pBaroSensorCeilingIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-		case pBaroSensorRangeIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-#else // defined(useChryslerBaroSensor)
-		case pBarometricPressureIdx:
-			t = pfHardwareInitMPGuino;
-			break;
-#endif // defined(useChryslerBaroSensor)
-#endif // defined(useChryslerMAPCorrection)
+#endif // !defined(useBarFuelEconVsSpeed)
 #if defined(useVehicleParameters)
 #if defined(useCoastDownCalculator)
 		case pCoastdownSamplePeriodIdx:
-			t = pfHardwareInitMPGuino;
-			break;
 #endif // defined(useCoastDownCalculator)
 #if defined(useDragRaceFunction)
 		case pDragSpeedIdx:
-			t = pfHardwareInitMPGuino;
-			break;
 		case pDragDistanceIdx:
-			t = pfHardwareInitMPGuino;
-			break;
 #endif // defined(useDragRaceFunction)
 #endif // defined(useVehicleParameters)
-#if defined(useSimulatedFIandVSS)
-		case pPeakHoldSimPeriodIdx:
-			t = pfSoftwareInitMPGuino;
+#if defined(useChryslerMAPCorrection)
+		case pMAPsensorFloorIdx:
+		case pMAPsensorCeilingIdx:
+		case pMAPsensorRangeIdx:
+#if defined(useChryslerBaroSensor)
+		case pBaroSensorFloorIdx:
+		case pBaroSensorCeilingIdx:
+		case pBaroSensorRangeIdx:
+#else // defined(useChryslerBaroSensor)
+		case pBarometricPressureIdx:
+#endif // defined(useChryslerBaroSensor)
+#endif // defined(useChryslerMAPCorrection)
+		case pVSSpauseIdx:
+		case pMinGoodSpeedidx:
+		case pInjEdgeTriggerIdx:
+		case pInjectorSettleTimeIdx:
+		case pInjPer2CrankRevIdx:
+		case pMinGoodRPMidx:
+		case pIdleTimeoutIdx:
+		case pEOCtimeoutIdx:
+		case pButtonTimeoutIdx:
+		case pParkTimeoutIdx:
+		case pActivityTimeoutIdx:
+		case pSignatureIdx:
+			t = ecsDoMPGuinoInitHardware;
 			break;
-		case pPeakHoldSimActiveIdx:
-			t = pfSoftwareInitMPGuino;
+
+		case pMetricModeIdx:
+			t = ecsDoMetricConversion;
 			break;
-#endif // defined(useSimulatedFIandVSS)
 
 #if defined(useButtonInput)
 		case pDisplayIdx:
-			t = pfChangeDisplay;
-			break;
 #if LCDcharHeight == 4
 		case pBottomDisplayIdx:
-			t = pfChangeDisplay;
-			break;
 		case pBottomCursorIdx:
-			t = pfChangeDisplay;
-			break;
 #endif // LCDcharHeight == 4
 #endif // defined(useButtonInput)
+#if defined(useLCDoutput)
+		case pBrightnessIdx:
+#if defined(useLCDcontrast)
+		case pContrastIdx:
+#endif // defined(useLCDcontrast)
+#if defined(useAdafruitRGBLCDdisplay)
+		case pLCDcolorIdx:
+#endif // defined(useAdafruitRGBLCDdisplay)
+#endif // defined(useLCDoutput)
+		case pAlternateFEidx:
+			t = ecsChangeDisplay;
+			break;
 
+#if defined(useSimulatedFIandVSS)
+		case pPeakHoldSimPeriodIdx:
+		case pPeakHoldSimActiveIdx:
+#endif // defined(useSimulatedFIandVSS)
+		case pTankSizeIdx:
+		case pTankBingoSizeIdx:
+		case pMicroSecondsPerGallonIdx:
+			t = ecsDoMPGuinoInitSoftware;
+			break;
+
+#if defined(useBarFuelEconVsSpeed)
+		case pPulseEdgePerDistanceIdx:
+			t = ecsDoMPGuinoInitHardware | ecsDoMPGuinoInitSoftware | ecsResetBarFEvsSpeed;
+			break;
+
+#endif // defined(useBarFuelEconVsSpeed)
+#if defined(useFuelPressure)
+#if defined(useChryslerMAPCorrection)
+		case pSysFuelPressureIdx:
+			t = ecsDoMPGuinoInitHardware
+#if defined(useCalculatedFuelFactor)
+				| ecsCalculateFuelParam
+#endif // defined(useCalculatedFuelFactor)
+				;
+			break;
+
+#else // defined(useChryslerMAPCorrection)
+		case pSysFuelPressureIdx:
+			t = ecsCalculateFuelParam;
+			break;
+
+#endif // defined(useChryslerMAPCorrection)
+#if defined(useCalculatedFuelFactor)
+		case pRefFuelPressureIdx:
+		case pInjectorCountIdx:
+		case pInjectorSizeIdx:
+			t = ecsCalculateFuelParam;
+			break;
+
+#endif // defined(useCalculatedFuelFactor)
+#endif // defined(useFuelPressure)
 		default:
 			break;
 
@@ -1201,6 +1053,7 @@ static uint8_t EEPROM::getLength(uint8_t eePtr)
 
 	if (eePtr >= eePtrEnd) return 0;
 
+	if (eePtr < pSettings1BitIdxStart) return 8;
 	if (eePtr < pSettings2BitIdxStart) return 1;
 	if (eePtr < pSettings3BitIdxStart) return 2;
 	if (eePtr < pSettings4BitIdxStart) return 3;
@@ -1211,18 +1064,8 @@ static uint8_t EEPROM::getLength(uint8_t eePtr)
 	if (eePtr < pSettings20BitIdxStart) return 18;
 	if (eePtr < pSettings24BitIdxStart) return 20;
 	if (eePtr < pSettings32BitIdxStart) return 24;
-	if (eePtr < pSettingsIdxEnd) return 32;
-
-#if defined(useButtonInput) && (LCDcharHeight == 4)
-	if (eePtr < pExpanded8BitIdxEnd) return 8;
-#endif // defined(useButtonInput) && (LCDcharHeight == 4)
-
-#if defined(useEEPROMtripStorage)
-	if (eePtr < pSavedTrips8BitIdxEnd) return 8;
-	if (eePtr < pSavedTrips24BitIdxEnd) return 24;
-	if (eePtr < pSavedTrips32BitIdxEnd) return 32;
-	if (eePtr < pSavedTrips64BitIdxEnd) return 64;
-#endif // defined(useEEPROMtripStorage)
+	if (eePtr < pSettings64BitIdxStart) return 32;
+	if (eePtr < pSettingsIdxEnd) return 64;
 
 	t = getAddress(eePtr);
 	u = getAddress(eePtr + 1);

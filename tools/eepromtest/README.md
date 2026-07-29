@@ -27,13 +27,12 @@ python run_tests.py COM3 38400
 ## Current Coverage
 
 - Parses `P` listing metadata: value, flags, bit length, EEPROM address, label.
-- Discovers monitor ranges:
-  - main settings
+- Reads the full `P` listing once, then derives host-side groups for:
   - saved trip EEPROM parameters
   - display page pseudo-parameters
   - display cursor pseudo-parameters
   - menu height pseudo-parameters
-- Groups parameters by exposed action flags:
+- Groups parameters by the exposed EEPROM change-status bitmask:
   - hardware init
   - software init
   - fuel calculation

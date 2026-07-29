@@ -121,19 +121,21 @@ static uint8_t accelTestStatus;
 static uint8_t lastAccelTestStatus;
 static uint8_t accelTestState;
 
-static const uint8_t atsNoStatusChange =			0;
-static const uint8_t atsReady =						atsNoStatusChange + 1;
-static const uint8_t atsActive =					atsReady + 1;
-static const uint8_t atsFinished =					atsActive + 1;
-static const uint8_t atsCancelled =					atsFinished + 1;
-static const uint8_t atsCheckPointDist =			atsCancelled + 1;
-static const uint8_t atsCheckPointHalf =			atsCheckPointDist + 1;
-static const uint8_t atsCheckPointDistHalf =		atsCheckPointHalf + 1;
-static const uint8_t atsCheckPointFull =			atsCheckPointDistHalf + 1;
-static const uint8_t atsCheckPointDistFull =		atsCheckPointFull + 1;
-static const uint8_t atsCheckPointHalfFull =		atsCheckPointDistFull + 1;
-static const uint8_t atsCheckPointDistHalfFull =	atsCheckPointHalfFull + 1;
-static const uint8_t atsInvalidState =				atsCheckPointDistHalfFull + 1;
+enum {
+	atsNoStatusChange,
+	atsReady,
+	atsActive,
+	atsFinished,
+	atsCancelled,
+	atsCheckPointDist,
+	atsCheckPointHalf,
+	atsCheckPointDistHalf,
+	atsCheckPointFull,
+	atsCheckPointDistFull,
+	atsCheckPointHalfFull,
+	atsCheckPointDistHalfFull,
+	atsInvalidState
+};
 
 static const char accelTestStateMsgs[] PROGMEM = {
 	tcEOS
@@ -169,9 +171,11 @@ static const char JSONaccelTestStateMsgs[] PROGMEM = {
 };
 
 #endif // defined(useJSONoutput)
-static const uint8_t attTriggerNormal =				0;
-static const uint8_t attVehicleStillMoving =		attTriggerNormal + 1;
-static const uint8_t attTriggerForced =				attVehicleStillMoving + 1;
+enum {
+	attTriggerNormal,
+	attVehicleStillMoving,
+	attTriggerForced
+};
 
 static const char accelTestTriggerMsgs[] PROGMEM = {
 	"DragTest Armed" tcEOS

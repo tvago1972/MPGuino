@@ -15,7 +15,6 @@ from s64constants import read_constants
 from eepromcases import build_cases
 from eepromlisting import (
     read_parameter,
-    read_parameters,
     read_all_parameter_ranges,
     set_parameter,
     parameter_groups,
@@ -36,22 +35,12 @@ def _require_labels(params_by_label):
             'EEPROM harness requires useDebugTerminalLabels; P listing has no parameter labels')
 
 
-def _refresh_parameters(term):
-    _, by_label, unparsed = read_parameters(term)
-    return by_label, unparsed
-
-
 def _merge_range_labels(range_params):
     merged = {}
     for _, params in sorted(range_params.items()):
         for param in params.values():
             merged[param.label] = param
     return merged
-
-
-def _refresh_all_parameters(term):
-    range_params, unparsed_by_range = read_all_parameter_ranges(term)
-    return _merge_range_labels(range_params), range_params, unparsed_by_range
 
 
 def _refresh_variables(term):
@@ -113,6 +102,14 @@ def _run_case(term, case, params_by_label):
     return EEPROMResult(case.name, not failures, failures)
 
 
+def _update_cached_parameter(term, params_by_label, parameter):
+    updated, _ = read_parameter(term, parameter.index)
+    if updated is not None:
+        params_by_label[updated.label] = updated
+        if updated.label != parameter.label:
+            params_by_label.pop(parameter.label, None)
+
+
 def print_discovery(term):
     ranges, unparsed = read_all_parameter_ranges(term)
     settings = list(ranges.get('settings', {}).values())
@@ -136,6 +133,7 @@ def print_discovery(term):
     for name in ('hardware_init', 'software_init', 'fuel_calc', 'display_change', 'metric_mode'):
         labels = [p.label for p in groups[name]]
         print('  {:16s} {:2d} {}'.format(name + ':', len(labels), ', '.join(labels)))
+    return ranges, unparsed
 
 
 def run_suite(port, baud, discover_only=False):
@@ -144,11 +142,11 @@ def run_suite(port, baud, discover_only=False):
 
     with S64Terminal(port, baud) as term:
         term.wait_for_prompt()
-        print_discovery(term)
+        range_params, unparsed_by_range = print_discovery(term)
         if discover_only:
             return passed, failed
 
-        params_by_label, range_params, unparsed_by_range = _refresh_all_parameters(term)
+        params_by_label = _merge_range_labels(range_params)
         _require_labels(params_by_label)
         constants_by_alias = _read_constants(term)
         for range_name, lines in sorted(unparsed_by_range.items()):
@@ -159,8 +157,10 @@ def run_suite(port, baud, discover_only=False):
         print()
         print('Running {} EEPROM case(s):'.format(len(cases)))
         for case in cases:
+            param = params_by_label.get(case.parameter)
             result = _run_case(term, case, params_by_label)
-            params_by_label, _, _ = _refresh_all_parameters(term)
+            if param is not None and ((not case.restore) or (not result.passed)):
+                _update_cached_parameter(term, params_by_label, param)
             if result.passed:
                 passed += 1
                 print('PASS  {}'.format(result.name))
