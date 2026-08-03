@@ -9,13 +9,6 @@ static const uint8_t prgmWriteBTparameterValue[] PROGMEM = {
 	instrDone											// return to caller
 };
 
-static const uint8_t prgmCheckInstantSpeed[] PROGMEM = {
-	instrLdRegTripVar, 0x02, instantIdx, rvVSSpulseIdx,	// load instant trip VSS pulse count
-	instrBranchIfZero, 3,								// if speed measurement is zero, exit to caller
-	instrLdRegByte, 0x02, 1,							// load a non-zero number
-	instrDone											// return to caller
-};
-
 static void bluetooth::init(void)
 {
 
@@ -369,13 +362,6 @@ static void bluetooth::mainProcess(void)
 #if defined(useDebugTerminal)
 						if (m08(m8PeekFlags) & peekBluetoothOutput) text::charOut(m8DevDebugTerminalIdx, btChar);
 #endif // defined(useDebugTerminal)
-
-						if ((btF->u08[1] == instantIdx) && (btF->u08[0] == tFuelEcon)) // check if swap with fuel consumption rate is needed
-						{
-
-							if (SWEET64::runPrgm(S64_PRGM_PTR(prgmCheckInstantSpeed), 0) == 0) btF->u08[0] = tFuelRate;
-
-						}
 
 						btChar = ((btF->u08[0] < dfMaxValDisplayCount) ? 7 : 10);
 

@@ -135,6 +135,14 @@ enum {
 #endif // defined(useEEPROMtripStorage)
 };
 
+// Pseudo trip index flag: force pure fuel economy instead of idle fuel-rate substitution.
+
+static const uint8_t tripIdxForceFuelEcon = 0x80;
+static const uint8_t tripIdxMask = 0x7F;
+static const uint8_t instantFuelEconIdx = (instantIdx | tripIdxForceFuelEcon);
+
+typedef char tripIdxForceFuelEconCheck[(tripSlotTotalCount <= tripIdxForceFuelEcon) ? 1 : -1];
+
 static const char tripFormatLabelText[(uint16_t)(tripSlotTotalCount)] PROGMEM = {
 	'0',
 	'1',

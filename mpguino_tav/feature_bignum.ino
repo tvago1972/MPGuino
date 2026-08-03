@@ -425,7 +425,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 #if defined(useBigFE)
 				case bigFEdisplayIdx:
-					outputFuelEconomy(tripIdx, cursorPos);
+					outputFuelEconomy((tripIdx == instantIdx) ? instantFuelEconIdx : tripIdx, cursorPos);
 					break;
 
 #endif // defined(useBigFE)
@@ -459,40 +459,13 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 static void bigDigit::outputFuelEconomy(uint8_t tripIdx, uint8_t cursorPos)
 {
 
-	uint8_t calcFmtIdx;
-	uint8_t i;
 	uint8_t windowLength;
 
 	windowLength = (LCDcharWidth / 4);
 
-	mainCalcFuncVar.isValid = 0;
+	translateCalcIdx(tripIdx, tFuelEcon, windowLength - 1, dfIgnoreDecimalPoint); // perform the required decimal formatting
 
-	if (tripIdx < tripSlotTotalCount) mainCalcFuncVar.isValid ^= (isValidTripIdx);
-
-	mainCalcFuncVar.isValid ^= (isValidCalcIdx);
-	mainCalcFuncVar.tripIdx = tripIdx;
-	mainCalcFuncVar.calcIdx = tFuelEcon;
-	mainCalcFuncVar.suppressTripLabel = 0;
-
-	calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(tFuelEcon)]);
-
-	if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (m08(m8MetricModeFlags) & mmDisplayMetric)) calcFmtIdx++;
-	if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (m08(m8MetricModeFlags) & mmDisplayAlternateFE)) calcFmtIdx += 2;
-
-	mainCalcFuncVar.calcFmtIdx = calcFmtIdx;
-
-	i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
-	mainCalcFuncVar.decimalPlaces = (i & 0x0F);
-
-	mainCalcFuncVar.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
-	mainCalcFuncVar.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
-
-	if (mainCalcFuncVar.isValid & isValidCalcObj) mainCalcFuncVar.isValid ^= (isValidFlag);
-	if (mainCalcFuncVar.isValid) mainCalcFuncVar.value = SWEET64::runPrgm(S64_PRGM_PTR(prgmFuelEcon), tripIdx);
-
-	ull2str(nBuff, mainCalcFuncVar.decimalPlaces, windowLength - 1, dfIgnoreDecimalPoint);
-
-	outputNumberString(0, nBuff, cursorPos, findStr(bigFElabels, calcFmtIdx - calcFormatFuelEconomyIdx)); // output the number
+	outputNumberString(0, nBuff, cursorPos, findStr(bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx)); // output the number
 
 }
 

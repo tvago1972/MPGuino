@@ -340,7 +340,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	}
 
 #if defined(useSimulatedFIandVSS)
-	if (v08(v8SignalSimModeIdx) & debugFIreadyFlags)
+	if ((v08(v8SignalSimModeIdx) & debugFIreadyFlags) && (v08(v8SignalSimFIPidx) != debugSignalSimFixedIdx))
 	{
 
 		if (v08(v8SignalSimModeIdx) & debugInjectorFlag) // if injector simulator is enabled
@@ -393,7 +393,7 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 
 	}
 
-	if (v08(v8SignalSimModeIdx) & debugVSreadyFlags)
+	if ((v08(v8SignalSimModeIdx) & debugVSreadyFlags) && (v08(v8SignalSimVSSidx) != debugSignalSimFixedIdx))
 	{
 
 		if (v08(v8SignalSimModeIdx) & debugVSSflag) // if VSS simulator is enabled
@@ -855,10 +855,23 @@ ISR( TIMER0_OVF_vect ) // system timer interrupt handler
 	{
 
 		v08(v8Timer0CommandIdx) &= ~(t0cResetInputActivityTimer); // acknowledge request
-		v08(v8AwakeIdx) |= (aAwakeOnInput); // set awake status on input received
-		v08(v8ActivityIdx) &= ~(afUserInputFlag | afActivityTimeoutFlag);
+#if defined(useVehicleOnlyWake)
+		if ((v08(v8ActivityIdx) & afActivityTimeoutFlag) && ((v08(v8AwakeIdx) & (aAwakeOnInjector | aAwakeOnVSS)) == 0))
+		{
 
-		inputTimeoutCount = v16(v16InputTimeoutIdx);
+			v08(v8ActivityIdx) |= (afUserInputFlag);
+
+		}
+		else
+#endif // defined(useVehicleOnlyWake)
+		{
+
+			v08(v8AwakeIdx) |= (aAwakeOnInput); // set awake status on input received
+			v08(v8ActivityIdx) &= ~(afUserInputFlag | afActivityTimeoutFlag);
+
+			inputTimeoutCount = v16(v16InputTimeoutIdx);
+
+		}
 
 	}
 
