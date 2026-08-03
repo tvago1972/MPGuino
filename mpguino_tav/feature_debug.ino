@@ -273,6 +273,8 @@ static void signalSim::configurePorts(uint8_t newMode)
 	cli(); // disable interrupts to make the next operations atomic
 
 	v08(v8SignalSimModeIdx) &= ~(debugEnableFlags); // disable signal sim normal operation for VSS and fuel injector signals
+	v08(v8SignalSimVSSidx) = 0; // clear any monitor-only fixed simulator setting
+	v08(v8SignalSimFIPidx) = 0; // clear any monitor-only fixed simulator setting
 
 	// configure VSS pin for either normal operation input or debug output
 	if (newMode & debugVSSflag)
@@ -280,13 +282,27 @@ static void signalSim::configurePorts(uint8_t newMode)
 
 #if defined(__AVR_ATmega32U4__)
 		DDRB |= _BV(DDB7); // configure VSS sense pin as output
+		PCMSK0 |= (1 << PCINT7); // enable port B VSS pin interrupt
+		PCIFR |= (1 << PCIF0); // clear port B pin-change interrupt flag
+		PCICR |= (1 << PCIE0); // enable selected interrupts on port B
+		lastPINxState = PINB;
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 		DDRK |= _BV(DDK0); // configure VSS sense pin as output
+		DIDR2 &= ~(1 << ADC8D); // enable digital input on VSS pin
+		PCMSK2 |= (1 << PCINT16); // enable port K VSS pin interrupt
+		PCIFR |= (1 << PCIF2); // clear port K pin-change interrupt flag
+		PCICR |= (1 << PCIE2); // enable selected interrupts on port K
+		lastPINxState = PINK;
 		DDRA |= _BV(DDA2); // configure VSS sense pin repeater as output
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 		DDRC |= _BV(DDC0); // configure VSS sense pin as output
+		DIDR0 &= ~(1 << ADC0D); // enable digital input on VSS pin
+		PCMSK1 |= (1 << PCINT8); // enable port C VSS pin interrupt
+		PCIFR |= (1 << PCIF1); // clear port C pin-change interrupt flag
+		PCICR |= (1 << PCIE1); // enable selected interrupts on port C
+		lastPINxState = PINC;
 #endif // defined(__AVR_ATmega328P__)
 
 		v08(v8SignalSimModeIdx) |= (debugVSSready); // tell timer0 to reset the VSS signal simulator
@@ -297,15 +313,29 @@ static void signalSim::configurePorts(uint8_t newMode)
 
 #if defined(__AVR_ATmega32U4__)
 		DDRB &= ~_BV(DDB7); // configure VSS sense pin as input
+		PCMSK0 |= (1 << PCINT7); // enable port B VSS pin interrupt
+		PCIFR |= (1 << PCIF0); // clear port B pin-change interrupt flag
+		PCICR |= (1 << PCIE0); // enable selected interrupts on port B
+		lastPINxState = PINB;
 #endif // defined(__AVR_ATmega32U4__)
 #if defined(__AVR_ATmega2560__)
 		DDRK &= ~_BV(DDK0); // configure VSS sense pin as input
+		DIDR2 &= ~(1 << ADC8D); // enable digital input on VSS pin
+		PCMSK2 |= (1 << PCINT16); // enable port K VSS pin interrupt
+		PCIFR |= (1 << PCIF2); // clear port K pin-change interrupt flag
+		PCICR |= (1 << PCIE2); // enable selected interrupts on port K
+		lastPINxState = PINK;
 #if !defined(useArduinoMega2560)
 		DDRA &= ~_BV(DDA2); // configure VSS sense pin repeater as input
 #endif // !defined(useArduinoMega2560)
 #endif // defined(__AVR_ATmega2560__)
 #if defined(__AVR_ATmega328P__)
 		DDRC &= ~_BV(DDC0); // configure VSS sense pin as input
+		DIDR0 &= ~(1 << ADC0D); // enable digital input on VSS pin
+		PCMSK1 |= (1 << PCINT8); // enable port C VSS pin interrupt
+		PCIFR |= (1 << PCIF1); // clear port C pin-change interrupt flag
+		PCICR |= (1 << PCIE1); // enable selected interrupts on port C
+		lastPINxState = PINC;
 #endif // defined(__AVR_ATmega328P__)
 
 		v08(v8SignalSimModeIdx) &= ~(debugVSSready); // tell timer0 to turn off VSS signal simulator
@@ -368,6 +398,122 @@ static void signalSim::configurePorts(uint8_t newMode)
 
 	}
 	else v08(v8Timer1CommandIdx) &= ~(t1cEnableDebug);
+
+	SREG = oldSREG; // restore state of interrupt flag
+
+}
+
+static const uint8_t prgmConfigureFixedSignalSimVSS[] PROGMEM = {
+	instrLdReg, 0x12,									// load speed value into working register
+	instrMul2byEEPROM, pPulseEdgePerDistanceIdx,		// multiply by VSS pulse edges per unit distance
+	instrLdReg, 0x21,									// move denominator into register 1
+	instrLdRegConst, 0x02, idxTicks1PerSecond,			// load timer1 ticks per second
+	instrMul2byConst, idxSecondsPerHour,				// convert numerator to timer1 ticks per hour
+	instrDiv2by1,										// divide by speed * pulse edge per unit distance
+	instrAdjustQuotient,								// round to nearest tick
+	instrStRegVariable, 0x02, v16SignalSimVSStickIdx,	// store fixed VSS period
+	instrDone
+};
+
+static const uint8_t prgmConfigureFixedSignalSimFIperiod[] PROGMEM = {
+	instrLdReg, 0x12,									// load engine speed, in hundreds of RPM
+	instrMul2byByte, 100,								// convert to RPM
+	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by injector events per 2 crank revolutions
+	instrLdReg, 0x21,									// move denominator into register 1
+	instrLdRegConst, 0x02, idxTicks1PerSecond,			// load timer1 ticks per second
+	instrMul2byByte, 120,								// account for 60 seconds/minute and 2 crank revolutions
+	instrDiv2by1,										// divide by RPM * injector events per 2 crank revolutions
+	instrAdjustQuotient,								// round to nearest tick
+	instrStRegVariable, 0x02, v16SignalSimFIPtickIdx,	// store fixed injector period
+	instrDone
+};
+
+static const uint8_t prgmConfigureFixedSignalSimFIwidth[] PROGMEM = {
+	instrLdReg, 0x12,									// load engine speed, in hundreds of RPM
+	instrMul2byByte, 100,								// convert to RPM
+	instrMul2byEEPROM, pInjPer2CrankRevIdx,				// multiply by injector events per 2 crank revolutions
+	instrMul2byByte, 3,									// build the denominator for tenths of unit volume per hour
+	instrMul2byByte, 100,
+	instrMul2byConst, idxCycles1PerTick,					// convert timer0-cycle fuel volume into timer1 ticks
+	instrLdReg, 0x21,									// move denominator into register 1
+	instrLdReg, 0x32,									// load fuel flow, in tenths of unit volume per hour
+	instrMul2byVariable, m32CyclesPerVolumeIdx,			// convert fuel flow to timer0 cycles per hour
+	instrMul2byByte, 64,								// account for timer0 prescale
+	instrDiv2by1,										// convert to timer1 ticks per injector event
+	instrAdjustQuotient,								// round to nearest tick
+	instrLdReg, 0x23,									// save unclamped injector pulse width
+	instrLdRegVariable, 0x02, v16SignalSimFIPtickIdx,	// load injector period
+	instrMul2byByte, 85,								// calculate 85% maximum duty cycle
+	instrDiv2byByte, 100,
+	instrLdReg, 0x21,									// move maximum pulse width into register 1
+	instrLdReg, 0x32,									// reload unclamped injector pulse width
+	instrCmpXtoY, 0x21,									// compare pulse width to 85% duty cycle
+	instrBranchIfLTorE, 2,								// if pulse width is not greater than maximum, skip clamp
+	instrLdReg, 0x12,									// clamp pulse width to 85% duty cycle
+	instrStRegVariable, 0x02, v16SignalSimFIPWtickIdx,	// store fixed injector pulse width
+	instrDone
+};
+
+static void signalSim::configureFixed(uint8_t speed, uint8_t rpmHundreds, uint8_t flowTenths)
+{
+
+	uint8_t oldSREG;
+	uint8_t newMode;
+
+	newMode = debugFIsaturatedFlag;
+	if (speed) newMode |= debugVSSflag;
+	if (rpmHundreds) newMode |= debugInjectorFlag;
+
+	configurePorts(newMode);
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	v08(v8SignalSimVSSidx) = debugSignalSimFixedIdx;
+	v08(v8SignalSimFIPidx) = debugSignalSimFixedIdx;
+	v08(v8SignalSimVSSstate) = 0;
+	v08(v8SignalSimFIPstate) = 0;
+	v16(v16SignalSimVSStickIdx) = 0;
+	v16(v16SignalSimVSScountIdx) = 0;
+	v16(v16SignalSimVSScycleCountIdx) = 0;
+	v16(v16SignalSimFIPtickIdx) = 0;
+	v16(v16SignalSimFIPcountIdx) = 0;
+	v16(v16SignalSimFIPWtickIdx) = 0;
+	v16(v16SignalSimFIPWcountIdx) = 0;
+
+	SREG = oldSREG; // restore state of interrupt flag
+
+	if (speed)
+	{
+
+		SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_1)]), speed);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmConfigureFixedSignalSimVSS), 0);
+
+	}
+
+	if (rpmHundreds)
+	{
+
+		SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_1)]), rpmHundreds);
+		SWEET64::runPrgm(S64_PRGM_PTR(prgmConfigureFixedSignalSimFIperiod), 0);
+
+		if (flowTenths)
+		{
+
+			SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_1)]), rpmHundreds);
+			SWEET64::init64byt((union union_64 *)(&s64reg[(uint16_t)(s64reg64_3)]), flowTenths);
+			SWEET64::runPrgm(S64_PRGM_PTR(prgmConfigureFixedSignalSimFIwidth), 0);
+
+		}
+
+	}
+
+	oldSREG = SREG; // save interrupt flag status
+	cli(); // disable interrupts to make the next operations atomic
+
+	v08(v8SignalSimModeIdx) |= (newMode & debugEnableFlags);
+	if (newMode & debugVSSflag) v08(v8SignalSimModeIdx) |= debugVSSready;
+	if (newMode & debugInjectorFlag) v08(v8SignalSimModeIdx) |= debugFIPready;
 
 	SREG = oldSREG; // restore state of interrupt flag
 
@@ -842,7 +988,7 @@ static void terminal::outputSystemStatusBytes(void)
 static void terminal::outputSignalSimSetting(uint8_t lineNumber)
 {
 
-	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == terminalLine) text::charOut(m8DevDebugTerminalIdx, '*');
+	if ((debugEnableFlags & v08(v8SignalSimModeIdx)) == lineNumber) text::charOut(m8DevDebugTerminalIdx, '*');
 	else text::charOut(m8DevDebugTerminalIdx, ' ');
 
 }
@@ -2150,6 +2296,10 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
                  long (L, C, R, U, D)
            S - lists available signal simulator modes
           yS - sets signal simulator mode to y
+      z<y.xS - set fixed signal simulator scenario
+                z - speed in MPH or km/h
+                y - engine speed, in hundreds of RPM
+                x - fuel flow, in tenths of gallons/hour or liters/hour
            Y - sends the rest of the input string to BLEfriend shield
           ^S - displays supplemental system information
            ? - displays this help
@@ -3120,7 +3270,35 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useSimulatedFIandVSS)
 								case 'S':   // list available signal simulator mode values, with optional mode setting
-									if (terminalMode & tmByteReadIn)
+									if (terminalMode & (tmTargetReadIn | tmSourceReadIn))
+									{
+
+										if ((terminalMode & (tmTargetReadIn | tmSourceReadIn | tmByteReadIn)) != (tmTargetReadIn | tmSourceReadIn | tmByteReadIn)) errIdx = tseIdxSyntax;
+										else
+										{
+
+											signalSim::configureFixed(terminalTarget, terminalSource, terminalByte);
+											text::stringOut(m8DevDebugTerminalIdx, PSTR("fixed signal simulation "));
+											text::hexByteOut(m8DevDebugTerminalIdx, terminalTarget);
+											text::charOut(m8DevDebugTerminalIdx, '<');
+											text::hexByteOut(m8DevDebugTerminalIdx, terminalSource);
+											text::charOut(m8DevDebugTerminalIdx, '.');
+											text::hexByteOut(m8DevDebugTerminalIdx, terminalByte);
+											text::stringOut(m8DevDebugTerminalIdx, PSTR(" mode="));
+											text::hexByteOut(m8DevDebugTerminalIdx, v08(v8SignalSimModeIdx));
+											text::stringOut(m8DevDebugTerminalIdx, PSTR(" VSS="));
+											text::hexWordOut(m8DevDebugTerminalIdx, v16(v16SignalSimVSStickIdx));
+											text::stringOut(m8DevDebugTerminalIdx, PSTR(" FI="));
+											text::hexWordOut(m8DevDebugTerminalIdx, v16(v16SignalSimFIPtickIdx));
+											text::charOut(m8DevDebugTerminalIdx, '/');
+											text::hexWordOut(m8DevDebugTerminalIdx, v16(v16SignalSimFIPWtickIdx));
+											text::newLine(m8DevDebugTerminalIdx);
+											terminalState = tsInitProcessing;
+
+										}
+
+									}
+									else if (terminalMode & tmByteReadIn)
 									{
 
 										signalSim::configurePorts(terminalByte & debugEnableFlags);
@@ -3137,7 +3315,7 @@ x^E:y           - store one or more y values, starting at SWEET64 register x
 									{
 
 										primaryFunc = terminal::outputSignalSimSetting;
-										maxLine = 8;
+										maxLine = terminalSignalSimModeCount;
 #if defined(useDebugTerminalLabels)
 										labelList = terminalSignalSimHelp;
 #endif // defined(useDebugTerminalLabels)

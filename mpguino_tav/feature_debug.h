@@ -49,6 +49,7 @@ namespace signalSim /* VSS / fuel injector on-board simulator support section pr
 	static uint16_t getSignalSimPageFormats(uint8_t formatIdx);
 #endif // defined(useButtonInput)
 	static void configurePorts(uint8_t newMode);
+	static void configureFixed(uint8_t speed, uint8_t rpmHundreds, uint8_t flowTenths);
 
 }
 
@@ -67,6 +68,8 @@ static const uint8_t debugPeakHoldFlags =		(debugFIPpeak | debugFIPhold);
 static const uint8_t debugOutputFlags =			(debugVSSflag | debugInjectorFlag);
 static const uint8_t debugVSreadyFlags =		(debugVSSready | debugVSSflag);
 static const uint8_t debugFIreadyFlags =		(debugFIPready | debugInjectorFlag);
+static const uint8_t debugSignalSimFixedIdx = 0xFF;
+static const uint8_t terminalSignalSimModeCount = 8;
 
 #if defined(useButtonInput)
 static const uint16_t signalSimPageFormats[4] PROGMEM = {
@@ -553,6 +556,10 @@ static const char terminalHelp[] PROGMEM = {
 #if defined(useSimulatedFIandVSS)
 	tcSP11 "S - lists available signal simulator modes" tcEOSCR
 	tcSP10 "yS - sets signal simulator mode to y" tcEOSCR
+	tcSP6 "z<y.xS - set fixed signal simulator scenario" tcEOSCR
+	tcSP16 "z speed in MPH or km/h" tcEOSCR
+	tcSP16 "y engine speed in hundreds of RPM" tcEOSCR
+	tcSP16 "x fuel flow in tenths of gal/hr or L/hr" tcEOSCR
 #endif // defined(useSimulatedFIandVSS)
 #if defined(useBluetoothAdaFruitSPI)
 	tcSP11 "Y - sends the rest of the input string to BLEfriend shield" tcEOSCR

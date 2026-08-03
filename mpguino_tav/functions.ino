@@ -19,8 +19,12 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 
 	uint8_t calcFmtIdx;
 	uint8_t i;
+	uint8_t forceFuelEcon;
 
 	mainCalcFuncVar.isValid = 0;
+
+	forceFuelEcon = (tripIdx & tripIdxForceFuelEcon);
+	tripIdx &= tripIdxMask;
 
 	if (tripIdx < tripSlotTotalCount) mainCalcFuncVar.isValid ^= (isValidTripIdx);
 
@@ -29,10 +33,15 @@ static void translateCalcIdx(uint8_t tripIdx, uint8_t calcIdx, uint8_t windowLen
 
 		mainCalcFuncVar.isValid ^= (isValidCalcIdx);
 
-		if (v08(v8ActivityIdx) & afVehicleIdleFlag) // do fuel consumption rate swap with fuel economy here
+		if (forceFuelEcon == 0)
 		{
 
-			if ((tripIdx == instantIdx) && (calcIdx == tFuelEcon)) calcIdx = tFuelRate;
+			if (v08(v8ActivityIdx) & afVehicleIdleFlag) // do fuel consumption rate swap with fuel economy here
+			{
+
+				if ((tripIdx == instantIdx) && (calcIdx == tFuelEcon)) calcIdx = tFuelRate;
+
+			}
 
 		}
 

@@ -1159,7 +1159,7 @@ On Mega2560, the same monitor block also enables `useDebugCPUreading`. On ATmega
 
 ### C.4 What the Monitor Block Disables
 
-To fit within the 328P flash budget, the monitor block disables all display hardware, button input, clocks, drag race, bar graphs, signal simulation, and other peripherals that are irrelevant to a headless debug session. Key items disabled include `useSimulatedFIandVSS`, `useSoftwareClock`, `useDS1307clock`, `useOutputPins`, `useDragRaceFunction`, all LCD/display options, all button options, Bluetooth/JSON/logging outputs, and board-specific display defines.
+To fit within the 328P flash budget, the Uno-class monitor block disables all display hardware, button input, clocks, drag race, bar graphs, signal simulation, and other peripherals that are irrelevant to a headless debug session. Key items disabled on 328P include `useSimulatedFIandVSS`, `useSoftwareClock`, `useDS1307clock`, `useOutputPins`, `useDragRaceFunction`, all LCD/display options, all button options, Bluetooth/JSON/logging outputs, and board-specific display defines. The ATmega2560 dev monitor keeps enough flash headroom to allow `useSimulatedFIandVSS` when it is explicitly selected.
 
 ### C.5 Flash Budget and Feature Tradeoffs
 
@@ -1175,7 +1175,7 @@ The help text in `terminalHelp` uses run-length encoding for space characters (`
 
 The status and trace code is also arranged so the headless monitor can inspect core runtime state without pulling in the LCD/button-facing screens. `^S` remains available for decoded activity/status bytes and SWEET64 error state; uptime appears only when CPU/debug CPU timing support is included.
 
-`useSimulatedFIandVSS` does not fit alongside the full debug terminal on 328P. Use a second Arduino Uno as an external signal generator instead — see [Appendix D](#appendix-d-second-arduino-uno-as-external-signal-generator).
+`useSimulatedFIandVSS` does not fit alongside the full debug terminal on 328P. On ATmega2560, the dev monitor can retain the built-in simulator when `useSimulatedFIandVSS` is selected. For Uno-class monitor builds, use a second Arduino Uno as an external signal generator instead - see [Appendix D](#appendix-d-second-arduino-uno-as-external-signal-generator).
 
 ### C.6 Serial Connection
 
