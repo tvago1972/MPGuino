@@ -1,0 +1,14 @@
+# Enforce consistent line endings so tools (editors, sed, AI assistants) can't
+# flip them and create whole-file line-ending churn in diffs.
+#
+# "text eol=crlf" stores the blob normalized (LF) in the repo but checks the file
+# out as CRLF in the working tree. Because git compares the normalized form,
+# a tool that writes LF (or CRLF) produces no diff at all - the flip-flop stops.
+
+# Arduino source + project docs: CRLF working tree (project convention)
+*.ino   text eol=crlf
+*.h     text eol=crlf
+*.md    text eol=crlf
+
+# Python tooling (test harnesses): LF
+*.py    text eol=lf

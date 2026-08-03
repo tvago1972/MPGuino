@@ -94,8 +94,10 @@ static const uint8_t btoDelayFlags =			(btoDelayInitFlags | btoFlagDelay);
 
 static uint8_t btOutputListIdx;
 
-static const uint8_t btolTripFunctionIdx =		0;
-static const uint8_t btolParameterIdx =			btolTripFunctionIdx + 1;
+enum {
+	btolTripFunctionIdx,
+	btolParameterIdx
+};
 
 static char btInpBuff[20];
 static uint8_t btInpBuffIdx;

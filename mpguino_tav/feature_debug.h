@@ -318,59 +318,53 @@ namespace terminal /* debug terminal section prototype */
 
 }
 
-#define nextAllowedValue 0
-static const uint8_t tsError =					nextAllowedValue;
-static const uint8_t tsBell =					tsError + 1;
-static const uint8_t tsInitInput =				tsBell + 1;
-static const uint8_t tsUserInput =				tsInitInput + 1;
-static const uint8_t tsInitTerminalCmd =		tsUserInput + 1;
-static const uint8_t tsInitProcessing =			tsInitTerminalCmd + 1;
-static const uint8_t tsProcessCommand =			tsInitProcessing + 1;
-static const uint8_t tsInitListDecimal =		tsProcessCommand + 1;
-static const uint8_t tsInitListReadOnly =		tsInitListDecimal + 1;
-static const uint8_t tsInitList =				tsInitListReadOnly + 1;
-static const uint8_t tsProcessList =			tsInitList + 1;
-#define nextAllowedValue tsProcessList + 1;
+enum {
+	tsError,
+	tsBell,
+	tsInitInput,
+	tsUserInput,
+	tsInitTerminalCmd,
+	tsInitProcessing,
+	tsProcessCommand,
+	tsInitListDecimal,
+	tsInitListReadOnly,
+	tsInitList,
+	tsProcessList,
 #if defined(useDebugTerminalHelp)
-static const uint8_t tsOutputHelpLine =			nextAllowedValue;
-#define nextAllowedValue tsOutputHelpLine + 1;
+	tsOutputHelpLine,
 #endif // defined(useDebugTerminalHelp)
 #if defined(useDebugButtonInjection)
-static const uint8_t tsInjectButtonPress =		nextAllowedValue;
-static const uint8_t tsInjectButtonsUp =		tsInjectButtonPress + 1;
-#define nextAllowedValue tsInjectButtonsUp + 1;
+	tsInjectButtonPress,
+	tsInjectButtonsUp,
 #endif // defined(useDebugButtonInjection)
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t tsOutputSWEET64line =		nextAllowedValue;
-static const uint8_t tsTraceSWEET64line =		tsOutputSWEET64line + 1;
-#define nextAllowedValue tsTraceSWEET64line + 1;
+	tsOutputSWEET64line,
+	tsTraceSWEET64line,
 #if defined(useSWEET64RAMprograms)
-static const uint8_t tsOutputSWEET64RAMline =	nextAllowedValue;
-static const uint8_t tsInitSWEET64assembler =	tsOutputSWEET64RAMline + 1;
-static const uint8_t tsSWEET64assemblerInput =	tsInitSWEET64assembler + 1;
-static const uint8_t tsOutputSWEET64RAMsourceLine = tsSWEET64assemblerInput + 1;
-#define nextAllowedValue tsOutputSWEET64RAMsourceLine + 1;
+	tsOutputSWEET64RAMline,
+	tsInitSWEET64assembler,
+	tsSWEET64assemblerInput,
+	tsOutputSWEET64RAMsourceLine,
 #endif // defined(useSWEET64RAMprograms)
 #endif // defined(useDebugTerminalSWEET64)
 #if defined(useBluetoothAdaFruitSPI)
-static const uint8_t tsOutputBLEfriend =		nextAllowedValue;
-#define nextAllowedValue tsOutputBLEfriend + 1;
+	tsOutputBLEfriend,
 #endif // defined(useBluetoothAdaFruitSPI)
+};
 
-#define nextAllowedValue 0
-static const uint8_t tseIdxLineCancel =			nextAllowedValue;
-static const uint8_t tseIdxSyntax =				tseIdxLineCancel + 1;
-static const uint8_t tseIdxState =				tseIdxSyntax + 1;
-static const uint8_t tseIdxSourceVal =			tseIdxState + 1;
-static const uint8_t tseIdxTargetVal =			tseIdxSourceVal + 1;
-static const uint8_t tseIdxAddressVal =			tseIdxTargetVal + 1;
-static const uint8_t tseIdxBadIndex =			tseIdxAddressVal + 1;
-static const uint8_t tseIdxNoAddress =			tseIdxBadIndex + 1;
-#define nextAllowedValue tseIdxNoAddress + 1
+enum {
+	tseIdxLineCancel,
+	tseIdxSyntax,
+	tseIdxState,
+	tseIdxSourceVal,
+	tseIdxTargetVal,
+	tseIdxAddressVal,
+	tseIdxBadIndex,
+	tseIdxNoAddress,
 #if defined(useDebugTerminalSWEET64)
-static const uint8_t tseIdxBadSWEET64addr =		nextAllowedValue;
-#define nextAllowedValue tseIdxBadSWEET64addr + 1;
+	tseIdxBadSWEET64addr,
 #endif // defined(useDebugTerminalSWEET64)
+};
 
 static uint8_t errIdx;
 
@@ -418,25 +412,22 @@ typedef struct
 
 } dS64label_t;
 
-#define nextAllowedValue 1
-static const uint8_t dslIdxConst =				nextAllowedValue;
-static const uint8_t dslIdxConstSWEET64 =		dslIdxConst + 1;
-static const uint8_t dslIdxEEPROM =				dslIdxConstSWEET64 + 1;
-static const uint8_t dslIdxExpandedEEPROM =		dslIdxEEPROM + 1;
-static const uint8_t dslIdxProgramVariable =	dslIdxExpandedEEPROM + 1;
-static const uint8_t dslIdxTripVariable =		dslIdxProgramVariable + 1;
-static const uint8_t dslIdxTripMeasurement =	dslIdxTripVariable + 1;
-static const uint8_t dslIdxFunction =			dslIdxTripMeasurement + 1;
-static const uint8_t dslIdxBCDformat =			dslIdxFunction + 1;
-#define nextAllowedValue dslIdxBCDformat + 1
-
-static const uint8_t dslIdxEnd =				nextAllowedValue;
+enum {
+	dslIdxConst = 1,
+	dslIdxConstSWEET64,
+	dslIdxEEPROM,
+	dslIdxProgramVariable,
+	dslIdxTripVariable,
+	dslIdxTripMeasurement,
+	dslIdxFunction,
+	dslIdxBCDformat,
+	dslIdxEnd
+};
 
 static const dS64label_t debugSWEET64labelList[] PROGMEM = {
 	{0,		terminalParameterNames, 			pSettingsIdxLen},
-	{0,		terminalConstIdxNames,				idxConstantLength},
+	{0,		terminalConstIdxNames,				idxConstantEnd},
 	{1,		terminalParameterNames, 			pSettingsIdxLen},
-	{1,		terminalExpandedParameterNames, 	pExpandedSettingsIdxLen},
 	{2,		terminalVariableLabels, 			programVariableMaxIdx},
 	{3,		terminalTripVarNames, 				tripSlotTotalCount},
 	{4,		terminalTripVarLabels, 				rvMeasuredCount},
@@ -595,7 +586,7 @@ static char s64programRAMassemblerToken[24];
 
 static const char prgmLoadByteValue[] PROGMEM = {
 	instrLdRegByteFromIndex, 0x02,						// load byte value
-	instrMul2byRdOnly, idxDecimalPoint,					// multiply by decimal formatting term
+	instrMul2byConst, idxDecimalPoint,					// multiply by decimal formatting term
 	instrDone											// exit to caller
 };
 

@@ -524,7 +524,7 @@ static void serial3::init(void)
 
 #if defined(useSerial3PortInput)
 	text::initDev(m8DevSerial3idx, (odvFlagCRLF | odvFlagEnableOutput), chrOut, chrIn);
-#else defined(useSerial3PortInput)
+#else // defined(useSerial3PortInput)
 	text::initDev(m8DevSerial3idx, (odvFlagCRLF | odvFlagEnableOutput), chrOut);
 #endif // defined(useSerial3PortInput)
 

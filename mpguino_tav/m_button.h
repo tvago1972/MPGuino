@@ -94,17 +94,20 @@ static const uint8_t dfUsesCGRAMfont =		0b00010000;		// tells whether display CG
 static const uint8_t dfCGRAMfontMask =		0b00001111;		// if stored CGRAM font, tells font number
 
 static uint8_t callingDisplayIdx;
-static const uint8_t displayInitialEntryIdx =	0;								// typically, this call will fall through
-static const uint8_t displayCursorUpdateIdx =	displayInitialEntryIdx + 1;		// ...to this call, which will then will fall through
-static const uint8_t displayOutputIdx =			displayCursorUpdateIdx + 1;		// ...to this call
 
-static const uint8_t menuInitialEntryIdx =		displayOutputIdx + 1;			// if the associated menu cursor is reset upon entry
-static const uint8_t menuFirstLineOutIdx =		menuInitialEntryIdx + 1;		// displays first line for menu
-static const uint8_t menuSecondLineInitIdx =	menuFirstLineOutIdx + 1;		// if the associated menu entry has additional info, initializes info
-static const uint8_t menuSecondLineFlagIdx =	menuSecondLineInitIdx + 1;		// if the associated menu entry has additional info, returns a 1
-static const uint8_t menuSecondLineOutIdx =		menuSecondLineFlagIdx + 1;		// if the associated menu entry has additional info, displays info line
-static const uint8_t menuDoSelectionIdx =		menuSecondLineOutIdx + 1;		// performs optional defined associated action, and returns next display index
-static const uint8_t menuExitIdx =				menuDoSelectionIdx + 1;			// performs optional defined exit action, and returns next display index
+enum {
+	displayInitialEntryIdx,		// typically, this call will fall through
+	displayCursorUpdateIdx,		// ...to this call, which will then will fall through
+	displayOutputIdx,			// ...to this call
+
+	menuInitialEntryIdx,		// if the associated menu cursor is reset upon entry
+	menuFirstLineOutIdx,		// displays first line for menu
+	menuSecondLineInitIdx,		// if the associated menu entry has additional info, initializes info
+	menuSecondLineFlagIdx,		// if the associated menu entry has additional info, returns a 1
+	menuSecondLineOutIdx,		// if the associated menu entry has additional info, displays info line
+	menuDoSelectionIdx,			// performs optional defined associated action, and returns next display index
+	menuExitIdx					// performs optional defined exit action, and returns next display index
+};
 
 #if defined(useSpiffyTripLabels)
 static const uint8_t dfMainDisplay =			dfSplitScreen | dfUsesCGRAM;

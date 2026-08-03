@@ -79,12 +79,12 @@ static const uint8_t prgmAutoRangeNumber[] PROGMEM = {
 	instrBranchIfLT, 9,									// if valid, skip ahead
 	instrLxdI, 8,										// assume window length of 8 digits
 	instrSkip, 5,										// skip ahead
-	instrLdRegRdOnly, 0x02, idxDecimalPoint,			// window length is 1 digit, load equivalent of decimal formatting term
+	instrLdRegConst, 0x02, idxDecimalPoint,			// window length is 1 digit, load equivalent of decimal formatting term
 	instrSkip, 5,										// skip ahead
 
 //cont:
-	instrLdRegRdOnlyOffset, 0x02, idxTen,				// load power of 10 corresponding to window into register 2
-	instrMul2byRdOnly, idxDecimalPoint,					// adjust by decimal formatting term
+	instrLdRegConstOffset, 0x02, idxTen,				// load power of 10 corresponding to window into register 2
+	instrMul2byConst, idxDecimalPoint,					// adjust by decimal formatting term
 
 //cont2:
 	instrLxdI, 0,										// initialize decimal count with 0

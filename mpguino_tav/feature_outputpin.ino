@@ -107,7 +107,7 @@ static const uint8_t prgmCalculateOutputPinValue[] PROGMEM = {
 	instrLdReg, 0x21,									// save denominator in register 1
 	instrLdRegTripVar, 0x02, instantIdx, rvVSSpulseIdx,	// fetch instant VSS pulses (distance numerator)
 	instrMul2byVariable, m32CyclesPerVolumeIdx,			// multiply by cycles per unit volume
-	instrMul2byRdOnly, idxDecimalPoint,					// scale by idxDecimalPoint (cancels stored max FE scaling)
+	instrMul2byConst, idxDecimalPoint,					// scale by idxDecimalPoint (cancels stored max FE scaling)
 	instrMul2byByte, 255,								// scale to 0-255 output range
 	instrDiv2by1,										// compute PWM = numerator / denominator
 	instrAdjustQuotient,								// round result

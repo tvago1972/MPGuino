@@ -169,8 +169,8 @@ static const uint8_t prgmFindHalfReserveRange[] PROGMEM = {
 static const uint8_t prgmMinOfFuelEconomy[] PROGMEM = {	// return the lesser of either fuel economy or 999000
 	instrCall, tFuelEcon,								// find fuel economy value
 	instrLdReg, 0x23,									// move value to register 3 for now
-	instrLdRegRdOnly, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
-	instrLdRegRdOnly, 0x01, idxDecimalPoint,
+	instrLdRegConst, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
+	instrLdRegConst, 0x01, idxDecimalPoint,
 	instrSubYfromX, 0x12,
 	instrCmpXtoY, 0x23,									// compare fuel economy value to the upper bound value 999000
 	instrBranchIfLTorE, 2,								// if 999000 <= fuel economy value, exit to caller
@@ -184,14 +184,14 @@ static const uint8_t prgmMaxOfFuelEconomy[] PROGMEM = {	// return the lesser of 
 	instrCall, tFuelEcon,								// find fuel economy value
 	instrLdReg, 0x23,									// move value to register 3 for now
 	instrLdRegByte, 0x02, 40,							// load register 2 with the lower bound value 40000
-	instrMul2byRdOnly, idxDecimalPoint,
+	instrMul2byConst, idxDecimalPoint,
 	instrCmpXtoY, 0x23,									// compare fuel economy value to the value 40000
 	instrBranchIfLTorE, 2,								// if 40000 <= fuel economy value, skip ahead
 	instrLdReg, 0x23,									// shift fuel economy lower bound value to register 3
 
 //cont1:
-	instrLdRegRdOnly, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
-	instrLdRegRdOnly, 0x01, idxDecimalPoint,
+	instrLdRegConst, 0x02, idxOneMillion,				// load register 2 with the upper bound value 999000
+	instrLdRegConst, 0x01, idxDecimalPoint,
 	instrSubYfromX, 0x12,
 	instrCmpXtoY, 0x23,									// compare fuel economy value to the upper bound value 999000
 	instrBranchIfLTorE, 2,								// if 999000 <= fuel economy value, exit to caller

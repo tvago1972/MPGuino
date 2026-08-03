@@ -7,7 +7,7 @@ LxdI:
 
 The %/&/@ resolvers give the index value to load into the index register, so
 e.g. 'LxdI %idxOneThousand' makes the index register point at that constant,
-and 'LdRegRdOnlyIndexed 11' then loads constant[idxOneThousand] = 1000.
+and 'LdRegConstIndexed 11' then loads constant[idxOneThousand] = 1000.
 
 Read-only/constant cases check against known constant values; EEPROM cases use
 the pScratchpadIdx scratchpad and verify via hex ^E; the variable-indexed case
@@ -22,14 +22,14 @@ VAR = "@m8MetricModeFlags"
 CASES = [
     # --- constant, indexed (index register = constant index) ---
     S64Case(
-        name="LdRegRdOnlyIndexed: const[idxOneThousand] = 1000",
-        program=["LxdI %idxOneThousand", "LdRegRdOnlyIndexed 11", "Done"],
+        name="LdRegConstIndexed: const[idxOneThousand] = 1000",
+        program=["LxdI %idxOneThousand", "LdRegConstIndexed 11", "Done"],
         expect={1: 0x3E8},
     ),
     # --- constant, offset (base idxTen + tripIdx 2 -> idxOneThousand) ---
     S64Case(
-        name="LdRegRdOnlyOffset: const[idxTen + 2] = idxOneThousand = 1000",
-        program=["LxdI 02", "LdRegRdOnlyOffset 11 %idxTen", "Done"],
+        name="LdRegConstOffset: const[idxTen + 2] = idxOneThousand = 1000",
+        program=["LxdI 02", "LdRegConstOffset 11 %idxTen", "Done"],
         expect={1: 0x3E8},
     ),
     # --- EEPROM, indexed load (write scratchpad, then index-load it) ---

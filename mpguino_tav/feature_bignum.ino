@@ -1,20 +1,20 @@
 #if defined(useClockSupport)
 /* Clock support section */
- 
+
 static const uint8_t prgmSetClock[] PROGMEM = {
 	instrLdRegVariable, 0x02, m8HourIdx,				// load user-defined hours value
 	instrMul2byByte, 60,								// multply hours value by 60 (minutes per hour)
 	instrAddVariableToX, 0x02, m8MinuteIdx,				// add user-defined minutes value to time value
 	instrMul2byByte, 60,								// multply time value by 60 (seconds per minute)
 	instrAddVariableToX, 0x02, m8SecondIdx,				// add user-defined seconds value to time value
-	instrMul2byRdOnly, idxTicks0PerSecond,				// convert time value from seconds to cycles
+	instrMul2byConst, idxTicks0PerSecond,				// convert time value from seconds to cycles
 	instrStRegVariable, 0x02, v32ClockCycleIdx,			// write software clock
 	instrDone
 };
 
 static const uint8_t prgmOutputClockTime[] PROGMEM = {
 	instrLdRegVariable, 0x02, v32ClockCycleIdx,
-	instrDiv2byRdOnly, idxTicks0PerSecond,
+	instrDiv2byConst, idxTicks0PerSecond,
 	instrLdReg, 0x21,									// move time in seconds into register 1
 	instrDoBCDadjust, 0x12, bcdFormatHHMMSS,			// process register 1 as hhmmss BCD string and store it in register 2
 	instrDone											// exit to caller
@@ -425,7 +425,7 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 
 #if defined(useBigFE)
 				case bigFEdisplayIdx:
-					outputNumber(tripIdx, tFuelEcon, 0, cursorPos, findStr(bigFElabels, mainCalcFuncVar.calcFmtIdx - calcFormatFuelEconomyIdx));
+					outputFuelEconomy(tripIdx, cursorPos);
 					break;
 
 #endif // defined(useBigFE)
@@ -455,6 +455,48 @@ static uint8_t bigDigit::displayHandler(uint8_t cmd, uint8_t cursorPos)
 }
 
 #if defined(useBigNumberDisplay)
+#if defined(useBigFE)
+static void bigDigit::outputFuelEconomy(uint8_t tripIdx, uint8_t cursorPos)
+{
+
+	uint8_t calcFmtIdx;
+	uint8_t i;
+	uint8_t windowLength;
+
+	windowLength = (LCDcharWidth / 4);
+
+	mainCalcFuncVar.isValid = 0;
+
+	if (tripIdx < tripSlotTotalCount) mainCalcFuncVar.isValid ^= (isValidTripIdx);
+
+	mainCalcFuncVar.isValid ^= (isValidCalcIdx);
+	mainCalcFuncVar.tripIdx = tripIdx;
+	mainCalcFuncVar.calcIdx = tFuelEcon;
+	mainCalcFuncVar.suppressTripLabel = 0;
+
+	calcFmtIdx = pgm_read_byte(&calcFormatList[(uint16_t)(tFuelEcon)]);
+
+	if ((calcFmtIdx >= calcFormatMaxValNonConversion) && (m08(m8MetricModeFlags) & mmDisplayMetric)) calcFmtIdx++;
+	if ((calcFmtIdx >= calcFormatMaxValSingleFormat) && (m08(m8MetricModeFlags) & mmDisplayAlternateFE)) calcFmtIdx += 2;
+
+	mainCalcFuncVar.calcFmtIdx = calcFmtIdx;
+
+	i = pgm_read_byte(&calcFormatDecimalPlaces[(uint16_t)(calcFmtIdx)]);
+	mainCalcFuncVar.decimalPlaces = (i & 0x0F);
+
+	mainCalcFuncVar.tripChar = pgm_read_byte(&tripFormatLabelText[(uint16_t)(tripIdx)]);
+	mainCalcFuncVar.calcChar = pgm_read_byte(&calcFormatLabelText[(uint16_t)(calcFmtIdx)]);
+
+	if (mainCalcFuncVar.isValid & isValidCalcObj) mainCalcFuncVar.isValid ^= (isValidFlag);
+	if (mainCalcFuncVar.isValid) mainCalcFuncVar.value = SWEET64::runPrgm(S64_PRGM_PTR(prgmFuelEcon), tripIdx);
+
+	ull2str(nBuff, mainCalcFuncVar.decimalPlaces, windowLength - 1, dfIgnoreDecimalPoint);
+
+	outputNumberString(0, nBuff, cursorPos, findStr(bigFElabels, calcFmtIdx - calcFormatFuelEconomyIdx)); // output the number
+
+}
+
+#endif // defined(useBigFE)
 static void bigDigit::outputNumber(uint8_t tripIdx, uint8_t calcIdx, uint8_t decimalFlag, uint8_t cursorPos, const char * str)
 {
 

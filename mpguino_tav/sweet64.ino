@@ -22,7 +22,7 @@ static s64pc_t SWEET64::makeProgmemProgram(s64prgm_ptr_t ptr)
 {
 
 	s64pc_t prgmPtr;
-	
+
 	prgmPtr.ptr = ptr;
 #if defined(useSWEET64RAMprograms)
 	prgmPtr.ram_ptr = 0;
@@ -37,7 +37,7 @@ static s64pc_t SWEET64::makeRAMprogram(uint8_t * ptr)
 {
 
 	s64pc_t prgmPtr;
-	
+
 	prgmPtr.ptr = 0;
 #if defined(useSWEET64RAMprograms)
 	prgmPtr.ram_ptr = ptr;
@@ -645,26 +645,14 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				break;
 
 			case i14:	// load rX with const
-				switch (operand)
+				if (operand >= idxConstantEnd)
 				{
 
-					case (idxConstantStart) ... (idxConstantEnd - 1):
-						extra = idxConstantStart;
-						break;
-
-					case (pSettingsIdxStart) ... (pSettingsIdxEnd - 1):
-						extra = pSettingsIdxStart;
-						break;
-
-					default:
-						extra = 0;
-						setProgramError(prgmReg8, s64errBadOperand);
-						isValid = 0;
-						break;
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
 
 				}
 
-				operand -= extra;
 				break;
 
 			case i07:	// load rX with program variable
@@ -826,23 +814,15 @@ static void SWEET64::executeInstruction(union union_32 * instrLWord, s64pc_t &pr
 				break;
 
 			case i14:	// load rX with const
-				switch (extra)
+				if (extra < idxConstantEnd) init64(regX, pgm_read_dword(&constantNumberList[(uint16_t)(operand)]));
+				else
 				{
 
-					case idxConstantStart:
-						init64(regX, pgm_read_dword(&constantNumberList[(uint16_t)(operand)]));
-						break;
-
-					case pSettingsIdxStart:
-						init64(regX, pgm_read_dword(&params[(uint16_t)(operand)]));
-						break;
-
-					default:
-						setProgramError(prgmReg8, s64errBadOperand);
-						isValid = 0;
-						break;
+					setProgramError(prgmReg8, s64errBadOperand);
+					isValid = 0;
 
 				}
+
 				break;
 
 #if defined(useFEvTdata)

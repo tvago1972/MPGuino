@@ -31,6 +31,16 @@ class S64AssemblerError(Exception):
     pass
 
 
+MNEMONIC_ALIASES = {
+    'LdRegRdOnly': 'LdRegConst',
+    'LdRegRdOnlyIndexed': 'LdRegConstIndexed',
+    'LdRegRdOnlyOffset': 'LdRegConstOffset',
+    'LdRegRdOnlyMetric': 'LdRegConstMetric',
+    'Mul2byRdOnly': 'Mul2byConst',
+    'Div2byRdOnly': 'Div2byConst',
+}
+
+
 def resolve_labels(instructions, base_address=0):
     """Resolve symbolic branch-target labels to absolute addresses.
 
@@ -55,6 +65,7 @@ def resolve_labels(instructions, base_address=0):
         if len(tokens) == 1 and tokens[0].endswith(':'):
             labels[tokens[0][:-1]] = addr
             continue
+        tokens[0] = MNEMONIC_ALIASES.get(tokens[0], tokens[0])
         body.append(tokens)
         addr += len(tokens)         # opcode + operands, one byte each
 
@@ -101,7 +112,7 @@ def assemble(term, address, instructions):
         for src in instructions:
             lines, prompt = term.exchange(src, EITHER_PROMPT_RE, flush=False)
             if not is_asm_prompt(prompt):
-                # dropped back to ']' — the line was rejected
+                # dropped back to ']' ? the line was rejected
                 raise S64AssemblerError(
                     'assembler rejected {!r}; monitor said: {}'.format(
                         src, ' | '.join(lines)))
